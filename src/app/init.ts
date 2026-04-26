@@ -67,7 +67,7 @@ import {
 import { type PatternAnalysisScope } from '../patterns/pattern-detector';
 import type { CandleData } from '../types';
 import type { DisplayCurrency } from '../types/market';
-import { SimpleChart, X_AXIS_HEIGHT, MOBILE_BOTTOM_BAR_HEIGHT, MOBILE_JUMP_LATEST_SVG } from '../chart/SimpleChart';
+import { SimpleChart, X_AXIS_HEIGHT, MOBILE_BOTTOM_BAR_HEIGHT, MOBILE_JUMP_LATEST_SVG } from '../chart/SimpleChart0';
 import { getUsdtToDisplayRate } from '../utils/currency';
 import { canonicalizeUiSymbol, isNasdaqFuturesLikeSymbol, isCmeEquityFuturesOpen } from '../utils/market-session';
 import { type GapMode, loadGapMode, loadPatternAnalysisScope, loadPatternAlertEnabled } from '../utils/gap-smoothing';
@@ -1799,115 +1799,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
 export {};
 
 
-// -----------------------------------------------------------------------------
-// 매도 포지션 드로잉 박스 업데이트 및 모바일 드로잉 삭제 로직 추가
-// -----------------------------------------------------------------------------
-
-function updateSellPositionBox(drawing: any) {
-  if (drawing.type === 'sell') {
-    // 목표가와 손절가 위치를 반대로 설정
-    drawing.targetPricePosition = 'bottom';
-    drawing.stopLossPosition = 'top';
-
-    // 박스 크기 및 너비 조정
-    if (typeof drawing.boxHeight === 'number') {
-      drawing.boxHeight *= 3;
-    }
-    if (typeof drawing.targetPriceText === 'string' && typeof drawing.stopLossText === 'string') {
-      drawing.boxWidth = Math.max(
-        drawing.targetPriceText.length,
-        drawing.stopLossText.length
-      ) * 1.2;
-    }
-
-    // 박스 중간 앵커 포인트 X 위치 설정
-    drawing.anchorX = drawing.boxLineX;
-  }
-}
-
-function handleDrawingDeletion(event: TouchEvent) {
-  if (typeof window === 'undefined') return;
-  // 모바일 모드 감지
-  const isMobileMode = () =>
-    window.innerWidth < 768 ||
-    (/Mobi|Android|iPhone|iPod/i.test(navigator.userAgent) ||
-      (window.matchMedia?.('(pointer: coarse)').matches ?? false) ||
-      window.innerWidth < 600);
-
-  if (isMobileMode()) {
-    // 드로잉 객체를 찾는 함수 (실제 구현에 맞게 수정 필요)
-    const getTouchedDrawing = (evt: TouchEvent): any => {
-      // 예시: 전역 chart 인스턴스에서 hit test
-      if (typeof (window as any).getActivePane === 'function') {
-        const chart = (window as any).getActivePane().chart;
-        if (chart && typeof chart.findDrawingAt === 'function') {
-          const touch = evt.changedTouches[0];
-          const rect = chart.canvas.getBoundingClientRect();
-          const mx = touch.clientX - rect.left;
-          const my = touch.clientY - rect.top;
-          const hit = chart.findDrawingAt(mx, my);
-          return hit?.shape ?? null;
-        }
-      }
-      return null;
-    };
-
-    // 드로잉 삭제 함수 (실제 구현에 맞게 수정 필요)
-    const deleteDrawing = (drawing: any) => {
-      if (typeof (window as any).getActivePane === 'function') {
-        const chart = (window as any).getActivePane().chart;
-        if (chart && typeof chart.deleteSelectedDrawing === 'function') {
-          chart.selectedDrawingId = drawing.id;
-          chart.deleteSelectedDrawing();
-        }
-      }
-    };
-
-    // 전체 드로잉 삭제 함수 (실제 구현에 맞게 수정 필요)
-    const deleteAllDrawings = () => {
-      if (typeof (window as any).getActivePane === 'function') {
-        const chart = (window as any).getActivePane().chart;
-        if (chart && typeof chart.clearAllDrawings === 'function') {
-          chart.clearAllDrawings(true);
-        }
-      }
-    };
-
-    const touchedDrawing = getTouchedDrawing(event);
-    if (touchedDrawing) {
-      deleteDrawing(touchedDrawing);
-    } else {
-      deleteAllDrawings();
-    }
-  }
-}
-
-// 드로잉 업데이트 및 삭제 로직 추가
-function initializeDrawingHandlers() {
-  // 드로잉이 활성화된 경우 매도 포지션 박스 업데이트
-  document.addEventListener('touchstart', (event) => {
-    // 실제 드로잉 객체를 가져오는 함수 (실제 구현에 맞게 수정 필요)
-    const getActiveDrawing = (): any => {
-      if (typeof (window as any).getActivePane === 'function') {
-        const chart = (window as any).getActivePane().chart;
-        if (chart && typeof chart.getSelectedDrawing === 'function') {
-          return chart.getSelectedDrawing();
-        }
-      }
-      return null;
-    };
-
-    const drawing = getActiveDrawing();
-    if (drawing) {
-      updateSellPositionBox(drawing);
-    }
-  });
-
-  // 모바일에서 드로잉 터치 또는 바깥 영역 터치 시 삭제
-  document.addEventListener('touchend', handleDrawingDeletion);
-}
-
-initializeDrawingHandlers();
 
 
 
