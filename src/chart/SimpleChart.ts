@@ -3536,8 +3536,11 @@ export class SimpleChart {
     const rawStepCandles = targetPx / Math.max(totalSp, 1);
     const stepCandles = pickAxisStepCandles(rawStepCandles, this.config.timeframe);
     const tickIndices: number[] = [];
-    for (let i = 0; i < count; i++) {
-      if (i % stepCandles !== 0 && i !== count - 1) continue;
+    // Extend tick range across the full visible area including the right gap (future bars),
+    // so that grid lines appear even when most of the viewport is future/empty area.
+    const totalVisibleSlots = Math.ceil(visibleSlots + gapBars);
+    for (let i = 0; i <= totalVisibleSlots; i++) {
+      if (i % stepCandles !== 0) continue;
       tickIndices.push(i);
     }
 
@@ -4424,6 +4427,7 @@ export class SimpleChart {
     const labelGap = 10;
     for (let ti = tickIndices.length - 1; ti >= 0; ti -= 1) {
       const i = tickIndices[ti];
+      if (i >= count) continue; // Future bars have no candle data — skip time label
         const x = chartLeft + i * totalSp + candleW / 2;
       const lbl = formatAxisTime(visData[i].time, this.config.timezone, this.config.timeframe, stepCandles);
       const w = ctx.measureText(lbl).width;
@@ -5020,7 +5024,8 @@ export class SimpleChart {
     if (!m) return null;
     if (mx < m.chartLeft || mx > m.chartRight || my < m.top || my > m.mainH) return null;
     const rawIndex = this.startIndex + (mx - m.chartLeft - m.candleW / 2) / Math.max(1e-6, m.totalSp);
-    const index = Math.max(0, Math.min(this.data.length - 1, rawIndex));
+    // No upper clamp — allow drawing in the future (right margin) area beyond data.length.
+    const index = Math.max(0, rawIndex);
     const price = m.maxP - ((my - m.top) / Math.max(1, m.mainH - m.top)) * m.range;
     return { index, price };
   }
