@@ -268,9 +268,7 @@ export class SimpleChart {
   private focusedSignalCandleIndex: number | null = null;
   private focusedTradeRange: { startIndex: number; endIndex: number } | null = null;
   private focusVisualTimer: ReturnType<typeof setTimeout> | null = null;
-  private dashedCrossX = 0;
-  private dashedCrossY = 0;
-  private hasDashedCross = false;
+
   // 십자선 가격박스 옆 + 아이콘 히트 영역
   private crosshairPlusHit: { x: number; y: number; r: number; price: number } | null = null;
   private crosshairPlusHovered = false;
@@ -2568,7 +2566,6 @@ export class SimpleChart {
     this.canvas.addEventListener('dblclick',  this.handleDoubleClick.bind(this));
     this.canvas.addEventListener('mouseleave', () => {
       this.isMouseOver = false;
-      this.hasDashedCross = false;
       this.hoveredDrawingId = null;
       this.hoveredDrawingPart = null;
       this.canvas.style.cursor = 'default';
@@ -2715,7 +2712,6 @@ export class SimpleChart {
       : Math.max(20, this.viewportHeight * 0.35);
     this.mouseY = focusY;
     this.isMouseOver = true;
-    this.hasDashedCross = false;
 
     this.clearFocusVisualTimer();
     this.focusVisualTimer = setTimeout(() => {
@@ -6436,10 +6432,11 @@ export class SimpleChart {
     // ????????????????????????????????????????????????????????????????????????????
     // ?? 터치 드로잉 모드: 십자선 렌더링 (TradingView 스타일)
     // ????????????????????????????????????????????????????????????????????????????
-    if (this.drawingTool) {
+    if (this.drawingTool && this.isMouseOver) {
       ctx.save();
-      const x = this.touchDrawingCrosshairX;
-      const y = this.touchDrawingCrosshairY;
+      // Use live mouse position in PC mode; fall back to last-touch position in touch mode.
+      const x = this.mouseX;
+      const y = this.mouseY;
 
       // 얇은 파란 점선 (전체 축)
       ctx.strokeStyle = 'rgba(64, 180, 255, 0.5)';
@@ -6548,27 +6545,14 @@ export class SimpleChart {
     }
 
     const solidX = snapX;
-    const solidY = this.mouseY;
-    if (!this.hasDashedCross) {
-      this.dashedCrossX = solidX;
-      this.dashedCrossY = solidY;
-      this.hasDashedCross = true;
-    } else {
-      const lag = 0.22;
-      // Y축 점선(세로선)은 캔들 중심에 자석 스냅을 즉시 반영
-      this.dashedCrossX = solidX;
-      // X축 점선(가로선)은 약간 늦게 따라오게 유지
-      this.dashedCrossY += (solidY - this.dashedCrossY) * lag;
-    }
 
-    // TradingView 스타일: 축 전체는 점선(약간 지연), 중심은 실선
     ctx.save();
     ctx.strokeStyle = 'rgba(214,219,233,0.65)';
     ctx.lineWidth = 1;
     ctx.setLineDash([6, 5]);
     ctx.beginPath();
-    ctx.moveTo(this.dashedCrossX, 0); ctx.lineTo(this.dashedCrossX, height);
-    ctx.moveTo(0, this.dashedCrossY); ctx.lineTo(width, this.dashedCrossY);
+    ctx.moveTo(solidX, 0); ctx.lineTo(solidX, height);
+    ctx.moveTo(0, this.mouseY); ctx.lineTo(width, this.mouseY);
     ctx.stroke();
     ctx.restore();
 
@@ -6577,8 +6561,8 @@ export class SimpleChart {
     ctx.lineWidth = 1.4;
     const centerLen = 10;
     ctx.beginPath();
-    ctx.moveTo(solidX - centerLen, solidY); ctx.lineTo(solidX + centerLen, solidY);
-    ctx.moveTo(solidX, solidY - centerLen); ctx.lineTo(solidX, solidY + centerLen);
+    ctx.moveTo(solidX - centerLen, this.mouseY); ctx.lineTo(solidX + centerLen, this.mouseY);
+    ctx.moveTo(solidX, this.mouseY - centerLen); ctx.lineTo(solidX, this.mouseY + centerLen);
     ctx.stroke();
     ctx.restore();
 
@@ -6588,7 +6572,7 @@ export class SimpleChart {
       ctx.font = `12px ${CHART_FONT_STACK}`;
       const boxW = Math.ceil(ctx.measureText(label).width) + 16;
       const boxH = X_AXIS_HEIGHT;
-      const boxX = Math.min(Math.max(chartLeft + 2, this.dashedCrossX - boxW / 2), chartRight - boxW - 2);
+      const boxX = Math.min(Math.max(chartLeft + 2, solidX - boxW / 2), chartRight - boxW - 2);
       const boxY = plotHeight;
       ctx.fillStyle = 'rgba(184,190,199,0.92)';
       ctx.fillRect(boxX, boxY, boxW, boxH);
@@ -6759,7 +6743,7 @@ export class SimpleChart {
           accentColor = this.resolveStyle('obv', '#22ab94').color;
         }
 
-        const clampedY = Math.max(plotTop, Math.min(plotTop + plotH, this.dashedCrossY));
+        const clampedY = Math.max(plotTop, Math.min(plotTop + plotH, this.mouseY));
         const value = hi - ((clampedY - plotTop) / (plotH || 1)) * (hi - lo);
         if (hoveredPanelId === 'volume') {
           labelText = formatKUnit(value, 1);
@@ -7700,7 +7684,6 @@ export class SimpleChart {
     if (!this.isCrosshairMode) return;
     this.isCrosshairMode = false;
     this.isMouseOver     = false;
-    this.hasDashedCross  = false;
     if (this.crosshairAutoHideTimer !== null) {
       clearTimeout(this.crosshairAutoHideTimer);
       this.crosshairAutoHideTimer = null;
@@ -7808,6 +7791,8 @@ export class SimpleChart {
         const snapped = this.crosshair_snap_to_candle(pos.x, pos.y);
         this.touchDrawingCrosshairX = snapped.x;
         this.touchDrawingCrosshairY = snapped.y;
+        this.mouseX = snapped.x;
+        this.mouseY = snapped.y;
         this.isMouseOver = true;
         // 기본 열십자 즉시 해제
         if (this.isCrosshairMode) this.exitCrosshairMode();
@@ -7875,7 +7860,6 @@ export class SimpleChart {
         this.mouseX = pos.x;
         this.mouseY = pos.y;
         this.isMouseOver = true;
-        this.hasDashedCross = false;
         if (navigator.vibrate) navigator.vibrate(30);
         this.requestOverlayDraw();
         // 활성 직후 터치-업은 무시 (롱프레스 손 뗌과 구분)
@@ -7945,6 +7929,8 @@ export class SimpleChart {
         const snapped = this.crosshair_snap_to_candle(pos.x, pos.y);
         this.touchDrawingCrosshairX = snapped.x;
         this.touchDrawingCrosshairY = snapped.y;
+        this.mouseX = snapped.x;
+        this.mouseY = snapped.y;
         this.isMouseOver = true;
 
         // fib-trend / position: 드래그 = 십자선 이동 + 미리보기
