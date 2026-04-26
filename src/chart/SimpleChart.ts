@@ -5706,14 +5706,19 @@ export class SimpleChart {
       case 'trendline': {
         setStroke(strokeColor, strokeWidth, dashByStyle[lineStyle]);
         ctx.beginPath();
-        // Extend line to full chart width so it stays visible when anchors are panned off-screen.
-        if (Math.abs(bx - ax) < 0.5) {
-          ctx.moveTo(ax, 0);
-          ctx.lineTo(ax, metrics.mainH);
+        if (!isDraft && b) {
+          // Completed trendline: extend to full chart width so it stays visible when anchors pan off-screen.
+          if (Math.abs(bx - ax) < 0.5) {
+            ctx.moveTo(ax, 0);
+            ctx.lineTo(ax, metrics.mainH);
+          } else {
+            const sl = (by - ay) / (bx - ax);
+            ctx.moveTo(metrics.chartLeft, ay + sl * (metrics.chartLeft - ax));
+            ctx.lineTo(metrics.chartRight, ay + sl * (metrics.chartRight - ax));
+          }
         } else {
-          const slope = (by - ay) / (bx - ax);
-          ctx.moveTo(metrics.chartLeft, ay + slope * (metrics.chartLeft - ax));
-          ctx.lineTo(metrics.chartRight, ay + slope * (metrics.chartRight - ax));
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(bx, by);
         }
         ctx.stroke();
         if (!isDraft) {
@@ -5854,11 +5859,23 @@ export class SimpleChart {
         const offsetPx = Math.hypot(a2x - ax, a2y - ay);
         setStroke(strokeColor, strokeWidth, dashByStyle[lineStyle]);
         ctx.beginPath();
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(bx, by);
+        if (!isDraft && b && Math.abs(bx - ax) >= 0.5) {
+          const sl = (by - ay) / (bx - ax);
+          ctx.moveTo(metrics.chartLeft, ay + sl * (metrics.chartLeft - ax));
+          ctx.lineTo(metrics.chartRight, ay + sl * (metrics.chartRight - ax));
+        } else {
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(bx, by);
+        }
         if (offsetPx > 0.8) {
-          ctx.moveTo(a2x, a2y);
-          ctx.lineTo(b2x, b2y);
+          if (!isDraft && b && Math.abs(b2x - a2x) >= 0.5) {
+            const sl2 = (b2y - a2y) / (b2x - a2x);
+            ctx.moveTo(metrics.chartLeft, a2y + sl2 * (metrics.chartLeft - a2x));
+            ctx.lineTo(metrics.chartRight, a2y + sl2 * (metrics.chartRight - a2x));
+          } else {
+            ctx.moveTo(a2x, a2y);
+            ctx.lineTo(b2x, b2y);
+          }
         }
         ctx.stroke();
         if (offsetPx <= 0.8) {
@@ -6003,8 +6020,8 @@ export class SimpleChart {
             const y = toY(lv.ratio);
             setStroke(lv.lineColor, Math.max(1.1, strokeWidth * 0.9), lineDash);
             ctx.beginPath();
-            ctx.moveTo(x0, y);
-            ctx.lineTo(x1, y);
+            ctx.moveTo(metrics.chartLeft, y);
+            ctx.lineTo(metrics.chartRight, y);
             ctx.stroke();
 
             const p = toPrice(lv.ratio);
