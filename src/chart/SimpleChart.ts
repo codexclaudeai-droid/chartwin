@@ -5706,8 +5706,15 @@ export class SimpleChart {
       case 'trendline': {
         setStroke(strokeColor, strokeWidth, dashByStyle[lineStyle]);
         ctx.beginPath();
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(bx, by);
+        // Extend line to full chart width so it stays visible when anchors are panned off-screen.
+        if (Math.abs(bx - ax) < 0.5) {
+          ctx.moveTo(ax, 0);
+          ctx.lineTo(ax, metrics.mainH);
+        } else {
+          const slope = (by - ay) / (bx - ax);
+          ctx.moveTo(metrics.chartLeft, ay + slope * (metrics.chartLeft - ax));
+          ctx.lineTo(metrics.chartRight, ay + slope * (metrics.chartRight - ax));
+        }
         ctx.stroke();
         if (!isDraft) {
           const shapeId = ('id' in shape) ? shape.id : null;
