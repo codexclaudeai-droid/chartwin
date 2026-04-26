@@ -5720,11 +5720,14 @@ export class SimpleChart {
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = strokeWidth;  // 드로잉 두께와 동일
             ctx.setLineDash([]);
+            ctx.fillStyle = '#000000';
             ctx.beginPath();
             ctx.arc(ax, ay, r, 0, Math.PI * 2);
+            ctx.fill();
             ctx.stroke();
             ctx.beginPath();
             ctx.arc(bx, by, r, 0, Math.PI * 2);
+            ctx.fill();
             ctx.stroke();
             if (isHovered) {
               ctx.save();
