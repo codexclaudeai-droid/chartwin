@@ -99,6 +99,24 @@ function canonicalizeSymbolByMarket(market, symbol) {
   return normalized;
 }
 
+const FX_QUOTES = ['USD', 'EUR', 'JPY', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD', 'KRW', 'CNH', 'HKD', 'SGD'];
+
+function inferMarketFromSymbol(symbol) {
+  const upper = normalizeSymbol(symbol);
+  // commodity
+  if (/^(XAU|XAG|XPT|USO|WTI|BRENT)/.test(upper)) return 'commodity';
+  // fx: exactly 6 uppercase letters, both halves in FX_QUOTES
+  if (/^[A-Z]{6}$/.test(upper)) {
+    const base = upper.slice(0, 3);
+    const quote = upper.slice(3);
+    if (FX_QUOTES.includes(base) && FX_QUOTES.includes(quote)) return 'fx';
+  }
+  // index
+  if (/^([A-Z]{2,5}\d{2,4}|SPX500|NAS100|NQ1!|NDX|HSI|DAX|NIKKEI|KOSPI|KOSDAQ|KOSPI200)$/.test(upper)) return 'index';
+  // default
+  return 'futures';
+}
+
 function normalizeTimeframe(input) {
   return String(input || '').trim();
 }
@@ -445,7 +463,7 @@ async function handleWebhookIngest(req, res) {
     return;
   }
 
-  const market = normalizeMarket(body.market);
+  const market = normalizeMarket(body.market) || inferMarketFromSymbol(body.symbol);
   const symbol = canonicalizeSymbolByMarket(market, body.symbol);
   const timeframe = normalizeTimeframe(body.timeframe || body.interval || '1m');
   const candles = sanitizeCandles(body.candles, timeframe);
