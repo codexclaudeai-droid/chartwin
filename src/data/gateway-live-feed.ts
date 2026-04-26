@@ -131,8 +131,15 @@ function resolveGatewayBaseUrl(): string {
   const fromWindow = typeof win.__DATA_GATEWAY_URL__ === 'string' ? win.__DATA_GATEWAY_URL__.trim() : '';
   const fromStorage = localStorage.getItem('my-chart-lib.data-gateway-url')?.trim() ?? '';
   const fromEnv = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_DATA_GATEWAY_URL?.trim() ?? '';
-  const selected = fromWindow || fromStorage || fromEnv || 'http://127.0.0.1:8788';
-  return selected.replace(/\/+$/, '');
+  if (fromWindow) return fromWindow.replace(/\/+$/, '');
+  if (fromStorage) return fromStorage.replace(/\/+$/, '');
+  if (fromEnv) return fromEnv.replace(/\/+$/, '');
+  // 로컬 개발 환경은 로컬 게이트웨이, 그 외(Netlify 등)는 같은 오리진의 Functions 사용
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://127.0.0.1:8787';
+  }
+  return window.location.origin;
 }
 
 function sanitizeCandles(rows: unknown): CandleDataLike[] {
