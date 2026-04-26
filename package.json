@@ -1,0 +1,23 @@
+{
+  "name": "my-chart-lib",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "backend:dev": "node server/data-gateway.mjs",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/moo": "^0.5.10",
+    "@types/nearley": "^2.11.5",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.4"
+  },
+  "dependencies": {
+    "moo": "^0.5.3",
+    "nearley": "^2.20.1",
+    "technicalindicators": "^3.1.0"
+  }
+}

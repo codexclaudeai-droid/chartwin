@@ -1,0 +1,15 @@
+﻿/* src/style.css */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #0f172a; /* ?대몢??諛곌꼍 */
+  overflow: hidden;
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  /* ?뱀떆 紐⑤Ⅴ??諛곌꼍?됱쓣 ?뺤떎??以섏꽌 ?곸뿭 ?뺤씤 */
+  background-color: #0f172a; 
+}
+

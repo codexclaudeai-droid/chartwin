@@ -1,0 +1,11 @@
+{
+  "adminToken": "gcu5g/S4ONCx7EULLO3mrzkITVD84ob4ba69KQwv1T4=",
+  "webhookPassphrase": "7SGMie3m/XVQh3PgC+iehsBkFgfoGpde3RWnpmThgOyOEaVgNuQFQPmSSmTb/rMC",
+  "providers": {
+    "crypto": "binance",
+    "futures": "webhook",
+    "index": "webhook",
+    "commodity": "webhook",
+    "fx": "webhook"
+  }
+}
