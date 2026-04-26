@@ -67,7 +67,7 @@ import {
 import { type PatternAnalysisScope } from '../patterns/pattern-detector';
 import type { CandleData } from '../types';
 import type { DisplayCurrency } from '../types/market';
-import { SimpleChart, X_AXIS_HEIGHT, MOBILE_BOTTOM_BAR_HEIGHT, MOBILE_JUMP_LATEST_SVG } from '../chart/SimpleChart0';
+import { SimpleChart, X_AXIS_HEIGHT, MOBILE_BOTTOM_BAR_HEIGHT, MOBILE_JUMP_LATEST_SVG } from '../chart/SimpleChart';
 import { getUsdtToDisplayRate } from '../utils/currency';
 import { canonicalizeUiSymbol, isNasdaqFuturesLikeSymbol, isCmeEquityFuturesOpen } from '../utils/market-session';
 import { type GapMode, loadGapMode, loadPatternAnalysisScope, loadPatternAlertEnabled } from '../utils/gap-smoothing';
