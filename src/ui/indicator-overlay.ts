@@ -612,7 +612,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     const strategyRow = document.createElement('div');
     strategyRow.style.cssText = compactOverlay
       ? 'display:flex;flex-direction:row;align-items:center;gap:2px;margin-top:0;'
-      : 'display:flex;flex-direction:row;align-items:center;gap:4px;';
+      : `display:flex;flex-direction:row;align-items:center;gap:4px;margin-top:${touchLarge ? '-6px' : '-2px'};`;
     const subColumn = document.createElement('div');
     subColumn.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
 
