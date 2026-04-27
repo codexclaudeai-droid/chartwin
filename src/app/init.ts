@@ -725,6 +725,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       seq: 0,
     };
     const refreshExchange24hPercent = async (force = false) => {
+      if (!shouldUseBinanceDirect(chart.config.symbol)) return;
       const resolved = resolveExchangeMarketSymbol(chart.config.symbol);
       const key = `${resolved.market}:${resolved.symbol}`;
       const now = Date.now();
