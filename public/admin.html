@@ -6,98 +6,131 @@
   <title>ChartWin Admin</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0d1117; color: #c9d1d9; min-height: 100vh;
-    }
-    .container { max-width: 680px; margin: 0 auto; padding: 32px 16px; }
-    h1 { font-size: 20px; font-weight: 700; color: #e6edf3; margin-bottom: 24px; letter-spacing: -0.3px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+    .container { max-width: 700px; margin: 0 auto; padding: 32px 16px 64px; }
+    h1 { font-size: 20px; font-weight: 700; color: #e6edf3; margin-bottom: 24px; }
     h1 span { color: #58a6ff; }
-    .card {
-      background: #161b22; border: 1px solid #30363d; border-radius: 10px;
-      padding: 20px; margin-bottom: 16px;
-    }
-    .card-title { font-size: 12px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 14px; }
-    .auth-row { display: flex; gap: 8px; }
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+    .card-title { font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; letter-spacing: .9px; margin-bottom: 14px; }
+    .field-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .field-row:last-child { margin-bottom: 0; }
     input[type="password"] {
       flex: 1; background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
       color: #c9d1d9; font-size: 14px; padding: 8px 12px; outline: none;
+      transition: border-color .15s;
     }
     input[type="password"]:focus { border-color: #58a6ff; }
+    input[type="password"]::placeholder { color: #484f58; }
     button {
       background: #21262d; border: 1px solid #30363d; border-radius: 6px;
       color: #c9d1d9; font-size: 13px; font-weight: 600; padding: 8px 16px;
       cursor: pointer; white-space: nowrap; transition: background .15s, border-color .15s;
     }
-    button:hover { background: #30363d; border-color: #8b949e; }
+    button:hover:not(:disabled) { background: #30363d; border-color: #8b949e; }
     button.primary { background: #238636; border-color: #2ea043; color: #fff; }
-    button.primary:hover { background: #2ea043; }
-    button:disabled { opacity: .45; cursor: not-allowed; }
-    .category { margin-bottom: 20px; }
-    .category-label {
-      font-size: 11px; font-weight: 700; color: #58a6ff; text-transform: uppercase;
-      letter-spacing: .8px; margin-bottom: 10px; padding-bottom: 6px;
-      border-bottom: 1px solid #21262d;
-    }
-    .symbol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
-    .symbol-item {
-      display: flex; align-items: center; gap: 10px;
-      background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
-      padding: 8px 12px; cursor: pointer; transition: border-color .15s, background .15s;
-    }
-    .symbol-item:hover { border-color: #30363d; background: #161b22; }
-    .symbol-item.hidden-item { border-color: #da3633; background: #1a0e0e; }
-    .symbol-item.hidden-item .sym-name { color: #ff7b72; }
-    .symbol-item input[type="checkbox"] { accent-color: #238636; width: 15px; height: 15px; cursor: pointer; }
-    .sym-name { font-size: 13px; font-weight: 600; color: #e6edf3; }
-    .sym-desc { font-size: 11px; color: #8b949e; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .status {
-      font-size: 13px; padding: 10px 14px; border-radius: 6px; margin-top: 12px;
-      display: none;
-    }
+    button.primary:hover:not(:disabled) { background: #2ea043; }
+    button.danger { background: #b91c1c; border-color: #dc2626; color: #fff; }
+    button.danger:hover:not(:disabled) { background: #dc2626; }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+    .status { font-size: 13px; padding: 9px 13px; border-radius: 6px; margin-top: 10px; display: none; }
     .status.ok { background: #0d2b17; border: 1px solid #238636; color: #3fb950; display: block; }
     .status.err { background: #2b0d0d; border: 1px solid #da3633; color: #ff7b72; display: block; }
-    .symbols-section { display: none; }
-    .save-row { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+
+    /* ── Symbol Management ─────────────────────────────────────────── */
+    .symbols-wrap { display: none; }
+    .category { margin-bottom: 22px; }
+    .category:last-child { margin-bottom: 0; }
+    .category-label { font-size: 11px; font-weight: 700; color: #58a6ff; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid #21262d; }
+    .symbol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+    .symbol-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      background: #0d1117; border: 1px solid #21262d; border-radius: 8px;
+      padding: 9px 12px; transition: border-color .15s, background .15s;
+    }
+    .symbol-item.visible { border-color: #2a3e2a; }
+    .symbol-item.hidden-sym { border-color: #3e2a2a; background: #110a0a; }
+    .sym-info { min-width: 0; }
+    .sym-name { font-size: 13px; font-weight: 700; color: #e6edf3; transition: color .15s; }
+    .hidden-sym .sym-name { color: #6e3a3a; }
+    .sym-desc { font-size: 10px; color: #484f58; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Toggle switch */
+    .toggle { position: relative; width: 38px; height: 21px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .track {
+      position: absolute; inset: 0; border-radius: 21px; background: #3d4450;
+      cursor: pointer; transition: background .2s;
+    }
+    .track::before {
+      content: ''; position: absolute; width: 15px; height: 15px;
+      top: 3px; left: 3px; border-radius: 50%; background: #8b949e;
+      transition: transform .2s, background .2s;
+    }
+    .toggle input:checked + .track { background: #1a6330; }
+    .toggle input:checked + .track::before { transform: translateX(17px); background: #3fb950; }
+
+    .save-row { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
     .hidden-count { font-size: 13px; color: #8b949e; }
     .hidden-count b { color: #ff7b72; }
+
+    /* ── Password Change ───────────────────────────────────────────── */
+    .pw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    @media (max-width: 480px) { .pw-grid { grid-template-columns: 1fr; } }
+    .pw-grid input { margin-bottom: 0; }
   </style>
 </head>
 <body>
 <div class="container">
   <h1>ChartWin <span>Admin</span></h1>
 
+  <!-- Auth -->
   <div class="card">
-    <div class="card-title">인증</div>
-    <div class="auth-row">
-      <input type="password" id="passphrase" placeholder="Passphrase 입력" autocomplete="current-password">
+    <div class="card-title">관리자 인증</div>
+    <div class="field-row">
+      <input type="password" id="passphrase" placeholder="현재 Passphrase" autocomplete="current-password">
       <button id="load-btn" onclick="loadSymbols()">불러오기</button>
     </div>
     <div class="status" id="auth-status"></div>
   </div>
 
-  <div class="symbols-section" id="symbols-section">
+  <!-- Symbol Management -->
+  <div class="symbols-wrap" id="symbols-wrap">
     <div class="card">
-      <div class="card-title">종목 표시 관리 <span style="color:#8b949e;font-weight:400;text-transform:none;letter-spacing:0">— 체크 해제 시 프론트엔드에서 숨김</span></div>
+      <div class="card-title">종목 표시 관리 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#484f58">— OFF 시 프론트엔드에서 숨김</span></div>
       <div id="symbol-list"></div>
     </div>
     <div class="save-row">
-      <button class="primary" onclick="saveSymbols()">저장 적용</button>
+      <button class="primary" id="save-sym-btn" onclick="saveSymbols()">변경사항 저장</button>
       <span class="hidden-count" id="hidden-count"></span>
     </div>
     <div class="status" id="save-status"></div>
+  </div>
+
+  <!-- Password Change -->
+  <div class="symbols-wrap" id="pw-wrap">
+    <div class="card">
+      <div class="card-title">관리자 비밀번호 변경</div>
+      <div class="pw-grid">
+        <input type="password" id="new-pass" placeholder="새 비밀번호 (8자 이상)" autocomplete="new-password">
+        <input type="password" id="new-pass-confirm" placeholder="새 비밀번호 확인" autocomplete="new-password">
+      </div>
+      <div class="field-row" style="margin-top:8px">
+        <button class="danger" onclick="changePassword()">비밀번호 변경</button>
+      </div>
+      <div class="status" id="pw-status"></div>
+    </div>
   </div>
 </div>
 
 <script>
 const CATALOG = {
   'Index': [
-    { id: 'NQ1!',    desc: 'E-mini Nasdaq-100 Futures' },
-    { id: 'SPX500',  desc: 'S&P 500' },
-    { id: 'HSI',     desc: 'Hang Seng' },
-    { id: 'KOSPI',   desc: 'Korea Composite Stock Price Index' },
-    { id: 'KOSPI200',desc: 'KOSPI 200' },
-    { id: 'KOSDAQ',  desc: 'Korea Securities Dealers Automated Quotations' },
+    { id: 'NQ1!',     desc: 'E-mini Nasdaq-100 Futures' },
+    { id: 'SPX500',   desc: 'S&P 500' },
+    { id: 'HSI',      desc: 'Hang Seng' },
+    { id: 'KOSPI',    desc: 'Korea Composite Stock Price Index' },
+    { id: 'KOSPI200', desc: 'KOSPI 200' },
+    { id: 'KOSDAQ',   desc: 'Korea Securities Dealers Automated Quotations' },
   ],
   'Crypto Spot': [
     { id: 'BTCUSDT', desc: 'Bitcoin / USDT' },
@@ -126,23 +159,19 @@ const CATALOG = {
 
 let currentHidden = new Set();
 
-function apiBase() {
-  return window.location.origin;
-}
-
 async function loadSymbols() {
   const pass = document.getElementById('passphrase').value;
   if (!pass) { showStatus('auth-status', 'err', 'Passphrase를 입력하세요.'); return; }
-
   document.getElementById('load-btn').disabled = true;
   try {
-    const res = await fetch(`${apiBase()}/admin/symbols`, { cache: 'no-store' });
+    const res = await fetch('/admin/symbols', { cache: 'no-store' });
     const json = await res.json();
     if (!json.ok) throw new Error(json.message || 'failed');
     currentHidden = new Set((json.hidden || []).map(s => s.toUpperCase()));
     renderSymbols();
-    document.getElementById('symbols-section').style.display = 'block';
-    showStatus('auth-status', 'ok', '불러오기 완료');
+    document.getElementById('symbols-wrap').style.display = 'block';
+    document.getElementById('pw-wrap').style.display = 'block';
+    showStatus('auth-status', 'ok', '불러오기 완료 — 종목 관리 및 비밀번호 변경이 활성화됐습니다.');
   } catch (e) {
     showStatus('auth-status', 'err', '불러오기 실패: ' + e.message);
   } finally {
@@ -160,24 +189,27 @@ function renderSymbols() {
     const grid = document.createElement('div');
     grid.className = 'symbol-grid';
     for (const sym of symbols) {
-      const isHidden = currentHidden.has(sym.id.toUpperCase());
-      const item = document.createElement('label');
-      item.className = 'symbol-item' + (isHidden ? ' hidden-item' : '');
+      const visible = !currentHidden.has(sym.id.toUpperCase());
+      const item = document.createElement('div');
+      item.className = 'symbol-item ' + (visible ? 'visible' : 'hidden-sym');
+      const uid = 'tog_' + sym.id.replace(/[^a-z0-9]/gi, '_');
       item.innerHTML = `
-        <input type="checkbox" data-id="${sym.id}" ${isHidden ? '' : 'checked'}>
-        <div>
+        <div class="sym-info">
           <div class="sym-name">${sym.id}</div>
           <div class="sym-desc">${sym.desc}</div>
-        </div>`;
+        </div>
+        <label class="toggle" title="${visible ? '표시 중' : '숨김'}">
+          <input type="checkbox" id="${uid}" data-id="${sym.id}" ${visible ? 'checked' : ''}>
+          <span class="track"></span>
+        </label>`;
       item.querySelector('input').addEventListener('change', (e) => {
         const id = e.target.dataset.id.toUpperCase();
         if (e.target.checked) {
           currentHidden.delete(id);
-          item.classList.remove('hidden-item');
-          item.querySelector('.sym-name').style.color = '';
+          item.classList.replace('hidden-sym', 'visible');
         } else {
           currentHidden.add(id);
-          item.classList.add('hidden-item');
+          item.classList.replace('visible', 'hidden-sym');
         }
         updateHiddenCount();
       });
@@ -192,17 +224,16 @@ function renderSymbols() {
 function updateHiddenCount() {
   const el = document.getElementById('hidden-count');
   const n = currentHidden.size;
-  el.innerHTML = n === 0 ? '모든 종목 표시 중' : `<b>${n}개</b> 종목 숨김 처리`;
+  el.innerHTML = n === 0 ? '모든 종목 표시 중' : `<b>${n}개</b> 종목 숨김`;
 }
 
 async function saveSymbols() {
   const pass = document.getElementById('passphrase').value;
   if (!pass) { showStatus('save-status', 'err', 'Passphrase를 입력하세요.'); return; }
-
-  const btn = document.querySelector('button.primary');
+  const btn = document.getElementById('save-sym-btn');
   btn.disabled = true;
   try {
-    const res = await fetch(`${apiBase()}/admin/symbols`, {
+    const res = await fetch('/admin/symbols', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ passphrase: pass, hidden: Array.from(currentHidden) }),
@@ -214,6 +245,31 @@ async function saveSymbols() {
     showStatus('save-status', 'err', '저장 실패: ' + e.message);
   } finally {
     btn.disabled = false;
+  }
+}
+
+async function changePassword() {
+  const pass = document.getElementById('passphrase').value;
+  const next = document.getElementById('new-pass').value;
+  const confirm = document.getElementById('new-pass-confirm').value;
+  if (!pass) { showStatus('pw-status', 'err', '현재 Passphrase를 입력하세요.'); return; }
+  if (!next) { showStatus('pw-status', 'err', '새 비밀번호를 입력하세요.'); return; }
+  if (next.length < 8) { showStatus('pw-status', 'err', '새 비밀번호는 8자 이상이어야 합니다.'); return; }
+  if (next !== confirm) { showStatus('pw-status', 'err', '새 비밀번호가 일치하지 않습니다.'); return; }
+  try {
+    const res = await fetch('/admin/passphrase', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ passphrase: pass, newPassphrase: next }),
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.message || 'failed');
+    document.getElementById('passphrase').value = next;
+    document.getElementById('new-pass').value = '';
+    document.getElementById('new-pass-confirm').value = '';
+    showStatus('pw-status', 'ok', '비밀번호가 변경됐습니다. 현재 Passphrase 필드도 자동 업데이트됐습니다.');
+  } catch (e) {
+    showStatus('pw-status', 'err', '변경 실패: ' + e.message);
   }
 }
 
