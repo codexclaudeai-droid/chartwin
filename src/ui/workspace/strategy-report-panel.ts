@@ -441,7 +441,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const worker = createReportWorker();
 
   const panel = document.createElement('div');
-  panel.style.cssText = `position:absolute;left:${leftInset}px;right:0;bottom:0;height:${normalHeight}px;background:#0f1524;border-top:1px solid #2a2e3e;z-index:900;display:flex;flex-direction:column;`;
+  panel.style.cssText = `position:absolute;left:${leftInset}px;right:0;bottom:0;height:${normalHeight}px;background:#0f1524;border-top:1px solid #2a2e3e;z-index:1010;display:flex;flex-direction:column;`;
   app.appendChild(panel);
 
   const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
@@ -1264,7 +1264,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       panel.style.top = '';
       panel.style.bottom = '0';
       panel.style.height = `${mode === 'collapsed' ? headerHeight : normalHeight}px`;
-      panel.style.zIndex = '900';
+      panel.style.zIndex = '1010';
       resizeHandle.style.display = mode === 'normal' ? 'flex' : 'none';
       expandBtn.innerHTML = icon.maximize;
       collapseBtn.innerHTML = mode === 'collapsed' ? icon.unfold : icon.fold;
