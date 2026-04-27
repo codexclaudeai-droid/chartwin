@@ -9,7 +9,9 @@ import {
   createSymbolIconElement,
   findSymbolItem,
   getSymbolIconUrl,
+  loadAdminConfig,
 } from '../catalog/symbols';
+void loadAdminConfig();
 import {
   loadStrategies,
   saveStrategies,

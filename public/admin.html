@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChartWin Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d1117; color: #c9d1d9; min-height: 100vh;
+    }
+    .container { max-width: 680px; margin: 0 auto; padding: 32px 16px; }
+    h1 { font-size: 20px; font-weight: 700; color: #e6edf3; margin-bottom: 24px; letter-spacing: -0.3px; }
+    h1 span { color: #58a6ff; }
+    .card {
+      background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+      padding: 20px; margin-bottom: 16px;
+    }
+    .card-title { font-size: 12px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 14px; }
+    .auth-row { display: flex; gap: 8px; }
+    input[type="password"] {
+      flex: 1; background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+      color: #c9d1d9; font-size: 14px; padding: 8px 12px; outline: none;
+    }
+    input[type="password"]:focus { border-color: #58a6ff; }
+    button {
+      background: #21262d; border: 1px solid #30363d; border-radius: 6px;
+      color: #c9d1d9; font-size: 13px; font-weight: 600; padding: 8px 16px;
+      cursor: pointer; white-space: nowrap; transition: background .15s, border-color .15s;
+    }
+    button:hover { background: #30363d; border-color: #8b949e; }
+    button.primary { background: #238636; border-color: #2ea043; color: #fff; }
+    button.primary:hover { background: #2ea043; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .category { margin-bottom: 20px; }
+    .category-label {
+      font-size: 11px; font-weight: 700; color: #58a6ff; text-transform: uppercase;
+      letter-spacing: .8px; margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid #21262d;
+    }
+    .symbol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+    .symbol-item {
+      display: flex; align-items: center; gap: 10px;
+      background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
+      padding: 8px 12px; cursor: pointer; transition: border-color .15s, background .15s;
+    }
+    .symbol-item:hover { border-color: #30363d; background: #161b22; }
+    .symbol-item.hidden-item { border-color: #da3633; background: #1a0e0e; }
+    .symbol-item.hidden-item .sym-name { color: #ff7b72; }
+    .symbol-item input[type="checkbox"] { accent-color: #238636; width: 15px; height: 15px; cursor: pointer; }
+    .sym-name { font-size: 13px; font-weight: 600; color: #e6edf3; }
+    .sym-desc { font-size: 11px; color: #8b949e; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .status {
+      font-size: 13px; padding: 10px 14px; border-radius: 6px; margin-top: 12px;
+      display: none;
+    }
+    .status.ok { background: #0d2b17; border: 1px solid #238636; color: #3fb950; display: block; }
+    .status.err { background: #2b0d0d; border: 1px solid #da3633; color: #ff7b72; display: block; }
+    .symbols-section { display: none; }
+    .save-row { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+    .hidden-count { font-size: 13px; color: #8b949e; }
+    .hidden-count b { color: #ff7b72; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>ChartWin <span>Admin</span></h1>
+
+  <div class="card">
+    <div class="card-title">인증</div>
+    <div class="auth-row">
+      <input type="password" id="passphrase" placeholder="Passphrase 입력" autocomplete="current-password">
+      <button id="load-btn" onclick="loadSymbols()">불러오기</button>
+    </div>
+    <div class="status" id="auth-status"></div>
+  </div>
+
+  <div class="symbols-section" id="symbols-section">
+    <div class="card">
+      <div class="card-title">종목 표시 관리 <span style="color:#8b949e;font-weight:400;text-transform:none;letter-spacing:0">— 체크 해제 시 프론트엔드에서 숨김</span></div>
+      <div id="symbol-list"></div>
+    </div>
+    <div class="save-row">
+      <button class="primary" onclick="saveSymbols()">저장 적용</button>
+      <span class="hidden-count" id="hidden-count"></span>
+    </div>
+    <div class="status" id="save-status"></div>
+  </div>
+</div>
+
+<script>
+const CATALOG = {
+  'Index': [
+    { id: 'NQ1!',    desc: 'E-mini Nasdaq-100 Futures' },
+    { id: 'SPX500',  desc: 'S&P 500' },
+    { id: 'HSI',     desc: 'Hang Seng' },
+    { id: 'KOSPI',   desc: 'Korea Composite Stock Price Index' },
+    { id: 'KOSPI200',desc: 'KOSPI 200' },
+    { id: 'KOSDAQ',  desc: 'Korea Securities Dealers Automated Quotations' },
+  ],
+  'Crypto Spot': [
+    { id: 'BTCUSDT', desc: 'Bitcoin / USDT' },
+    { id: 'ETHUSDT', desc: 'Ethereum / USDT' },
+    { id: 'SOLUSDT', desc: 'Solana / USDT' },
+    { id: 'XRPUSDT', desc: 'XRP / USDT' },
+    { id: 'BNBUSDT', desc: 'BNB / USDT' },
+    { id: 'TRXUSDT', desc: 'TRX / USDT' },
+  ],
+  'Crypto Futures': [
+    { id: 'BTCUSDT.P', desc: 'BTCUSDT Perpetual Futures' },
+    { id: 'ETHUSDT.P', desc: 'ETHUSDT Perpetual Futures' },
+    { id: 'XRPUSDT.P', desc: 'XRPUSDT Perpetual Futures' },
+    { id: 'BNBUSDT.P', desc: 'BNBUSDT Perpetual Futures' },
+    { id: 'SOLUSDT.P', desc: 'SOLUSDT Perpetual Futures' },
+    { id: 'TRXUSDT.P', desc: 'TRXUSDT Perpetual Futures' },
+  ],
+  'Commodity': [
+    { id: 'XAUUSD',    desc: 'Gold / USD' },
+    { id: 'WTI1!',     desc: 'WTI Crude Oil Futures' },
+    { id: 'XAGUSD',    desc: 'Silver / USD' },
+    { id: 'XAUUSDT.P', desc: 'Gold Perpetual Futures / USDT' },
+    { id: 'XAGUSDT.P', desc: 'Silver Perpetual Futures / USDT' },
+  ],
+};
+
+let currentHidden = new Set();
+
+function apiBase() {
+  return window.location.origin;
+}
+
+async function loadSymbols() {
+  const pass = document.getElementById('passphrase').value;
+  if (!pass) { showStatus('auth-status', 'err', 'Passphrase를 입력하세요.'); return; }
+
+  document.getElementById('load-btn').disabled = true;
+  try {
+    const res = await fetch(`${apiBase()}/admin/symbols`, { cache: 'no-store' });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.message || 'failed');
+    currentHidden = new Set((json.hidden || []).map(s => s.toUpperCase()));
+    renderSymbols();
+    document.getElementById('symbols-section').style.display = 'block';
+    showStatus('auth-status', 'ok', '불러오기 완료');
+  } catch (e) {
+    showStatus('auth-status', 'err', '불러오기 실패: ' + e.message);
+  } finally {
+    document.getElementById('load-btn').disabled = false;
+  }
+}
+
+function renderSymbols() {
+  const list = document.getElementById('symbol-list');
+  list.innerHTML = '';
+  for (const [cat, symbols] of Object.entries(CATALOG)) {
+    const catEl = document.createElement('div');
+    catEl.className = 'category';
+    catEl.innerHTML = `<div class="category-label">${cat}</div>`;
+    const grid = document.createElement('div');
+    grid.className = 'symbol-grid';
+    for (const sym of symbols) {
+      const isHidden = currentHidden.has(sym.id.toUpperCase());
+      const item = document.createElement('label');
+      item.className = 'symbol-item' + (isHidden ? ' hidden-item' : '');
+      item.innerHTML = `
+        <input type="checkbox" data-id="${sym.id}" ${isHidden ? '' : 'checked'}>
+        <div>
+          <div class="sym-name">${sym.id}</div>
+          <div class="sym-desc">${sym.desc}</div>
+        </div>`;
+      item.querySelector('input').addEventListener('change', (e) => {
+        const id = e.target.dataset.id.toUpperCase();
+        if (e.target.checked) {
+          currentHidden.delete(id);
+          item.classList.remove('hidden-item');
+          item.querySelector('.sym-name').style.color = '';
+        } else {
+          currentHidden.add(id);
+          item.classList.add('hidden-item');
+        }
+        updateHiddenCount();
+      });
+      grid.appendChild(item);
+    }
+    catEl.appendChild(grid);
+    list.appendChild(catEl);
+  }
+  updateHiddenCount();
+}
+
+function updateHiddenCount() {
+  const el = document.getElementById('hidden-count');
+  const n = currentHidden.size;
+  el.innerHTML = n === 0 ? '모든 종목 표시 중' : `<b>${n}개</b> 종목 숨김 처리`;
+}
+
+async function saveSymbols() {
+  const pass = document.getElementById('passphrase').value;
+  if (!pass) { showStatus('save-status', 'err', 'Passphrase를 입력하세요.'); return; }
+
+  const btn = document.querySelector('button.primary');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${apiBase()}/admin/symbols`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ passphrase: pass, hidden: Array.from(currentHidden) }),
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.message || 'failed');
+    showStatus('save-status', 'ok', `저장 완료 — 숨긴 종목 ${json.hidden.length}개`);
+  } catch (e) {
+    showStatus('save-status', 'err', '저장 실패: ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function showStatus(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = 'status ' + type;
+  el.textContent = msg;
+}
+
+document.getElementById('passphrase').addEventListener('keydown', e => {
+  if (e.key === 'Enter') loadSymbols();
+});
+</script>
+</body>
+</html>

@@ -219,12 +219,36 @@ export function persistSymbolRegistry(): void {
   }
 }
 
+export const hiddenSymbols = new Set<string>();
+
+export async function loadAdminConfig(): Promise<void> {
+  try {
+    const hostname = window.location.hostname;
+    const base = (hostname === 'localhost' || hostname === '127.0.0.1')
+      ? 'http://127.0.0.1:8787'
+      : window.location.origin;
+    const res = await fetch(`${base}/admin/symbols`, { cache: 'no-store' });
+    if (!res.ok) return;
+    const json = await res.json() as { hidden?: unknown };
+    if (Array.isArray(json.hidden)) {
+      hiddenSymbols.clear();
+      json.hidden.forEach((s) => {
+        if (typeof s === 'string') hiddenSymbols.add(s.trim().toUpperCase());
+      });
+    }
+  } catch {
+    // non-fatal: hidden list stays empty
+  }
+}
+
 export function getAllSymbolCatalog(): Record<string, SymbolCatalogItem[]> {
   const catalog: Record<string, SymbolCatalogItem[]> = {};
   for (const [category, items] of Object.entries(SYMBOL_CATALOG)) {
-    catalog[category] = items.map((item) => ({ ...item, category }));
+    const visible = items.filter((item) => !hiddenSymbols.has(item.id.toUpperCase()));
+    if (visible.length) catalog[category] = visible.map((item) => ({ ...item, category }));
   }
   for (const item of CUSTOM_SYMBOLS) {
+    if (hiddenSymbols.has(item.id.toUpperCase())) continue;
     if (!catalog[item.category]) catalog[item.category] = [];
     catalog[item.category].push(item);
   }
