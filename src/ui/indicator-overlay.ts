@@ -283,7 +283,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       btn.type = 'button';
       btn.title = title;
       btn.innerHTML = svg;
-      const actionBtnSz = touchLarge ? 28 : (compactOverlay ? 15 : 16);
+      const actionBtnSz = touchLarge ? 19 : (compactOverlay ? 15 : 16);
       btn.style.cssText = `width:${actionBtnSz}px;height:${actionBtnSz}px;
         display:inline-flex;align-items:center;justify-content:center;
         border:1px solid rgba(121,136,166,0.45);border-radius:4px;background:rgba(15,21,33,0.9);
@@ -304,9 +304,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     ) => {
       const actions = document.createElement('span');
       actions.className = 'indicator-overlay-tag-actions';
-      actions.style.cssText = `position:absolute;left:0;top:0;right:0;bottom:0;
-        display:none;align-items:center;justify-content:center;gap:${touchLarge ? 4 : 2}px;
-        background:rgba(12,17,28,0.93);border-radius:3px;`;
+      actions.style.cssText = `display:none;align-items:center;gap:${touchLarge ? 3 : 2}px;`;
       const currentlyVisible = isIndicatorLineVisible(key);
       const hideBtn = makeTagActionButton(
         currentlyVisible ? '감추기' : '표시',
