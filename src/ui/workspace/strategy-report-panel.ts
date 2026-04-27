@@ -444,8 +444,14 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   panel.style.cssText = `position:absolute;left:${leftInset}px;right:0;bottom:0;height:${normalHeight}px;background:#0f1524;border-top:1px solid #2a2e3e;z-index:900;display:flex;flex-direction:column;`;
   app.appendChild(panel);
 
+  const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
   const resizeHandle = document.createElement('div');
-  resizeHandle.style.cssText = 'position:absolute;left:0;right:0;top:-4px;height:8px;cursor:ns-resize;z-index:15;';
+  resizeHandle.style.cssText = `position:absolute;left:0;right:0;top:${isTouchDevice ? '-12px' : '-4px'};height:${isTouchDevice ? '24px' : '8px'};cursor:ns-resize;z-index:15;display:flex;align-items:center;justify-content:center;`;
+  if (isTouchDevice) {
+    const grip = document.createElement('div');
+    grip.style.cssText = 'width:40px;height:4px;border-radius:2px;background:rgba(180,190,210,0.35);pointer-events:none;';
+    resizeHandle.appendChild(grip);
+  }
   panel.appendChild(resizeHandle);
 
   const header = document.createElement('div');
@@ -520,14 +526,14 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   panel.appendChild(body);
 
   const periodMenu = document.createElement('div');
-  periodMenu.style.cssText = 'position:absolute;top:0;left:0;background:#171f32;border:1px solid #30405e;border-radius:8px;padding:8px;display:none;z-index:20;min-width:280px;';
-  body.appendChild(periodMenu);
+  periodMenu.style.cssText = 'position:absolute;top:0;left:0;background:#171f32;border:1px solid #30405e;border-radius:8px;padding:8px;display:none;z-index:950;min-width:280px;';
+  panel.appendChild(periodMenu);
   const widgetMenu = document.createElement('div');
-  widgetMenu.style.cssText = 'position:absolute;top:0;left:0;background:#171f32;border:1px solid #30405e;border-radius:8px;padding:6px;display:none;z-index:20;min-width:210px;';
-  body.appendChild(widgetMenu);
+  widgetMenu.style.cssText = 'position:absolute;top:0;left:0;background:#171f32;border:1px solid #30405e;border-radius:8px;padding:6px;display:none;z-index:950;min-width:210px;';
+  panel.appendChild(widgetMenu);
   const settingsMenu = document.createElement('div');
-  settingsMenu.style.cssText = 'position:absolute;top:0;left:0;background:#171f32;border:1px solid #30405e;border-radius:8px;padding:8px;display:none;z-index:20;min-width:210px;';
-  body.appendChild(settingsMenu);
+  settingsMenu.style.cssText = 'position:absolute;top:0;left:0;background:#171f32;border:1px solid #30405e;border-radius:8px;padding:8px;display:none;z-index:950;min-width:210px;';
+  panel.appendChild(settingsMenu);
 
   const metricsView = document.createElement('div');
   metricsView.style.cssText = 'display:flex;flex-direction:column;min-height:0;flex:1;overflow-y:auto;overflow-x:hidden;';
@@ -610,10 +616,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const placeMenuAtButton = (menu: HTMLDivElement, btn: HTMLButtonElement) => {
-    const bodyRect = body.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
     const btnRect = btn.getBoundingClientRect();
 
-    // Measure real menu size first to avoid clipping on right/bottom edges.
     menu.style.display = 'block';
     menu.style.visibility = 'hidden';
     menu.style.left = '0px';
@@ -621,15 +626,14 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const menuW = Math.max(120, menu.offsetWidth);
     const menuH = Math.max(80, menu.offsetHeight);
 
-    let left = btnRect.left - bodyRect.left;
-    if (left + menuW > bodyRect.width - 8) left = bodyRect.width - menuW - 8;
+    let left = btnRect.left - panelRect.left;
+    if (left + menuW > panelRect.width - 8) left = panelRect.width - menuW - 8;
     if (left < 8) left = 8;
 
-    let top = btnRect.bottom - bodyRect.top;
-    if (top + menuH > bodyRect.height - 8) {
-      top = btnRect.top - bodyRect.top - menuH;
-    }
-    if (top < 8) top = 8;
+    // 버튼 위에 표시 (패널이 화면 하단이므로 메뉴는 버튼 위쪽)
+    let top = btnRect.top - panelRect.top - menuH - 4;
+    if (top < 4) top = btnRect.bottom - panelRect.top + 4;
+    if (top + menuH > panelRect.height - 4) top = Math.max(4, panelRect.height - menuH - 4);
 
     menu.style.left = `${left}px`;
     menu.style.top = `${top}px`;
@@ -728,7 +732,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       periodText.style.fontSize = '11px';
     }
 
-    const maxMenuWidth = Math.max(180, width - 16);
+    const maxMenuWidth = Math.max(180, panel.clientWidth - 16);
     periodMenu.style.maxWidth = `${maxMenuWidth}px`;
     widgetMenu.style.maxWidth = `${maxMenuWidth}px`;
     settingsMenu.style.maxWidth = `${maxMenuWidth}px`;
@@ -1261,7 +1265,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       panel.style.bottom = '0';
       panel.style.height = `${mode === 'collapsed' ? headerHeight : normalHeight}px`;
       panel.style.zIndex = '900';
-      resizeHandle.style.display = mode === 'normal' ? 'block' : 'none';
+      resizeHandle.style.display = mode === 'normal' ? 'flex' : 'none';
       expandBtn.innerHTML = icon.maximize;
       collapseBtn.innerHTML = mode === 'collapsed' ? icon.unfold : icon.fold;
       collapseBtn.title = mode === 'collapsed' ? '펼치기' : '접기';
@@ -1299,6 +1303,34 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     window.addEventListener('mousemove', handleDragMove);
     window.addEventListener('mouseup', stopDrag);
   });
+
+  const handleTouchDragMove = (event: TouchEvent) => {
+    if (!dragging || panelMode !== 'normal') return;
+    event.preventDefault();
+    const touch = event.touches[0];
+    if (!touch) return;
+    const delta = startClientY - touch.clientY;
+    applyNormalHeight(startHeight + delta);
+  };
+
+  const stopTouchDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    window.removeEventListener('touchmove', handleTouchDragMove);
+    window.removeEventListener('touchend', stopTouchDrag);
+  };
+
+  resizeHandle.addEventListener('touchstart', (event) => {
+    if (panelMode !== 'normal') return;
+    event.preventDefault();
+    const touch = event.touches[0];
+    if (!touch) return;
+    dragging = true;
+    startClientY = touch.clientY;
+    startHeight = normalHeight;
+    window.addEventListener('touchmove', handleTouchDragMove, { passive: false });
+    window.addEventListener('touchend', stopTouchDrag);
+  }, { passive: false });
 
   worker.addEventListener('message', (event: MessageEvent<{ requestId: number; result: ReportResult }>) => {
     const message = event.data;

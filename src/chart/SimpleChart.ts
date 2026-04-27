@@ -272,6 +272,9 @@ export class SimpleChart {
   // 십자선 가격박스 옆 + 아이콘 히트 영역
   private crosshairPlusHit: { x: number; y: number; r: number; price: number } | null = null;
   private crosshairPlusHovered = false;
+
+  public onCrosshairOHLC: ((ohlc: { open: number; high: number; low: number; close: number; time: number } | null) => void) | null = null;
+  private _lastCrosshairOHLCIdx = -2;
   // 기본 십자선 자동 숨김 타이머 (5초)
   private static readonly CROSSHAIR_AUTO_HIDE_MS = 5000;
   private crosshairAutoHideTimer: ReturnType<typeof setTimeout> | null = null;
@@ -2667,6 +2670,21 @@ export class SimpleChart {
   public setVisibleAll() {
     this.startIndex = 0;
     this.endIndex = this.data.length;
+    this.draw();
+  }
+
+  public setVisibleByDateRange(fromSec: number, toSec: number) {
+    if (!this.data.length) return;
+    let from = 0;
+    let to = this.data.length;
+    for (let i = 0; i < this.data.length; i++) {
+      if (this.data[i].time >= fromSec) { from = i; break; }
+    }
+    for (let i = this.data.length - 1; i >= 0; i--) {
+      if (this.data[i].time <= toSec) { to = i + 1; break; }
+    }
+    this.startIndex = Math.max(0, from);
+    this.endIndex = Math.min(this.data.length, Math.max(this.startIndex + 2, to));
     this.draw();
   }
 
@@ -6534,7 +6552,15 @@ export class SimpleChart {
       }
     }
 
-    if (!this.isMouseOver) return;
+    const _isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+
+    if (!this.isMouseOver) {
+      if (!_isTouchDevice && this.onCrosshairOHLC && this._lastCrosshairOHLCIdx !== -1) {
+        this._lastCrosshairOHLCIdx = -1;
+        this.onCrosshairOHLC(null);
+      }
+      return;
+    }
 
     // X축(세로선)은 메인 캔들 패널에서만 자석 스냅, 보조지표 패널에서는 자유 이동
     let snapX = this.mouseX;
@@ -6589,72 +6615,75 @@ export class SimpleChart {
       ctx.fillText(label, boxX + boxW / 2, boxY + boxH / 2 + 0.5);
       ctx.restore();
 
-      // OHLCV 툴팁
-      const isUp = c.close >= c.open;
-      const closeColor = isUp ? '#ef5350' : '#26a69a';
-      const tradingValue = c.close * c.volume;
-      const d = symbolPriceDigits;
-      const tooltipRows: Array<{ label: string; value: string; color: string }> = [
-        { label: '시가', value: formatWithComma(c.open,  d), color: '#c9d4e8' },
-        { label: '고가', value: formatWithComma(c.high,  d), color: '#ef5350' },
-        { label: '저가', value: formatWithComma(c.low,   d), color: '#26a69a' },
-        { label: '종가', value: formatWithComma(c.close, d), color: closeColor },
-        { label: '거래량', value: formatKUnit(c.volume),        color: '#c9d4e8' },
-        { label: '거래대금', value: formatKUnit(tradingValue),   color: '#c9d4e8' },
-      ];
-      ctx.save();
-      ctx.font = `600 11px ${CHART_FONT_STACK}`;
-      const tPadX = 9, tPadY = 6, tLineH = 17;
-      const tLabelW = 44;
-      const tValueW = Math.max(...tooltipRows.map(r => Math.ceil(ctx.measureText(r.value).width))) + 4;
-      const tBoxW = tPadX * 2 + tLabelW + tValueW + 6;
-      const tHeaderH = tLineH;
-      const tBoxH = tPadY * 2 + tHeaderH + tooltipRows.length * tLineH;
-      const showOnLeft = solidX > chartLeft + chartW / 2;
-      const tBoxX = showOnLeft ? chartLeft + 4 : chartRight - tBoxW - 4;
-      const tBoxY = R.top + 4;
-      const tRadius = 5;
-      ctx.beginPath();
-      ctx.moveTo(tBoxX + tRadius, tBoxY);
-      ctx.lineTo(tBoxX + tBoxW - tRadius, tBoxY);
-      ctx.arcTo(tBoxX + tBoxW, tBoxY, tBoxX + tBoxW, tBoxY + tRadius, tRadius);
-      ctx.lineTo(tBoxX + tBoxW, tBoxY + tBoxH - tRadius);
-      ctx.arcTo(tBoxX + tBoxW, tBoxY + tBoxH, tBoxX + tBoxW - tRadius, tBoxY + tBoxH, tRadius);
-      ctx.lineTo(tBoxX + tRadius, tBoxY + tBoxH);
-      ctx.arcTo(tBoxX, tBoxY + tBoxH, tBoxX, tBoxY + tBoxH - tRadius, tRadius);
-      ctx.lineTo(tBoxX, tBoxY + tRadius);
-      ctx.arcTo(tBoxX, tBoxY, tBoxX + tRadius, tBoxY, tRadius);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(15, 20, 32, 0.92)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(60, 80, 110, 0.8)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.textBaseline = 'middle';
-      // 날짜 헤더
-      ctx.font = `600 11px ${CHART_FONT_STACK}`;
-      ctx.fillStyle = '#7a8aab';
-      ctx.textAlign = 'left';
-      ctx.fillText(label, tBoxX + tPadX, tBoxY + tPadY + tLineH / 2);
-      // 구분선
-      ctx.strokeStyle = 'rgba(60, 80, 110, 0.5)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(tBoxX + 4, tBoxY + tPadY + tLineH + 2);
-      ctx.lineTo(tBoxX + tBoxW - 4, tBoxY + tPadY + tLineH + 2);
-      ctx.stroke();
-      // 데이터 행
-      tooltipRows.forEach((row, i) => {
-        const rowY = tBoxY + tPadY + tHeaderH + i * tLineH + tLineH / 2;
+      // OHLCV 툴팁: 모바일=canvas floating, PC=헤더 콜백
+      if (_isTouchDevice) {
+        const isUp = c.close >= c.open;
+        const closeColor = isUp ? '#ef5350' : '#26a69a';
+        const tradingValue = c.close * c.volume;
+        const d = symbolPriceDigits;
+        const tooltipRows: Array<{ label: string; value: string; color: string }> = [
+          { label: '시가', value: formatWithComma(c.open,  d), color: '#c9d4e8' },
+          { label: '고가', value: formatWithComma(c.high,  d), color: '#ef5350' },
+          { label: '저가', value: formatWithComma(c.low,   d), color: '#26a69a' },
+          { label: '종가', value: formatWithComma(c.close, d), color: closeColor },
+          { label: '거래량', value: formatKUnit(c.volume),        color: '#c9d4e8' },
+          { label: '거래대금', value: formatKUnit(tradingValue),   color: '#c9d4e8' },
+        ];
+        ctx.save();
         ctx.font = `600 11px ${CHART_FONT_STACK}`;
-        ctx.fillStyle = '#4e5d78';
+        const tPadX = 9, tPadY = 6, tLineH = 17;
+        const tLabelW = 44;
+        const tValueW = Math.max(...tooltipRows.map(r => Math.ceil(ctx.measureText(r.value).width))) + 4;
+        const tBoxW = tPadX * 2 + tLabelW + tValueW + 6;
+        const tHeaderH = tLineH;
+        const tBoxH = tPadY * 2 + tHeaderH + tooltipRows.length * tLineH;
+        const gap = 14;
+        const fitsRight = solidX + gap + tBoxW <= chartRight - 2;
+        const tBoxX = fitsRight ? solidX + gap : solidX - gap - tBoxW;
+        const tBoxY = Math.max(R.top + 2, Math.min(this.mouseY - tBoxH / 2, mainH - tBoxH - 4));
+        const tRadius = 5;
+        ctx.beginPath();
+        ctx.moveTo(tBoxX + tRadius, tBoxY);
+        ctx.lineTo(tBoxX + tBoxW - tRadius, tBoxY);
+        ctx.arcTo(tBoxX + tBoxW, tBoxY, tBoxX + tBoxW, tBoxY + tRadius, tRadius);
+        ctx.lineTo(tBoxX + tBoxW, tBoxY + tBoxH - tRadius);
+        ctx.arcTo(tBoxX + tBoxW, tBoxY + tBoxH, tBoxX + tBoxW - tRadius, tBoxY + tBoxH, tRadius);
+        ctx.lineTo(tBoxX + tRadius, tBoxY + tBoxH);
+        ctx.arcTo(tBoxX, tBoxY + tBoxH, tBoxX, tBoxY + tBoxH - tRadius, tRadius);
+        ctx.lineTo(tBoxX, tBoxY + tRadius);
+        ctx.arcTo(tBoxX, tBoxY, tBoxX + tRadius, tBoxY, tRadius);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(15, 20, 32, 0.75)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(60, 80, 110, 0.8)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.textBaseline = 'middle';
+        ctx.font = `600 11px ${CHART_FONT_STACK}`;
+        ctx.fillStyle = '#7a8aab';
         ctx.textAlign = 'left';
-        ctx.fillText(row.label, tBoxX + tPadX, rowY);
-        ctx.fillStyle = row.color;
-        ctx.textAlign = 'right';
-        ctx.fillText(row.value, tBoxX + tBoxW - tPadX, rowY);
-      });
-      ctx.restore();
+        ctx.fillText(label, tBoxX + tPadX, tBoxY + tPadY + tLineH / 2);
+        ctx.strokeStyle = 'rgba(60, 80, 110, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(tBoxX + 4, tBoxY + tPadY + tLineH + 2);
+        ctx.lineTo(tBoxX + tBoxW - 4, tBoxY + tPadY + tLineH + 2);
+        ctx.stroke();
+        tooltipRows.forEach((row, i) => {
+          const rowY = tBoxY + tPadY + tHeaderH + i * tLineH + tLineH / 2;
+          ctx.font = `600 11px ${CHART_FONT_STACK}`;
+          ctx.fillStyle = '#4e5d78';
+          ctx.textAlign = 'left';
+          ctx.fillText(row.label, tBoxX + tPadX, rowY);
+          ctx.fillStyle = row.color;
+          ctx.textAlign = 'right';
+          ctx.fillText(row.value, tBoxX + tBoxW - tPadX, rowY);
+        });
+        ctx.restore();
+      } else if (this.onCrosshairOHLC && this._lastCrosshairOHLCIdx !== snappedCandleIndex) {
+        this._lastCrosshairOHLCIdx = snappedCandleIndex;
+        this.onCrosshairOHLC({ open: c.open, high: c.high, low: c.low, close: c.close, time: c.time });
+      }
     }
 
     if (this.mouseY < mainH && mainScale) {

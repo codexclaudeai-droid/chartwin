@@ -217,10 +217,16 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     const strategies = chart.getStrategies() as StrategyDefinition[];
     const activeStrategyId = chart.getActiveStrategyId();
     const activeStrategy = strategies.find((s) => s.id === activeStrategyId);
-    const compactOverlay = window.innerWidth < 600
-      || (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+    const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    const compactOverlay = !isTouchDevice && window.innerWidth < 600;
+    // 모바일 터치: 태그 폰트/패딩을 보조지표 타이틀 수준(13px)으로 확대
+    const touchLarge = isTouchDevice;
+    const tagFontSize = touchLarge ? 13 : (compactOverlay ? 11 : 12);
+    const tagPadX = touchLarge ? '4px 10px' : (compactOverlay ? '1px 4px' : '2px 7px');
+    const tagGap = touchLarge ? 6 : (compactOverlay ? 2 : 4);
+    const tagLineH = touchLarge ? 1.5 : (compactOverlay ? 1.2 : 1.35);
     const isMobileOverlay = /Mobi|Android|iPhone|iPad|iPod|Touch/i.test(navigator.userAgent)
-      || (window.matchMedia?.('(pointer: coarse)').matches ?? false)
+      || isTouchDevice
       || window.innerWidth < 600;
     activeMobileMainTag = null;
     const marketLeftInset = chart.config.layout.marketInfoSide === 'left'
@@ -230,7 +236,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     overlay.style.maxWidth = compactOverlay
       ? `calc(100% - ${marketLeftInset + 16}px)`
       : 'none';
-    overlay.style.gap = compactOverlay ? '1px' : '3px';
+    overlay.style.gap = touchLarge ? '4px' : (compactOverlay ? '1px' : '3px');
 
     const getIndicatorStyleKeys = (targetKey: string): string[] => {
       const indicators = chart.config.indicators as any;
@@ -265,10 +271,11 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       onOverlayChange?.();
     };
 
+    const actionIconSz = touchLarge ? 18 : 12;
     const eyeIconSvg = (visible: boolean): string => (
       visible
-        ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12"></path><circle cx="12" cy="12" r="2.8"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>'
-        : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12"></path><circle cx="12" cy="12" r="2.8"></circle></svg>'
+        ? `<svg viewBox="0 0 24 24" width="${actionIconSz}" height="${actionIconSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12"></path><circle cx="12" cy="12" r="2.8"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`
+        : `<svg viewBox="0 0 24 24" width="${actionIconSz}" height="${actionIconSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12"></path><circle cx="12" cy="12" r="2.8"></circle></svg>`
     );
 
     const makeTagActionButton = (title: string, svg: string, onClick: () => void): HTMLButtonElement => {
@@ -276,7 +283,8 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       btn.type = 'button';
       btn.title = title;
       btn.innerHTML = svg;
-      btn.style.cssText = `width:${compactOverlay ? 15 : 16}px;height:${compactOverlay ? 15 : 16}px;
+      const actionBtnSz = touchLarge ? 28 : (compactOverlay ? 15 : 16);
+      btn.style.cssText = `width:${actionBtnSz}px;height:${actionBtnSz}px;
         display:inline-flex;align-items:center;justify-content:center;
         border:1px solid rgba(121,136,166,0.45);border-radius:4px;background:rgba(15,21,33,0.9);
         color:#d3def4;cursor:pointer;padding:0;`;
@@ -296,7 +304,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     ) => {
       const actions = document.createElement('span');
       actions.className = 'indicator-overlay-tag-actions';
-      actions.style.cssText = 'display:inline-flex;align-items:center;gap:3px;opacity:0;transition:opacity 0.15s;';
+      actions.style.cssText = `display:inline-flex;align-items:center;gap:${touchLarge ? 6 : 3}px;opacity:0;transition:opacity 0.15s;`;
       const currentlyVisible = isIndicatorLineVisible(key);
       const hideBtn = makeTagActionButton(
         currentlyVisible ? '감추기' : '표시',
@@ -305,7 +313,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       );
       const settingsBtn = makeTagActionButton(
         '설정',
-        '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"></line><circle cx="9" cy="7" r="2"></circle><line x1="4" y1="12" x2="20" y2="12"></line><circle cx="15" cy="12" r="2"></circle><line x1="4" y1="17" x2="20" y2="17"></line><circle cx="11" cy="17" r="2"></circle></svg>',
+        `<svg viewBox="0 0 24 24" width="${actionIconSz}" height="${actionIconSz}" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"></line><circle cx="9" cy="7" r="2"></circle><line x1="4" y1="12" x2="20" y2="12"></line><circle cx="15" cy="12" r="2"></circle><line x1="4" y1="17" x2="20" y2="17"></line><circle cx="11" cy="17" r="2"></circle></svg>`,
         openSettings,
       );
       actions.appendChild(hideBtn);
@@ -352,10 +360,10 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
 
     const makeTag = (label: string, color: string, key: string) => {
       const tag = document.createElement('div');
-      tag.style.cssText = `display:inline-flex;align-items:center;gap:${compactOverlay ? 2 : 4}px;max-width:fit-content;
+      tag.style.cssText = `display:inline-flex;align-items:center;gap:${tagGap}px;max-width:fit-content;
         background:transparent;border:1px solid transparent;border-radius:3px;
-        padding:${compactOverlay ? '1px 4px' : '2px 7px'};font-size:${compactOverlay ? 11 : 12}px;font-family:${CHART_FONT_STACK};color:${color};
-        pointer-events:auto;cursor:pointer;transition:border-color 0.15s;line-height:${compactOverlay ? 1.2 : 1.35};text-shadow:0 1px 2px rgba(0,0,0,0.72);`;
+        padding:${tagPadX};font-size:${tagFontSize}px;font-family:${CHART_FONT_STACK};color:${color};
+        pointer-events:auto;cursor:pointer;transition:border-color 0.15s;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);`;
       const textEl = document.createElement('span');
       textEl.className = 'indicator-overlay-tag-name';
       textEl.textContent = label;
@@ -381,10 +389,10 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
 
     const makeStrategyTag = (label: string) => {
       const tag = document.createElement('div');
-      tag.style.cssText = `display:inline-flex;align-items:center;gap:${compactOverlay ? 2 : 4}px;max-width:none;
+      tag.style.cssText = `display:inline-flex;align-items:center;gap:${tagGap}px;max-width:none;
         background:transparent;border:none;border-radius:0;
-        padding:${compactOverlay ? '1px 4px' : '2px 7px'};font-size:${compactOverlay ? 11 : 12}px;font-family:${CHART_FONT_STACK};color:#f5f7fb;
-        pointer-events:auto;cursor:default;box-sizing:border-box;overflow:visible;white-space:nowrap;line-height:${compactOverlay ? 1.2 : 1.35};text-shadow:0 1px 2px rgba(0,0,0,0.72);`;
+        padding:${tagPadX};font-size:${tagFontSize}px;font-family:${CHART_FONT_STACK};color:#f5f7fb;
+        pointer-events:auto;cursor:default;box-sizing:border-box;overflow:visible;white-space:nowrap;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);`;
       const textEl = document.createElement('span');
       textEl.textContent = label;
       textEl.style.cssText = 'white-space:nowrap;';
@@ -393,12 +401,14 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       visibilityBtn.type = 'button';
       visibilityBtn.className = 'strategy-visibility-btn';
       visibilityBtn.title = isVisible ? '전략시그널 감추기' : '전략시그널 보이기';
-      visibilityBtn.style.cssText = `width:${compactOverlay ? 24 : 30}px;height:${compactOverlay ? 24 : 30}px;border:none;border-radius:5px;
+      const btnSz = touchLarge ? 34 : (compactOverlay ? 24 : 30);
+      const svgSz = touchLarge ? 20 : (compactOverlay ? 17 : 20);
+      visibilityBtn.style.cssText = `width:${btnSz}px;height:${btnSz}px;border:none;border-radius:5px;
         background:transparent;color:#edf3ff;display:inline-flex;align-items:center;justify-content:center;
         padding:0;cursor:pointer;transition:background 0.15s ease,border-color 0.15s ease,color 0.15s ease;flex:0 0 auto;`;
       visibilityBtn.innerHTML = isVisible
-        ? `<svg viewBox="0 0 24 24" width="${compactOverlay ? 17 : 20}" height="${compactOverlay ? 17 : 20}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><path class="eye-lid-top" d="M3 12c2.6-3.4 5.5-5 9-5 3.5 0 6.4 1.6 9 5"></path><path class="eye-lid-bottom" d="M3 12c2.6 3.4 5.5 5 9 5 3.5 0 6.4-1.6 9-5"></path><circle class="eye-iris" cx="12" cy="12" r="2.8"></circle></svg>`
-        : `<svg viewBox="0 0 24 24" width="${compactOverlay ? 17 : 20}" height="${compactOverlay ? 17 : 20}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="2.8"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`;
+        ? `<svg viewBox="0 0 24 24" width="${svgSz}" height="${svgSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><path class="eye-lid-top" d="M3 12c2.6-3.4 5.5-5 9-5 3.5 0 6.4 1.6 9 5"></path><path class="eye-lid-bottom" d="M3 12c2.6 3.4 5.5 5 9 5 3.5 0 6.4-1.6 9-5"></path><circle class="eye-iris" cx="12" cy="12" r="2.8"></circle></svg>`
+        : `<svg viewBox="0 0 24 24" width="${svgSz}" height="${svgSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="2.8"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`;
       visibilityBtn.addEventListener('mouseenter', () => {
         visibilityBtn.style.background = 'transparent';
         visibilityBtn.style.color = '#ffffff';
@@ -423,10 +433,10 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       fallbackColor = '#dbe3f4',
     ) => {
       const tag = document.createElement('div');
-      tag.style.cssText = `display:inline-flex;align-items:center;gap:${compactOverlay ? 3 : 5}px;max-width:fit-content;
+      tag.style.cssText = `display:inline-flex;align-items:center;gap:${touchLarge ? 6 : (compactOverlay ? 3 : 5)}px;max-width:fit-content;
         background:transparent;border:1px solid transparent;border-radius:3px;
-        padding:${compactOverlay ? '1px 4px' : '2px 7px'};font-size:${compactOverlay ? 11 : 12}px;font-family:${CHART_FONT_STACK};color:${fallbackColor};
-        pointer-events:auto;cursor:pointer;transition:border-color 0.15s;line-height:${compactOverlay ? 1.2 : 1.35};text-shadow:0 1px 2px rgba(0,0,0,0.72);`;
+        padding:${tagPadX};font-size:${tagFontSize}px;font-family:${CHART_FONT_STACK};color:${fallbackColor};
+        pointer-events:auto;cursor:pointer;transition:border-color 0.15s;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);`;
       const textWrap = document.createElement('span');
       textWrap.className = 'indicator-overlay-tag-name';
       textWrap.style.cssText = `display:inline-flex;align-items:center;gap:${compactOverlay ? 3 : 5}px;`;

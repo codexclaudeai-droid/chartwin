@@ -35,6 +35,7 @@ export type PaneChrome = {
   strategyReportBtn: HTMLButtonElement;
   marketSessionBadge: HTMLSpanElement;
   headerTitle: HTMLDivElement;
+  ohlcHeaderDisplay: HTMLDivElement;
   winCtrlWrap: HTMLDivElement;
   minBtn: HTMLButtonElement;
   maxBtn: HTMLButtonElement;
@@ -179,16 +180,19 @@ export function createPaneChrome<TKey extends string>({
   });
   paneHeader.appendChild(strategyReportBtn);
 
+  const headerTitle = document.createElement('div');
+  headerTitle.style.cssText = 'display:none;';
+  paneHeader.appendChild(headerTitle);
+
   const marketSessionBadge = document.createElement('span');
   marketSessionBadge.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:10px;height:10px;border-radius:50%;border:1px solid #3a4155;background:#3a4155;flex-shrink:0;';
   marketSessionBadge.title = '장상태';
   paneHeader.appendChild(marketSessionBadge);
 
-  const headerTitle = document.createElement('div');
-  headerTitle.style.cssText = 'display:none;';
-  paneHeader.appendChild(headerTitle);
+  const ohlcHeaderDisplay = document.createElement('div');
+  ohlcHeaderDisplay.style.cssText = 'display:flex;align-items:center;gap:6px;margin-left:auto;font-size:11px;font-family:"Segoe UI",Arial,sans-serif;white-space:nowrap;flex-shrink:0;line-height:1;';
+  paneHeader.appendChild(ohlcHeaderDisplay);
 
-  currencySelect.style.marginLeft = 'auto';
   paneHeader.appendChild(currencySelect);
 
   const winCtrlWrap = document.createElement('div');
@@ -291,6 +295,7 @@ export function createPaneChrome<TKey extends string>({
     strategyReportBtn,
     marketSessionBadge,
     headerTitle,
+    ohlcHeaderDisplay,
     winCtrlWrap,
     minBtn,
     maxBtn,

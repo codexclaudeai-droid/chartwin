@@ -542,6 +542,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       strategyReportBtn,
       marketSessionBadge,
       headerTitle,
+      ohlcHeaderDisplay,
       winCtrlWrap,
       minBtn,
       maxBtn,
@@ -587,11 +588,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         if (marketPriceWrap.parentElement !== paneHeader) paneHeader.insertBefore(marketPriceWrap, tfSelect);
         paneHeader.insertBefore(marketPriceWrap, tfSelect);
         currencySelect.style.marginLeft = '0';
+        ohlcHeaderDisplay.style.marginLeft = '0';
         winCtrlWrap.style.marginLeft = 'auto';
       } else {
         if (marketPriceWrap.parentElement !== paneHeader) paneHeader.insertBefore(marketPriceWrap, tfSelect);
         if (currencySelect.parentElement !== paneHeader) paneHeader.insertBefore(currencySelect, winCtrlWrap);
-        currencySelect.style.marginLeft = 'auto';
+        ohlcHeaderDisplay.style.marginLeft = 'auto';
+        currencySelect.style.marginLeft = '0';
         winCtrlWrap.style.marginLeft = '6px';
       }
     };
@@ -844,6 +847,26 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       winCtrlWrap.style.display = (visibleCount <= 1 && paneState.maximizedPaneId === null) ? 'none' : 'flex';
     };
 
+    const updateOhlcHeader = (candle: { open: number; high: number; low: number; close: number } | null) => {
+      if (isMobile) return;
+      if (!candle) {
+        const last = chart.getCandles().at(-1);
+        if (!last) { ohlcHeaderDisplay.innerHTML = ''; return; }
+        candle = last;
+      }
+      const d = getSymbolPricePrecision(chart.config.symbol, chart.config.quoteCurrency);
+      const closeColor = candle.close >= candle.open ? '#ef5350' : '#26a69a';
+      ohlcHeaderDisplay.innerHTML =
+        `<span style="color:#6b7a96;font-size:10px">O</span><span style="color:#c9d4e8">${formatWithComma(candle.open, d)}</span>` +
+        `<span style="color:#6b7a96;font-size:10px">H</span><span style="color:#ef5350">${formatWithComma(candle.high, d)}</span>` +
+        `<span style="color:#6b7a96;font-size:10px">L</span><span style="color:#26a69a">${formatWithComma(candle.low, d)}</span>` +
+        `<span style="color:#6b7a96;font-size:10px">C</span><span style="color:${closeColor}">${formatWithComma(candle.close, d)}</span>`;
+    };
+
+    if (!isMobile) {
+      chart.onCrosshairOHLC = (ohlc) => updateOhlcHeader(ohlc);
+    }
+
     const fallbackTicker = createLiveTicker({
       chart: {
         config: chart.config,
@@ -916,9 +939,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         rawCandles = candles.slice();
         applyDisplayCurrencyToChart();
         refreshChartUi();
+        updateOhlcHeader(null);
       },
       onLiveTick: () => {
         refreshHeader();
+        updateOhlcHeader(null);
       },
       onStatusChange: (status) => {
         setLiveStatus(status);
@@ -970,9 +995,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         rawCandles = candles.slice();
         applyDisplayCurrencyToChart();
         refreshChartUi();
+        updateOhlcHeader(null);
       },
       onLiveTick: () => {
         refreshHeader();
+        updateOhlcHeader(null);
       },
       onStatusChange: (status) => {
         setLiveStatus(status);
@@ -1029,6 +1056,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           chart.config.symbol = canonical;
           saveSymbol(canonical);
           restoreCurrentChartDrawings();
+          ohlcHeaderDisplay.innerHTML = '';
           void reloadLiveData();
         });
       },
@@ -1041,6 +1069,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         persistCurrentChartDrawings();
         chart.setTimeframe(timeframe);
         saveTimeframe(timeframe);
+        ohlcHeaderDisplay.innerHTML = '';
         const hasStoredTarget = restoreCurrentChartDrawings({ clearWhenMissing: false });
         void reloadLiveData().then(() => {
           if (hasStoredTarget) {
@@ -1567,6 +1596,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         leftInset: drawingToolbarDockWidth,
         getActivePane,
         onApplyRange: (label) => applyRangeToChart(getActivePane().chart, label),
+        onApplyDateRange: (fromSec, toSec) => getActivePane().chart.setVisibleByDateRange?.(fromSec, toSec),
         onOpenTimezone: (chart, onUpdated) => openTimezoneModal(chart, onUpdated),
         formatDateWithTimezone,
         formatTimezoneLabel,

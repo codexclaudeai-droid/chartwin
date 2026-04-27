@@ -39,6 +39,7 @@ export function collectMainIndicatorNames(config: MainIndicatorsLike): string[] 
 export type RangeChartLike = {
   setVisibleAll: () => void;
   setVisibleBySeconds: (seconds: number) => void;
+  setVisibleByDateRange?: (fromSec: number, toSec: number) => void;
 };
 
 export function applyRangeToChart(chart: RangeChartLike, key: string): void {
