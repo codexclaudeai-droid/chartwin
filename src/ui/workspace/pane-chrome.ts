@@ -214,7 +214,12 @@ export function createPaneChrome<TKey extends string>({
     symLabel.textContent = getSymbolDisplayLabel ? getSymbolDisplayLabel(symbol) : symbol;
   };
 
+  const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
   const applyResponsive = () => {
+    if (isTouchDevice) {
+      indBtn.style.display = 'none';
+      strategyBtn.style.display = 'none';
+    }
     const width = host.clientWidth;
     if (width < 560) {
       paneHeader.style.gap = '4px';
