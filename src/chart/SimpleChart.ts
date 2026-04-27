@@ -789,6 +789,7 @@ export class SimpleChart {
       this.pendingChannelId = null;
       this.fibTrendPointStage = 0;
       this.touchDrawingTapCount = 0;
+      this._lastCrosshairOHLCIdx = -2;
       this.updateChartCursor();
       this.syncDrawingToolbar();
       this.requestOverlayDraw();
@@ -6616,7 +6617,7 @@ export class SimpleChart {
       ctx.restore();
 
       // OHLCV 툴팁: 모바일=canvas floating, PC=헤더 콜백
-      if (_isTouchDevice) {
+      if (!this.drawingTool && _isTouchDevice) {
         const isUp = c.close >= c.open;
         const closeColor = isUp ? '#ef5350' : '#26a69a';
         const tradingValue = c.close * c.volume;
@@ -6680,7 +6681,7 @@ export class SimpleChart {
           ctx.fillText(row.value, tBoxX + tBoxW - tPadX, rowY);
         });
         ctx.restore();
-      } else if (this.onCrosshairOHLC && this._lastCrosshairOHLCIdx !== snappedCandleIndex) {
+      } else if (!this.drawingTool && this.onCrosshairOHLC && this._lastCrosshairOHLCIdx !== snappedCandleIndex) {
         this._lastCrosshairOHLCIdx = snappedCandleIndex;
         this.onCrosshairOHLC({ open: c.open, high: c.high, low: c.low, close: c.close, time: c.time });
       }
