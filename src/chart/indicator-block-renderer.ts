@@ -498,13 +498,13 @@ export function renderIndicatorBlocks(this: any, params: any): void {
       const rng = hi - lo || 1;
       ctx.save();
       ctx.strokeStyle = '#1e2230'; ctx.fillStyle = chartTextSecondary;
-      ctx.font = `12px ${fontStack}`; ctx.textAlign = 'left';
+      ctx.font = `12px ${fontStack}`; ctx.textAlign = 'right';
       vals.forEach(v => {
         const snapped = snapSubAxisValue(v, lo, hi);
         const clamped = Math.min(hi, Math.max(lo, snapped));
         const y = plotTop + (hi - clamped) / rng * plotH;
         ctx.beginPath(); ctx.moveTo(chartLeft, y); ctx.lineTo(subChartRight, y); ctx.stroke();
-        const axisTextX = subAxisStart + 4;
+        const axisTextX = width - 4;
         ctx.fillText(formatter ? formatter(clamped) : formatWithComma(clamped, 0), axisTextX, y + 4);
       });
       ctx.restore();

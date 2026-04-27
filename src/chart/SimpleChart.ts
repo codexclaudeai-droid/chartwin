@@ -3846,7 +3846,7 @@ export class SimpleChart {
     // 1) 메인 가로 격자/가격축
     ctx.save();
     ctx.strokeStyle = '#1e2230'; ctx.fillStyle = CHART_TEXT_SECONDARY;
-    ctx.font = `13px ${CHART_FONT_STACK}`; ctx.textAlign = 'left';
+    ctx.font = `13px ${CHART_FONT_STACK}`; ctx.textAlign = 'right';
     const axisDigits = Math.max(0, Math.ceil(-Math.log10(mainAxisStep)) + 2);
     const tickCount = Math.max(1, Math.floor((maxP - minP) / mainAxisStep) + 1);
     const axisBottomPadding = 14;
@@ -3856,7 +3856,7 @@ export class SimpleChart {
       const y = getY(p);
       if (y >= mainH - axisBottomPadding) continue;
       ctx.beginPath(); ctx.moveTo(chartLeft, y); ctx.lineTo(chartRight, y); ctx.stroke();
-      const axisTextX = geometry.side === 'left' ? 4 : (chartRight + 4);
+      const axisTextX = geometry.side === 'left' ? (geometry.axisPad - 4) : (width - 4);
       ctx.fillText(formatWithComma(Number(p.toFixed(axisDigits)), symbolPriceDigits), axisTextX, y + 4);
     }
     ctx.restore();
