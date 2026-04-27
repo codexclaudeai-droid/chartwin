@@ -1357,16 +1357,25 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       ].join(';');
       rangePanelEl.appendChild(rangeGrid);
 
+      const CALENDAR_SVG_MOBILE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17,10.039c-3.859,0-7,3.14-7,7,0,3.838,3.141,6.961,7,6.961s7-3.14,7-7c0-3.838-3.141-6.961-7-6.961Zm0,11.961c-2.757,0-5-2.226-5-4.961,0-2.757,2.243-5,5-5s5,2.226,5,4.961c0,2.757-2.243,5-5,5Zm1.707-4.707c.391,.391,.391,1.023,0,1.414-.195,.195-.451,.293-.707,.293s-.512-.098-.707-.293l-1-1c-.188-.188-.293-.442-.293-.707v-2c0-.552,.447-1,1-1s1,.448,1,1v1.586l.707,.707Zm5.293-10.293v2c0,.552-.447,1-1,1s-1-.448-1-1v-2c0-1.654-1.346-3-3-3H5c-1.654,0-3,1.346-3,3v1H11c.552,0,1,.448,1,1s-.448,1-1,1H2v9c0,1.654,1.346,3,3,3h4c.552,0,1,.448,1,1s-.448,1-1,1H5c-2.757,0-5-2.243-5-5V7C0,4.243,2.243,2,5,2h1V1c0-.552,.448-1,1-1s1,.448,1,1v1h8V1c0-.552,.447-1,1-1s1,.448,1,1v1h1c2.757,0,5,2.243,5,5Z"/></svg>`;
+
       RANGE_BTNS.forEach((label) => {
         const btn = document.createElement('button');
-        btn.textContent = label;
+        const isCalendar = label === '??';
+        if (isCalendar) {
+          btn.innerHTML = CALENDAR_SVG_MOBILE;
+          btn.title = '기간 직접 입력';
+        } else {
+          btn.textContent = label;
+        }
         btn.style.cssText = [
-          'background:#1c2840', 'color:#c2ccdf', 'border:1px solid #2e3f5c',
+          'background:#1c2840', `color:${isCalendar ? '#8ab4f8' : '#c2ccdf'}`, 'border:1px solid #2e3f5c',
           'border-radius:8px', 'padding:11px 4px',
           'font-size:13px', 'font-family:inherit', 'font-weight:700',
           'cursor:pointer', 'touch-action:manipulation',
           '-webkit-tap-highlight-color:transparent',
           'transition:background 0.12s,color 0.12s,border-color 0.12s',
+          'display:inline-flex', 'align-items:center', 'justify-content:center',
         ].join(';');
         btn.addEventListener('touchstart', () => {
           btn.style.background  = '#2962ff';
@@ -1376,15 +1385,53 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         btn.addEventListener('touchend', () => {
           setTimeout(() => {
             btn.style.background  = '#1c2840';
-            btn.style.color       = '#c2ccdf';
+            btn.style.color       = isCalendar ? '#8ab4f8' : '#c2ccdf';
             btn.style.borderColor = '#2e3f5c';
           }, 400);
         }, { passive: true });
-        btn.addEventListener('click', () => {
-          applyRangeToChart(getActivePane().chart, label);
-          display_close_panel();
-        });
+        if (isCalendar) {
+          btn.addEventListener('click', () => {
+            display_close_panel();
+            display_open_panel(datePanelEl);
+          });
+        } else {
+          btn.addEventListener('click', () => {
+            applyRangeToChart(getActivePane().chart, label);
+            display_close_panel();
+          });
+        }
         rangeGrid.appendChild(btn);
+      });
+
+      // 날짜 직접 입력 패널
+      const datePanelEl = display_create_slide_panel('기간 직접 입력');
+      const datePanelBody = document.createElement('div');
+      datePanelBody.style.cssText = 'padding:0 20px 24px;display:flex;flex-direction:column;gap:12px;';
+      datePanelEl.appendChild(datePanelBody);
+      datePanelBody.innerHTML = `
+        <label style="display:flex;flex-direction:column;gap:6px;color:#8a9bb8;font-size:12px;font-weight:600;">
+          시작일
+          <input data-k="start" type="date" style="height:44px;background:#111827;border:1px solid #2f3f5e;color:#d7e0f1;border-radius:8px;padding:0 12px;font-size:15px;color-scheme:dark;box-sizing:border-box;width:100%;">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px;color:#8a9bb8;font-size:12px;font-weight:600;">
+          종료일
+          <input data-k="end" type="date" style="height:44px;background:#111827;border:1px solid #2f3f5e;color:#d7e0f1;border-radius:8px;padding:0 12px;font-size:15px;color-scheme:dark;box-sizing:border-box;width:100%;">
+        </label>
+        <button data-k="apply" type="button" style="height:48px;background:#2962ff;border:none;color:#fff;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-top:4px;">적용</button>`;
+      const dpMobileStart = datePanelBody.querySelector('[data-k="start"]') as HTMLInputElement;
+      const dpMobileEnd   = datePanelBody.querySelector('[data-k="end"]') as HTMLInputElement;
+      const dpMobileApply = datePanelBody.querySelector('[data-k="apply"]') as HTMLButtonElement;
+      // 기본값 설정 (1년 전 ~ 오늘)
+      const _dpNow = new Date();
+      const _dpFrom = new Date(_dpNow); _dpFrom.setFullYear(_dpFrom.getFullYear() - 1);
+      dpMobileStart.value = _dpFrom.toISOString().slice(0, 10);
+      dpMobileEnd.value   = _dpNow.toISOString().slice(0, 10);
+      dpMobileApply.addEventListener('click', () => {
+        const fromMs = dpMobileStart.value ? new Date(dpMobileStart.value).getTime() : NaN;
+        const toMs   = dpMobileEnd.value   ? new Date(dpMobileEnd.value + 'T23:59:59').getTime() : NaN;
+        if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || fromMs > toMs) return;
+        getActivePane().chart.setVisibleByDateRange?.(Math.floor(fromMs / 1000), Math.floor(toMs / 1000));
+        display_close_panel();
       });
 
       // ????????????????????????????????????????????????????????????????????
