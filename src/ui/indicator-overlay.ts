@@ -401,8 +401,8 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       visibilityBtn.type = 'button';
       visibilityBtn.className = 'strategy-visibility-btn';
       visibilityBtn.title = isVisible ? '전략시그널 감추기' : '전략시그널 보이기';
-      const btnSz = touchLarge ? 22 : (compactOverlay ? 18 : 20);
-      const svgSz = touchLarge ? 15 : (compactOverlay ? 13 : 14);
+      const btnSz = touchLarge ? 18 : (compactOverlay ? 14 : 16);
+      const svgSz = touchLarge ? 12 : (compactOverlay ? 10 : 11);
       visibilityBtn.style.cssText = `width:${btnSz}px;height:${btnSz}px;border:none;border-radius:4px;
         background:transparent;color:#edf3ff;display:inline-flex;align-items:center;justify-content:center;
         padding:0;cursor:pointer;transition:color 0.15s ease;flex:0 0 auto;`;
