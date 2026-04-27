@@ -404,14 +404,16 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       visibilityBtn.type = 'button';
       visibilityBtn.className = 'strategy-visibility-btn';
       visibilityBtn.title = isVisible ? '전략시그널 감추기' : '전략시그널 보이기';
-      const btnSz = touchLarge ? 18 : (compactOverlay ? 14 : 16);
-      const svgSz = touchLarge ? 12 : (compactOverlay ? 10 : 11);
-      visibilityBtn.style.cssText = `width:${btnSz}px;height:${btnSz}px;border:none;border-radius:4px;
+      const eyeSvgSz = actionIconSz;
+      const eyeBtnSz = touchLarge ? 22 : (compactOverlay ? 16 : 18);
+      const reportSvgSz = touchLarge ? 14 : (compactOverlay ? 10 : 10);
+      const reportBtnSz = touchLarge ? 18 : (compactOverlay ? 14 : 16);
+      visibilityBtn.style.cssText = `width:${eyeBtnSz}px;height:${eyeBtnSz}px;border:none;border-radius:4px;
         background:transparent;color:#edf3ff;display:inline-flex;align-items:center;justify-content:center;
         padding:0;cursor:pointer;transition:color 0.15s ease;flex:0 0 auto;`;
       visibilityBtn.innerHTML = isVisible
-        ? `<svg viewBox="0 0 24 24" width="${svgSz}" height="${svgSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><path class="eye-lid-top" d="M3 12c2.6-3.4 5.5-5 9-5 3.5 0 6.4 1.6 9 5"></path><path class="eye-lid-bottom" d="M3 12c2.6 3.4 5.5 5 9 5 3.5 0 6.4-1.6 9-5"></path><circle class="eye-iris" cx="12" cy="12" r="2.8"></circle></svg>`
-        : `<svg viewBox="0 0 24 24" width="${svgSz}" height="${svgSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="2.8"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`;
+        ? `<svg viewBox="0 0 24 24" width="${eyeSvgSz}" height="${eyeSvgSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><path class="eye-lid-top" d="M3 12c2.6-3.4 5.5-5 9-5 3.5 0 6.4 1.6 9 5"></path><path class="eye-lid-bottom" d="M3 12c2.6 3.4 5.5 5 9 5 3.5 0 6.4-1.6 9-5"></path><circle class="eye-iris" cx="12" cy="12" r="2.8"></circle></svg>`
+        : `<svg viewBox="0 0 24 24" width="${eyeSvgSz}" height="${eyeSvgSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="2.8"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`;
       visibilityBtn.addEventListener('mouseenter', () => { visibilityBtn.style.color = '#ffffff'; });
       visibilityBtn.addEventListener('mouseleave', () => { visibilityBtn.style.color = '#edf3ff'; });
       visibilityBtn.addEventListener('click', (event) => {
@@ -422,10 +424,10 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       const reportBtn = document.createElement('button');
       reportBtn.type = 'button';
       reportBtn.title = '전략리포트';
-      reportBtn.style.cssText = `width:${btnSz}px;height:${btnSz}px;border:1px solid #3a4158;border-radius:3px;
+      reportBtn.style.cssText = `width:${reportBtnSz}px;height:${reportBtnSz}px;border:1px solid #3a4158;border-radius:3px;
         background:#ffffff;color:#0f1218;display:inline-flex;align-items:center;justify-content:center;
         padding:0;cursor:pointer;transition:border-color 0.15s ease;flex:0 0 auto;`;
-      reportBtn.innerHTML = `<svg viewBox="0 0 24 24" width="${svgSz}" height="${svgSz}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      reportBtn.innerHTML = `<svg viewBox="0 0 24 24" width="${reportSvgSz}" height="${reportSvgSz}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="4 16 9 11 13 13 19 7"></polyline>
         <path d="M5 4v4"></path><path d="M3 7l2 2 2-2"></path>
         <path d="M19 17v-4"></path><path d="M17 15l2-2 2 2"></path>
@@ -613,7 +615,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     const strategyRow = document.createElement('div');
     strategyRow.style.cssText = compactOverlay
       ? 'display:flex;flex-direction:row;align-items:center;gap:2px;margin-top:0;'
-      : `display:flex;flex-direction:row;align-items:center;gap:3px;margin-top:${touchLarge ? '-4px' : '-2px'};`;
+      : `display:flex;flex-direction:row;align-items:center;gap:3px;margin-top:${touchLarge ? '1px' : '1px'};`;
     const subColumn = document.createElement('div');
     subColumn.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
 
