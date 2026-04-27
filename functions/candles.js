@@ -4,12 +4,45 @@ const CORS = {
   'Access-Control-Allow-Headers': 'content-type',
 };
 const ALLOWED_MARKETS = ['crypto', 'futures', 'index', 'commodity', 'fx'];
+const TF_SECONDS = {
+  '1s': 1, '1m': 60, '3m': 180, '5m': 300, '15m': 900,
+  '30m': 1800, '1h': 3600, '2h': 7200, '4h': 14400,
+  '1d': 86400, '1w': 604800, '1M': 2592000,
+};
 
 function norm(s) { return String(s || '').trim().toUpperCase().replace(/\s+/g, ''); }
 function canonicalize(market, symbol) {
   const s = norm(symbol);
   if (market === 'index' && (s === 'NAS100' || s === 'NQ')) return 'NQ1!';
   return s;
+}
+
+/**
+ * 1m 캔들 배열을 더 큰 타임프레임으로 집계합니다.
+ * targetTfSec: 집계할 타임프레임의 초 단위 크기
+ */
+function aggregateFrom1m(candles1m, targetTfSec) {
+  const map = new Map();
+  for (const c of candles1m) {
+    const bucket = Math.floor(c.time / targetTfSec) * targetTfSec;
+    const existing = map.get(bucket);
+    if (!existing) {
+      map.set(bucket, {
+        time: bucket,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+        volume: c.volume || 0,
+      });
+    } else {
+      if (c.high > existing.high) existing.high = c.high;
+      if (c.low < existing.low) existing.low = c.low;
+      existing.close = c.close;
+      existing.volume = (existing.volume || 0) + (c.volume || 0);
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.time - b.time);
 }
 
 export async function onRequestOptions() {
@@ -32,7 +65,20 @@ export async function onRequestGet({ request, env }) {
   let candles = [];
   try {
     const raw = await env.CANDLES_KV.get(key, { type: 'json' });
-    if (Array.isArray(raw)) candles = raw;
+    if (Array.isArray(raw) && raw.length > 0) {
+      // 해당 타임프레임 데이터가 직접 존재하면 그대로 반환
+      candles = raw;
+    } else if (timeframe !== '1m') {
+      // 없으면 1m 데이터를 집계해서 생성
+      const tfSec = TF_SECONDS[timeframe];
+      if (tfSec && tfSec > 60) {
+        const key1m = `${market}:${symbol}:1m`;
+        const raw1m = await env.CANDLES_KV.get(key1m, { type: 'json' });
+        if (Array.isArray(raw1m) && raw1m.length > 0) {
+          candles = aggregateFrom1m(raw1m, tfSec);
+        }
+      }
+    }
   } catch {}
 
   return Response.json(
