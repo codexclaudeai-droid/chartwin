@@ -1,4 +1,5 @@
 ﻿import type { TimeframeKey } from '../catalog/time';
+import { hiddenSymbols } from '../catalog/symbols';
 
 export type CandleDataLike = {
   time: number;
@@ -292,12 +293,18 @@ export function createGatewayLiveFeed({
 
   const pollOnce = async (fullReload: boolean): Promise<boolean> => {
     if (connecting) return false;
+
+    const symbol = chart.config.symbol;
+    if (hiddenSymbols.has(normalizeSymbol(symbol))) {
+      if (running) onStatusChange?.('fallback');
+      return false;
+    }
+
     connecting = true;
     stopFetch();
     abortController = new AbortController();
 
     try {
-      const symbol = chart.config.symbol;
       const market = inferGatewayMarket(symbol);
       const timeframe = chart.config.timeframe;
       const baseUrl = resolveGatewayBaseUrl();

@@ -89,6 +89,13 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ ok: false, message: 'market/symbol/timeframe/candles required' }, { status: 400, headers: CORS });
   }
 
+  try {
+    const hidden = await env.CANDLES_KV.get('admin:hidden-symbols', { type: 'json' });
+    if (Array.isArray(hidden) && hidden.map(s => String(s).toUpperCase()).includes(symbol)) {
+      return Response.json({ ok: false, message: 'symbol disabled' }, { status: 403, headers: CORS });
+    }
+  } catch {}
+
   const key = `${market}:${symbol}:${timeframe}`;
   let existing = [];
   try {
