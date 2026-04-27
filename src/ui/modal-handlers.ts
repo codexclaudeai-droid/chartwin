@@ -1417,7 +1417,7 @@ export function openSymbolModal(chart: any, symLabel: HTMLElement, symIcon: HTML
 
   render('');
   inp.addEventListener('input', () => render(inp.value));
-  inp.focus();
+  if (!('ontouchstart' in window)) inp.focus();
 }
 
 // -----------------------------------------------------------------------------
@@ -1595,7 +1595,7 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
   setTab('all');
   renderOrder();
   inp.addEventListener('input', () => render(inp.value));
-  inp.focus();
+  if (!('ontouchstart' in window)) inp.focus();
 }
 
 export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, onUpdate: () => void) {
