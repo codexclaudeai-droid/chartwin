@@ -43,21 +43,6 @@ const POLL_INTERVAL_MS_BY_TIMEFRAME: Partial<Record<TimeframeKey, number>> = {
   '1w': 60_000,
   '1M': 60_000,
 };
-// Netlify Functions 환경에서는 Function 호출 절약을 위해 폴링 간격을 최소 30초로 제한
-const POLL_INTERVAL_MS_BY_TIMEFRAME_NETLIFY: Partial<Record<TimeframeKey, number>> = {
-  '1s': 30_000,
-  '1m': 30_000,
-  '3m': 30_000,
-  '5m': 30_000,
-  '15m': 45_000,
-  '30m': 60_000,
-  '1h': 60_000,
-  '2h': 60_000,
-  '4h': 60_000,
-  '1d': 120_000,
-  '1w': 120_000,
-  '1M': 120_000,
-};
 const GATEWAY_FAST_SYNC_CONFIG_KEY = 'my-chart-lib.gateway-fast-sync.v1';
 const DEFAULT_FAST_SYNC_INTERVAL_MS = 1_000;
 const DEFAULT_FAST_SYNC_TICKS = 8;
@@ -343,16 +328,12 @@ export function createGatewayLiveFeed({
     stopPolling();
     stopFastPolling();
     fastSyncConfig = loadGatewayFastSyncConfig();
-    const isNetlify = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-    const intervalTable = isNetlify ? POLL_INTERVAL_MS_BY_TIMEFRAME_NETLIFY : POLL_INTERVAL_MS_BY_TIMEFRAME;
-    const intervalMs = intervalTable[chart.config.timeframe] ?? (isNetlify ? 30_000 : 5_000);
+    const intervalMs = POLL_INTERVAL_MS_BY_TIMEFRAME[chart.config.timeframe] ?? 5_000;
     pollingTimer = window.setInterval(() => {
       if (!running) return;
       void pollOnce(false);
     }, intervalMs);
 
-    // Netlify 환경에서는 fast sync 생략 (Function 호출 절약)
-    if (isNetlify) return;
     // After symbol/timeframe changes, run a short 1s sync burst for snappy UI updates.
     if (fastSyncConfig.ticks <= 0) return;
     let ticks = 0;
