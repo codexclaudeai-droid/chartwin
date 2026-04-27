@@ -550,6 +550,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       refreshSymbolVisual,
     } = chrome;
     headerTitle.style.cssText = 'display:block;margin-left:6px;padding:1px 6px;border-radius:999px;border:1px solid #3a4155;background:#22293a;color:#b5bece;font-size:10px;font-weight:700;line-height:1.4;white-space:nowrap;flex-shrink:0;';
+    if (isMobile) {
+      indBtn.style.display = 'none';
+      strategyBtn.style.display = 'none';
+    }
 
     const chart = new SimpleChart(chartArea);
     if (persistedSymbol) {

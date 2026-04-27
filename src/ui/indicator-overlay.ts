@@ -424,6 +424,22 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       });
       tag.appendChild(textEl);
       tag.appendChild(visibilityBtn);
+      if (isTouchDevice || isMobileOverlay) {
+        const reportBtnSz = touchLarge ? 34 : (compactOverlay ? 24 : 30);
+        const reportSvgSz = touchLarge ? 20 : (compactOverlay ? 17 : 20);
+        const reportBtn = document.createElement('button');
+        reportBtn.type = 'button';
+        reportBtn.title = '전략리포트';
+        reportBtn.style.cssText = `width:${reportBtnSz}px;height:${reportBtnSz}px;border:none;border-radius:5px;
+          background:transparent;color:#edf3ff;display:inline-flex;align-items:center;justify-content:center;
+          padding:0;cursor:pointer;transition:background 0.15s ease,color 0.15s ease;flex:0 0 auto;`;
+        reportBtn.innerHTML = `<svg viewBox="0 0 24 24" width="${reportSvgSz}" height="${reportSvgSz}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>`;
+        reportBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          window.dispatchEvent(new CustomEvent('chart-open-strategy-report', { detail: { chart } }));
+        });
+        tag.appendChild(reportBtn);
+      }
       return tag;
     };
 
