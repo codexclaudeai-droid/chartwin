@@ -222,9 +222,9 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     // 모바일 터치: 태그 폰트/패딩을 보조지표 타이틀 수준(13px)으로 확대
     const touchLarge = isTouchDevice;
     const tagFontSize = touchLarge ? 13 : (compactOverlay ? 11 : 12);
-    const tagPadX = touchLarge ? '4px 10px' : (compactOverlay ? '1px 4px' : '2px 7px');
-    const tagGap = touchLarge ? 6 : (compactOverlay ? 2 : 4);
-    const tagLineH = touchLarge ? 1.5 : (compactOverlay ? 1.2 : 1.35);
+    const tagPadX = touchLarge ? '1px 3px' : (compactOverlay ? '1px 3px' : '2px 5px');
+    const tagGap = touchLarge ? 3 : (compactOverlay ? 2 : 3);
+    const tagLineH = touchLarge ? 1.3 : (compactOverlay ? 1.2 : 1.35);
     const isMobileOverlay = /Mobi|Android|iPhone|iPad|iPod|Touch/i.test(navigator.userAgent)
       || isTouchDevice
       || window.innerWidth < 600;
@@ -236,7 +236,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     overlay.style.maxWidth = compactOverlay
       ? `calc(100% - ${marketLeftInset + 16}px)`
       : 'none';
-    overlay.style.gap = touchLarge ? '1px' : (compactOverlay ? '0px' : '1px');
+    overlay.style.gap = '0px';
 
     const getIndicatorStyleKeys = (targetKey: string): string[] => {
       const indicators = chart.config.indicators as any;
@@ -607,12 +607,12 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
 
     const mainRow = document.createElement('div');
     mainRow.style.cssText = compactOverlay
-      ? 'display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;align-content:flex-start;gap:2px;row-gap:3px;white-space:normal;max-width:100%;'
-      : 'display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:4px;white-space:nowrap;';
+      ? 'display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;align-content:flex-start;gap:2px;row-gap:2px;white-space:normal;max-width:100%;'
+      : `display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:${touchLarge ? 2 : 3}px;white-space:nowrap;`;
     const strategyRow = document.createElement('div');
     strategyRow.style.cssText = compactOverlay
       ? 'display:flex;flex-direction:row;align-items:center;gap:2px;margin-top:0;'
-      : `display:flex;flex-direction:row;align-items:center;gap:4px;margin-top:${touchLarge ? '-6px' : '-2px'};`;
+      : `display:flex;flex-direction:row;align-items:center;gap:3px;margin-top:${touchLarge ? '-2px' : '-1px'};`;
     const subColumn = document.createElement('div');
     subColumn.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
 
