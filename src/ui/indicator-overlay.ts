@@ -118,7 +118,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
   const overlay = document.createElement('div');
   overlay.id = 'ind-overlay';
   overlay.style.cssText = `position:absolute;top:6px;left:8px;z-index:200;
-    pointer-events:none;display:flex;flex-direction:column;gap:3px;`;
+    pointer-events:none;display:flex;flex-direction:column;gap:1px;`;
   container.appendChild(overlay);
 
   const panelControls = document.createElement('div');
@@ -236,7 +236,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     overlay.style.maxWidth = compactOverlay
       ? `calc(100% - ${marketLeftInset + 16}px)`
       : 'none';
-    overlay.style.gap = touchLarge ? '4px' : (compactOverlay ? '1px' : '3px');
+    overlay.style.gap = touchLarge ? '1px' : (compactOverlay ? '0px' : '1px');
 
     const getIndicatorStyleKeys = (targetKey: string): string[] => {
       const indicators = chart.config.indicators as any;
