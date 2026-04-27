@@ -6570,7 +6570,8 @@ export class SimpleChart {
     ctx.restore();
 
     if (snappedCandleIndex >= 0 && snappedCandleIndex < this.data.length) {
-      const label = formatCrosshairTimelineLabel(this.data[snappedCandleIndex].time, this.config.timezone);
+      const c = this.data[snappedCandleIndex];
+      const label = formatCrosshairTimelineLabel(c.time, this.config.timezone);
       ctx.save();
       ctx.font = `12px ${CHART_FONT_STACK}`;
       const boxW = Math.ceil(ctx.measureText(label).width) + 16;
@@ -6586,6 +6587,73 @@ export class SimpleChart {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(label, boxX + boxW / 2, boxY + boxH / 2 + 0.5);
+      ctx.restore();
+
+      // OHLCV 툴팁
+      const isUp = c.close >= c.open;
+      const closeColor = isUp ? '#ef5350' : '#26a69a';
+      const tradingValue = c.close * c.volume;
+      const d = symbolPriceDigits;
+      const tooltipRows: Array<{ label: string; value: string; color: string }> = [
+        { label: '시가', value: formatWithComma(c.open,  d), color: '#c9d4e8' },
+        { label: '고가', value: formatWithComma(c.high,  d), color: '#ef5350' },
+        { label: '저가', value: formatWithComma(c.low,   d), color: '#26a69a' },
+        { label: '종가', value: formatWithComma(c.close, d), color: closeColor },
+        { label: '거래량', value: formatKUnit(c.volume),        color: '#c9d4e8' },
+        { label: '거래대금', value: formatKUnit(tradingValue),   color: '#c9d4e8' },
+      ];
+      ctx.save();
+      ctx.font = `600 11px ${CHART_FONT_STACK}`;
+      const tPadX = 9, tPadY = 6, tLineH = 17;
+      const tLabelW = 44;
+      const tValueW = Math.max(...tooltipRows.map(r => Math.ceil(ctx.measureText(r.value).width))) + 4;
+      const tBoxW = tPadX * 2 + tLabelW + tValueW + 6;
+      const tHeaderH = tLineH;
+      const tBoxH = tPadY * 2 + tHeaderH + tooltipRows.length * tLineH;
+      const showOnLeft = solidX > chartLeft + chartW / 2;
+      const tBoxX = showOnLeft ? chartLeft + 4 : chartRight - tBoxW - 4;
+      const tBoxY = R.top + 4;
+      const tRadius = 5;
+      ctx.beginPath();
+      ctx.moveTo(tBoxX + tRadius, tBoxY);
+      ctx.lineTo(tBoxX + tBoxW - tRadius, tBoxY);
+      ctx.arcTo(tBoxX + tBoxW, tBoxY, tBoxX + tBoxW, tBoxY + tRadius, tRadius);
+      ctx.lineTo(tBoxX + tBoxW, tBoxY + tBoxH - tRadius);
+      ctx.arcTo(tBoxX + tBoxW, tBoxY + tBoxH, tBoxX + tBoxW - tRadius, tBoxY + tBoxH, tRadius);
+      ctx.lineTo(tBoxX + tRadius, tBoxY + tBoxH);
+      ctx.arcTo(tBoxX, tBoxY + tBoxH, tBoxX, tBoxY + tBoxH - tRadius, tRadius);
+      ctx.lineTo(tBoxX, tBoxY + tRadius);
+      ctx.arcTo(tBoxX, tBoxY, tBoxX + tRadius, tBoxY, tRadius);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(15, 20, 32, 0.92)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(60, 80, 110, 0.8)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.textBaseline = 'middle';
+      // 날짜 헤더
+      ctx.font = `600 11px ${CHART_FONT_STACK}`;
+      ctx.fillStyle = '#7a8aab';
+      ctx.textAlign = 'left';
+      ctx.fillText(label, tBoxX + tPadX, tBoxY + tPadY + tLineH / 2);
+      // 구분선
+      ctx.strokeStyle = 'rgba(60, 80, 110, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(tBoxX + 4, tBoxY + tPadY + tLineH + 2);
+      ctx.lineTo(tBoxX + tBoxW - 4, tBoxY + tPadY + tLineH + 2);
+      ctx.stroke();
+      // 데이터 행
+      tooltipRows.forEach((row, i) => {
+        const rowY = tBoxY + tPadY + tHeaderH + i * tLineH + tLineH / 2;
+        ctx.font = `600 11px ${CHART_FONT_STACK}`;
+        ctx.fillStyle = '#4e5d78';
+        ctx.textAlign = 'left';
+        ctx.fillText(row.label, tBoxX + tPadX, rowY);
+        ctx.fillStyle = row.color;
+        ctx.textAlign = 'right';
+        ctx.fillText(row.value, tBoxX + tBoxW - tPadX, rowY);
+      });
       ctx.restore();
     }
 
