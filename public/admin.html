@@ -7,17 +7,15 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
-    .container { max-width: 700px; margin: 0 auto; padding: 32px 16px 64px; }
+    .container { max-width: 740px; margin: 0 auto; padding: 32px 16px 64px; }
     h1 { font-size: 20px; font-weight: 700; color: #e6edf3; margin-bottom: 24px; }
     h1 span { color: #58a6ff; }
     .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
     .card-title { font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; letter-spacing: .9px; margin-bottom: 14px; }
     .field-row { display: flex; gap: 8px; margin-bottom: 8px; }
-    .field-row:last-child { margin-bottom: 0; }
     input[type="password"] {
       flex: 1; background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
-      color: #c9d1d9; font-size: 14px; padding: 8px 12px; outline: none;
-      transition: border-color .15s;
+      color: #c9d1d9; font-size: 14px; padding: 8px 12px; outline: none; transition: border-color .15s;
     }
     input[type="password"]:focus { border-color: #58a6ff; }
     input[type="password"]::placeholder { color: #484f58; }
@@ -33,29 +31,48 @@
     button.danger:hover:not(:disabled) { background: #dc2626; }
     button:disabled { opacity: .4; cursor: not-allowed; }
     .status { font-size: 13px; padding: 9px 13px; border-radius: 6px; margin-top: 10px; display: none; }
-    .status.ok { background: #0d2b17; border: 1px solid #238636; color: #3fb950; display: block; }
+    .status.ok  { background: #0d2b17; border: 1px solid #238636; color: #3fb950; display: block; }
     .status.err { background: #2b0d0d; border: 1px solid #da3633; color: #ff7b72; display: block; }
 
-    /* ── Symbol Management ─────────────────────────────────────────── */
+    /* Symbol grid */
     .symbols-wrap { display: none; }
     .category { margin-bottom: 22px; }
     .category:last-child { margin-bottom: 0; }
-    .category-label { font-size: 11px; font-weight: 700; color: #58a6ff; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid #21262d; }
-    .symbol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
-    .symbol-item {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      background: #0d1117; border: 1px solid #21262d; border-radius: 8px;
-      padding: 9px 12px; transition: border-color .15s, background .15s;
+    .category-label {
+      font-size: 11px; font-weight: 700; color: #58a6ff; text-transform: uppercase;
+      letter-spacing: .8px; margin-bottom: 10px; padding-bottom: 7px; border-bottom: 1px solid #21262d;
     }
-    .symbol-item.visible { border-color: #2a3e2a; }
-    .symbol-item.hidden-sym { border-color: #3e2a2a; background: #110a0a; }
-    .sym-info { min-width: 0; }
-    .sym-name { font-size: 13px; font-weight: 700; color: #e6edf3; transition: color .15s; }
-    .hidden-sym .sym-name { color: #6e3a3a; }
-    .sym-desc { font-size: 10px; color: #484f58; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Column headers */
+    .col-headers {
+      display: grid;
+      grid-template-columns: 1fr 72px 72px;
+      gap: 8px;
+      padding: 0 12px 6px;
+      margin-bottom: 4px;
+    }
+    .col-hdr { font-size: 10px; font-weight: 700; color: #484f58; text-transform: uppercase; letter-spacing: .7px; text-align: center; }
+    .col-hdr:first-child { text-align: left; }
+
+    .symbol-grid { display: flex; flex-direction: column; gap: 6px; }
+    .symbol-item {
+      display: grid;
+      grid-template-columns: 1fr 72px 72px;
+      align-items: center;
+      gap: 8px;
+      background: #0d1117; border: 1px solid #21262d; border-radius: 8px;
+      padding: 9px 12px; transition: border-color .15s;
+    }
+    .symbol-item:hover { border-color: #30363d; }
+    .sym-name { font-size: 13px; font-weight: 700; color: #e6edf3; }
+    .sym-desc { font-size: 10px; color: #484f58; margin-top: 2px; }
+
+    /* toggle col */
+    .toggle-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .toggle-state { font-size: 9px; font-weight: 700; letter-spacing: .4px; }
 
     /* Toggle switch */
-    .toggle { position: relative; width: 38px; height: 21px; flex-shrink: 0; }
+    .toggle { position: relative; width: 38px; height: 21px; }
     .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
     .track {
       position: absolute; inset: 0; border-radius: 21px; background: #3d4450;
@@ -66,17 +83,26 @@
       top: 3px; left: 3px; border-radius: 50%; background: #8b949e;
       transition: transform .2s, background .2s;
     }
-    .toggle input:checked + .track { background: #1a6330; }
-    .toggle input:checked + .track::before { transform: translateX(17px); background: #3fb950; }
+    /* 표시 toggle: green */
+    .vis-input:checked + .track { background: #1a6330; }
+    .vis-input:checked + .track::before { transform: translateX(17px); background: #3fb950; }
+    /* 웹훅 toggle: blue */
+    .wh-input:checked + .track { background: #1a3366; }
+    .wh-input:checked + .track::before { transform: translateX(17px); background: #58a6ff; }
+
+    .toggle-state.on-vis  { color: #3fb950; }
+    .toggle-state.off-vis { color: #484f58; }
+    .toggle-state.on-wh   { color: #58a6ff; }
+    .toggle-state.off-wh  { color: #484f58; }
 
     .save-row { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
-    .hidden-count { font-size: 13px; color: #8b949e; }
-    .hidden-count b { color: #ff7b72; }
+    .summary { font-size: 13px; color: #8b949e; }
+    .summary b { color: #ff7b72; }
+    .summary span { color: #58a6ff; }
 
-    /* ── Password Change ───────────────────────────────────────────── */
+    /* pw section */
     .pw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     @media (max-width: 480px) { .pw-grid { grid-template-columns: 1fr; } }
-    .pw-grid input { margin-bottom: 0; }
   </style>
 </head>
 <body>
@@ -88,7 +114,7 @@
     <div class="card-title">관리자 인증</div>
     <div class="field-row">
       <input type="password" id="passphrase" placeholder="현재 Passphrase" autocomplete="current-password">
-      <button id="load-btn" onclick="loadSymbols()">불러오기</button>
+      <button id="load-btn" onclick="loadSettings()">불러오기</button>
     </div>
     <div class="status" id="auth-status"></div>
   </div>
@@ -96,12 +122,12 @@
   <!-- Symbol Management -->
   <div class="symbols-wrap" id="symbols-wrap">
     <div class="card">
-      <div class="card-title">종목 표시 관리 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#484f58">— OFF 시 프론트엔드에서 숨김</span></div>
+      <div class="card-title">종목 관리</div>
       <div id="symbol-list"></div>
     </div>
     <div class="save-row">
-      <button class="primary" id="save-sym-btn" onclick="saveSymbols()">변경사항 저장</button>
-      <span class="hidden-count" id="hidden-count"></span>
+      <button class="primary" id="save-btn" onclick="saveSettings()">변경사항 저장</button>
+      <span class="summary" id="summary"></span>
     </div>
     <div class="status" id="save-status"></div>
   </div>
@@ -157,9 +183,10 @@ const CATALOG = {
   ],
 };
 
-let currentHidden = new Set();
+let currentHidden   = new Set();
+let currentDisabled = new Set();
 
-async function loadSymbols() {
+async function loadSettings() {
   const pass = document.getElementById('passphrase').value;
   if (!pass) { showStatus('auth-status', 'err', 'Passphrase를 입력하세요.'); return; }
   document.getElementById('load-btn').disabled = true;
@@ -167,11 +194,12 @@ async function loadSymbols() {
     const res = await fetch('/admin/symbols', { cache: 'no-store' });
     const json = await res.json();
     if (!json.ok) throw new Error(json.message || 'failed');
-    currentHidden = new Set((json.hidden || []).map(s => s.toUpperCase()));
+    currentHidden   = new Set((json.hidden   || []).map(s => s.toUpperCase()));
+    currentDisabled = new Set((json.disabled || []).map(s => s.toUpperCase()));
     renderSymbols();
     document.getElementById('symbols-wrap').style.display = 'block';
     document.getElementById('pw-wrap').style.display = 'block';
-    showStatus('auth-status', 'ok', '불러오기 완료 — 종목 관리 및 비밀번호 변경이 활성화됐습니다.');
+    showStatus('auth-status', 'ok', '불러오기 완료');
   } catch (e) {
     showStatus('auth-status', 'err', '불러오기 실패: ' + e.message);
   } finally {
@@ -186,61 +214,97 @@ function renderSymbols() {
     const catEl = document.createElement('div');
     catEl.className = 'category';
     catEl.innerHTML = `<div class="category-label">${cat}</div>`;
+
+    // column headers
+    const headers = document.createElement('div');
+    headers.className = 'col-headers';
+    headers.innerHTML = '<div class="col-hdr">종목</div><div class="col-hdr">표시</div><div class="col-hdr">웹훅</div>';
+    catEl.appendChild(headers);
+
     const grid = document.createElement('div');
     grid.className = 'symbol-grid';
+
     for (const sym of symbols) {
-      const visible = !currentHidden.has(sym.id.toUpperCase());
+      const id  = sym.id.toUpperCase();
+      const vis = !currentHidden.has(id);
+      const wh  = !currentDisabled.has(id);
+      const uid = id.replace(/[^a-z0-9]/gi, '_');
+
       const item = document.createElement('div');
-      item.className = 'symbol-item ' + (visible ? 'visible' : 'hidden-sym');
-      const uid = 'tog_' + sym.id.replace(/[^a-z0-9]/gi, '_');
+      item.className = 'symbol-item';
       item.innerHTML = `
         <div class="sym-info">
           <div class="sym-name">${sym.id}</div>
           <div class="sym-desc">${sym.desc}</div>
         </div>
-        <label class="toggle" title="${visible ? '표시 중' : '숨김'}">
-          <input type="checkbox" id="${uid}" data-id="${sym.id}" ${visible ? 'checked' : ''}>
-          <span class="track"></span>
-        </label>`;
-      item.querySelector('input').addEventListener('change', (e) => {
-        const id = e.target.dataset.id.toUpperCase();
-        if (e.target.checked) {
-          currentHidden.delete(id);
-          item.classList.replace('hidden-sym', 'visible');
-        } else {
-          currentHidden.add(id);
-          item.classList.replace('visible', 'hidden-sym');
-        }
-        updateHiddenCount();
+        <div class="toggle-col">
+          <label class="toggle">
+            <input class="vis-input" type="checkbox" data-id="${id}" ${vis ? 'checked' : ''}>
+            <span class="track"></span>
+          </label>
+          <span class="toggle-state ${vis ? 'on-vis' : 'off-vis'}" id="vs_${uid}">${vis ? 'ON' : 'OFF'}</span>
+        </div>
+        <div class="toggle-col">
+          <label class="toggle">
+            <input class="wh-input" type="checkbox" data-id="${id}" ${wh ? 'checked' : ''}>
+            <span class="track"></span>
+          </label>
+          <span class="toggle-state ${wh ? 'on-wh' : 'off-wh'}" id="wh_${uid}">${wh ? 'ON' : 'OFF'}</span>
+        </div>`;
+
+      item.querySelector('.vis-input').addEventListener('change', (e) => {
+        const sid = e.target.dataset.id;
+        const checked = e.target.checked;
+        const stateEl = document.getElementById('vs_' + sid.replace(/[^a-z0-9]/gi, '_'));
+        if (checked) { currentHidden.delete(sid); stateEl.textContent = 'ON'; stateEl.className = 'toggle-state on-vis'; }
+        else          { currentHidden.add(sid);    stateEl.textContent = 'OFF'; stateEl.className = 'toggle-state off-vis'; }
+        updateSummary();
       });
+      item.querySelector('.wh-input').addEventListener('change', (e) => {
+        const sid = e.target.dataset.id;
+        const checked = e.target.checked;
+        const stateEl = document.getElementById('wh_' + sid.replace(/[^a-z0-9]/gi, '_'));
+        if (checked) { currentDisabled.delete(sid); stateEl.textContent = 'ON'; stateEl.className = 'toggle-state on-wh'; }
+        else          { currentDisabled.add(sid);    stateEl.textContent = 'OFF'; stateEl.className = 'toggle-state off-wh'; }
+        updateSummary();
+      });
+
       grid.appendChild(item);
     }
     catEl.appendChild(grid);
     list.appendChild(catEl);
   }
-  updateHiddenCount();
+  updateSummary();
 }
 
-function updateHiddenCount() {
-  const el = document.getElementById('hidden-count');
-  const n = currentHidden.size;
-  el.innerHTML = n === 0 ? '모든 종목 표시 중' : `<b>${n}개</b> 종목 숨김`;
+function updateSummary() {
+  const el = document.getElementById('summary');
+  const h = currentHidden.size, d = currentDisabled.size;
+  const parts = [];
+  if (h > 0) parts.push(`<b>${h}개</b> 숨김`);
+  if (d > 0) parts.push(`<span>${d}개</span> 웹훅 정지`);
+  el.innerHTML = parts.length ? parts.join(' &nbsp;·&nbsp; ') : '모든 종목 정상';
 }
 
-async function saveSymbols() {
+async function saveSettings() {
   const pass = document.getElementById('passphrase').value;
   if (!pass) { showStatus('save-status', 'err', 'Passphrase를 입력하세요.'); return; }
-  const btn = document.getElementById('save-sym-btn');
+  const btn = document.getElementById('save-btn');
   btn.disabled = true;
   try {
     const res = await fetch('/admin/symbols', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ passphrase: pass, hidden: Array.from(currentHidden) }),
+      body: JSON.stringify({
+        passphrase: pass,
+        hidden:   Array.from(currentHidden),
+        disabled: Array.from(currentDisabled),
+      }),
     });
     const json = await res.json();
     if (!json.ok) throw new Error(json.message || 'failed');
-    showStatus('save-status', 'ok', `저장 완료 — 숨긴 종목 ${json.hidden.length}개`);
+    showStatus('save-status', 'ok',
+      `저장 완료 — 숨김 ${json.hidden.length}개 / 웹훅 정지 ${json.disabled.length}개`);
   } catch (e) {
     showStatus('save-status', 'err', '저장 실패: ' + e.message);
   } finally {
@@ -249,11 +313,11 @@ async function saveSymbols() {
 }
 
 async function changePassword() {
-  const pass = document.getElementById('passphrase').value;
-  const next = document.getElementById('new-pass').value;
+  const pass    = document.getElementById('passphrase').value;
+  const next    = document.getElementById('new-pass').value;
   const confirm = document.getElementById('new-pass-confirm').value;
-  if (!pass) { showStatus('pw-status', 'err', '현재 Passphrase를 입력하세요.'); return; }
-  if (!next) { showStatus('pw-status', 'err', '새 비밀번호를 입력하세요.'); return; }
+  if (!pass)           { showStatus('pw-status', 'err', '현재 Passphrase를 입력하세요.'); return; }
+  if (!next)           { showStatus('pw-status', 'err', '새 비밀번호를 입력하세요.'); return; }
   if (next.length < 8) { showStatus('pw-status', 'err', '새 비밀번호는 8자 이상이어야 합니다.'); return; }
   if (next !== confirm) { showStatus('pw-status', 'err', '새 비밀번호가 일치하지 않습니다.'); return; }
   try {
@@ -267,7 +331,7 @@ async function changePassword() {
     document.getElementById('passphrase').value = next;
     document.getElementById('new-pass').value = '';
     document.getElementById('new-pass-confirm').value = '';
-    showStatus('pw-status', 'ok', '비밀번호가 변경됐습니다. 현재 Passphrase 필드도 자동 업데이트됐습니다.');
+    showStatus('pw-status', 'ok', '비밀번호가 변경됐습니다.');
   } catch (e) {
     showStatus('pw-status', 'err', '변경 실패: ' + e.message);
   }
@@ -280,7 +344,7 @@ function showStatus(id, type, msg) {
 }
 
 document.getElementById('passphrase').addEventListener('keydown', e => {
-  if (e.key === 'Enter') loadSymbols();
+  if (e.key === 'Enter') loadSettings();
 });
 </script>
 </body>

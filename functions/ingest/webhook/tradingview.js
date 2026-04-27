@@ -90,8 +90,8 @@ export async function onRequestPost({ request, env }) {
   }
 
   try {
-    const hidden = await env.CANDLES_KV.get('admin:hidden-symbols', { type: 'json' });
-    if (Array.isArray(hidden) && hidden.map(s => String(s).toUpperCase()).includes(symbol)) {
+    const disabled = await env.CANDLES_KV.get('admin:disabled-symbols', { type: 'json' });
+    if (Array.isArray(disabled) && disabled.map(s => String(s).toUpperCase()).includes(symbol)) {
       return Response.json({ ok: false, message: 'symbol disabled' }, { status: 403, headers: CORS });
     }
   } catch {}

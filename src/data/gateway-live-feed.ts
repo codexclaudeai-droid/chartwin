@@ -1,5 +1,5 @@
 ﻿import type { TimeframeKey } from '../catalog/time';
-import { hiddenSymbols } from '../catalog/symbols';
+import { disabledSymbols } from '../catalog/symbols';
 
 export type CandleDataLike = {
   time: number;
@@ -295,7 +295,7 @@ export function createGatewayLiveFeed({
     if (connecting) return false;
 
     const symbol = chart.config.symbol;
-    if (hiddenSymbols.has(normalizeSymbol(symbol))) {
+    if (disabledSymbols.has(normalizeSymbol(symbol))) {
       if (running) onStatusChange?.('fallback');
       return false;
     }

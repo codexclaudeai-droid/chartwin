@@ -219,7 +219,8 @@ export function persistSymbolRegistry(): void {
   }
 }
 
-export const hiddenSymbols = new Set<string>();
+export const hiddenSymbols   = new Set<string>();
+export const disabledSymbols = new Set<string>();
 
 export async function loadAdminConfig(): Promise<void> {
   try {
@@ -229,15 +230,17 @@ export async function loadAdminConfig(): Promise<void> {
       : window.location.origin;
     const res = await fetch(`${base}/admin/symbols`, { cache: 'no-store' });
     if (!res.ok) return;
-    const json = await res.json() as { hidden?: unknown };
+    const json = await res.json() as { hidden?: unknown; disabled?: unknown };
+    hiddenSymbols.clear();
+    disabledSymbols.clear();
     if (Array.isArray(json.hidden)) {
-      hiddenSymbols.clear();
-      json.hidden.forEach((s) => {
-        if (typeof s === 'string') hiddenSymbols.add(s.trim().toUpperCase());
-      });
+      json.hidden.forEach((s) => { if (typeof s === 'string') hiddenSymbols.add(s.trim().toUpperCase()); });
+    }
+    if (Array.isArray(json.disabled)) {
+      json.disabled.forEach((s) => { if (typeof s === 'string') disabledSymbols.add(s.trim().toUpperCase()); });
     }
   } catch {
-    // non-fatal: hidden list stays empty
+    // non-fatal
   }
 }
 
