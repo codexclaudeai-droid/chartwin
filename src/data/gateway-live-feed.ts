@@ -31,7 +31,7 @@ type CreateGatewayLiveFeedArgs = {
 
 const POLL_INTERVAL_MS_BY_TIMEFRAME: Partial<Record<TimeframeKey, number>> = {
   '1s': 1_000,
-  '1m': 2_000,
+  '1m': 1_000,
   '3m': 3_000,
   '5m': 5_000,
   '15m': 8_000,
