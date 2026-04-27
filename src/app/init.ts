@@ -1518,6 +1518,56 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       });
       mobileBarEl.appendChild(toolTriggerBtn);
 
+      // 보조지표 버튼
+      const IND_ICON_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>`;
+      const indMobileBtn = document.createElement('button');
+      indMobileBtn.type = 'button';
+      indMobileBtn.title = '보조지표';
+      indMobileBtn.innerHTML = IND_ICON_SVG;
+      indMobileBtn.style.cssText = MOBILE_BAR_BTN;
+      indMobileBtn.addEventListener('touchstart', () => {
+        indMobileBtn.style.background  = '#2962ff';
+        indMobileBtn.style.borderColor = '#2962ff';
+        indMobileBtn.style.color       = '#fff';
+      }, { passive: true });
+      indMobileBtn.addEventListener('touchend', () => {
+        setTimeout(() => {
+          indMobileBtn.style.background  = '#1c2840';
+          indMobileBtn.style.borderColor = '#2e3f5c';
+          indMobileBtn.style.color       = '#c2ccdf';
+        }, 200);
+      }, { passive: true });
+      indMobileBtn.addEventListener('click', () => {
+        const pane = getActivePane();
+        openIndicatorModal(pane.chart, pane.refreshChartUi);
+      });
+      mobileBarEl.appendChild(indMobileBtn);
+
+      // 전략시그널 버튼
+      const STRAT_ICON_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
+      const stratMobileBtn = document.createElement('button');
+      stratMobileBtn.type = 'button';
+      stratMobileBtn.title = '전략시그널';
+      stratMobileBtn.innerHTML = STRAT_ICON_SVG;
+      stratMobileBtn.style.cssText = MOBILE_BAR_BTN;
+      stratMobileBtn.addEventListener('touchstart', () => {
+        stratMobileBtn.style.background  = '#2962ff';
+        stratMobileBtn.style.borderColor = '#2962ff';
+        stratMobileBtn.style.color       = '#fff';
+      }, { passive: true });
+      stratMobileBtn.addEventListener('touchend', () => {
+        setTimeout(() => {
+          stratMobileBtn.style.background  = '#1c2840';
+          stratMobileBtn.style.borderColor = '#2e3f5c';
+          stratMobileBtn.style.color       = '#c2ccdf';
+        }, 200);
+      }, { passive: true });
+      stratMobileBtn.addEventListener('click', () => {
+        const pane = getActivePane();
+        openStrategyModal(pane.chart, pane.refreshChartUi);
+      });
+      mobileBarEl.appendChild(stratMobileBtn);
+
       // ── 우측: 시계 + 타임존 (bottom-bar.ts 와 동일) ──────────────────────
       const tzWrap = document.createElement('div');
       tzWrap.style.cssText = 'margin-left:auto;display:flex;align-items:center;gap:8px;padding-right:4px;flex-shrink:0;';
