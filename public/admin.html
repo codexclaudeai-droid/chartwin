@@ -150,37 +150,49 @@
 
 <script>
 const CATALOG = {
-  'Index': [
-    { id: 'NQ1!',     desc: 'E-mini Nasdaq-100 Futures' },
-    { id: 'SPX500',   desc: 'S&P 500' },
-    { id: 'HSI',      desc: 'Hang Seng' },
-    { id: 'KOSPI',    desc: 'Korea Composite Stock Price Index' },
-    { id: 'KOSPI200', desc: 'KOSPI 200' },
-    { id: 'KOSDAQ',   desc: 'Korea Securities Dealers Automated Quotations' },
-  ],
-  'Crypto Spot': [
-    { id: 'BTCUSDT', desc: 'Bitcoin / USDT' },
-    { id: 'ETHUSDT', desc: 'Ethereum / USDT' },
-    { id: 'SOLUSDT', desc: 'Solana / USDT' },
-    { id: 'XRPUSDT', desc: 'XRP / USDT' },
-    { id: 'BNBUSDT', desc: 'BNB / USDT' },
-    { id: 'TRXUSDT', desc: 'TRX / USDT' },
-  ],
-  'Crypto Futures': [
-    { id: 'BTCUSDT.P', desc: 'BTCUSDT Perpetual Futures' },
-    { id: 'ETHUSDT.P', desc: 'ETHUSDT Perpetual Futures' },
-    { id: 'XRPUSDT.P', desc: 'XRPUSDT Perpetual Futures' },
-    { id: 'BNBUSDT.P', desc: 'BNBUSDT Perpetual Futures' },
-    { id: 'SOLUSDT.P', desc: 'SOLUSDT Perpetual Futures' },
-    { id: 'TRXUSDT.P', desc: 'TRXUSDT Perpetual Futures' },
-  ],
-  'Commodity': [
-    { id: 'XAUUSD',    desc: 'Gold / USD' },
-    { id: 'WTI1!',     desc: 'WTI Crude Oil Futures' },
-    { id: 'XAGUSD',    desc: 'Silver / USD' },
-    { id: 'XAUUSDT.P', desc: 'Gold Perpetual Futures / USDT' },
-    { id: 'XAGUSDT.P', desc: 'Silver Perpetual Futures / USDT' },
-  ],
+  'Index': {
+    webhook: true,
+    symbols: [
+      { id: 'NQ1!',     desc: 'E-mini Nasdaq-100 Futures' },
+      { id: 'SPX500',   desc: 'S&P 500' },
+      { id: 'HSI',      desc: 'Hang Seng' },
+      { id: 'KOSPI',    desc: 'Korea Composite Stock Price Index' },
+      { id: 'KOSPI200', desc: 'KOSPI 200' },
+      { id: 'KOSDAQ',   desc: 'Korea Securities Dealers Automated Quotations' },
+    ],
+  },
+  'Crypto Spot': {
+    webhook: false,
+    symbols: [
+      { id: 'BTCUSDT', desc: 'Bitcoin / USDT' },
+      { id: 'ETHUSDT', desc: 'Ethereum / USDT' },
+      { id: 'SOLUSDT', desc: 'Solana / USDT' },
+      { id: 'XRPUSDT', desc: 'XRP / USDT' },
+      { id: 'BNBUSDT', desc: 'BNB / USDT' },
+      { id: 'TRXUSDT', desc: 'TRX / USDT' },
+    ],
+  },
+  'Crypto Futures': {
+    webhook: false,
+    symbols: [
+      { id: 'BTCUSDT.P', desc: 'BTCUSDT Perpetual Futures' },
+      { id: 'ETHUSDT.P', desc: 'ETHUSDT Perpetual Futures' },
+      { id: 'XRPUSDT.P', desc: 'XRPUSDT Perpetual Futures' },
+      { id: 'BNBUSDT.P', desc: 'BNBUSDT Perpetual Futures' },
+      { id: 'SOLUSDT.P', desc: 'SOLUSDT Perpetual Futures' },
+      { id: 'TRXUSDT.P', desc: 'TRXUSDT Perpetual Futures' },
+    ],
+  },
+  'Commodity': {
+    webhook: true,
+    symbols: [
+      { id: 'XAUUSD',    desc: 'Gold / USD' },
+      { id: 'WTI1!',     desc: 'WTI Crude Oil Futures' },
+      { id: 'XAGUSD',    desc: 'Silver / USD' },
+      { id: 'XAUUSDT.P', desc: 'Gold Perpetual Futures / USDT' },
+      { id: 'XAGUSDT.P', desc: 'Silver Perpetual Futures / USDT' },
+    ],
+  },
 };
 
 let currentHidden   = new Set();
@@ -210,21 +222,23 @@ async function loadSettings() {
 function renderSymbols() {
   const list = document.getElementById('symbol-list');
   list.innerHTML = '';
-  for (const [cat, symbols] of Object.entries(CATALOG)) {
+  for (const [cat, group] of Object.entries(CATALOG)) {
+    const isWebhook = group.webhook;
     const catEl = document.createElement('div');
     catEl.className = 'category';
-    catEl.innerHTML = `<div class="category-label">${cat}</div>`;
+    catEl.innerHTML = `<div class="category-label">${cat}${isWebhook ? ' <span style="color:#58a6ff;font-size:9px;font-weight:600;letter-spacing:.4px;vertical-align:middle">WEBHOOK</span>' : ''}</div>`;
 
-    // column headers
+    // column headers — 웹훅 컬럼은 webhook 카테고리만
     const headers = document.createElement('div');
     headers.className = 'col-headers';
-    headers.innerHTML = '<div class="col-hdr">종목</div><div class="col-hdr">표시</div><div class="col-hdr">웹훅</div>';
+    headers.style.gridTemplateColumns = isWebhook ? '1fr 72px 72px' : '1fr 72px';
+    headers.innerHTML = `<div class="col-hdr">종목</div><div class="col-hdr">표시</div>${isWebhook ? '<div class="col-hdr">웹훅</div>' : ''}`;
     catEl.appendChild(headers);
 
     const grid = document.createElement('div');
     grid.className = 'symbol-grid';
 
-    for (const sym of symbols) {
+    for (const sym of group.symbols) {
       const id  = sym.id.toUpperCase();
       const vis = !currentHidden.has(id);
       const wh  = !currentDisabled.has(id);
@@ -232,6 +246,7 @@ function renderSymbols() {
 
       const item = document.createElement('div');
       item.className = 'symbol-item';
+      item.style.gridTemplateColumns = isWebhook ? '1fr 72px 72px' : '1fr 72px';
       item.innerHTML = `
         <div class="sym-info">
           <div class="sym-name">${sym.id}</div>
@@ -244,13 +259,14 @@ function renderSymbols() {
           </label>
           <span class="toggle-state ${vis ? 'on-vis' : 'off-vis'}" id="vs_${uid}">${vis ? 'ON' : 'OFF'}</span>
         </div>
+        ${isWebhook ? `
         <div class="toggle-col">
           <label class="toggle">
             <input class="wh-input" type="checkbox" data-id="${id}" ${wh ? 'checked' : ''}>
             <span class="track"></span>
           </label>
           <span class="toggle-state ${wh ? 'on-wh' : 'off-wh'}" id="wh_${uid}">${wh ? 'ON' : 'OFF'}</span>
-        </div>`;
+        </div>` : ''}`;
 
       item.querySelector('.vis-input').addEventListener('change', (e) => {
         const sid = e.target.dataset.id;
@@ -260,14 +276,16 @@ function renderSymbols() {
         else          { currentHidden.add(sid);    stateEl.textContent = 'OFF'; stateEl.className = 'toggle-state off-vis'; }
         updateSummary();
       });
-      item.querySelector('.wh-input').addEventListener('change', (e) => {
-        const sid = e.target.dataset.id;
-        const checked = e.target.checked;
-        const stateEl = document.getElementById('wh_' + sid.replace(/[^a-z0-9]/gi, '_'));
-        if (checked) { currentDisabled.delete(sid); stateEl.textContent = 'ON'; stateEl.className = 'toggle-state on-wh'; }
-        else          { currentDisabled.add(sid);    stateEl.textContent = 'OFF'; stateEl.className = 'toggle-state off-wh'; }
-        updateSummary();
-      });
+      if (isWebhook) {
+        item.querySelector('.wh-input').addEventListener('change', (e) => {
+          const sid = e.target.dataset.id;
+          const checked = e.target.checked;
+          const stateEl = document.getElementById('wh_' + sid.replace(/[^a-z0-9]/gi, '_'));
+          if (checked) { currentDisabled.delete(sid); stateEl.textContent = 'ON'; stateEl.className = 'toggle-state on-wh'; }
+          else          { currentDisabled.add(sid);    stateEl.textContent = 'OFF'; stateEl.className = 'toggle-state off-wh'; }
+          updateSummary();
+        });
+      }
 
       grid.appendChild(item);
     }
