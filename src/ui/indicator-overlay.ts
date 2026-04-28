@@ -233,9 +233,11 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       ? Math.max(0, chart.config.layout.rightPadding)
       : 0;
     overlay.style.left = `${8 + marketLeftInset}px`;
-    overlay.style.maxWidth = (compactOverlay || touchLarge)
+    const overlayConstrainedWidth = (compactOverlay || touchLarge)
       ? `calc(100% - ${marketLeftInset + 16}px)`
-      : 'none';
+      : '';
+    overlay.style.width = overlayConstrainedWidth;
+    overlay.style.maxWidth = overlayConstrainedWidth || 'none';
     overlay.style.gap = '0px';
 
     const getIndicatorStyleKeys = (targetKey: string): string[] => {
@@ -605,23 +607,23 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       const i = chartIndicators;
       const richParts: Array<{ text: string; color?: string }> = (() => {
         switch (key) {
-          case 'maShort':  return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.maShort.value), color: c }];
-          case 'maLong':   return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.maLong.value),  color: c }];
-          case 'ma60':     return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.ma60.value),    color: c }];
-          case 'ma120':    return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.ma120.value),   color: c }];
-          case 'ma200':    return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.ma200.value),   color: c }];
+          case 'maShort':  return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.maShort?.value ?? ''), color: c }];
+          case 'maLong':   return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.maLong?.value ?? ''),  color: c }];
+          case 'ma60':     return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.ma60?.value ?? ''),    color: c }];
+          case 'ma120':    return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.ma120?.value ?? ''),   color: c }];
+          case 'ma200':    return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.ma200?.value ?? ''),   color: c }];
           case 'vwap':     return [{ text: 'VWAP', color: c }];
-          case 'ichimoku': return [{ text: 'Ichi', color: '#dbe3f4' }, { text: String(i.ichimoku.tenkan), color: c }, { text: String(i.ichimoku.kijun), color: c }];
-          case 'envelope': return [{ text: 'Env', color: '#dbe3f4' }, { text: String(i.envelope.period), color: c }, { text: `${i.envelope.pct}%`, color: c }];
-          case 'supertrend': return [{ text: 'ST', color: '#dbe3f4' }, { text: String(i.supertrend.period), color: c }, { text: String(i.supertrend.factor), color: c }];
-          case 'statisticalTrailingStop': return [{ text: 'STS', color: '#dbe3f4' }, { text: String(i.statisticalTrailingStop.dataLength), color: c }, { text: String(i.statisticalTrailingStop.distributionLength), color: c }, { text: `L${i.statisticalTrailingStop.baseLevel}`, color: c }];
+          case 'ichimoku': return [{ text: 'Ichi', color: '#dbe3f4' }, { text: String(i.ichimoku?.tenkan ?? ''), color: c }, { text: String(i.ichimoku?.kijun ?? ''), color: c }];
+          case 'envelope': return [{ text: 'Env', color: '#dbe3f4' }, { text: String(i.envelope?.period ?? ''), color: c }, { text: `${i.envelope?.pct ?? ''}%`, color: c }];
+          case 'supertrend': return [{ text: 'ST', color: '#dbe3f4' }, { text: String(i.supertrend?.period ?? ''), color: c }, { text: String(i.supertrend?.factor ?? ''), color: c }];
+          case 'statisticalTrailingStop': return [{ text: 'STS', color: '#dbe3f4' }, { text: String(i.statisticalTrailingStop?.dataLength ?? ''), color: c }, { text: String(i.statisticalTrailingStop?.distributionLength ?? ''), color: c }, { text: `L${i.statisticalTrailingStop?.baseLevel ?? ''}`, color: c }];
           case 'zeroLagMaTrendLevels': return [{ text: 'ZLMA', color: '#dbe3f4' }, { text: String(Number(i.zeroLagMaTrendLevels?.length ?? 15)), color: c }];
-          case 'rsi':    return [{ text: 'RSI',  color: '#dbe3f4' }, { text: String(i.rsi.period),  color: c }];
-          case 'dmi':    return [{ text: 'DMI',  color: '#dbe3f4' }, { text: String(i.dmi.period),  color: c }];
-          case 'macd':   return [{ text: 'MACD', color: '#dbe3f4' }, { text: String(i.macd.fast), color: c }, { text: String(i.macd.slow), color: c }, { text: String(i.macd.signal), color: c }];
-          case 'stochF': return [{ text: 'StF',  color: '#dbe3f4' }, { text: String(i.stochF.kPeriod), color: c }, { text: String(i.stochF.dPeriod), color: c }];
-          case 'stochS': return [{ text: 'StS',  color: '#dbe3f4' }, { text: String(i.stochS.kPeriod), color: c }, { text: String(i.stochS.dPeriod), color: c }];
-          case 'cci':    return [{ text: 'CCI',  color: '#dbe3f4' }, { text: String(i.cci.period),  color: c }];
+          case 'rsi':    return [{ text: 'RSI',  color: '#dbe3f4' }, { text: String(i.rsi?.period ?? ''),  color: c }];
+          case 'dmi':    return [{ text: 'DMI',  color: '#dbe3f4' }, { text: String(i.dmi?.period ?? ''),  color: c }];
+          case 'macd':   return [{ text: 'MACD', color: '#dbe3f4' }, { text: String(i.macd?.fast ?? ''), color: c }, { text: String(i.macd?.slow ?? ''), color: c }, { text: String(i.macd?.signal ?? ''), color: c }];
+          case 'stochF': return [{ text: 'StF',  color: '#dbe3f4' }, { text: String(i.stochF?.kPeriod ?? ''), color: c }, { text: String(i.stochF?.dPeriod ?? ''), color: c }];
+          case 'stochS': return [{ text: 'StS',  color: '#dbe3f4' }, { text: String(i.stochS?.kPeriod ?? ''), color: c }, { text: String(i.stochS?.dPeriod ?? ''), color: c }];
+          case 'cci':    return [{ text: 'CCI',  color: '#dbe3f4' }, { text: String(i.cci?.period ?? ''),  color: c }];
           case 'obv':    return [{ text: 'OBV',  color: c }];
           case 'volume': return [{ text: 'Vol',  color: c }];
           default:       return [{ text: key.toUpperCase(), color: c }];
@@ -654,13 +656,15 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     allKeys.forEach(key => {
       const enabled = Boolean((ind as any)[key]?.show);
       if (enabled && !collapsedPanels.has(key)) {
-        const tag = getMainIndicatorTag(key);
-        tag.style.pointerEvents = 'auto';
-        if (panelMap[key] === 'main') {
-          mainRow.appendChild(tag);
-        } else {
-          subColumn.appendChild(tag);
-        }
+        try {
+          const tag = getMainIndicatorTag(key);
+          tag.style.pointerEvents = 'auto';
+          if (panelMap[key] === 'main') {
+            mainRow.appendChild(tag);
+          } else {
+            subColumn.appendChild(tag);
+          }
+        } catch (_) { /* skip indicator with incomplete config */ }
       }
     });
 

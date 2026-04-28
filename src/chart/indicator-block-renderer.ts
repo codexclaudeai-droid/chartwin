@@ -33,6 +33,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
     line,
     showLine,
     chartLeft,
+    effectiveChartLeft = chartLeft,
     chartRight,
     totalSp,
     candleW,
@@ -162,10 +163,10 @@ export function renderIndicatorBlocks(this: any, params: any): void {
           const h = Math.max(1, Math.abs(yCenter - yLine));
           if (dir < 0 && upBgEnabled) {
             ctx.fillStyle = upBgColor;
-            ctx.fillRect(chartLeft + i * totalSp, yTop, Math.max(1, totalSp), h);
+            ctx.fillRect(effectiveChartLeft + i * totalSp, yTop, Math.max(1, totalSp), h);
           } else if (dir >= 0 && downBgEnabled) {
             ctx.fillStyle = downBgColor;
-            ctx.fillRect(chartLeft + i * totalSp, yTop, Math.max(1, totalSp), h);
+            ctx.fillRect(effectiveChartLeft + i * totalSp, yTop, Math.max(1, totalSp), h);
           }
         }
         ctx.restore();
@@ -210,7 +211,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
         }
         const yTop = Math.min(getY(trail), getY(anch));
         const h = Math.max(1, Math.abs(getY(anch) - getY(trail)));
-        ctx.fillRect(chartLeft + i * totalSp, yTop, Math.max(1, totalSp), h);
+        ctx.fillRect(effectiveChartLeft + i * totalSp, yTop, Math.max(1, totalSp), h);
       }
       ctx.restore();
       if (showLine('statisticalTrailingStopBull')) line(bullLine, bullStyle.color, bullStyle.width, bullStyle.dash);
@@ -396,7 +397,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
           const b = statisticalTrailingStopD.bias[gi];
           const candle = displayData[gi];
           if (lv == null || b == null || !candle) continue;
-          const cx = chartLeft + i * totalSp + candleW / 2;
+          const cx = effectiveChartLeft + i * totalSp + candleW / 2;
           let cy = getY(lv);
           if (markerLocation === 'abovebar') cy = getY(candle.high) - markerOffset;
           else if (markerLocation === 'belowbar') cy = getY(candle.low) + markerOffset;
@@ -433,7 +434,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
       ctx.rect(chartLeft, volTop, chartW, volH);
       ctx.clip();
       visData.forEach((c, i) => {
-        const x = chartLeft + i * totalSp;
+        const x = effectiveChartLeft + i * totalSp;
         const isUp = c.close >= c.open;
         const upColor = this.config.candleStyle?.upColor ?? '#22ab94';
         const downColor = this.config.candleStyle?.downColor ?? '#f23645';
@@ -746,7 +747,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
           if (v == null) return;
           const zy = sy(0), by = sy(v);
           ctx.fillStyle = v >= 0 ? 'rgba(34,171,148,0.6)' : 'rgba(242,54,69,0.6)';
-          ctx.fillRect(chartLeft + i * totalSp, Math.min(by, zy), candleW, Math.max(Math.abs(by - zy), 1));
+          ctx.fillRect(effectiveChartLeft + i * totalSp, Math.min(by, zy), candleW, Math.max(Math.abs(by - zy), 1));
         });
         ctx.restore();
         if (showLine('macdLine')) subLine(macdD.macdLine, macdLineStyle.color, macdLineStyle.width, top, pH, -mMax, mMax, macdLineStyle.dash);

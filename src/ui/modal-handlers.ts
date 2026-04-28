@@ -635,6 +635,33 @@ export function openChartSettingsModal(chart: any, onApply: () => void, onSymbol
   row.appendChild(controls);
   body.appendChild(row);
 
+  const panMarginRow = document.createElement('div');
+  panMarginRow.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+  const panMarginLabel = document.createElement('div');
+  panMarginLabel.innerHTML = '<div style="font-size:13px;font-weight:700;">차트 이동 여백</div><div style="font-size:11px;color:#84898e;margin-top:2px;">좌우상하 이동 시 데이터 경계 너머 여백 허용</div>';
+  const panMarginToggleWrap = document.createElement('label');
+  panMarginToggleWrap.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;';
+  const panMarginCheckbox = document.createElement('input');
+  panMarginCheckbox.type = 'checkbox';
+  panMarginCheckbox.checked = Boolean((chart.config.layout as any).panMarginEnabled);
+  panMarginCheckbox.style.cssText = 'width:16px;height:16px;cursor:pointer;accent-color:#3b82f6;';
+  const panMarginToggleLabel = document.createElement('span');
+  panMarginToggleLabel.textContent = panMarginCheckbox.checked ? 'ON' : 'OFF';
+  panMarginToggleLabel.style.cssText = `font-size:12px;font-weight:700;color:${panMarginCheckbox.checked ? '#3b82f6' : '#84898e'};min-width:28px;`;
+  panMarginCheckbox.addEventListener('change', () => {
+    (chart.config.layout as any).panMarginEnabled = panMarginCheckbox.checked;
+    panMarginToggleLabel.textContent = panMarginCheckbox.checked ? 'ON' : 'OFF';
+    panMarginToggleLabel.style.color = panMarginCheckbox.checked ? '#3b82f6' : '#84898e';
+    if (!panMarginCheckbox.checked) (chart as any).leftPanBars = 0;
+    chart.draw();
+    onApply();
+  });
+  panMarginToggleWrap.appendChild(panMarginCheckbox);
+  panMarginToggleWrap.appendChild(panMarginToggleLabel);
+  panMarginRow.appendChild(panMarginLabel);
+  panMarginRow.appendChild(panMarginToggleWrap);
+  body.appendChild(panMarginRow);
+
   const candleRow = document.createElement('div');
   candleRow.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
   const candleLabel = document.createElement('div');

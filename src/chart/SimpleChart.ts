@@ -286,6 +286,9 @@ export class SimpleChart {
   private dragStartIndex = 0;
   private dragStartPriceOffset = 0;
   private mainPricePanOffset = 0;
+  private leftPanBars = 0;
+  private dragStartLeftPanBars = 0;
+  private touchStartLeftPanBars = 0;
   private mouseX = 0;
   private mouseY = 0;
   private isMouseOver = false;
@@ -443,6 +446,7 @@ export class SimpleChart {
       rightPadding: 0,
       rightGapBars: 0,
       marketInfoSide: 'right' as 'left' | 'right',
+      panMarginEnabled: false,
     },
     candleStyle: {
       upColor: '#22ab94',
@@ -2393,6 +2397,7 @@ export class SimpleChart {
     mainH: number;
     minP: number;
     maxP: number;
+    leftGap: number;
     getY: (p: number) => number;
   } = null;
 
@@ -2407,6 +2412,7 @@ export class SimpleChart {
     mainH: number;
     minP: number;
     maxP: number;
+    leftGap: number;
     getY: (p: number) => number;
   } | null, timeMs = performance.now()): void {
     const ctx = this.signalCtx;
@@ -2499,7 +2505,7 @@ export class SimpleChart {
       const signal = this.strategySignals[gi] ?? 0;
       if (!signal) continue;
       const candle = visible[i];
-      const x = meta.chartLeft + i * meta.totalSp + meta.candleW / 2;
+      const x = meta.chartLeft + (i + meta.leftGap) * meta.totalSp + meta.candleW / 2;
       const y = signal > 0 ? meta.getY(candle.low) + 12 : meta.getY(candle.high) - 12;
       const entryPrice = candle.close;
       const isLatest = gi === latestSignalIndex;
@@ -2815,6 +2821,7 @@ export class SimpleChart {
     const visibleCount = Math.max(10, this.endIndex - this.startIndex);
     this.endIndex   = this.data.length;
     this.startIndex = Math.max(0, this.endIndex - visibleCount);
+    this.leftPanBars = 0;
     this.draw();
   }
 
@@ -2824,9 +2831,8 @@ export class SimpleChart {
     const shift = Number.isFinite(shiftBars) ? Math.trunc(shiftBars) : 0;
     if (!shift) return;
     const visibleCount = Math.max(1, this.endIndex - this.startIndex);
-    const ns = this.clampPanStartIndex(this.startIndex + shift, visibleCount);
-    this.startIndex = ns;
-    this.endIndex = ns + visibleCount;
+    const virtualStart = (this.startIndex - this.leftPanBars) + shift;
+    this.applyHorizontalPan(virtualStart, visibleCount);
     this.draw();
   }
 
@@ -2841,15 +2847,39 @@ export class SimpleChart {
     const nextVisible = Math.max(minVisible, Math.min(maxVisible, currentVisible + delta));
     this.endIndex = this.data.length;
     this.startIndex = Math.max(0, this.endIndex - nextVisible);
+    this.leftPanBars = 0;
     this.draw();
   }
 
   private clampPanStartIndex(startIndex: number, visibleCount: number): number {
     if (visibleCount <= 0) return 0;
     const dataLength = this.data.length;
-    // 최신 캔들 2개까지만 남기고 나머지는 오른쪽 여백(미래 영역)으로 이동 가능.
-    const maxStart = Math.max(0, dataLength - 2);
+    const panMarginEnabled = Boolean((this.config.layout as any).panMarginEnabled);
+    const maxStart = panMarginEnabled
+      ? Math.max(0, dataLength - 1 + Math.floor(visibleCount / 2))
+      : Math.max(0, dataLength - 2);
     return Math.max(0, Math.min(maxStart, startIndex));
+  }
+
+  /** 가상 시작 인덱스(음수 가능)를 적용 — 좌측 여백 처리 포함 */
+  private applyHorizontalPan(virtualStart: number, visibleCount: number): boolean {
+    const panMarginEnabled = Boolean((this.config.layout as any).panMarginEnabled);
+    const maxLeftBars = Math.floor(visibleCount / 2);
+    if (panMarginEnabled && virtualStart < 0) {
+      const newLeft = Math.min(maxLeftBars, -virtualStart);
+      const changed = newLeft !== this.leftPanBars || this.startIndex !== 0;
+      this.leftPanBars = newLeft;
+      this.startIndex = 0;
+      this.endIndex = visibleCount;
+      return changed;
+    }
+    const newLeft = 0;
+    const ns = this.clampPanStartIndex(virtualStart, visibleCount);
+    const changed = ns !== this.startIndex || newLeft !== this.leftPanBars;
+    this.leftPanBars = newLeft;
+    this.startIndex = ns;
+    this.endIndex = ns + visibleCount;
+    return changed;
   }
 
   private getMainPricePerPixel(): number {
@@ -3588,7 +3618,9 @@ export class SimpleChart {
     }
 
     const gapBars = Math.min(Math.max(0, this.config.layout.rightGapBars ?? 0), 50 / Math.max(1, chartW / Math.max(1, visibleSlots)));
-    const totalSp = chartW / (visibleSlots + gapBars);
+    const leftGap = Math.max(0, this.leftPanBars);
+    const totalSp = chartW / (visibleSlots + gapBars + leftGap);
+    const effectiveChartLeft = chartLeft + leftGap * totalSp;
     const candleW = Math.max(totalSp * 0.8, 1);
     const targetPx = 110;
     const rawStepCandles = targetPx / Math.max(totalSp, 1);
@@ -3835,7 +3867,7 @@ export class SimpleChart {
       visData.forEach((_, i) => {
         const v = data[this.startIndex + i];
         if (v == null) { started = false; return; }
-        const x = chartLeft + i * totalSp + candleW / 2;
+        const x = effectiveChartLeft + i * totalSp + candleW / 2;
         if (!started) { ctx.moveTo(x, getY(v)); started = true; } else ctx.lineTo(x, getY(v));
       });
       ctx.stroke(); ctx.setLineDash([]); ctx.restore();
@@ -3863,7 +3895,7 @@ export class SimpleChart {
       visData.forEach((_, i) => {
         const v = data[this.startIndex + i];
         if (v == null) { started = false; return; }
-        const x = chartLeft + i * totalSp + candleW / 2;
+        const x = effectiveChartLeft + i * totalSp + candleW / 2;
         if (!started) { ctx.moveTo(x, sy(v)); started = true; } else ctx.lineTo(x, sy(v));
       });
       ctx.stroke(); ctx.setLineDash([]); ctx.restore();
@@ -3912,7 +3944,7 @@ export class SimpleChart {
     ctx.clip();
     ctx.strokeStyle = '#1e2230';
     tickIndices.forEach((i) => {
-      const x = chartLeft + i * totalSp + candleW / 2;
+      const x = effectiveChartLeft + i * totalSp + candleW / 2;
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, plotHeight);
@@ -3934,7 +3966,7 @@ export class SimpleChart {
         const a = ichiD.senkouA[gi], b = ichiD.senkouB[gi];
         if (a == null || b == null) return;
         ctx.fillStyle = a >= b ? 'rgba(34,171,148,0.1)' : 'rgba(242,54,69,0.1)';
-        ctx.fillRect(chartLeft + i * totalSp, Math.min(getY(a), getY(b)), totalSp, Math.abs(getY(a) - getY(b)));
+        ctx.fillRect(effectiveChartLeft + i * totalSp, Math.min(getY(a), getY(b)), totalSp, Math.abs(getY(a) - getY(b)));
       });
       ctx.restore();
       const tenkanStyle = this.resolveStyle('ichimokuTenkan', '#f23645', 1);
@@ -3958,13 +3990,13 @@ export class SimpleChart {
       visData.forEach((_, i) => {
         const v = bbLine.data.upper[this.startIndex + i];
         if (v == null) return;
-        if (first) { ctx.moveTo(chartLeft + i * totalSp + candleW/2, getY(v)); first = false; }
-        else ctx.lineTo(chartLeft + i * totalSp + candleW/2, getY(v));
+        if (first) { ctx.moveTo(effectiveChartLeft + i * totalSp + candleW/2, getY(v)); first = false; }
+        else ctx.lineTo(effectiveChartLeft + i * totalSp + candleW/2, getY(v));
       });
       for (let i = visData.length - 1; i >= 0; i--) {
         const v = bbLine.data.lower[this.startIndex + i];
         if (v == null) continue;
-        ctx.lineTo(chartLeft + i * totalSp + candleW/2, getY(v));
+        ctx.lineTo(effectiveChartLeft + i * totalSp + candleW/2, getY(v));
       }
       ctx.closePath(); ctx.fill(); ctx.restore();
     });
@@ -3977,13 +4009,13 @@ export class SimpleChart {
       visData.forEach((_, i) => {
         const v = envD.upper[this.startIndex + i];
         if (v == null) return;
-        if (first) { ctx.moveTo(chartLeft + i * totalSp + candleW/2, getY(v)); first = false; }
-        else ctx.lineTo(chartLeft + i * totalSp + candleW/2, getY(v));
+        if (first) { ctx.moveTo(effectiveChartLeft + i * totalSp + candleW/2, getY(v)); first = false; }
+        else ctx.lineTo(effectiveChartLeft + i * totalSp + candleW/2, getY(v));
       });
       for (let i = visData.length - 1; i >= 0; i--) {
         const v = envD.lower[this.startIndex + i];
         if (v == null) continue;
-        ctx.lineTo(chartLeft + i * totalSp + candleW/2, getY(v));
+        ctx.lineTo(effectiveChartLeft + i * totalSp + candleW/2, getY(v));
       }
       ctx.closePath(); ctx.fill(); ctx.restore();
     }
@@ -4363,7 +4395,7 @@ export class SimpleChart {
     const volTop = panelTops['volume'] ?? Math.max(0, mainH - volH);
 
     visData.forEach((c, i) => {
-      const x = chartLeft + i * totalSp, isUp = c.close >= c.open;
+      const x = effectiveChartLeft + i * totalSp, isUp = c.close >= c.open;
       const upColor = this.config.candleStyle?.upColor ?? '#22ab94';
       const downColor = this.config.candleStyle?.downColor ?? '#f23645';
       const candleColor = isUp ? upColor : downColor;
@@ -4413,6 +4445,7 @@ export class SimpleChart {
       line,
       showLine,
       chartLeft,
+      effectiveChartLeft,
       chartRight,
       totalSp,
       candleW,
@@ -4489,7 +4522,7 @@ export class SimpleChart {
     for (let ti = tickIndices.length - 1; ti >= 0; ti -= 1) {
       const i = tickIndices[ti];
       if (i >= count) continue; // Future bars have no candle data — skip time label
-        const x = chartLeft + i * totalSp + candleW / 2;
+        const x = effectiveChartLeft + i * totalSp + candleW / 2;
       const lbl = formatAxisTime(visData[i].time, this.config.timezone, this.config.timeframe, stepCandles);
       const w = ctx.measureText(lbl).width;
       const left = x - w / 2;
@@ -4512,6 +4545,7 @@ export class SimpleChart {
       mainH,
       minP,
       maxP,
+      leftGap,
       getY,
     };
     this.drawConfirmedPatternBoxes(this.lastDrawMeta);
@@ -7581,6 +7615,7 @@ export class SimpleChart {
     this.dragStartX = e.clientX;
     this.dragStartY = e.clientY;
     this.dragStartIndex = this.startIndex;
+    this.dragStartLeftPanBars = this.leftPanBars;
     this.dragStartPriceOffset = this.mainPricePanOffset;
     this.requestOverlayDraw();
     this.updateChartCursor();
@@ -7678,12 +7713,8 @@ export class SimpleChart {
     let changed = false;
     if (cpw > 0) {
       const shift = Math.floor(dx / cpw) * -1;
-      const ns = this.clampPanStartIndex(this.dragStartIndex + shift, visibleCount);
-      if (ns !== this.startIndex) {
-        this.startIndex = ns;
-        this.endIndex = ns + visibleCount;
-        changed = true;
-      }
+      const virtualStart = (this.dragStartIndex - this.dragStartLeftPanBars) + shift;
+      if (this.applyHorizontalPan(virtualStart, visibleCount)) changed = true;
     }
     const pricePerPixel = this.getMainPricePerPixel();
     const nextPriceOffset = this.dragStartPriceOffset + dy * pricePerPixel;
@@ -8025,6 +8056,7 @@ export class SimpleChart {
       // ── 패닝 준비 ─────────────────────────────────────────────────────
       this.isTouchPanning = true;
       this.touchStartIndex = this.startIndex;
+      this.touchStartLeftPanBars = this.leftPanBars;
       this.touchStartPriceOffset = this.mainPricePanOffset;
 
     } else if (e.touches.length === 2) {
@@ -8170,12 +8202,8 @@ export class SimpleChart {
         let changed = false;
         if (cpw > 0) {
           const shift = Math.floor(dx / cpw) * -1;
-          const ns = this.clampPanStartIndex(this.touchStartIndex + shift, visibleCount);
-          if (ns !== this.startIndex) {
-            this.startIndex = ns;
-            this.endIndex = ns + visibleCount;
-            changed = true;
-          }
+          const virtualStart = (this.touchStartIndex - this.touchStartLeftPanBars) + shift;
+          if (this.applyHorizontalPan(virtualStart, visibleCount)) changed = true;
         }
         const pricePerPixel = this.getMainPricePerPixel();
         const nextPriceOffset = this.touchStartPriceOffset + dy * pricePerPixel;
@@ -8378,6 +8406,7 @@ export class SimpleChart {
         this.touchStartX     = pos.x;
         this.touchStartY     = pos.y;
         this.touchStartIndex = this.startIndex;
+        this.touchStartLeftPanBars = this.leftPanBars;
         this.touchStartPriceOffset = this.mainPricePanOffset;
       }
     }
