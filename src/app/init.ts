@@ -553,8 +553,15 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
 
     const chart = new SimpleChart(chartArea);
     chart.onAfterDraw = () => {
-      const pad = chart.currentAxisPad;
-      if (pad > 0) currencySelect.style.width = `${pad}px`;
+      const axisPad = chart.currentAxisPad;
+      if (axisPad > 0) {
+        const headerPadRight = parseInt(getComputedStyle(paneHeader).paddingRight) || 0;
+        currencySelect.style.width = `${Math.max(30, axisPad - headerPadRight)}px`;
+        const gripRight = Math.max(4, Math.round(axisPad / 2 - 9));
+        chartArea.querySelectorAll<HTMLElement>('.divider-grip').forEach((el) => {
+          el.style.right = `${gripRight}px`;
+        });
+      }
     };
     if (persistedSymbol) {
       chart.config.symbol = persistedSymbol;

@@ -59,7 +59,7 @@ export function createPanelDividerManager<TPanelState>({
       divider.className = 'panel-divider';
       divider.style.cssText = 'position:absolute;left:0;right:0;height:12px;background:transparent;cursor:row-resize;z-index:500;transform:translateY(-6px);';
       divider.innerHTML = `<div class="divider-line" style="width:100%;height:1px;background:#2a2e3e;margin-top:6px;position:relative;border-radius:999px;transition:background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;">
-        <div class="divider-grip" style="position:absolute;top:58%;right:38px;transform:translateY(-50%);width:18px;height:12px;display:flex;align-items:center;justify-content:center;color:#59617a;pointer-events:none;transition:color 0.15s ease;">
+        <div class="divider-grip" style="position:absolute;top:58%;right:30px;transform:translateY(-50%);width:18px;height:12px;display:flex;align-items:center;justify-content:center;color:#59617a;pointer-events:none;transition:color 0.15s ease;">
           <svg viewBox="0 0 18 12" width="18" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <line x1="2" y1="2" x2="16" y2="2"></line>
             <line x1="2" y1="6" x2="16" y2="6"></line>

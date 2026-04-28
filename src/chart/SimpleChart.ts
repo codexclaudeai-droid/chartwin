@@ -3905,8 +3905,11 @@ export class SimpleChart {
     }
     ctx.restore();
 
-    // 1-2) 세로 격자: 배경 레벨에서 먼저 렌더 (캔들/지표 위로 올라오지 않도록)
+    // 1-2) 세로 격자: 차트 영역에만 클리핑하여 시세영역 침범 방지
     ctx.save();
+    ctx.beginPath();
+    ctx.rect(chartLeft, 0, chartW, plotHeight);
+    ctx.clip();
     ctx.strokeStyle = '#1e2230';
     tickIndices.forEach((i) => {
       const x = chartLeft + i * totalSp + candleW / 2;
