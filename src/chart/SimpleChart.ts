@@ -3501,7 +3501,7 @@ export class SimpleChart {
       let quickMax = -Infinity;
       quickVis.forEach(d => { quickMax = Math.max(quickMax, d.high); });
       if (isFinite(quickMax)) {
-        ctx.font = `13px ${CHART_FONT_STACK}`;
+        ctx.font = `600 13px ${CHART_FONT_STACK}`;
         const measured = ctx.measureText(formatWithComma(quickMax, symbolPriceDigits)).width;
         dynamicAxisPad = Math.max(44, Math.ceil(measured + 16));
       }
@@ -3860,7 +3860,7 @@ export class SimpleChart {
     // 1) 메인 가로 격자/가격축
     ctx.save();
     ctx.strokeStyle = '#1e2230'; ctx.fillStyle = CHART_TEXT_SECONDARY;
-    ctx.font = `13px ${CHART_FONT_STACK}`; ctx.textAlign = 'right';
+    ctx.font = `600 13px ${CHART_FONT_STACK}`; ctx.textAlign = 'right';
     const axisDigits = Math.max(0, Math.ceil(-Math.log10(mainAxisStep)) + 2);
     const tickCount = Math.max(1, Math.floor((maxP - minP) / mainAxisStep) + 1);
     const axisBottomPadding = 14;
@@ -4423,7 +4423,7 @@ export class SimpleChart {
       ctx.lineTo(geometry.axisPad - 0.5, mainH);
       ctx.stroke();
       ctx.fillStyle = CHART_TEXT_SECONDARY;
-      ctx.font = `13px ${CHART_FONT_STACK}`;
+      ctx.font = `600 13px ${CHART_FONT_STACK}`;
       ctx.textAlign = 'right';
       const axisDigits = Math.max(0, Math.ceil(-Math.log10(mainAxisStep)) + 2);
       const tickCount = Math.max(1, Math.floor((maxP - minP) / mainAxisStep) + 1);
@@ -6443,7 +6443,7 @@ export class SimpleChart {
           const priceBoxX = geometry.side === 'left' ? 2 : (width - priceBoxW - 2);
           ctx.fillRect(priceBoxX, py - 10, priceBoxW, 20);
           ctx.fillStyle = getContrastTextColor(boxColor);
-          ctx.font = `700 13px ${CHART_FONT_STACK}`; ctx.textAlign = 'right';
+          ctx.font = `600 13px ${CHART_FONT_STACK}`; ctx.textAlign = 'right';
           ctx.fillText(formatWithComma(last, symbolPriceDigits), geometry.side === 'left' ? geometry.axisPad - 6 : width - 4, py + 4);
         }
       }
