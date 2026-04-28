@@ -412,7 +412,7 @@ export class SimpleChart {
       macdRatio:   0.11,
       subRatio:    0.12, // default ratio for unknown sub panel
       rightPadding: 0,
-      rightGapBars: 1,
+      rightGapBars: 0,
       marketInfoSide: 'right' as 'left' | 'right',
     },
     candleStyle: {

@@ -607,14 +607,14 @@ export function openChartSettingsModal(chart: any, onApply: () => void, onSymbol
   slider.min = '0';
   slider.max = '40';
   slider.step = '1';
-  slider.value = String(chart.config.layout.rightGapBars ?? 1);
+  slider.value = String(chart.config.layout.rightGapBars ?? 0);
 
   const number = document.createElement('input');
   number.type = 'number';
   number.min = '0';
   number.max = '40';
   number.step = '1';
-  number.value = String(chart.config.layout.rightGapBars ?? 1);
+  number.value = String(chart.config.layout.rightGapBars ?? 0);
   number.style.cssText = 'width:64px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:4px 6px;text-align:right;font-size:12px;';
 
   const apply = (raw: number) => {
