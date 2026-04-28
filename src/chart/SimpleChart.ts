@@ -84,6 +84,30 @@ const LOCK_ICON_CLOSED_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fi
 const LOCK_ICON_OPEN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M16 11V8a4 4 0 1 0-8 0"></path></svg>';
 const ERASER_CURSOR = 'url("/eraser-cursor.svg") 4 20, pointer';
 
+function drawPriceArrowBox(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number,
+  side: 'left' | 'right',
+  arrowDepth = 8,
+): void {
+  const half = h / 2;
+  ctx.beginPath();
+  if (side === 'right') {
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + arrowDepth, y - half);
+    ctx.lineTo(x + w, y - half);
+    ctx.lineTo(x + w, y + half);
+    ctx.lineTo(x + arrowDepth, y + half);
+  } else {
+    ctx.moveTo(x + w, y);
+    ctx.lineTo(x + w - arrowDepth, y - half);
+    ctx.lineTo(x, y - half);
+    ctx.lineTo(x, y + half);
+    ctx.lineTo(x + w - arrowDepth, y + half);
+  }
+  ctx.closePath();
+}
+
 // ── 모바일 전용 상수 ──────────────────────────────────────────────────────────
 export const MOBILE_BOTTOM_BAR_HEIGHT = 44;
 
@@ -5819,19 +5843,19 @@ export class SimpleChart {
         ctx.stroke();
 
         // Axis price box follows the hline color automatically.
-        const boxW = Math.max(20, metrics.axisPad - 4);
-        const boxX = metrics.axisSide === 'left' ? 2 : (metrics.width - boxW - 2);
+        const boxW = Math.max(20, metrics.axisPad - 2);
+        const boxX = metrics.axisSide === 'left' ? 2 : metrics.chartRight;
         const boxH = 20;
-        const boxY = ay - boxH / 2;
         ctx.save();
         ctx.setLineDash([]);
         ctx.fillStyle = strokeColor;
-        ctx.fillRect(boxX, boxY, boxW, boxH);
+        drawPriceArrowBox(ctx, boxX, ay, boxW, boxH, metrics.axisSide);
+        ctx.fill();
         ctx.fillStyle = getContrastTextColor(strokeColor);
         ctx.font = `700 12px ${CHART_FONT_STACK}`;
-        ctx.textAlign = 'center';
+        ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
-      ctx.fillText(formatWithComma(a.price, getSymbolPricePrecision(this.config.symbol, this.config.quoteCurrency)), boxX + boxW / 2, ay);
+        ctx.fillText(formatWithComma(a.price, getSymbolPricePrecision(this.config.symbol, this.config.quoteCurrency)), metrics.axisSide === 'left' ? boxX + boxW - 12 : boxX + boxW - 4, ay);
         ctx.restore();
 
         const text = ('text' in shape ? shape.text : '') ?? '';
@@ -6446,9 +6470,10 @@ export class SimpleChart {
         const boundaryPadding = 12;
         if (py < mainH - boundaryPadding) {
           ctx.fillStyle = boxColor;
-          const priceBoxW = Math.max(20, geometry.axisPad - 4);
-          const priceBoxX = geometry.side === 'left' ? 2 : (width - priceBoxW - 2);
-          ctx.fillRect(priceBoxX, py - 10, priceBoxW, 20);
+          const priceBoxW = Math.max(20, geometry.axisPad - 2);
+          const priceBoxX = geometry.side === 'left' ? 2 : chartRight;
+          drawPriceArrowBox(ctx, priceBoxX, py, priceBoxW, 20, geometry.side);
+          ctx.fill();
           ctx.fillStyle = getContrastTextColor(boxColor);
           ctx.font = `600 13px ${CHART_FONT_STACK}`; ctx.textAlign = 'right';
           ctx.fillText(formatWithComma(last, symbolPriceDigits), geometry.side === 'left' ? geometry.axisPad - 6 : width - 4, py + 4);
@@ -6712,11 +6737,12 @@ export class SimpleChart {
       const hi = mainScale.hi;
       const price = hi - (this.mouseY - R.top) / (mainH - R.top || 1) * (hi - lo);
       ctx.fillStyle = '#2a2e39';
-      const priceBoxW = Math.max(20, geometry.axisPad - 4);
-      const priceBoxX = geometry.side === 'left' ? 2 : (width - priceBoxW - 2);
-      ctx.fillRect(priceBoxX, this.mouseY - 10, priceBoxW, 20);
+      const priceBoxW = Math.max(20, geometry.axisPad - 2);
+      const priceBoxX = geometry.side === 'left' ? 2 : chartRight;
+      drawPriceArrowBox(ctx, priceBoxX, this.mouseY, priceBoxW, 20, geometry.side);
+      ctx.fill();
       ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
-      ctx.strokeRect(priceBoxX, this.mouseY - 10, priceBoxW, 20);
+      ctx.stroke();
       ctx.fillStyle = CHART_TEXT_PRIMARY; ctx.font = `600 13px ${CHART_FONT_STACK}`; ctx.textAlign = 'right';
       ctx.fillText(formatWithComma(price, symbolPriceDigits), geometry.side === 'left' ? geometry.axisPad - 6 : width - 4, this.mouseY + 4);
 
