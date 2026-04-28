@@ -639,27 +639,23 @@ export function openChartSettingsModal(chart: any, onApply: () => void, onSymbol
   panMarginRow.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
   const panMarginLabel = document.createElement('div');
   panMarginLabel.innerHTML = '<div style="font-size:13px;font-weight:700;">차트 이동 여백</div><div style="font-size:11px;color:#84898e;margin-top:2px;">좌우상하 이동 시 데이터 경계 너머 여백 허용</div>';
-  const panMarginToggleWrap = document.createElement('label');
-  panMarginToggleWrap.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;';
-  const panMarginCheckbox = document.createElement('input');
-  panMarginCheckbox.type = 'checkbox';
-  panMarginCheckbox.checked = Boolean((chart.config.layout as any).panMarginEnabled);
-  panMarginCheckbox.style.cssText = 'width:16px;height:16px;cursor:pointer;accent-color:#3b82f6;';
-  const panMarginToggleLabel = document.createElement('span');
-  panMarginToggleLabel.textContent = panMarginCheckbox.checked ? 'ON' : 'OFF';
-  panMarginToggleLabel.style.cssText = `font-size:12px;font-weight:700;color:${panMarginCheckbox.checked ? '#3b82f6' : '#84898e'};min-width:28px;`;
-  panMarginCheckbox.addEventListener('change', () => {
-    (chart.config.layout as any).panMarginEnabled = panMarginCheckbox.checked;
-    panMarginToggleLabel.textContent = panMarginCheckbox.checked ? 'ON' : 'OFF';
-    panMarginToggleLabel.style.color = panMarginCheckbox.checked ? '#3b82f6' : '#84898e';
-    if (!panMarginCheckbox.checked) (chart as any).leftPanBars = 0;
+  let panMarginOn = Boolean((chart.config.layout as any).panMarginEnabled);
+  const pmToggleTrack = document.createElement('div');
+  pmToggleTrack.style.cssText = `position:relative;width:44px;height:24px;border-radius:12px;cursor:pointer;transition:background 0.2s;background:${panMarginOn ? '#3b82f6' : '#3a4155'};flex-shrink:0;`;
+  const pmToggleThumb = document.createElement('div');
+  pmToggleThumb.style.cssText = `position:absolute;top:3px;left:${panMarginOn ? '23px' : '3px'};width:18px;height:18px;border-radius:50%;background:#ffffff;box-shadow:0 1px 4px rgba(0,0,0,0.35);transition:left 0.18s;`;
+  pmToggleTrack.appendChild(pmToggleThumb);
+  pmToggleTrack.addEventListener('click', () => {
+    panMarginOn = !panMarginOn;
+    (chart.config.layout as any).panMarginEnabled = panMarginOn;
+    pmToggleTrack.style.background = panMarginOn ? '#3b82f6' : '#3a4155';
+    pmToggleThumb.style.left = panMarginOn ? '23px' : '3px';
+    if (!panMarginOn) (chart as any).leftPanBars = 0;
     chart.draw();
     onApply();
   });
-  panMarginToggleWrap.appendChild(panMarginCheckbox);
-  panMarginToggleWrap.appendChild(panMarginToggleLabel);
   panMarginRow.appendChild(panMarginLabel);
-  panMarginRow.appendChild(panMarginToggleWrap);
+  panMarginRow.appendChild(pmToggleTrack);
   body.appendChild(panMarginRow);
 
   const candleRow = document.createElement('div');

@@ -2738,11 +2738,12 @@ export class SimpleChart {
       Math.max(0, this.config.layout.rightGapBars ?? 0),
       50 / Math.max(1, chartW / Math.max(1, this.endIndex - this.startIndex)),
     );
-    const totalSp = chartW / (visibleCount + gapBars);
+    const leftGap = Math.max(0, this.leftPanBars);
+    const totalSp = chartW / (visibleCount + gapBars + leftGap);
     const candleW = Math.max(totalSp * 0.8, 1);
     const localIndex = candleIndex - this.startIndex;
     if (!Number.isFinite(localIndex) || localIndex < 0 || localIndex > visibleCount) return null;
-    return geometry.chartLeft + localIndex * totalSp + candleW / 2;
+    return geometry.chartLeft + (leftGap + localIndex) * totalSp + candleW / 2;
   }
 
   private focusSignalVisual(candleIndex: number): void {
@@ -5095,9 +5096,12 @@ export class SimpleChart {
     const top = 10;
     const totalSp = this.lastDrawMeta.totalSp;
     const candleW = this.lastDrawMeta.candleW;
+    const leftGap = this.lastDrawMeta.leftGap ?? 0;
     const range = this.lastDrawMeta.maxP - this.lastDrawMeta.minP || 1;
+    const effectiveChartLeft = geometry.chartLeft + leftGap * totalSp;
     return {
       chartLeft: geometry.chartLeft,
+      effectiveChartLeft,
       chartRight: geometry.chartRight,
       chartW: geometry.chartWidth,
       axisPad: geometry.axisPad,
@@ -5106,6 +5110,7 @@ export class SimpleChart {
       top,
       totalSp,
       candleW,
+      leftGap,
       minP: this.lastDrawMeta.minP,
       maxP: this.lastDrawMeta.maxP,
       range,
@@ -5119,7 +5124,7 @@ export class SimpleChart {
     const m = this.getMainViewportMetrics();
     if (!m) return null;
     if (mx < m.chartLeft || mx > m.chartRight || my < m.top || my > m.mainH) return null;
-    const rawIndex = this.startIndex + (mx - m.chartLeft - m.candleW / 2) / Math.max(1e-6, m.totalSp);
+    const rawIndex = this.startIndex + (mx - m.effectiveChartLeft - m.candleW / 2) / Math.max(1e-6, m.totalSp);
     // No upper clamp — allow drawing in the future (right margin) area beyond data.length.
     const index = Math.max(0, rawIndex);
     const price = m.maxP - ((my - m.top) / Math.max(1, m.mainH - m.top)) * m.range;
@@ -5128,7 +5133,8 @@ export class SimpleChart {
 
   private xForIndex(index: number, totalSp: number, candleW: number): number {
     const chartLeft = this.lastDrawMeta?.chartLeft ?? 0;
-    return chartLeft + (index - this.startIndex) * totalSp + candleW / 2;
+    const leftGap = this.lastDrawMeta?.leftGap ?? 0;
+    return chartLeft + (leftGap + index - this.startIndex) * totalSp + candleW / 2;
   }
 
   /** 앵커 가격을 캔들 OHLC 중 가장 가까운 값으로 자석 스냅 (약한 자석: 12px 이내) */
