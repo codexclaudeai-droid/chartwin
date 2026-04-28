@@ -1629,43 +1629,40 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         'opacity:0.88',
       ].join(';');
 
-      // 위치 계산: 최상단 보조지표 패널 바로 위 + 가격축 왼쪽(최근 캔들 부근)
+      // 위치 계산: 캔들 차트 영역 우측 하단 구석 (시세영역 침범 안 함)
+      const JUMP_BTN_MARGIN = 8; // 축 경계 및 하단 기본 간격
       const display_update_jump_pos = () => {
         const pane = getActivePane();
         const panels = pane.chart.activePanels as string[];
         const ca    = pane.chartArea;
-        const rightPad: number = (pane.chart.config as any).layout?.rightPadding ?? 70;
+        const axisPad = pane.chart.currentAxisPad;
         const side: 'left' | 'right' = ((pane.chart.config as any).layout?.marketInfoSide === 'left') ? 'left' : 'right';
-
-        // X: 가격축 안쪽
-        if (side === 'left') {
-          jumpBtn.style.left = `${rightPad + 4}px`;
-          jumpBtn.style.right = 'auto';
-        } else {
-          jumpBtn.style.right = `${rightPad + 4}px`;
-          jumpBtn.style.left = 'auto';
-        }
 
         const wsRect = workspace.getBoundingClientRect();
         const caRect = ca.getBoundingClientRect();
 
+        // X: 차트 영역 우측 끝 — 시세 축 왼쪽에 margin 간격 유지
+        const axisOffsetFromWsRight = (wsRect.right - caRect.right) + axisPad;
+        if (side === 'left') {
+          jumpBtn.style.left  = `${axisPad + JUMP_BTN_MARGIN}px`;
+          jumpBtn.style.right = 'auto';
+        } else {
+          jumpBtn.style.right = `${axisOffsetFromWsRight + JUMP_BTN_MARGIN}px`;
+          jumpBtn.style.left  = 'auto';
+        }
+
+        // Y: 주 캔들 영역 하단 (보조지표 상단 또는 시간축 바로 위)
         if (panels.length) {
-          // 첫 보조지표 패널 상단 = plotHeight × (1 - 전체 서브비율)
-          const plotH  = Math.max(40, ca.clientHeight - 22); // X_AXIS_HEIGHT=22
+          const plotH  = Math.max(40, ca.clientHeight - 22);
           const subRat = panels.reduce((s: number, id: string) =>
             s + pane.chart.getPanelRatio(id), 0);
-          const dividerTop = plotH * (1 - subRat); // chartArea 내 Y
-
-          // workspace 좌표로 변환
-          const dividerAbsTop = caRect.top + dividerTop;
-          const dividerRelTop = dividerAbsTop - wsRect.top;
-
-          jumpBtn.style.top    = `${dividerRelTop - JUMP_BTN_SIZE - 6}px`;
+          const dividerTop    = plotH * (1 - subRat);
+          const dividerRelTop = (caRect.top + dividerTop) - wsRect.top;
+          jumpBtn.style.top    = `${dividerRelTop - JUMP_BTN_SIZE - JUMP_BTN_MARGIN}px`;
           jumpBtn.style.bottom = 'auto';
         } else {
-          // 보조지표 없으면 시간축 바로 위
           const caBottomRel = caRect.bottom - wsRect.top;
-          jumpBtn.style.top    = `${caBottomRel - 22 - JUMP_BTN_SIZE - 6}px`;
+          jumpBtn.style.top    = `${caBottomRel - 22 - JUMP_BTN_SIZE - JUMP_BTN_MARGIN}px`;
           jumpBtn.style.bottom = 'auto';
         }
       };
