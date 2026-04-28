@@ -759,7 +759,7 @@ export class SimpleChart {
         settings: [],
         values: [
           { text: `V ${lastVol == null ? '-' : formatThousandAdaptive(lastVol, 0)}`, color: '#8fa2c4' },
-          { text: `대금 ${lastTurnover == null ? '-' : formatThousandAdaptive(lastTurnover, 0)}`, color: '#c7d2ea' },
+          { text: `거래대금 ${lastTurnover == null ? '-' : formatThousandAdaptive(lastTurnover, 0)}`, color: '#c7d2ea' },
         ],
       };
     }
