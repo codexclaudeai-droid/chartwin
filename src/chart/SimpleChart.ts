@@ -426,7 +426,7 @@ export class SimpleChart {
     return this.config.layout.marketInfoSide === 'left' ? 'left' : 'right';
   }
 
-  private getChartGeometry(width: number): {
+  private getChartGeometry(width: number, dynamicPad?: number): {
     side: 'left' | 'right';
     axisPad: number;
     chartLeft: number;
@@ -437,7 +437,7 @@ export class SimpleChart {
     axisCenter: number;
   } {
     const side = this.getMarketInfoSide();
-    const axisPad = Math.max(24, this.config.layout.rightPadding);
+    const axisPad = Math.max(24, dynamicPad ?? this.config.layout.rightPadding);
     const chartLeft = 0;
     // Main panel right edge: in left-mode use full width, in right-mode keep right axis area.
     const chartRight = side === 'left' ? width : Math.max(0, width - axisPad);
@@ -2697,7 +2697,7 @@ export class SimpleChart {
 
   private getCandleCenterX(candleIndex: number): number | null {
     const visibleCount = Math.max(1, this.endIndex - this.startIndex);
-    const geometry = this.getChartGeometry(this.viewportWidth);
+    const geometry = this.getChartGeometry(this.viewportWidth, this.lastDrawMeta?.axisPad);
     const chartW = geometry.chartWidth;
     const gapBars = Math.min(
       Math.max(0, this.config.layout.rightGapBars ?? 0),
@@ -3493,7 +3493,20 @@ export class SimpleChart {
     }
 
     const plotHeight = Math.max(40, height - X_AXIS_HEIGHT);
-    const geometry = this.getChartGeometry(width);
+
+    // 가격 텍스트 폭을 측정해 축 너비를 동적 계산
+    let dynamicAxisPad = this.config.layout.rightPadding;
+    {
+      const quickVis = displayData.slice(this.startIndex, this.endIndex);
+      let quickMax = -Infinity;
+      quickVis.forEach(d => { quickMax = Math.max(quickMax, d.high); });
+      if (isFinite(quickMax)) {
+        ctx.font = `13px ${CHART_FONT_STACK}`;
+        const measured = ctx.measureText(formatWithComma(quickMax, symbolPriceDigits)).width;
+        dynamicAxisPad = Math.max(44, Math.ceil(measured + 16));
+      }
+    }
+    const geometry = this.getChartGeometry(width, dynamicAxisPad);
     const R     = { top: 10 };
     const panels = this.activePanels;
     const hiddenPanels = new Set<string>(((this.config.panelState as any).hiddenPanels ?? []) as string[]);
@@ -5009,7 +5022,7 @@ export class SimpleChart {
     const width = this.viewportWidth;
     const height = this.viewportHeight;
     const plotHeight = Math.max(40, height - X_AXIS_HEIGHT);
-    const geometry = this.getChartGeometry(width);
+    const geometry = this.getChartGeometry(width, this.lastDrawMeta.axisPad);
     const mainH = this.lastDrawMeta.mainH;
     const top = 10;
     const totalSp = this.lastDrawMeta.totalSp;
@@ -6383,7 +6396,7 @@ export class SimpleChart {
     this.hoveredSubIndicatorAddButton = null;
 
     const plotHeight = Math.max(40, height - X_AXIS_HEIGHT);
-    const geometry = this.getChartGeometry(width);
+    const geometry = this.getChartGeometry(width, this.lastDrawMeta?.axisPad);
     const R      = { top: 10 };
     const chartLeft = geometry.chartLeft;
     const chartRight = geometry.chartRight;
@@ -7004,7 +7017,7 @@ export class SimpleChart {
     const width = this.viewportWidth;
     const height = this.viewportHeight;
     const plotHeight = Math.max(40, height - X_AXIS_HEIGHT);
-    const geometry = this.getChartGeometry(width);
+    const geometry = this.getChartGeometry(width, this.lastDrawMeta?.axisPad);
     const R = { top: 10 };
     const panels = this.activePanels;
     const subRat = panels.reduce((s, id) => s + this.getPanelRatio(id), 0);
