@@ -793,27 +793,32 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       return;
     }
     const panelWidth = Math.max(320, panel.clientWidth);
-    const summaryCols = panelWidth < 760 ? 3 : 4;
+    const isMobileKpi = panelWidth < 760;
     const pnlColor = r.netProfit >= 0 ? '#39d98a' : '#ff7f7f';
+    const kpiGap = isMobileKpi ? '4px' : '8px';
+    const kpiPad = isMobileKpi ? '8px' : '10px';
+    const kpiLabelFs = isMobileKpi ? '10px' : '11px';
+    const kpiValueFs = isMobileKpi ? '12px' : '14px';
+    const kpiTitleMb = isMobileKpi ? '6px' : '8px';
     kpiRow.innerHTML = `
-      <div style="grid-column:1 / -1;padding:10px;border:1px solid #2a3a58;background:#141f33;border-radius:8px;">
-        <div style="font-size:12px;color:#c9d6ee;font-weight:700;margin-bottom:8px;">핵심 성과 요약</div>
-        <div style="display:grid;grid-template-columns:repeat(${summaryCols},minmax(0,1fr));gap:8px;">
+      <div style="grid-column:1 / -1;padding:${kpiPad};border:1px solid #2a3a58;background:#141f33;border-radius:8px;">
+        <div style="font-size:12px;color:#c9d6ee;font-weight:700;margin-bottom:${kpiTitleMb};">핵심 성과 요약</div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:${kpiGap};">
           <div>
-            <div style="font-size:11px;color:#95a8cb;">총손익</div>
-            <div style="font-size:14px;font-weight:700;color:${pnlColor};margin-top:2px;">${formatNetProfitValue(r.netProfit)}</div>
+            <div style="font-size:${kpiLabelFs};color:#95a8cb;">총손익</div>
+            <div style="font-size:${kpiValueFs};font-weight:700;color:${pnlColor};margin-top:2px;">${formatNetProfitValue(r.netProfit)}</div>
           </div>
           <div>
-            <div style="font-size:11px;color:#95a8cb;">승률</div>
-            <div style="font-size:14px;font-weight:700;color:#8ab4ff;margin-top:2px;">${formatWinRateValue(r)}</div>
+            <div style="font-size:${kpiLabelFs};color:#95a8cb;">승률</div>
+            <div style="font-size:${kpiValueFs};font-weight:700;color:#8ab4ff;margin-top:2px;">${formatWinRateValue(r)}</div>
           </div>
           <div>
-            <div style="font-size:11px;color:#95a8cb;">최대 자본 감소</div>
-            <div style="font-size:14px;font-weight:700;color:#ff8fa3;margin-top:2px;">${formatAmount(r.maxDrawdown)} (${r.maxDrawdownPct.toFixed(2)}%)</div>
+            <div style="font-size:${kpiLabelFs};color:#95a8cb;">${isMobileKpi ? '최대감소' : '최대 자본 감소'}</div>
+            <div style="font-size:${kpiValueFs};font-weight:700;color:#ff8fa3;margin-top:2px;">${formatAmount(r.maxDrawdown)} (${r.maxDrawdownPct.toFixed(2)}%)</div>
           </div>
           <div>
-            <div style="font-size:11px;color:#95a8cb;">수익지수</div>
-            <div style="font-size:14px;font-weight:700;color:#f7c948;margin-top:2px;">${r.profitFactor.toFixed(2)}</div>
+            <div style="font-size:${kpiLabelFs};color:#95a8cb;">수익지수</div>
+            <div style="font-size:${kpiValueFs};font-weight:700;color:#f7c948;margin-top:2px;">${r.profitFactor.toFixed(2)}</div>
           </div>
         </div>
       </div>
