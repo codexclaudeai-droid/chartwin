@@ -127,7 +127,7 @@ export function createPaneChrome<TKey extends string>({
   paneHeader.appendChild(tfSelect);
 
   const currencySelect = document.createElement('select');
-  currencySelect.style.cssText = 'background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;font-size:11px;padding:1px 4px;flex-shrink:0;min-width:58px;';
+  currencySelect.style.cssText = 'background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;font-size:11px;padding:1px 4px;flex-shrink:0;min-width:58px;appearance:none;-webkit-appearance:none;cursor:pointer;';
   const quoteOptions: Array<{ value: string; label: string }> = [
     { value: 'USD', label: 'USD' },
     { value: 'EUR', label: 'EURO' },
