@@ -3508,7 +3508,8 @@ export class SimpleChart {
       if (isFinite(quickMax)) {
         ctx.font = `600 13px ${CHART_FONT_STACK}`;
         const measured = ctx.measureText(formatWithComma(quickMax, symbolPriceDigits)).width;
-        dynamicAxisPad = Math.max(44, Math.ceil(measured + 16));
+        const minRef = ctx.measureText(formatWithComma(99.99, 2)).width;
+        dynamicAxisPad = Math.max(44, Math.ceil(Math.max(measured, minRef) + 16));
       }
     }
     const geometry = this.getChartGeometry(width, dynamicAxisPad);
