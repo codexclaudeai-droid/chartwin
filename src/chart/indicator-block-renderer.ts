@@ -504,7 +504,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
         const clamped = Math.min(hi, Math.max(lo, snapped));
         const y = plotTop + (hi - clamped) / rng * plotH;
         ctx.beginPath(); ctx.moveTo(chartLeft, y); ctx.lineTo(subChartRight, y); ctx.stroke();
-        const axisTextX = width - 4;
+        const axisTextX = subAxisStart + 4;
         ctx.fillText(formatter ? formatter(clamped) : formatWithComma(clamped, 0), axisTextX, y + 4);
       });
       ctx.restore();
