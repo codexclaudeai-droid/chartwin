@@ -6623,8 +6623,9 @@ export class SimpleChart {
     }
 
     const solidX = snapX;
+    const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
 
-    if (!this.drawingTool) {
+    if (noDrawingInteraction) {
       ctx.save();
       ctx.strokeStyle = 'rgba(214,219,233,0.65)';
       ctx.lineWidth = 1;
@@ -6646,7 +6647,7 @@ export class SimpleChart {
       ctx.restore();
     }
 
-    if (!this.drawingTool && snappedCandleIndex >= 0 && snappedCandleIndex < this.data.length) {
+    if (noDrawingInteraction && snappedCandleIndex >= 0 && snappedCandleIndex < this.data.length) {
       const c = this.data[snappedCandleIndex];
       const label = formatCrosshairTimelineLabel(c.time, this.config.timezone);
       ctx.save();
@@ -6667,7 +6668,7 @@ export class SimpleChart {
       ctx.restore();
 
       // OHLCV 툴팁: 모바일=canvas floating, PC=헤더 콜백
-      if (!this.drawingTool && _isTouchDevice) {
+      if (noDrawingInteraction && _isTouchDevice) {
         const isUp = c.close >= c.open;
         const closeColor = isUp ? '#ef5350' : '#26a69a';
         const tradingValue = c.close * c.volume;
@@ -6731,13 +6732,13 @@ export class SimpleChart {
           ctx.fillText(row.value, tBoxX + tBoxW - tPadX, rowY);
         });
         ctx.restore();
-      } else if (!this.drawingTool && this.onCrosshairOHLC && this._lastCrosshairOHLCIdx !== snappedCandleIndex) {
+      } else if (noDrawingInteraction && this.onCrosshairOHLC && this._lastCrosshairOHLCIdx !== snappedCandleIndex) {
         this._lastCrosshairOHLCIdx = snappedCandleIndex;
         this.onCrosshairOHLC({ open: c.open, high: c.high, low: c.low, close: c.close, time: c.time });
       }
     }
 
-    if (this.mouseY < mainH && mainScale && !this.drawingTool) {
+    if (this.mouseY < mainH && mainScale && noDrawingInteraction) {
       const lo = mainScale.lo;
       const hi = mainScale.hi;
       const price = hi - (this.mouseY - R.top) / (mainH - R.top || 1) * (hi - lo);
