@@ -403,9 +403,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 } {
   ensurePeriodPickerStyle();
   const headerHeight = 34;
-  const getMinNormalHeight = () => (window.matchMedia('(max-width: 760px)').matches ? 170 : 430);
+  const getMinNormalHeight = () => (window.matchMedia('(max-width: 760px)').matches ? 204 : 430);
   const maxNormalHeightRatio = 0.85;
-  const defaultHeight = window.matchMedia('(max-width: 760px)').matches ? 220 : Math.max(height, 360);
+  const defaultHeight = window.matchMedia('(max-width: 760px)').matches ? 264 : Math.max(height, 360);
 
   let panelMode: 'normal' | 'expanded' | 'collapsed' = 'normal';
   let panelVisible = true;
