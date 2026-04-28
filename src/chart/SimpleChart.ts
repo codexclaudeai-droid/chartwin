@@ -6444,7 +6444,7 @@ export class SimpleChart {
           ctx.fillRect(priceBoxX, py - 10, priceBoxW, 20);
           ctx.fillStyle = getContrastTextColor(boxColor);
           ctx.font = `700 13px ${CHART_FONT_STACK}`; ctx.textAlign = 'right';
-          ctx.fillText(formatWithComma(last, symbolPriceDigits), priceBoxX + priceBoxW - 6, py + 4);
+          ctx.fillText(formatWithComma(last, symbolPriceDigits), geometry.side === 'left' ? geometry.axisPad - 6 : width - 4, py + 4);
         }
       }
     }
@@ -6711,7 +6711,7 @@ export class SimpleChart {
       ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
       ctx.strokeRect(priceBoxX, this.mouseY - 10, priceBoxW, 20);
       ctx.fillStyle = CHART_TEXT_PRIMARY; ctx.font = `600 13px ${CHART_FONT_STACK}`; ctx.textAlign = 'right';
-      ctx.fillText(formatWithComma(price, symbolPriceDigits), priceBoxX + priceBoxW - 6, this.mouseY + 4);
+      ctx.fillText(formatWithComma(price, symbolPriceDigits), geometry.side === 'left' ? geometry.axisPad - 6 : width - 4, this.mouseY + 4);
 
       // 가격박스 왼쪽 원형 + 아이콘 (클릭 시 수평선 생성)
       const plusR  = 9;
@@ -6980,7 +6980,7 @@ export class SimpleChart {
           ctx.fillStyle = getContrastTextColor(lineColor);
           ctx.textAlign = 'right';
           ctx.textBaseline = 'middle';
-          ctx.fillText(formatWithComma(hoverSignal.entryPrice, symbolPriceDigits), entryBoxX + entryBoxW - 6, entryY);
+          ctx.fillText(formatWithComma(hoverSignal.entryPrice, symbolPriceDigits), geometry.side === 'left' ? geometry.axisPad - 6 : width - 4, entryY);
         }
       }
 
