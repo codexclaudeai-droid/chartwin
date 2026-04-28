@@ -6624,27 +6624,29 @@ export class SimpleChart {
 
     const solidX = snapX;
 
-    ctx.save();
-    ctx.strokeStyle = 'rgba(214,219,233,0.65)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([6, 5]);
-    ctx.beginPath();
-    ctx.moveTo(solidX, 0); ctx.lineTo(solidX, height);
-    ctx.moveTo(0, this.mouseY); ctx.lineTo(width, this.mouseY);
-    ctx.stroke();
-    ctx.restore();
+    if (!this.drawingTool) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(214,219,233,0.65)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.moveTo(solidX, 0); ctx.lineTo(solidX, height);
+      ctx.moveTo(0, this.mouseY); ctx.lineTo(width, this.mouseY);
+      ctx.stroke();
+      ctx.restore();
 
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.92)';
-    ctx.lineWidth = 1.4;
-    const centerLen = 10;
-    ctx.beginPath();
-    ctx.moveTo(solidX - centerLen, this.mouseY); ctx.lineTo(solidX + centerLen, this.mouseY);
-    ctx.moveTo(solidX, this.mouseY - centerLen); ctx.lineTo(solidX, this.mouseY + centerLen);
-    ctx.stroke();
-    ctx.restore();
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.lineWidth = 1.4;
+      const centerLen = 10;
+      ctx.beginPath();
+      ctx.moveTo(solidX - centerLen, this.mouseY); ctx.lineTo(solidX + centerLen, this.mouseY);
+      ctx.moveTo(solidX, this.mouseY - centerLen); ctx.lineTo(solidX, this.mouseY + centerLen);
+      ctx.stroke();
+      ctx.restore();
+    }
 
-    if (snappedCandleIndex >= 0 && snappedCandleIndex < this.data.length) {
+    if (!this.drawingTool && snappedCandleIndex >= 0 && snappedCandleIndex < this.data.length) {
       const c = this.data[snappedCandleIndex];
       const label = formatCrosshairTimelineLabel(c.time, this.config.timezone);
       ctx.save();
@@ -6735,8 +6737,7 @@ export class SimpleChart {
       }
     }
 
-    const isDrawingActive = this.drawingTool !== null || this.drawingDraft !== null || this.selectedDrawingId !== null;
-    if (this.mouseY < mainH && mainScale && !isDrawingActive) {
+    if (this.mouseY < mainH && mainScale && !this.drawingTool) {
       const lo = mainScale.lo;
       const hi = mainScale.hi;
       const price = hi - (this.mouseY - R.top) / (mainH - R.top || 1) * (hi - lo);
