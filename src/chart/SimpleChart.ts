@@ -6735,7 +6735,8 @@ export class SimpleChart {
       }
     }
 
-    if (this.mouseY < mainH && mainScale) {
+    const isDrawingActive = this.drawingTool !== null || this.drawingDraft !== null || this.selectedDrawingId !== null;
+    if (this.mouseY < mainH && mainScale && !isDrawingActive) {
       const lo = mainScale.lo;
       const hi = mainScale.hi;
       const price = hi - (this.mouseY - R.top) / (mainH - R.top || 1) * (hi - lo);
