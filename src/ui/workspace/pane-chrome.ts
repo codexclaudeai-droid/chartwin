@@ -127,7 +127,7 @@ export function createPaneChrome<TKey extends string>({
   paneHeader.appendChild(tfSelect);
 
   const currencySelect = document.createElement('select');
-  currencySelect.style.cssText = 'background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;font-size:11px;padding:1px 4px;flex-shrink:0;min-width:58px;appearance:none;-webkit-appearance:none;cursor:pointer;';
+  currencySelect.style.cssText = 'background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;font-size:11px;padding:1px 4px;flex-shrink:0;width:58px;text-align:center;appearance:none;-webkit-appearance:none;cursor:pointer;';
   const quoteOptions: Array<{ value: string; label: string }> = [
     { value: 'USD', label: 'USD' },
     { value: 'EUR', label: 'EURO' },
@@ -232,7 +232,7 @@ export function createPaneChrome<TKey extends string>({
       tfSelect.style.padding = '1px 3px';
       currencySelect.style.fontSize = '10px';
       currencySelect.style.padding = '1px 3px';
-      currencySelect.style.minWidth = '52px';
+      currencySelect.style.width = '52px';
       indBtn.textContent = '보조지표';
       strategyBtn.textContent = '전략시그널';
       indBtn.style.padding = '0 6px';
@@ -249,7 +249,7 @@ export function createPaneChrome<TKey extends string>({
       symChangeWrap.style.display = '';
       tfSelect.style.fontSize = '10px';
       currencySelect.style.fontSize = '10px';
-      currencySelect.style.minWidth = '55px';
+      currencySelect.style.width = '55px';
       indBtn.textContent = '보조지표';
       strategyBtn.textContent = '전략시그널';
       indBtn.style.padding = '0 7px';
@@ -267,7 +267,7 @@ export function createPaneChrome<TKey extends string>({
       tfSelect.style.fontSize = '11px';
       tfSelect.style.padding = '1px 4px';
       currencySelect.style.fontSize = '11px';
-      currencySelect.style.minWidth = '58px';
+      currencySelect.style.width = '58px';
       indBtn.textContent = '보조지표';
       strategyBtn.textContent = '전략시그널';
       indBtn.style.padding = '0 8px';

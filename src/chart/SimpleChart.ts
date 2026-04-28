@@ -281,6 +281,11 @@ export class SimpleChart {
   // 십자선 활성 직후 터치-업 무시 플래그 (롱프레스 해제와 구분)
   private crosshairJustActivated = false;
   public onAfterResize: (() => void) | null = null;
+  public onAfterDraw: (() => void) | null = null;
+
+  public get currentAxisPad(): number {
+    return this.lastDrawMeta?.axisPad ?? this.config.layout.rightPadding;
+  }
 
   // ── 터치 제스처 상태 ──────────────────────────
   private touchStartX    = 0;
@@ -4496,6 +4501,7 @@ export class SimpleChart {
     this.evaluatePatternAlerts();
     this.drawSignalLayer(this.lastDrawMeta);
     this.requestOverlayDraw();
+    this.onAfterDraw?.();
   }
 
   // 오버레이 렌더링
