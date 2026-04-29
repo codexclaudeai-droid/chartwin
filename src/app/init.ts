@@ -650,11 +650,18 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     headerTitle.style.cssText = 'display:block;margin-left:6px;padding:1px 6px;border-radius:999px;border:1px solid #3a4155;background:#22293a;color:#b5bece;font-size:10px;font-weight:700;line-height:1.4;white-space:nowrap;flex-shrink:0;';
 
     const chart = new SimpleChart(chartArea);
+    let lastCurrencySelectWidth = '';
     chart.onAfterDraw = () => {
       const axisPad = chart.currentAxisPad;
       if (axisPad > 0) {
         const headerPadRight = parseInt(getComputedStyle(paneHeader).paddingRight) || 0;
-        currencySelect.style.width = `${Math.max(30, axisPad - headerPadRight)}px`;
+        const nextWidth = `${Math.max(30, axisPad - headerPadRight)}px`;
+        if (document.activeElement !== currencySelect && currencySelect.style.width !== nextWidth) {
+          currencySelect.style.width = nextWidth;
+          lastCurrencySelectWidth = nextWidth;
+        } else if (!currencySelect.style.width) {
+          currencySelect.style.width = lastCurrencySelectWidth || nextWidth;
+        }
         const gripRight = Math.max(4, Math.round(axisPad / 2 - 9));
         chartArea.querySelectorAll<HTMLElement>('.divider-grip').forEach((el) => {
           el.style.right = `${gripRight}px`;
