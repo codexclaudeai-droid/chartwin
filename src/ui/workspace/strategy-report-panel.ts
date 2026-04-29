@@ -460,7 +460,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   panel.appendChild(resizeHandle);
 
   const header = document.createElement('div');
-  header.style.cssText = 'height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 10px;background:#131b2d;border-bottom:1px solid #24314a;color:#d5deef;font:600 12px Segoe UI,Arial,sans-serif;';
+  header.style.cssText = 'height:34px;display:flex;align-items:center;justify-content:center;padding:0 8px;background:#131b2d;border-bottom:1px solid #24314a;color:#d5deef;font:600 12px Segoe UI,Arial,sans-serif;position:relative;';
   panel.appendChild(header);
   const headerTitle = document.createElement('div');
   headerTitle.style.cssText = 'display:inline-flex;align-items:center;gap:6px;min-width:0;';
@@ -480,7 +480,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   headerTitle.appendChild(headerTitleText);
   header.appendChild(headerTitle);
   const titleControls = document.createElement('div');
-  titleControls.style.cssText = 'display:flex;align-items:center;gap:6px;';
+  titleControls.style.cssText = 'display:flex;align-items:center;gap:6px;position:absolute;right:8px;top:50%;transform:translateY(-50%);';
   header.appendChild(titleControls);
 
   const shotBtn = mkIconBtn('스크린샷', icon.camera);
@@ -1108,10 +1108,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       return;
     }
     const isMobileWidth = Math.max(320, panel.clientWidth) < 760;
-    const baseColumns = isMobileWidth ? '20px 34px 1fr 1.7fr 90px' : '32px 56px 1fr 1fr 90px';
-    const fullColumns = isMobileWidth ? '20px 34px 1fr 1.7fr 90px 88px' : '32px 56px 1fr 1fr 90px 88px';
+    const baseColumns = isMobileWidth ? '20px 34px 1fr 1.85fr 74px' : '32px 56px 1fr 1fr 90px';
+    const fullColumns = isMobileWidth ? '20px 34px 1fr 1.85fr 74px 52px' : '32px 56px 1fr 1fr 90px 88px';
 
-    const headerRow = `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:8px;border-bottom:1px solid #2b3d5d;background:#17243a;color:#9fb3d5;font-size:11px;font-weight:700;">
+    const headerRow = `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:8px;border-bottom:1px solid #2b3d5d;background:#17243a;color:#9fb3d5;font-size:11px;font-weight:700;text-align:center;">
       <div>#</div>
       <div>타입</div>
       <div>진입 -> 청산</div>
@@ -1129,9 +1129,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
         const entryTs = formatTradeTsLines(t.entryTime);
         const exitTs = formatTradeTsLines(t.exitTime);
         return `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid #1f2b44;">
-          <div style="color:#8aa0c5;">${idx + 1}</div>
-          <div style="color:${sideColor};font-weight:700;">${t.side}</div>
-          <div style="color:#cdd8ee;">${formatAmount(t.entry)} -> ${formatAmount(t.exit)}<div style="color:#8ca0c5;font-size:11px;">bar ${t.entryIndex} -> ${t.exitIndex}</div></div>
+          <div style="color:#8aa0c5;text-align:center;">${idx + 1}</div>
+          <div style="color:${sideColor};font-weight:700;text-align:center;font-size:${isMobileWidth ? '10px' : '12px'};white-space:nowrap;letter-spacing:${isMobileWidth ? '-0.1px' : '0'};">${t.side}</div>
+          <div style="color:#cdd8ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:${isMobileWidth ? '11px' : '12px'};">${formatAmount(t.entry)} -> ${formatAmount(t.exit)}</div>
           <div style="color:#aab9d6;font-size:11px;line-height:1.22;">
             <div>${entryTs.date}</div>
             <div>${entryTs.time}</div>
@@ -1169,7 +1169,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       const moveBtn = document.createElement('button');
       moveBtn.type = 'button';
       moveBtn.textContent = isMobileWidth ? '차트확인' : '시그널 이동';
-      moveBtn.style.cssText = 'height:24px;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:6px;font-size:11px;cursor:pointer;';
+      moveBtn.style.cssText = isMobileWidth
+        ? 'height:20px;min-width:48px;padding:0 4px;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:5px;font-size:10px;cursor:pointer;'
+        : 'height:24px;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:6px;font-size:11px;cursor:pointer;';
       moveBtn.addEventListener('click', (event) => {
         event.stopPropagation();
         const trade = displayedTrades[idx];
