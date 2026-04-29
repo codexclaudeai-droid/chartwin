@@ -148,6 +148,7 @@ if (app) {
 })();
 
 const splitPresets = [1, 2, 4, 6, 8] as const;
+  const NO_FX_INDEX_SYMBOLS = new Set(['KOSPI', 'KOSPI200', 'KOSDAQ']);
   const DRAWING_STORAGE_KEY = 'my-chart-lib.drawings.v1';
   const DRAWING_KIND_SET = new Set<string>([
     'trendline',
@@ -760,7 +761,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     let patternScope: PatternAnalysisScope = loadPatternAnalysisScope();
     let patternAlertEnabled = loadPatternAlertEnabled();
     let currencyRate = 1;
-    const convertPrice = (price: number): number => price * currencyRate;
+    const isNoFxIndexSymbol = (symbol: string): boolean => {
+      const normalized = canonicalizeUiSymbol(symbol).replace(/\.P$/, '');
+      return NO_FX_INDEX_SYMBOLS.has(normalized);
+    };
+    const shouldApplyDisplayCurrency = (): boolean => !isNoFxIndexSymbol(chart.config.symbol);
+    const convertPrice = (price: number): number => (shouldApplyDisplayCurrency() ? price * currencyRate : price);
     const toDisplayCandles = (candles: CandleData[]): CandleData[] => {
       return candles.map((c) => ({
         ...c,
@@ -1168,7 +1174,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     const applyCurrencySelection = async () => {
       chart.config.quoteCurrency = (currencySelect.value as DisplayCurrency) || 'USDT';
       saveQuoteCurrencyForSymbol(chart.config.symbol, chart.config.quoteCurrency);
-      currencyRate = await getUsdtToDisplayRate(chart.config.quoteCurrency);
+      currencyRate = shouldApplyDisplayCurrency()
+        ? await getUsdtToDisplayRate(chart.config.quoteCurrency)
+        : 1;
       applyDisplayCurrencyToChart();
       refreshChartUi();
     };
@@ -1180,7 +1188,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (chart.config.quoteCurrency !== nextCurrency) {
         chart.config.quoteCurrency = nextCurrency;
         saveQuoteCurrencyForSymbol(symbol, nextCurrency);
-        currencyRate = await getUsdtToDisplayRate(nextCurrency);
+        currencyRate = shouldApplyDisplayCurrency() ? await getUsdtToDisplayRate(nextCurrency) : 1;
         applyDisplayCurrencyToChart();
         refreshChartUi();
       }
