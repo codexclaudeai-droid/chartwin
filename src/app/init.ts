@@ -71,7 +71,12 @@ import type { CandleData } from '../types';
 import type { DisplayCurrency } from '../types/market';
 import { SimpleChart, X_AXIS_HEIGHT, MOBILE_BOTTOM_BAR_HEIGHT, MOBILE_JUMP_LATEST_SVG } from '../chart/SimpleChart';
 import { getUsdtToDisplayRate } from '../utils/currency';
-import { canonicalizeUiSymbol, isNasdaqFuturesLikeSymbol, isCmeEquityFuturesOpen } from '../utils/market-session';
+import {
+  canonicalizeUiSymbol,
+  getDefaultQuoteCurrencyForSymbol,
+  isNasdaqFuturesLikeSymbol,
+  isCmeEquityFuturesOpen,
+} from '../utils/market-session';
 import { type GapMode, loadGapMode, loadPatternAnalysisScope, loadPatternAlertEnabled } from '../utils/gap-smoothing';
 // 앱 시작 시 API 키 로드
 loadSavedApiKeys();
@@ -157,16 +162,22 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   ]);
   const SYMBOL_STORAGE_KEY = 'my-chart-lib.last-symbol.v1';
   const TIMEFRAME_STORAGE_KEY = 'my-chart-lib.last-timeframe.v1';
+  const QUOTE_CURRENCY_STORAGE_KEY = 'my-chart-lib.quote-currency.v1';
   type PersistedDrawingEntry = {
     symbol: string;
     timeframe: TimeframeKey;
     drawings: DrawingShape[];
+    temporalDrawings?: TemporalDrawingSnapshot['drawings'];
     drawingsVisible: boolean;
     updatedAt: number;
   };
   type PersistedDrawingStore = {
     version: 1;
     entries: Record<string, PersistedDrawingEntry>;
+  };
+  type PersistedQuoteCurrencyStore = {
+    version: 1;
+    entries: Record<string, DisplayCurrency>;
   };
   type TemporalDrawingSnapshot = {
     drawings: Array<{
@@ -331,11 +342,26 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         const drawings = drawingsRaw
           .map((item) => normalizeDrawingShape(item))
           .filter((item): item is DrawingShape => item !== null);
+        const temporalRaw = Array.isArray(entryRaw.temporalDrawings) ? entryRaw.temporalDrawings : [];
+        const temporalDrawings = temporalRaw
+          .map((item) => {
+            if (!isRecord(item)) return null;
+            const shape = normalizeDrawingShape(item.shape);
+            if (!shape) return null;
+            return {
+              shape,
+              aTime: toFiniteNumber(item.aTime) ?? null,
+              bTime: toFiniteNumber(item.bTime) ?? null,
+              offsetTime: toFiniteNumber(item.offsetTime) ?? null,
+            };
+          })
+          .filter((item): item is TemporalDrawingSnapshot['drawings'][number] => item !== null);
         const updatedAt = toFiniteNumber(entryRaw.updatedAt) ?? Date.now();
         entries[key] = {
           symbol,
           timeframe,
           drawings,
+          temporalDrawings: temporalDrawings.length ? temporalDrawings : undefined,
           drawingsVisible: typeof entryRaw.drawingsVisible === 'boolean' ? entryRaw.drawingsVisible : true,
           updatedAt,
         };
@@ -352,16 +378,25 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       // ignore
     }
   };
-  const saveDrawingEntry = (symbol: string, timeframe: TimeframeKey, chart: SimpleChart): void => {
+  const saveDrawingEntry = (
+    symbol: string,
+    timeframe: TimeframeKey,
+    chart: SimpleChart,
+    candles?: CandleData[],
+  ): void => {
     try {
       const normalizedSymbol = normalizeSymbol(symbol);
       if (!normalizedSymbol) return;
       const store = loadDrawingStore();
       const key = drawingEntryKey(normalizedSymbol, timeframe);
+      const snapshot = candles
+        ? captureTemporalDrawingSnapshot(chart.getDrawingsSnapshot(), candles, chart.isDrawingsVisible())
+        : null;
       store.entries[key] = {
         symbol: normalizedSymbol,
         timeframe,
         drawings: chart.getDrawingsSnapshot(),
+        temporalDrawings: snapshot?.drawings,
         drawingsVisible: chart.isDrawingsVisible(),
         updatedAt: Date.now(),
       };
@@ -380,6 +415,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     return {
       ...entry,
       drawings: entry.drawings.map((shape) => cloneDrawingShape(shape)),
+      temporalDrawings: entry.temporalDrawings?.map((item) => ({
+        shape: cloneDrawingShape(item.shape),
+        aTime: item.aTime,
+        bTime: item.bTime,
+        offsetTime: item.offsetTime,
+      })),
     };
   };
   const loadSavedSymbol = (): string | null => {
@@ -397,6 +438,49 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const normalized = canonicalizeUiSymbol(symbol);
       if (!normalized) return;
       localStorage.setItem(SYMBOL_STORAGE_KEY, normalized);
+    } catch {
+      // ignore
+    }
+  };
+  const loadQuoteCurrencyStore = (): PersistedQuoteCurrencyStore => {
+    try {
+      const raw = localStorage.getItem(QUOTE_CURRENCY_STORAGE_KEY);
+      if (!raw) return { version: 1, entries: {} };
+      const parsed = JSON.parse(raw) as unknown;
+      if (!isRecord(parsed) || !isRecord(parsed.entries)) return { version: 1, entries: {} };
+      const entries: Record<string, DisplayCurrency> = {};
+      Object.entries(parsed.entries).forEach(([key, value]) => {
+        if (typeof value !== 'string') return;
+        if (value !== 'USDT' && value !== 'USD' && value !== 'KRW') return;
+        const normalized = canonicalizeUiSymbol(key);
+        if (!normalized) return;
+        entries[normalized] = value;
+      });
+      return { version: 1, entries };
+    } catch {
+      return { version: 1, entries: {} };
+    }
+  };
+  const saveQuoteCurrencyStore = (store: PersistedQuoteCurrencyStore): void => {
+    try {
+      localStorage.setItem(QUOTE_CURRENCY_STORAGE_KEY, JSON.stringify(store));
+    } catch {
+      // ignore
+    }
+  };
+  const loadSavedQuoteCurrencyForSymbol = (symbol: string): DisplayCurrency | null => {
+    const normalized = canonicalizeUiSymbol(symbol);
+    if (!normalized) return null;
+    const store = loadQuoteCurrencyStore();
+    return store.entries[normalized] ?? null;
+  };
+  const saveQuoteCurrencyForSymbol = (symbol: string, currency: DisplayCurrency): void => {
+    try {
+      const normalized = canonicalizeUiSymbol(symbol);
+      if (!normalized) return;
+      const store = loadQuoteCurrencyStore();
+      store.entries[normalized] = currency;
+      saveQuoteCurrencyStore(store);
     } catch {
       // ignore
     }
@@ -429,6 +513,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     startLive: () => void;
     stopLive: () => void;
     reloadLiveData: () => Promise<void>;
+    applyDefaultQuoteCurrencyForSymbol: (symbol: string) => Promise<void>;
   };
 
   const TFS: Array<{ key: TimeframeKey; label: string }> = [
@@ -584,7 +669,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     }
     tfSelect.value = chart.config.timeframe;
     const persistCurrentChartDrawings = () => {
-      saveDrawingEntry(chart.config.symbol, chart.config.timeframe, chart);
+      saveDrawingEntry(chart.config.symbol, chart.config.timeframe, chart, rawCandles);
     };
     const restoreCurrentChartDrawings = (options: { clearWhenMissing?: boolean } = {}) => {
       const clearWhenMissing = options.clearWhenMissing ?? true;
@@ -596,28 +681,45 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         }
         return false;
       }
+      if (entry.temporalDrawings && rawCandles.length > 0) {
+        const remapped = remapTemporalDrawingSnapshot(
+          {
+            drawings: entry.temporalDrawings,
+            drawingsVisible: entry.drawingsVisible,
+          },
+          rawCandles,
+        );
+        chart.setDrawingsSnapshot(remapped.drawings);
+        chart.setDrawingsVisible(remapped.drawingsVisible);
+        return true;
+      }
       chart.setDrawingsSnapshot(entry.drawings);
       chart.setDrawingsVisible(entry.drawingsVisible);
       return true;
     };
-    restoreCurrentChartDrawings();
 
+    let lastMarketInfoSide: 'left' | 'right' | null = null;
     const applyMarketInfoLayout = () => {
       const side = chart.config.layout.marketInfoSide === 'left' ? 'left' : 'right';
+      if (
+        lastMarketInfoSide === side
+        && symBtn.parentElement === paneHeader
+        && marketPriceWrap.parentElement === paneHeader
+        && currencySelect.parentElement === paneHeader
+      ) {
+        return;
+      }
+      lastMarketInfoSide = side;
       if (!paneHeader.contains(symBtn)) paneHeader.insertBefore(symBtn, paneHeader.firstChild);
       if (!paneHeader.contains(winCtrlWrap)) paneHeader.appendChild(winCtrlWrap);
       if (side === 'left') {
-        if (currencySelect.parentElement !== paneHeader) paneHeader.insertBefore(currencySelect, symBtn);
         paneHeader.insertBefore(currencySelect, symBtn);
-        if (marketPriceWrap.parentElement !== paneHeader) paneHeader.insertBefore(marketPriceWrap, tfSelect);
         paneHeader.insertBefore(marketPriceWrap, tfSelect);
         currencySelect.style.marginLeft = '0';
         ohlcHeaderDisplay.style.marginLeft = '0';
         winCtrlWrap.style.marginLeft = 'auto';
       } else {
-        if (marketPriceWrap.parentElement !== paneHeader) paneHeader.insertBefore(marketPriceWrap, tfSelect);
         paneHeader.insertBefore(marketPriceWrap, tfSelect);
-        if (currencySelect.parentElement !== paneHeader) paneHeader.insertBefore(currencySelect, winCtrlWrap);
         paneHeader.insertBefore(currencySelect, winCtrlWrap);
         ohlcHeaderDisplay.style.marginLeft = 'auto';
         currencySelect.style.marginLeft = '0';
@@ -664,12 +766,17 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     const applyDisplayCurrencyToChart = () => {
       chart.setData(toDisplayCandles(rawCandles));
     };
-    chart.config.quoteCurrency = 'USDT';
+    chart.config.quoteCurrency = loadSavedQuoteCurrencyForSymbol(chart.config.symbol)
+      ?? getDefaultQuoteCurrencyForSymbol(chart.config.symbol);
     currencySelect.value = chart.config.quoteCurrency;
     chart.setGapMode(gapMode);
     chart.setPatternAnalysisScope(patternScope);
     chart.setPatternAlertEnabled(patternAlertEnabled);
     applyDisplayCurrencyToChart();
+    restoreCurrentChartDrawings();
+    window.addEventListener('chart-drawings-changed', () => {
+      saveDrawingEntry(chart.config.symbol, chart.config.timeframe, chart, rawCandles);
+    });
     window.addEventListener('my-chart-lib:gap-mode-updated', () => {
       gapMode = loadGapMode();
       chart.setGapMode(gapMode);
@@ -1053,9 +1160,23 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     let liveRunning = false;
     const applyCurrencySelection = async () => {
       chart.config.quoteCurrency = (currencySelect.value as DisplayCurrency) || 'USDT';
+      saveQuoteCurrencyForSymbol(chart.config.symbol, chart.config.quoteCurrency);
       currencyRate = await getUsdtToDisplayRate(chart.config.quoteCurrency);
       applyDisplayCurrencyToChart();
       refreshChartUi();
+    };
+    const applyDefaultQuoteCurrencyForSymbol = async (symbol: string) => {
+      const nextCurrency = loadSavedQuoteCurrencyForSymbol(symbol) ?? getDefaultQuoteCurrencyForSymbol(symbol);
+      if (currencySelect.value !== nextCurrency) {
+        currencySelect.value = nextCurrency;
+      }
+      if (chart.config.quoteCurrency !== nextCurrency) {
+        chart.config.quoteCurrency = nextCurrency;
+        saveQuoteCurrencyForSymbol(symbol, nextCurrency);
+        currencyRate = await getUsdtToDisplayRate(nextCurrency);
+        applyDisplayCurrencyToChart();
+        refreshChartUi();
+      }
     };
     currencySelect.addEventListener('change', () => {
       void applyCurrencySelection();
@@ -1082,9 +1203,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           const canonical = canonicalizeUiSymbol(selectedSymbol);
           chart.config.symbol = canonical;
           saveSymbol(canonical);
-          restoreCurrentChartDrawings();
+          await applyDefaultQuoteCurrencyForSymbol(canonical);
           ohlcHeaderDisplay.innerHTML = '';
-          void reloadLiveData();
+          void reloadLiveData().then(() => {
+            restoreCurrentChartDrawings();
+          });
         });
       },
       onTimeframeChange: (timeframe) => {
@@ -1097,8 +1220,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         chart.setTimeframe(timeframe);
         saveTimeframe(timeframe);
         ohlcHeaderDisplay.innerHTML = '';
-        const hasStoredTarget = restoreCurrentChartDrawings({ clearWhenMissing: false });
         void reloadLiveData().then(() => {
+          const hasStoredTarget = restoreCurrentChartDrawings({ clearWhenMissing: false });
           if (hasStoredTarget) {
             persistCurrentChartDrawings();
             return;
@@ -1146,6 +1269,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     startManagedInterval(() => {
       persistCurrentChartDrawings();
     }, 1500);
+    window.addEventListener('beforeunload', persistCurrentChartDrawings);
+    window.addEventListener('pagehide', persistCurrentChartDrawings);
 
     refreshChartUi();
     refreshHeader();
@@ -1160,6 +1285,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       startLive,
       stopLive,
       reloadLiveData,
+      applyDefaultQuoteCurrencyForSymbol,
     };
   };
 
@@ -1169,13 +1295,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     const pane = createPane(paneId, paneSlots[paneId]);
 
     if (isPopout) {
-      saveDrawingEntry(pane.chart.config.symbol, pane.chart.config.timeframe, pane.chart);
       const symbol = pageUrl.searchParams.get('symbol');
       const tf = pageUrl.searchParams.get('tf') as TimeframeKey | null;
       if (symbol) {
         const canonical = canonicalizeUiSymbol(symbol);
         pane.chart.config.symbol = canonical;
         saveSymbol(canonical);
+        void pane.applyDefaultQuoteCurrencyForSymbol(canonical);
       }
       if (tf && TIMEFRAME_SECONDS[tf]) {
         pane.chart.setTimeframe(tf);
@@ -1950,6 +2076,3 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
 
 // Export for debugging
 export {};
-
-
-

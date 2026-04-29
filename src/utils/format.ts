@@ -8,6 +8,13 @@ export function formatKUnit(value: number, maxFractionDigits = 2): string {
   return `${k.toFixed(digits)}K`;
 }
 
+export function formatKUnitWithComma(value: number): string {
+  if (!Number.isFinite(value)) return '-';
+  const k = value / 1000;
+  if (Math.abs(k) < 1000) return `${formatWithComma(k, 0)}K`;
+  return `${formatWithComma(k, 0)}K`;
+}
+
 export function formatThousandAdaptive(value: number, fractionDigitsBelow1000 = 0): string {
   if (!Number.isFinite(value)) return '-';
   if (Math.abs(value) < 1000) return formatWithComma(value, fractionDigitsBelow1000);

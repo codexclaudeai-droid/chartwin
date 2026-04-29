@@ -554,7 +554,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
           panelHeight: pH,
         });
 
-        const labelText = panelId === 'volume' ? formatKUnit(alert.value, 1) : alert.value.toFixed(2);
+      const labelText = panelId === 'volume' ? formatKUnit(alert.value, 2) : alert.value.toFixed(2);
         ctx.save();
         ctx.font = `12px ${fontStack}`;
         const boxW = Math.max(40, Math.min(geometry.axisPad - 22, Math.ceil(ctx.measureText(labelText).width) + 12));
@@ -611,7 +611,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
 
       if (id === 'volume') {
         subLabel('Volume', top);
-        subGrid([vMax, vMax / 2], top, pH, 0, vScaleMax, (value) => formatKUnit(value, 1));
+        subGrid([vMax, vMax / 2], top, pH, 0, vScaleMax, (value) => formatKUnit(value, 2));
         drawSubAlertLines('volume', top, pH, 0, vScaleMax);
       }
       if (id === 'rsi') {

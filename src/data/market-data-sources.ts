@@ -3,6 +3,21 @@ import type { TimeframeKey } from '../catalog/time';
 import type { DisplayCurrency } from '../types/market';
 import { getBucketStartSec, shiftBucketSec } from '../chart/axis-utils';
 
+const INDEX_SYMBOLS_2DP = new Set([
+  'NQ1!',
+  'NAS100',
+  'SPX500',
+  'HKG33',
+  'HSI',
+  'KOSPI',
+  'KOSPI200',
+  'KOSDAQ',
+  '^GSPC',
+  '^IXIC',
+  '^DJI',
+  '^FTSE',
+]);
+
 export interface MarketDataAPI {
   fetchHistoricalData(symbol: string, timeframe: string, limit: number): Promise<CandleData[]>;
   fetchRealTimeData?(symbol: string): Promise<Partial<CandleData>>;
@@ -207,9 +222,10 @@ export function generateDummyData(count: number, timeframe: TimeframeKey): Candl
 }
 
 export function getSymbolPricePrecision(symbol: string, quoteCurrency: DisplayCurrency = 'USDT'): number {
+  const normalized = symbol.trim().toUpperCase().replace(/\.P$/, '');
+  if (INDEX_SYMBOLS_2DP.has(normalized)) return 2;
   if (quoteCurrency === 'JPY' || quoteCurrency === 'KRW') return 0;
   if (quoteCurrency === 'EUR' || quoteCurrency === 'USD' || quoteCurrency === 'USDT') {
-    const normalized = symbol.trim().toUpperCase().replace(/\.P$/, '');
     if (normalized === 'XRPUSDT') return 4;
     if (
       normalized === 'BTCUSDT' ||
@@ -223,7 +239,6 @@ export function getSymbolPricePrecision(symbol: string, quoteCurrency: DisplayCu
     return 1;
   }
   if (quoteCurrency === 'BTC') return 6;
-  const normalized = symbol.trim().toUpperCase().replace(/\.P$/, '');
   if (normalized === 'XRPUSDT') return 4;
   if (
     normalized === 'BTCUSDT' ||

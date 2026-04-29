@@ -1,3 +1,9 @@
+import type { DisplayCurrency } from '../types/market';
+
+const KRW_INDEX_SYMBOLS = new Set(['KOSPI', 'KOSPI200', 'KOSDAQ']);
+const USD_INDEX_SYMBOLS = new Set(['NQ1!', 'NAS100', 'SPX500', 'HKG33', 'HSI', '^GSPC', '^IXIC', '^DJI', '^FTSE']);
+const USD_COMMODITY_SYMBOLS = new Set(['XAUUSD', 'XAGUSD']);
+
 export function getChicagoWeekdayHourMinute(now: Date): { weekday: string; hour: number; minute: number } {
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Chicago',
@@ -35,4 +41,11 @@ export function canonicalizeUiSymbol(symbol: string): string {
   const upper = symbol.trim().toUpperCase();
   if (upper === 'NAS100' || upper === 'NQ') return 'NQ1!';
   return upper;
+}
+
+export function getDefaultQuoteCurrencyForSymbol(symbol: string): DisplayCurrency {
+  const normalized = canonicalizeUiSymbol(symbol).replace(/\.P$/, '');
+  if (KRW_INDEX_SYMBOLS.has(normalized)) return 'KRW';
+  if (USD_INDEX_SYMBOLS.has(normalized) || USD_COMMODITY_SYMBOLS.has(normalized)) return 'USD';
+  return 'USDT';
 }
