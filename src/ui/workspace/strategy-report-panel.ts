@@ -460,10 +460,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   panel.appendChild(resizeHandle);
 
   const header = document.createElement('div');
-  header.style.cssText = 'height:34px;display:flex;align-items:center;justify-content:center;padding:0 8px;background:#131b2d;border-bottom:1px solid #24314a;color:#d5deef;font:600 12px Segoe UI,Arial,sans-serif;position:relative;';
+  header.style.cssText = 'height:34px;display:flex;align-items:center;justify-content:flex-start;padding:0 8px 0 10px;background:#131b2d;border-bottom:1px solid #24314a;color:#d5deef;font:600 12px Segoe UI,Arial,sans-serif;position:relative;';
   panel.appendChild(header);
   const headerTitle = document.createElement('div');
-  headerTitle.style.cssText = 'display:inline-flex;align-items:center;gap:6px;min-width:0;';
+  headerTitle.style.cssText = 'display:inline-flex;align-items:center;gap:6px;min-width:0;cursor:pointer;';
   const headerTitleIcon = document.createElement('span');
   headerTitleIcon.style.cssText = 'width:18px;height:18px;border:1px solid #3a4158;border-radius:5px;background:#ffffff;color:#0f1218;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;';
   headerTitleIcon.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
@@ -1039,6 +1039,17 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     return { date: `${yyyy}.${mm}.${dd}`, time: `${hh}:${mi}` };
   };
 
+  const formatTradeTsCompact = (sec: number | null): string => {
+    if (!Number.isFinite(Number(sec))) return '-';
+    const d = new Date(Number(sec) * 1000);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return `${yyyy}.${mm}.${dd} ${hh}:${mi}`;
+  };
+
   const escapeCsvCell = (value: string | number): string => {
     const text = String(value ?? '');
     if (text.includes('"') || text.includes(',') || text.includes('\n')) {
@@ -1108,8 +1119,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       return;
     }
     const isMobileWidth = Math.max(320, panel.clientWidth) < 760;
-    const baseColumns = isMobileWidth ? '20px 34px 1fr 1.85fr 74px' : '32px 56px 1fr 1fr 90px';
-    const fullColumns = isMobileWidth ? '20px 34px 1fr 1.85fr 74px 52px' : '32px 56px 1fr 1fr 90px 88px';
+    const baseColumns = isMobileWidth ? '20px 34px 1.15fr 2fr 62px' : '32px 56px 1fr 1fr 90px';
+    const fullColumns = isMobileWidth ? '20px 34px 1.15fr 2fr 62px 52px' : '32px 56px 1fr 1fr 90px 88px';
+    const rowArrowSvg = '<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;opacity:.95;"><path d="M2 8h9"></path><path d="M8 4l4 4-4 4"></path></svg>';
 
     const headerRow = `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:8px;border-bottom:1px solid #2b3d5d;background:#17243a;color:#9fb3d5;font-size:11px;font-weight:700;text-align:center;">
       <div>#</div>
@@ -1126,19 +1138,20 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       .map((t, idx) => {
         const pnlColor = t.pnl >= 0 ? '#39d98a' : '#ff7f7f';
         const sideColor = t.side === 'LONG' ? '#39d98a' : '#ff7f7f';
-        const entryTs = formatTradeTsLines(t.entryTime);
-        const exitTs = formatTradeTsLines(t.exitTime);
+        const entryTs = formatTradeTsCompact(t.entryTime);
+        const exitTs = formatTradeTsCompact(t.exitTime);
         return `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid #1f2b44;">
           <div style="color:#8aa0c5;text-align:center;">${idx + 1}</div>
           <div style="color:${sideColor};font-weight:700;text-align:center;font-size:${isMobileWidth ? '10px' : '12px'};white-space:nowrap;letter-spacing:${isMobileWidth ? '-0.1px' : '0'};">${t.side}</div>
-          <div style="color:#cdd8ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:${isMobileWidth ? '11px' : '12px'};">${formatAmount(t.entry)} -> ${formatAmount(t.exit)}</div>
-          <div style="color:#aab9d6;font-size:11px;line-height:1.22;">
-            <div>${entryTs.date}</div>
-            <div>${entryTs.time}</div>
-            <div>→ ${exitTs.date}</div>
-            <div>${exitTs.time}</div>
+          <div style="color:#cdd8ee;font-size:${isMobileWidth ? '15px' : '12px'};line-height:1.12;font-weight:${isMobileWidth ? '700' : '500'};">
+            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)}</div>
+            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${formatAmount(t.exit)}</div>
           </div>
-          <div style="color:${pnlColor};font-weight:700;text-align:right;">${formatAmount(t.pnl)}</div>
+          <div style="color:#aab9d6;font-size:11px;line-height:1.22;">
+            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${entryTs}</div>
+            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${exitTs}</div>
+          </div>
+          <div style="color:${pnlColor};font-weight:700;text-align:right;font-size:${isMobileWidth ? '15px' : '12px'};line-height:1.12;">${formatAmount(t.pnl)}</div>
         </div>`;
       })
       .join('');
@@ -1561,6 +1574,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   });
   collapseBtn.addEventListener('click', () => {
     applyPanelMode(panelMode === 'collapsed' ? 'normal' : 'collapsed');
+  });
+  headerTitle.addEventListener('click', () => {
+    if (panelMode === 'collapsed') applyPanelMode('normal');
   });
   sideSelect.addEventListener('change', () => {
     sideFilter = (sideSelect.value as SideFilter) ?? 'all';
