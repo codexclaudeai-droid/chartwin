@@ -304,6 +304,7 @@ export class SimpleChart {
   private focusedSignalCandleIndex: number | null = null;
   private focusedTradeRange: { startIndex: number; endIndex: number } | null = null;
   private focusVisualTimer: ReturnType<typeof setTimeout> | null = null;
+  private focusVisualStartedAt = 0;
 
   // 십자선 가격박스 옆 + 아이콘 히트 영역
   private crosshairPlusHit: { x: number; y: number; r: number; price: number } | null = null;
@@ -2815,9 +2816,11 @@ export class SimpleChart {
     return geometry.chartLeft + (leftGap + localIndex) * totalSp + candleW / 2;
   }
 
-  private focusSignalVisual(candleIndex: number): void {
+  private focusSignalVisual(candleIndex: number, options?: { showCrosshair?: boolean }): void {
+    const showCrosshair = options?.showCrosshair !== false;
     const clamped = Math.max(0, Math.min(this.data.length - 1, Math.floor(candleIndex)));
     this.focusedSignalCandleIndex = clamped;
+    this.focusVisualStartedAt = Date.now();
 
     const signalIndexInRange = (() => {
       const lo = Math.max(0, Math.min(this.focusedTradeRange?.startIndex ?? clamped, this.focusedTradeRange?.endIndex ?? clamped));
@@ -2835,18 +2838,34 @@ export class SimpleChart {
       ? Math.max(20, Math.min(this.lastDrawMeta.mainH - 20, this.lastDrawMeta.mainH * 0.35))
       : Math.max(20, this.viewportHeight * 0.35);
     this.mouseY = focusY;
-    this.isMouseOver = true;
+    if (showCrosshair) {
+      this.isMouseOver = true;
+    } else {
+      this.isMouseOver = false;
+      this.crosshairPlusHit = null;
+      this.crosshairPlusHovered = false;
+      if (this.onCrosshairOHLC && this._lastCrosshairOHLCIdx !== -1) {
+        this._lastCrosshairOHLCIdx = -1;
+        this.onCrosshairOHLC(null);
+      }
+    }
 
     this.clearFocusVisualTimer();
     this.focusVisualTimer = setTimeout(() => {
       this.focusedSignalCandleIndex = null;
       this.focusedTradeRange = null;
+      this.focusVisualStartedAt = 0;
       this.focusVisualTimer = null;
       this.requestOverlayDraw();
     }, 6000);
   }
 
-  public focusRangeByIndex(startIndex: number, endIndex: number, paddingBars = 8): void {
+  public focusRangeByIndex(
+    startIndex: number,
+    endIndex: number,
+    paddingBars = 8,
+    options?: { showCrosshair?: boolean },
+  ): void {
     if (!this.data.length) return;
 
     const lastIndex = this.data.length - 1;
@@ -2882,7 +2901,7 @@ export class SimpleChart {
       endIndex: Math.max(0, Math.min(lastIndex, Math.max(normalizedStart, normalizedEnd))),
     };
     this.draw();
-    this.focusSignalVisual(this.focusedTradeRange.startIndex);
+    this.focusSignalVisual(this.focusedTradeRange.startIndex, options);
   }
 
   /** 최신(가장 오른쪽) 캔들로 뷰포트 이동 */
@@ -6724,13 +6743,23 @@ export class SimpleChart {
         const endLocal = drawEnd - this.startIndex;
         const x1 = chartLeft + startLocal * totalSp;
         const x2 = chartLeft + endLocal * totalSp + candleW;
+        const elapsed = this.focusVisualStartedAt > 0 ? (Date.now() - this.focusVisualStartedAt) : 0;
+        const pulse = 0.5 + 0.5 * Math.sin(elapsed / 170);
+        const fillAlpha = 0.18 + pulse * 0.14;
+        const strokeAlpha = 0.5 + pulse * 0.38;
+        const glowAlpha = 0.14 + pulse * 0.22;
+        const rangeW = Math.max(2, x2 - x1);
+        const rangeH = Math.max(0, mainH - R.top);
         ctx.save();
-        ctx.fillStyle = 'rgba(72,118,255,0.14)';
-        ctx.strokeStyle = 'rgba(111,163,255,0.52)';
-        ctx.lineWidth = 1;
-        ctx.fillRect(x1, R.top, Math.max(2, x2 - x1), Math.max(0, mainH - R.top));
-        ctx.strokeRect(x1 + 0.5, R.top + 0.5, Math.max(1, x2 - x1 - 1), Math.max(1, mainH - R.top - 1));
+        ctx.fillStyle = `rgba(72,118,255,${fillAlpha.toFixed(3)})`;
+        ctx.strokeStyle = `rgba(145,188,255,${strokeAlpha.toFixed(3)})`;
+        ctx.shadowColor = `rgba(96,154,255,${glowAlpha.toFixed(3)})`;
+        ctx.shadowBlur = 16 + pulse * 10;
+        ctx.lineWidth = 1.3 + pulse * 0.7;
+        ctx.fillRect(x1, R.top, rangeW, rangeH);
+        ctx.strokeRect(x1 + 0.5, R.top + 0.5, Math.max(1, rangeW - 1), Math.max(1, rangeH - 1));
         ctx.restore();
+        this.requestOverlayDraw();
       }
     }
 

@@ -11,7 +11,12 @@ type StrategyReportChartLike = {
   getCandles: () => CandleLike[];
   getStrategySignalSeries: () => number[];
   getActiveStrategyName: () => string | null;
-  focusRangeByIndex?: (startIndex: number, endIndex: number, paddingBars?: number) => void;
+  focusRangeByIndex?: (
+    startIndex: number,
+    endIndex: number,
+    paddingBars?: number,
+    options?: { showCrosshair?: boolean },
+  ) => void;
   buildStrategyReport?: (args: {
     feeBps: number;
     slippageBps: number;
@@ -446,7 +451,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
   const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
   const resizeHandle = document.createElement('div');
-  resizeHandle.style.cssText = `position:absolute;left:0;right:0;top:${isTouchDevice ? '-12px' : '-4px'};height:${isTouchDevice ? '24px' : '8px'};cursor:ns-resize;z-index:15;display:flex;align-items:center;justify-content:center;`;
+  resizeHandle.style.cssText = `position:absolute;left:0;right:0;top:${isTouchDevice ? '-12px' : '-4px'};height:${isTouchDevice ? '24px' : '8px'};cursor:ns-resize;z-index:15;display:flex;align-items:center;justify-content:center;touch-action:none;`;
   if (isTouchDevice) {
     const grip = document.createElement('div');
     grip.style.cssText = 'width:40px;height:4px;border-radius:2px;background:rgba(180,190,210,0.35);pointer-events:none;';
@@ -536,7 +541,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   panel.appendChild(settingsMenu);
 
   const metricsView = document.createElement('div');
-  metricsView.style.cssText = 'display:flex;flex-direction:column;min-height:0;flex:1;overflow-y:auto;overflow-x:hidden;';
+  metricsView.style.cssText = 'display:flex;flex-direction:column;min-height:0;flex:1;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;';
   body.appendChild(metricsView);
 
   const kpiRow = document.createElement('div');
@@ -548,10 +553,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   metricsView.appendChild(legendRow);
 
   const canvasWrap = document.createElement('div');
-  canvasWrap.style.cssText = 'position:relative;flex:0 0 40%;min-height:190px;max-height:62%;border-bottom:1px solid #22304a;';
+  canvasWrap.style.cssText = 'position:relative;flex:0 0 40%;min-height:190px;max-height:62%;border-bottom:1px solid #22304a;touch-action:pan-y;';
   metricsView.appendChild(canvasWrap);
   const canvas = document.createElement('canvas');
-  canvas.style.cssText = 'width:100%;height:100%;display:block;background:#0f1524;';
+  canvas.style.cssText = 'width:100%;height:100%;display:block;background:#0f1524;touch-action:pan-y;';
   canvasWrap.appendChild(canvas);
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('2D context unavailable for strategy report panel.');
@@ -1082,7 +1087,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const chart = getActiveChart();
     if (typeof chart.focusRangeByIndex !== 'function') return;
     const padding = panelMode === 'expanded' ? 10 : 6;
-    chart.focusRangeByIndex(trade.entryIndex, trade.exitIndex, padding);
+    chart.focusRangeByIndex(trade.entryIndex, trade.exitIndex, padding, { showCrosshair: false });
   };
 
   const renderTradesTable = () => {
@@ -1285,6 +1290,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let dragging = false;
   let startClientY = 0;
   let startHeight = normalHeight;
+  let dragTouchId: number | null = null;
 
   const handleDragMove = (event: MouseEvent) => {
     if (!dragging || panelMode !== 'normal') return;
@@ -1311,9 +1317,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
   const handleTouchDragMove = (event: TouchEvent) => {
     if (!dragging || panelMode !== 'normal') return;
-    event.preventDefault();
-    const touch = event.touches[0];
+    const touch = dragTouchId == null
+      ? event.touches[0]
+      : Array.from(event.touches).find((t) => t.identifier === dragTouchId);
     if (!touch) return;
+    event.preventDefault();
     const delta = startClientY - touch.clientY;
     applyNormalHeight(startHeight + delta);
   };
@@ -1321,8 +1329,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const stopTouchDrag = () => {
     if (!dragging) return;
     dragging = false;
+    dragTouchId = null;
     window.removeEventListener('touchmove', handleTouchDragMove);
     window.removeEventListener('touchend', stopTouchDrag);
+    window.removeEventListener('touchcancel', stopTouchDrag);
   };
 
   resizeHandle.addEventListener('touchstart', (event) => {
@@ -1331,10 +1341,12 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const touch = event.touches[0];
     if (!touch) return;
     dragging = true;
+    dragTouchId = touch.identifier;
     startClientY = touch.clientY;
     startHeight = normalHeight;
     window.addEventListener('touchmove', handleTouchDragMove, { passive: false });
     window.addEventListener('touchend', stopTouchDrag);
+    window.addEventListener('touchcancel', stopTouchDrag);
   }, { passive: false });
 
   worker.addEventListener('message', (event: MessageEvent<{ requestId: number; result: ReportResult }>) => {
@@ -1572,4 +1584,3 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     },
   };
 }
-
