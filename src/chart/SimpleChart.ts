@@ -577,6 +577,7 @@ export class SimpleChart {
     const ind = this.config.indicators as any;
     if (!ind.ma) ind.ma = { show: true, nextId: 1, lines: [] };
     const ma = ind.ma;
+    if (ind.ema) ind.ema.show = false;
     if (!Array.isArray(ma.lines)) ma.lines = [];
     const nextIndex = Math.max(1, Number(ma.nextId) || ma.lines.length + 1);
     const lineItem = {
@@ -614,6 +615,7 @@ export class SimpleChart {
     const ind = this.config.indicators as any;
     if (!ind.ema) ind.ema = { show: true, nextId: 1, lines: [] };
     const ema = ind.ema;
+    if (ind.ma) ind.ma.show = false;
     if (!Array.isArray(ema.lines)) ema.lines = [];
     const nextIndex = Math.max(1, Number(ema.nextId) || ema.lines.length + 1);
     const lineItem = {

@@ -1580,8 +1580,15 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
         row.addEventListener('mouseleave', () => { if (!isOn) row.style.background = 'transparent'; });
         row.addEventListener('click', () => {
           if (ind.id === 'ma' || ind.id === 'ema') {
-            if (ind.id === 'ma') chart.addMaLine?.();
-            else chart.addEmaLine?.();
+            if (ind.id === 'ma') {
+              if (!(chart.config.indicators as any).ma?.lines?.length) chart.addMaLine?.();
+              (chart.config.indicators as any).ma.show = true;
+              if ((chart.config.indicators as any).ema) (chart.config.indicators as any).ema.show = false;
+            } else {
+              if (!(chart.config.indicators as any).ema?.lines?.length) chart.addEmaLine?.();
+              (chart.config.indicators as any).ema.show = true;
+              if ((chart.config.indicators as any).ma) (chart.config.indicators as any).ma.show = false;
+            }
             chart.draw();
             refresh();
             render(q);
@@ -1800,6 +1807,8 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     if (!Array.isArray(ind.lines)) ind.lines = [];
     if (!Number.isFinite(Number(ind.nextId))) ind.nextId = ind.lines.length + 1;
     ind.show = true;
+    if (popupKey === 'ma' && indicators.ema) indicators.ema.show = false;
+    if (popupKey === 'ema' && indicators.ma) indicators.ma.show = false;
     popup.style.minWidth = 'min(420px, calc(100vw - 16px))';
 
     const isEma = popupKey === 'ema';
@@ -1922,8 +1931,13 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     addBtn.textContent = isEma ? '+ EMA ??' : '+ MA ??';
     addBtn.style.cssText = 'width:100%;margin-top:10px;padding:8px;border:1px solid #3b65b7;border-radius:6px;background:#20345c;color:#dbe8ff;font-weight:700;cursor:pointer;';
     addBtn.addEventListener('click', () => {
-      if (isEma) chart.addEmaLine?.();
-      else chart.addMaLine?.();
+      if (isEma) {
+        chart.addEmaLine?.();
+        if (indicators.ma) indicators.ma.show = false;
+      } else {
+        chart.addMaLine?.();
+        if (indicators.ema) indicators.ema.show = false;
+      }
       chart.draw();
       onUpdate();
       renderMaRows();
