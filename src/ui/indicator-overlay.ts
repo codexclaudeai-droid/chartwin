@@ -251,6 +251,10 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         const maLines = Array.isArray(indicators.ma?.lines) ? indicators.ma.lines : [];
         return maLines.map((line: any, index: number) => String(line.id || `ma${index + 1}`));
       }
+      if (targetKey === 'ema') {
+        const emaLines = Array.isArray(indicators.ema?.lines) ? indicators.ema.lines : [];
+        return emaLines.map((line: any, index: number) => String(line.id || `ema${index + 1}`));
+      }
       if (targetKey === 'bb') {
         const bbLines = Array.isArray(indicators.bb?.lines)
           ? indicators.bb.lines
@@ -489,6 +493,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     const buildLabel = (c: any, key: string): string => {
       const i = c.config.indicators as any;
       const maLines = Array.isArray(i.ma?.lines) ? i.ma.lines : [];
+      const emaLines = Array.isArray(i.ema?.lines) ? i.ema.lines : [];
       const bbLines = Array.isArray(i.bb?.lines)
         ? i.bb.lines
         : (i.bb?.show ? [{ period: i.bb.period, stdDev: i.bb.stdDev }] : []);
@@ -496,6 +501,9 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         ma:       () => maLines.length
           ? `MA ${maLines.map((line: any) => Number(line.period ?? line.value ?? 20)).join(' ')}`
           : 'MA',
+        ema:      () => emaLines.length
+          ? `EMA ${emaLines.map((line: any) => Number(line.period ?? line.value ?? 20)).join(' ')}`
+          : 'EMA',
         maShort:  () => `MA ${i.maShort.value}`,
         maLong:   () => `MA ${i.maLong.value}`,
         ma60:     () => `MA ${i.ma60.value}`,
@@ -539,6 +547,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
 
     const colorMap: Record<string, string> = {
       ma: getLineStyle(chart.config.panelState, ((chart.config.indicators as any).ma?.lines?.[0]?.id ?? 'ma1'), { color: '#f7931a', width: 1.5, dash: [] }).color,
+      ema: getLineStyle(chart.config.panelState, ((chart.config.indicators as any).ema?.lines?.[0]?.id ?? 'ema1'), { color: '#ff9800', width: 1.5, dash: [] }).color,
       maShort: getLineStyle(chart.config.panelState, 'maShort', { color: '#f7931a', width: 1.5, dash: [] }).color,
       maLong: getLineStyle(chart.config.panelState, 'maLong', { color: '#2962ff', width: 1.5, dash: [] }).color,
       ma60: getLineStyle(chart.config.panelState, 'ma60', { color: '#4caf50', width: 1.5, dash: [] }).color,
@@ -571,6 +580,16 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         maLines.forEach((line: any, index: number) => {
           const styleKey = String(line.id || `ma${index + 1}`);
           const style = getLineStyle(chart.config.panelState, styleKey, { color: colorMap.ma, width: 1.5, dash: [] });
+          parts.push({ text: String(Number(line.period ?? line.value ?? 20)), color: style.color });
+        });
+        return makeRichTag(parts, key, '#dbe3f4');
+      }
+      if (key === 'ema') {
+        const emaLines = Array.isArray(chartIndicators.ema?.lines) ? chartIndicators.ema.lines : [];
+        const parts = [{ text: 'EMA', color: '#dbe3f4' }];
+        emaLines.forEach((line: any, index: number) => {
+          const styleKey = String(line.id || `ema${index + 1}`);
+          const style = getLineStyle(chart.config.panelState, styleKey, { color: colorMap.ema, width: 1.5, dash: [] });
           parts.push({ text: String(Number(line.period ?? line.value ?? 20)), color: style.color });
         });
         return makeRichTag(parts, key, '#dbe3f4');
@@ -654,7 +673,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     });
 
     const allKeys = [
-      'ma','maShort','maLong','ma60','ma120','ma200','bb','vwap','volumeProfile','vpvr','ichimoku','envelope',
+      'ma','ema','maShort','maLong','ma60','ma120','ma200','bb','vwap','volumeProfile','vpvr','ichimoku','envelope',
       'supertrend','statisticalTrailingStop','zeroLagMaTrendLevels',
       'rsi','dmi','macd','stochF','stochS','cci','obv','volume',
     ];
