@@ -229,10 +229,15 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       || isTouchDevice
       || window.innerWidth < 600;
     activeMobileMainTag = null;
+    const axisPad = Math.max(
+      0,
+      Number((chart as any).currentAxisPad ?? chart.config.layout.rightPadding ?? 0),
+    );
     const marketLeftInset = chart.config.layout.marketInfoSide === 'left'
-      ? Math.max(0, chart.config.layout.rightPadding)
+      ? axisPad
       : 0;
-    overlay.style.left = `${8 + marketLeftInset}px`;
+    const overlayLeftGap = chart.config.layout.marketInfoSide === 'left' ? 12 : 8;
+    overlay.style.left = `${overlayLeftGap + marketLeftInset}px`;
     const overlayConstrainedWidth = (compactOverlay || touchLarge)
       ? `calc(100% - ${marketLeftInset + 16}px)`
       : '';
@@ -769,7 +774,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       return btn;
     };
 
-    const rightOffset = Math.max(10, chart.config.layout.rightPadding + 6);
+    const rightOffset = Math.max(10, axisPad + 6);
     panelHoverControllers = [];
     const headerBoxHeight = 24;
     const titleHeaderBoxHeight = 30;

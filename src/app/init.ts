@@ -91,6 +91,19 @@ loadSavedApiKeys();
 
 const app = document.getElementById('app');
 if (app) {
+  const startManagedInterval = (
+    callback: () => void,
+    intervalMs: number,
+    options: { runWhenHidden?: boolean } = {},
+  ): (() => void) => {
+    const runWhenHidden = options.runWhenHidden ?? false;
+    const tick = () => {
+      if (!runWhenHidden && document.hidden) return;
+      callback();
+    };
+    const timerId = window.setInterval(tick, intervalMs);
+    return () => window.clearInterval(timerId);
+  };
 // ── 모바일 전용 CSS 주입 ──────────────────────────────────────────────────
 (function injectMobileStyles() {
   const style = document.createElement('style');
@@ -603,7 +616,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         winCtrlWrap.style.marginLeft = 'auto';
       } else {
         if (marketPriceWrap.parentElement !== paneHeader) paneHeader.insertBefore(marketPriceWrap, tfSelect);
+        paneHeader.insertBefore(marketPriceWrap, tfSelect);
         if (currencySelect.parentElement !== paneHeader) paneHeader.insertBefore(currencySelect, winCtrlWrap);
+        paneHeader.insertBefore(currencySelect, winCtrlWrap);
         ohlcHeaderDisplay.style.marginLeft = 'auto';
         currencySelect.style.marginLeft = '0';
         winCtrlWrap.style.marginLeft = '6px';
@@ -1045,7 +1060,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     currencySelect.addEventListener('change', () => {
       void applyCurrencySelection();
     });
-    window.setInterval(() => {
+    startManagedInterval(() => {
       if (chart.config.quoteCurrency === 'USDT' || chart.config.quoteCurrency === 'USD') return;
       void applyCurrencySelection();
     }, 60_000);
@@ -1128,7 +1143,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     };
 
     paneRoot.addEventListener('mousedown', () => setActivePane(paneId));
-    window.setInterval(() => {
+    startManagedInterval(() => {
       persistCurrentChartDrawings();
     }, 1500);
 
@@ -1605,7 +1620,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       };
       display_refresh_tz();
       display_update_clock();
-      window.setInterval(display_update_clock, 1000);
+      startManagedInterval(display_update_clock, 1000, { runWhenHidden: true });
 
       tzWrap.append(clockEl, tzBtn);
       mobileBarEl.appendChild(tzWrap);
@@ -1691,7 +1706,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       window.addEventListener('orientationchange', () =>
         setTimeout(display_update_jump_pos, 220));
       // 패널 크기 변경(divider 드래그) 후에도 갱신
-      window.setInterval(display_update_jump_pos, 400);
+      startManagedInterval(display_update_jump_pos, 600);
 
     } else {
       // ── 데스크톱: 기존 하단바 ──────────────────────────────────────────
@@ -1772,7 +1787,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         strategyReport.refresh();
       }
     };
-    window.setInterval(() => {
+    startManagedInterval(() => {
       refreshStrategyReport();
     }, 1000);
     refreshStrategyReport();
@@ -1911,7 +1926,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         emitToolboxTrashCounts();
       }
     });
-    window.setInterval(() => {
+    startManagedInterval(() => {
       emitToolboxTrashCounts();
     }, 1000);
     emitToolboxTrashCounts();
@@ -1935,8 +1950,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
 
 // Export for debugging
 export {};
-
-
 
 
 
