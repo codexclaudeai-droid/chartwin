@@ -1118,9 +1118,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       tradesView.innerHTML = '<div style="padding:8px;color:#93a5c4;">표시할 거래가 없습니다.</div>';
       return;
     }
-    const isMobileWidth = Math.max(320, panel.clientWidth) < 760;
-    const baseColumns = isMobileWidth ? '20px 34px 1.15fr 2fr 62px' : '32px 56px 1fr 1fr 90px';
-    const fullColumns = isMobileWidth ? '20px 34px 1.15fr 2fr 62px 52px' : '32px 56px 1fr 1fr 90px 88px';
+    const panelWidth = Math.max(320, panel.clientWidth);
+    const isPhoneWidth = panelWidth < 760;
+    const baseColumns = isPhoneWidth ? '20px 34px 1.15fr 2fr 62px' : '32px 56px 1fr 1fr 86px';
+    const fullColumns = isPhoneWidth ? '20px 34px 1.15fr 2fr 62px 52px' : '32px 56px 1fr 1fr 86px 88px';
     const rowArrowSvg = '<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;opacity:.95;"><path d="M2 8h9"></path><path d="M8 4l4 4-4 4"></path></svg>';
 
     const headerRow = `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:8px;border-bottom:1px solid #2b3d5d;background:#17243a;color:#9fb3d5;font-size:11px;font-weight:700;text-align:center;">
@@ -1142,16 +1143,22 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
         const exitTs = formatTradeTsCompact(t.exitTime);
         return `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid #1f2b44;">
           <div style="color:#8aa0c5;text-align:center;">${idx + 1}</div>
-          <div style="color:${sideColor};font-weight:700;text-align:center;font-size:${isMobileWidth ? '10px' : '12px'};white-space:nowrap;letter-spacing:${isMobileWidth ? '-0.1px' : '0'};">${t.side}</div>
-          <div style="color:#cdd8ee;font-size:${isMobileWidth ? '15px' : '12px'};line-height:1.12;font-weight:${isMobileWidth ? '700' : '500'};">
-            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)}</div>
-            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${formatAmount(t.exit)}</div>
+          <div style="color:${sideColor};font-weight:700;text-align:center;font-size:${isPhoneWidth ? '10px' : '12px'};white-space:nowrap;letter-spacing:${isPhoneWidth ? '-0.1px' : '0'};">${t.side}</div>
+          <div style="color:#cdd8ee;font-size:${isPhoneWidth ? '15px' : '12px'};line-height:1.12;font-weight:${isPhoneWidth ? '700' : '500'};">
+            ${isPhoneWidth
+              ? `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)}</div>
+                 <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${formatAmount(t.exit)}</div>`
+              : `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)} ${rowArrowSvg} ${formatAmount(t.exit)}</div>`
+            }
           </div>
-          <div style="color:#aab9d6;font-size:11px;line-height:1.22;">
-            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${entryTs}</div>
-            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${exitTs}</div>
+          <div style="color:#aab9d6;font-size:${isPhoneWidth ? '15px' : '12px'};line-height:1.22;">
+            ${isPhoneWidth
+              ? `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${entryTs}</div>
+                 <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${exitTs}</div>`
+              : `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${entryTs} ${rowArrowSvg} ${exitTs}</div>`
+            }
           </div>
-          <div style="color:${pnlColor};font-weight:700;text-align:right;font-size:${isMobileWidth ? '15px' : '12px'};line-height:1.12;">${formatAmount(t.pnl)}</div>
+          <div style="color:${pnlColor};font-weight:700;text-align:right;font-size:${isPhoneWidth ? '15px' : '12px'};line-height:1.12;">${formatAmount(t.pnl)}</div>
         </div>`;
       })
       .join('');
@@ -1168,7 +1175,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     rowEls[0].style.gridTemplateColumns = fullColumns;
     const moveHeader = document.createElement('div');
     moveHeader.style.textAlign = 'center';
-    moveHeader.textContent = isMobileWidth ? '확인' : '이동';
+    moveHeader.textContent = '보기';
     rowEls[0].appendChild(moveHeader);
 
     rowEls.slice(1).forEach((rowEl, idx) => {
@@ -1181,8 +1188,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       });
       const moveBtn = document.createElement('button');
       moveBtn.type = 'button';
-      moveBtn.textContent = isMobileWidth ? '차트확인' : '시그널 이동';
-      moveBtn.style.cssText = isMobileWidth
+      moveBtn.textContent = '차트보기';
+      moveBtn.style.cssText = isPhoneWidth
         ? 'height:20px;min-width:48px;padding:0 4px;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:5px;font-size:10px;cursor:pointer;'
         : 'height:24px;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:6px;font-size:11px;cursor:pointer;';
       moveBtn.addEventListener('click', (event) => {
