@@ -6058,9 +6058,10 @@ export class SimpleChart {
           const isHoveredGuide = shapeId != null
             && shapeId === this.hoveredDrawingId
             && (this.hoveredDrawingPart === 'line' || this.hoveredDrawingPart === 'trendline-text-guide');
+          const isEditingText = shapeId != null && shapeId === this.trendlineTextEditorShapeId;
           const placeholder = !hasText && isHoveredGuide ? '텍스트 입력' : '';
           const layout = this.getTrendlineTextLayout(shape as DrawingShape, metrics, placeholder);
-          if (layout.text) {
+          if (layout.text && !isEditingText) {
             ctx.save();
             ctx.translate(layout.x, layout.y);
             ctx.rotate(layout.angle);
@@ -6924,9 +6925,14 @@ export class SimpleChart {
     }
 
     const solidX = snapX;
+    const selectedShape = this.getSelectedDrawing();
+    const isTrendlineEditMode = !this.drawingTool && (
+      (selectedShape?.kind === 'trendline') || this.trendlineTextEditorEl != null
+    );
     const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
+    const shouldDrawCrosshairGuides = noDrawingInteraction || isTrendlineEditMode;
 
-    if (noDrawingInteraction) {
+    if (shouldDrawCrosshairGuides) {
       ctx.save();
       ctx.strokeStyle = 'rgba(214,219,233,0.65)';
       ctx.lineWidth = 1;
@@ -7406,6 +7412,14 @@ export class SimpleChart {
       this.canvas.style.cursor = 'default';
       return;
     }
+    const selectedShape = this.getSelectedDrawing();
+    const isTrendlineEditMode = !this.drawingTool && (
+      (selectedShape?.kind === 'trendline') || this.trendlineTextEditorEl != null
+    );
+    if (isTrendlineEditMode) {
+      this.canvas.style.cursor = 'none';
+      return;
+    }
     // 십자선 + 아이콘 위 → pointer
     if (this.crosshairPlusHit) {
       const { x: hx, y: hy, r: hr } = this.crosshairPlusHit;
@@ -7420,10 +7434,6 @@ export class SimpleChart {
     if (this.drawingTool) {
       if (this.drawingTool === 'eraser') {
         this.canvas.style.cursor = ERASER_CURSOR;
-        return;
-      }
-      if (hitDrawing && !hitDrawing.shape.locked) {
-        this.canvas.style.cursor = 'pointer';
         return;
       }
       this.canvas.style.cursor = 'crosshair';
@@ -7442,8 +7452,8 @@ export class SimpleChart {
       this.canvas.style.cursor = 'pointer';
       return;
     }
-    if (hitDrawing && hitDrawing.shape.kind === 'trendline' && hitDrawing.part === 'trendline-text-guide') {
-      this.canvas.style.cursor = 'text';
+    if (hitDrawing && hitDrawing.shape.kind === 'trendline') {
+      this.canvas.style.cursor = 'none';
       return;
     }
     if (hitDrawing) {
