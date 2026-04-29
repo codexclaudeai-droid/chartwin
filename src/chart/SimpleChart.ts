@@ -2917,6 +2917,7 @@ export class SimpleChart {
   /** 뷰포트를 좌/우로 이동 (음수: 왼쪽, 양수: 오른쪽) */
   public panViewport(shiftBars: number): void {
     if (!this.data.length) return;
+    if (!this.isPanMarginEnabled()) return;
     const shift = Number.isFinite(shiftBars) ? Math.trunc(shiftBars) : 0;
     if (!shift) return;
     const visibleCount = Math.max(1, this.endIndex - this.startIndex);
@@ -7338,6 +7339,10 @@ export class SimpleChart {
   private handleWheel(e: WheelEvent) {
     e.preventDefault();
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      if (!this.isPanMarginEnabled()) {
+        this.draw();
+        return;
+      }
       const shift = Math.floor(e.deltaX / 5);
       const visibleCount = Math.max(1, this.endIndex - this.startIndex);
       const ns = this.clampPanStartIndex(this.startIndex + shift, visibleCount);
@@ -7762,6 +7767,11 @@ export class SimpleChart {
       return;
     }
     this.clearDrawingSelection();
+    if (!this.isPanMarginEnabled()) {
+      this.requestOverlayDraw();
+      this.updateChartCursor();
+      return;
+    }
     this.isDragging = true;
     this.dragStartX = e.clientX;
     this.dragStartY = e.clientY;
@@ -7859,7 +7869,7 @@ export class SimpleChart {
     const chartW = this.viewportWidth - this.config.layout.rightPadding;
     const cpw = chartW / (visibleCount + Math.max(0, this.config.layout.rightGapBars ?? 0));
     let changed = false;
-    if (cpw > 0) {
+    if (this.isPanMarginEnabled() && cpw > 0) {
       const shift = Math.floor(dx / cpw) * -1;
       const virtualStart = (this.dragStartIndex - this.dragStartLeftPanBars) + shift;
       if (this.applyHorizontalPan(virtualStart, visibleCount)) changed = true;
@@ -8204,7 +8214,7 @@ export class SimpleChart {
       }, SimpleChart.LONG_PRESS_MS);
 
       // ── 패닝 준비 ─────────────────────────────────────────────────────
-      this.isTouchPanning = true;
+      this.isTouchPanning = this.isPanMarginEnabled();
       this.touchStartIndex = this.startIndex;
       this.touchStartLeftPanBars = this.leftPanBars;
       this.touchStartPriceOffset = this.mainPricePanOffset;
@@ -8347,7 +8357,7 @@ export class SimpleChart {
         const chartW = this.viewportWidth - this.config.layout.rightPadding;
         const cpw    = chartW / (visibleCount + Math.max(0, this.config.layout.rightGapBars ?? 0));
         let changed = false;
-        if (cpw > 0) {
+        if (this.isPanMarginEnabled() && cpw > 0) {
           const shift = Math.floor(dx / cpw) * -1;
           const virtualStart = (this.touchStartIndex - this.touchStartLeftPanBars) + shift;
           if (this.applyHorizontalPan(virtualStart, visibleCount)) changed = true;

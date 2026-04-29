@@ -647,16 +647,7 @@ export function openChartSettingsModal(chart: any, onApply: () => void, onSymbol
   pmToggleTrack.appendChild(pmToggleThumb);
   pmToggleTrack.addEventListener('click', () => {
     panMarginOn = !panMarginOn;
-    if (typeof (chart as any).setPanMarginEnabled === 'function') {
-      (chart as any).setPanMarginEnabled(panMarginOn);
-    } else {
-      (chart.config.layout as any).panMarginEnabled = panMarginOn;
-      if (!panMarginOn) {
-        (chart as any).leftPanBars = 0;
-        (chart as any).mainPricePanOffset = 0;
-      }
-      chart.draw();
-    }
+    (chart as any).setPanMarginEnabled(panMarginOn);
     pmToggleTrack.style.background = panMarginOn ? '#3b82f6' : '#3a4155';
     pmToggleThumb.style.left = panMarginOn ? '23px' : '3px';
     onApply();
