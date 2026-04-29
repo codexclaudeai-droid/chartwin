@@ -1,4 +1,4 @@
-export const INDICATOR_CATALOG = [
+﻿export const INDICATOR_CATALOG = [
   { id: 'rsi', label: 'RSI', desc: 'Relative Strength Index', panel: 'sub' },
   { id: 'macd', label: 'MACD', desc: 'Moving Avg Convergence Div', panel: 'sub' },
   { id: 'dmi', label: 'DMI / ADX', desc: 'Directional Movement Index', panel: 'sub' },
@@ -9,11 +9,12 @@ export const INDICATOR_CATALOG = [
   { id: 'volume', label: 'Volume', desc: 'Trading Volume', panel: 'sub' },
   { id: 'bb', label: 'Bollinger Band', desc: 'Bollinger Bands (20,2)', panel: 'main' },
   { id: 'ma', label: 'MA', desc: 'Moving Average lines (MA1, MA2, ...)', panel: 'main' },
+  { id: 'ema', label: 'EMA', desc: 'Exponential Moving Average lines (EMA1, EMA2, ...)', panel: 'main' },
   { id: 'vwap', label: 'VWAP', desc: 'Volume Weighted Avg Price', panel: 'main' },
-  { id: 'supertrend', label: 'Supertrend', desc: 'ATR 기반 추세 지표', panel: 'main' },
+  { id: 'supertrend', label: 'Supertrend', desc: 'ATR trend indicator', panel: 'main' },
   { id: 'statisticalTrailingStop', label: 'Statistical Trailing Stop', desc: 'Log-normal volatility trailing stop', panel: 'main' },
   { id: 'zeroLagMaTrendLevels', label: 'Zero-Lag MA Trend Levels', desc: 'Zero-lag EMA trend and ATR levels', panel: 'main' },
-  { id: 'volumeProfile', label: '매물대', desc: 'Visible Range Volume Profile', panel: 'main' },
+  { id: 'volumeProfile', label: 'Volume Profile', desc: 'Visible Range Volume Profile', panel: 'main' },
   { id: 'vpvr', label: 'Volume Profile Visible Range', desc: 'VPVR (alias of Visible Range Volume Profile)', panel: 'main' },
   { id: 'ichimoku', label: 'Ichimoku Cloud', desc: 'Ichimoku Kinko Hyo', panel: 'main' },
   { id: 'envelope', label: 'Envelope', desc: 'Price Envelope (MA ± %)', panel: 'main' },

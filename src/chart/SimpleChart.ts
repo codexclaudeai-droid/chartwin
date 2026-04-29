@@ -372,6 +372,16 @@ export class SimpleChart {
           { id: 'ma4', period: 120 },
         ],
       },
+      ema: {
+        show: false,
+        nextId: 5,
+        lines: [
+          { id: 'ema1', period: 5 },
+          { id: 'ema2', period: 20 },
+          { id: 'ema3', period: 60 },
+          { id: 'ema4', period: 120 },
+        ],
+      },
       bb:       { show: true,  period: 20, stdDev: 2 },
       rsi:      { show: false, period: 14 },
       macd:     { show: false, fast: 12, slow: 26, signal: 9 },
@@ -579,6 +589,43 @@ export class SimpleChart {
     const palette = ['#f7931a', '#2962ff', '#4caf50', '#9c27b0', '#ff5722', '#00bcd4', '#ffc107', '#e91e63'];
     updateLineStyle(this.config.panelState, lineItem.id, {
       color: palette[(ma.lines.length - 1) % palette.length],
+      width: 1.5,
+      dash: [],
+    });
+    setLineVisible(this.config.panelState, lineItem.id, true);
+    return lineItem;
+  }
+
+  private getEmaLines(): Array<{ id: string; period: number }> {
+    const ind = this.config.indicators as any;
+    const ema = ind.ema ?? { show: false, nextId: 1, lines: [] };
+    if (!Array.isArray(ema.lines)) ema.lines = [];
+    return ema.show
+      ? ema.lines
+          .map((lineItem: any) => ({
+            id: String(lineItem.id || ('ema' + (ema.lines.indexOf(lineItem) + 1))),
+            period: Math.max(1, Math.floor(Number(lineItem.period ?? lineItem.value ?? 20) || 20)),
+          }))
+          .filter((lineItem: { id: string; period: number }) => Boolean(lineItem.id) && Number.isFinite(lineItem.period))
+      : [];
+  }
+
+  public addEmaLine(period?: number): { id: string; period: number } {
+    const ind = this.config.indicators as any;
+    if (!ind.ema) ind.ema = { show: true, nextId: 1, lines: [] };
+    const ema = ind.ema;
+    if (!Array.isArray(ema.lines)) ema.lines = [];
+    const nextIndex = Math.max(1, Number(ema.nextId) || ema.lines.length + 1);
+    const lineItem = {
+      id: 'ema' + nextIndex,
+      period: Math.max(1, Math.floor(Number(period ?? ([5, 20, 60, 120, 200][ema.lines.length] ?? 20)) || 20)),
+    };
+    ema.lines.push(lineItem);
+    ema.nextId = nextIndex + 1;
+    ema.show = true;
+    const palette = ['#ff9800', '#00b0ff', '#7cb342', '#ab47bc', '#ff7043', '#26c6da', '#ffd54f', '#ec407a'];
+    updateLineStyle(this.config.panelState, lineItem.id, {
+      color: palette[(ema.lines.length - 1) % palette.length],
       width: 1.5,
       dash: [],
     });
@@ -3044,6 +3091,12 @@ export class SimpleChart {
     return out;
   }
 
+  private calcEMA(period: number): (number | null)[] {
+    const source = this.getIndicatorSourceData();
+    const closes = source.map((d) => d.close);
+    return this.calcEmaSeries(closes, period);
+  }
+
   private calcRSI(period: number): (number | null)[] {
     const source = this.getIndicatorSourceData();
     const closes = source.map((d) => d.close);
@@ -3661,6 +3714,11 @@ export class SimpleChart {
       ...maLine,
       data: this.calcMA(maLine.period),
     }));
+    const emaLines = indicatorLayerOn ? this.getEmaLines() : [];
+    const emaSeries = emaLines.map((emaLine) => ({
+      ...emaLine,
+      data: this.calcEMA(emaLine.period),
+    }));
     const maS  = indicatorLayerOn && ind.maShort.show  ? this.calcMA(ind.maShort.value) : [];
     const maL  = indicatorLayerOn && ind.maLong.show   ? this.calcMA(ind.maLong.value)  : [];
     const ma60 = indicatorLayerOn && ind.ma60.show     ? this.calcMA(ind.ma60.value)    : [];
@@ -3811,6 +3869,7 @@ export class SimpleChart {
       minP = Math.min(minP, d.low);  maxP = Math.max(maxP, d.high);
       [
         ...maSeries.map((maLine) => maLine.data[gi]),
+        ...emaSeries.map((emaLine) => emaLine.data[gi]),
         maS[gi],
         maL[gi],
         ma60[gi],
@@ -4446,6 +4505,7 @@ export class SimpleChart {
       ind,
       indicatorLayerOn,
       maSeries,
+      emaSeries,
       maS,
       maL,
       ma60,

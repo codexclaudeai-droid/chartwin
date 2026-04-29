@@ -1,4 +1,4 @@
-ï»¿// @ts-nocheck
+// @ts-nocheck
 import { INDICATOR_CATALOG } from '../catalog/indicators';
 import { toRgba } from './color-utils';
 import { getMainAxisStepByRange } from './axis-utils';
@@ -10,6 +10,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
     ind,
     indicatorLayerOn,
     maSeries,
+    emaSeries,
     maS,
     maL,
     ma60,
@@ -64,12 +65,18 @@ export function renderIndicatorBlocks(this: any, params: any): void {
     formatKUnit,
     formatWithComma,
     chartTextSecondary,
-  } = params;    // 6) ë©”ì¸ íŒ¨ë„ ì§€í‘œì„ 
+  } = params;    // 6) ¸ÞÀÎ ÆÐ³Î ÁöÇ¥¼±
     maSeries.forEach((maLine, index) => {
       if (!showLine(maLine.id)) return;
       const palette = ['#f7931a', '#2962ff', '#4caf50', '#9c27b0', '#ff5722', '#00bcd4', '#ffc107', '#e91e63'];
       const s = this.resolveStyle(maLine.id, palette[index % palette.length]);
       line(maLine.data, s.color, s.width, s.dash);
+    });
+    emaSeries.forEach((emaLine, index) => {
+      if (!showLine(emaLine.id)) return;
+      const palette = ['#ff9800', '#00b0ff', '#7cb342', '#ab47bc', '#ff7043', '#26c6da', '#ffd54f', '#ec407a'];
+      const s = this.resolveStyle(emaLine.id, palette[index % palette.length]);
+      line(emaLine.data, s.color, s.width, s.dash);
     });
     if (indicatorLayerOn && ind.maShort.show && showLine('maShort')) {
       const s = this.resolveStyle('maShort', '#f7931a');
@@ -427,7 +434,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
     }
     ctx.restore();
 
-    // ê±°ëž˜ëŸ‰ ë§‰ëŒ€ëŠ” ë³¼ë¥¨ íŒ¨ë„ ë²”ìœ„ë¡œ ë³„ë„ í´ë¦¬í•‘í•´ì„œ ë Œë”.
+    // °Å·¡·® ¸·´ë´Â º¼·ý ÆÐ³Î ¹üÀ§·Î º°µµ Å¬¸®ÇÎÇØ¼­ ·»´õ.
     if (ind.volume.show && volH > 0 && showLine('volumeBars')) {
       ctx.save();
       ctx.beginPath();
@@ -452,7 +459,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
       ctx.restore();
     }
 
-    // 7) ë³´ì¡° íŒ¨ë„ ë Œë”
+    // 7) º¸Á¶ ÆÐ³Î ·»´õ
     const showCanvasPanelTitles = false;
     const subLabel = (text: string, top: number, color = chartTextSecondary) => {
       if (!showCanvasPanelTitles) return;

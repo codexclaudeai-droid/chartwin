@@ -1379,7 +1379,7 @@ export function openSymbolModal(chart: any, symLabel: HTMLElement, symIcon: HTML
 
     if (active) {
       const check = document.createElement('span');
-      check.textContent = '✓';
+      check.textContent = '?';
       check.style.cssText = 'color:#2962ff;font-size:12px;';
       right.appendChild(check);
     }
@@ -1555,9 +1555,9 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
         return mQ && mT;
       })
       .forEach(ind => {
-        const isMa = ind.id === 'ma';
-        const isOn = isMa
-          ? Boolean((chart.config.indicators as any).ma?.show && ((chart.config.indicators as any).ma?.lines?.length ?? 0) > 0)
+        const isMultiMain = ind.id === 'ma' || ind.id === 'ema';
+        const isOn = isMultiMain
+          ? Boolean((chart.config.indicators as any)[ind.id]?.show && (((chart.config.indicators as any)[ind.id]?.lines?.length ?? 0) > 0))
           : ((chart.config.indicators as any)[ind.id]?.show ?? false);
         const row  = document.createElement('div');
         row.style.cssText = `display:flex;align-items:center;justify-content:space-between;
@@ -1579,13 +1579,14 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
         row.addEventListener('mouseenter', () => { if (!isOn) row.style.background = 'rgba(255,255,255,0.04)'; });
         row.addEventListener('mouseleave', () => { if (!isOn) row.style.background = 'transparent'; });
         row.addEventListener('click', () => {
-          if (ind.id === 'ma') {
-            chart.addMaLine?.();
+          if (ind.id === 'ma' || ind.id === 'ema') {
+            if (ind.id === 'ma') chart.addMaLine?.();
+            else chart.addEmaLine?.();
             chart.draw();
             refresh();
             render(q);
             renderOrder();
-            window.setTimeout(() => openSettingsPopup(row, chart, 'ma', () => {
+            window.setTimeout(() => openSettingsPopup(row, chart, ind.id, () => {
               chart.draw();
               refresh();
               render(q);
@@ -1687,7 +1688,7 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
   hdr.appendChild(xb); popup.appendChild(hdr);
 
   const FIELDS: Record<string, string[]> = {
-    maShort: ['value'], maLong: ['value'], ma60: ['value'], ma120: ['value'], ma200: ['value'], bb: [],
+    maShort: ['value'], maLong: ['value'], ma60: ['value'], ma120: ['value'], ma200: ['value'], ma: [], ema: [], bb: [],
     supertrend: ['period', 'factor'],
     statisticalTrailingStop: ['dataLength', 'distributionLength', 'baseLevel'],
     zeroLagMaTrendLevels: ['length'],
@@ -1734,7 +1735,7 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     select.style.cssText = 'height:24px;width:74px;background:#131722;border:1px solid #363a45;border-radius:4px;color:white;font-size:11px;padding:0 3px;';
     select.innerHTML = [
       '<option value="solid">━━ 실선</option>',
-      '<option value="dashed">┅┅ 대시</option>',
+      '<option value="dashed">- - dashed</option>',
       '<option value="dotted">··· 도트</option>',
     ].join('');
     select.value = initial;
@@ -1795,13 +1796,16 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     };
   };
 
-  if (popupKey === 'ma') {
+  if (popupKey === 'ma' || popupKey === 'ema') {
     if (!Array.isArray(ind.lines)) ind.lines = [];
     if (!Number.isFinite(Number(ind.nextId))) ind.nextId = ind.lines.length + 1;
     ind.show = true;
     popup.style.minWidth = 'min(420px, calc(100vw - 16px))';
 
-    const palette = ['#f7931a', '#2962ff', '#4caf50', '#9c27b0', '#ff5722', '#00bcd4', '#ffc107', '#e91e63'];
+    const isEma = popupKey === 'ema';
+    const palette = isEma
+      ? ['#ff9800', '#00b0ff', '#7cb342', '#ab47bc', '#ff7043', '#26c6da', '#ffd54f', '#ec407a']
+      : ['#f7931a', '#2962ff', '#4caf50', '#9c27b0', '#ff5722', '#00bcd4', '#ffc107', '#e91e63'];
 
     const rows = document.createElement('div');
     rows.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
@@ -1811,13 +1815,13 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
       rows.innerHTML = '';
       if (!ind.lines.length) {
         const empty = document.createElement('div');
-        empty.textContent = 'MA 라인이 없습니다. 아래 + 버튼으로 추가하세요.';
+        empty.textContent = isEma ? 'No EMA lines. Use + button to add one.' : 'No MA lines. Use + button to add one.';
         empty.style.cssText = 'color:#84898e;font-size:12px;padding:8px 0;';
         rows.appendChild(empty);
       }
 
       ind.lines.forEach((line: any, index: number) => {
-        if (!line.id) line.id = `ma${index + 1}`;
+        if (!line.id) line.id = (isEma ? 'ema' : 'ma') + (index + 1);
         if (!Number.isFinite(Number(line.period))) line.period = index === 0 ? 5 : 20;
         const styleKey = String(line.id);
         const style = getLineStyle(chart.config.panelState, styleKey, {
@@ -1831,7 +1835,7 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
         row.style.cssText = 'display:grid;grid-template-columns:42px 58px 28px 46px 78px 58px;align-items:center;gap:6px;';
 
         const name = document.createElement('span');
-        name.textContent = `MA${index + 1}`;
+        name.textContent = (isEma ? 'EMA' : 'MA') + (index + 1);
         name.style.cssText = 'font-weight:700;color:#d7dfef;';
 
         const period = document.createElement('input');
@@ -1915,10 +1919,11 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
 
     const addBtn = document.createElement('button');
     addBtn.type = 'button';
-    addBtn.textContent = '+ MA 추가';
+    addBtn.textContent = isEma ? '+ EMA ??' : '+ MA ??';
     addBtn.style.cssText = 'width:100%;margin-top:10px;padding:8px;border:1px solid #3b65b7;border-radius:6px;background:#20345c;color:#dbe8ff;font-weight:700;cursor:pointer;';
     addBtn.addEventListener('click', () => {
-      chart.addMaLine?.();
+      if (isEma) chart.addEmaLine?.();
+      else chart.addMaLine?.();
       chart.draw();
       onUpdate();
       renderMaRows();

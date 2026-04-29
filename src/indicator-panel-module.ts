@@ -1,4 +1,4 @@
-export type SubPanelId = 'volume' | 'rsi' | 'dmi' | 'macd' | 'stochF' | 'stochS' | 'cci' | 'obv';
+﻿export type SubPanelId = 'volume' | 'rsi' | 'dmi' | 'macd' | 'stochF' | 'stochS' | 'cci' | 'obv';
 
 export interface LineStyle {
   color: string;
@@ -24,6 +24,10 @@ const DEFAULT_LINE_STYLES: Record<string, LineStyle> = {
   ma2: { color: '#2962ff', width: 1.5, dash: [] },
   ma3: { color: '#4caf50', width: 1.5, dash: [] },
   ma4: { color: '#9c27b0', width: 1.5, dash: [] },
+  ema1: { color: '#ff9800', width: 1.5, dash: [] },
+  ema2: { color: '#00b0ff', width: 1.5, dash: [] },
+  ema3: { color: '#7cb342', width: 1.5, dash: [] },
+  ema4: { color: '#ab47bc', width: 1.5, dash: [] },
   maShort: { color: '#f7931a', width: 1.5, dash: [] },
   maLong: { color: '#2962ff', width: 1.5, dash: [] },
   ma60: { color: '#4caf50', width: 1.5, dash: [] },
@@ -78,6 +82,7 @@ const DEFAULT_LINE_STYLES: Record<string, LineStyle> = {
 
 export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: string }[]> = {
   ma: [],
+  ema: [],
   maShort: [{ key: 'maShort', label: 'Line' }],
   maLong: [{ key: 'maLong', label: 'Line' }],
   ma60: [{ key: 'ma60', label: 'Line' }],
@@ -125,7 +130,7 @@ export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: strin
     { key: 'zeroLagMaTrendLevelsSignal', label: 'Signals' },
     { key: 'zeroLagMaTrendLevelsLevel', label: 'Levels' },
   ],
-  rsi: [{ key: 'rsi', label: 'Line' }, { key: 'rsiBaseline', label: '기준선' }],
+  rsi: [{ key: 'rsi', label: 'Line' }, { key: 'rsiBaseline', label: 'Baseline' }],
   dmi: [
     { key: 'dmiPlus', label: '+DI' },
     { key: 'dmiMinus', label: '-DI' },
@@ -134,23 +139,23 @@ export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: strin
   macd: [
     { key: 'macdLine', label: 'MACD' },
     { key: 'macdSignal', label: 'Signal' },
-    { key: 'macdBaseline', label: '기준선' },
+    { key: 'macdBaseline', label: 'Baseline' },
   ],
   stochF: [
     { key: 'stochFastK', label: '%K' },
     { key: 'stochFastD', label: '%D' },
-    { key: 'stochFastBaseline', label: '기준선' },
+    { key: 'stochFastBaseline', label: 'Baseline' },
   ],
   stochS: [
     { key: 'stochSlowK', label: '%K' },
     { key: 'stochSlowD', label: '%D' },
-    { key: 'stochSlowBaseline', label: '기준선' },
+    { key: 'stochSlowBaseline', label: 'Baseline' },
   ],
-  cci: [{ key: 'cci', label: 'Line' }, { key: 'cciBaseline', label: '기준선' }],
+  cci: [{ key: 'cci', label: 'Line' }, { key: 'cciBaseline', label: 'Baseline' }],
   obv: [
     { key: 'obv', label: 'Line' },
     { key: 'obvSignal9', label: 'Signal 9' },
-    { key: 'obvBaseline', label: '기준선' },
+    { key: 'obvBaseline', label: 'Baseline' },
   ],
 };
 
