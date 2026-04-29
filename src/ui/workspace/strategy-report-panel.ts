@@ -452,11 +452,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
   const resizeHandle = document.createElement('div');
   resizeHandle.style.cssText = `position:absolute;left:0;right:0;top:${isTouchDevice ? '-12px' : '-4px'};height:${isTouchDevice ? '24px' : '8px'};cursor:ns-resize;z-index:15;display:flex;align-items:center;justify-content:center;touch-action:none;`;
-  if (isTouchDevice) {
-    const grip = document.createElement('div');
-    grip.style.cssText = 'width:40px;height:4px;border-radius:2px;background:rgba(180,190,210,0.35);pointer-events:none;';
-    resizeHandle.appendChild(grip);
-  }
+  const resizeGrip = document.createElement('div');
+  resizeGrip.style.cssText = isTouchDevice
+    ? 'width:40px;height:4px;border-radius:2px;background:rgba(180,190,210,0.35);pointer-events:none;transition:background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;'
+    : 'width:36px;height:2px;border-radius:999px;background:#2a2e3e;pointer-events:none;transition:background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;';
+  resizeHandle.appendChild(resizeGrip);
   panel.appendChild(resizeHandle);
 
   const header = document.createElement('div');
@@ -1028,6 +1028,17 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
   };
 
+  const formatTradeTsLines = (sec: number | null): { date: string; time: string } => {
+    if (!Number.isFinite(Number(sec))) return { date: '-', time: '-' };
+    const d = new Date(Number(sec) * 1000);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return { date: `${yyyy}.${mm}.${dd}`, time: `${hh}:${mi}` };
+  };
+
   const escapeCsvCell = (value: string | number): string => {
     const text = String(value ?? '');
     if (text.includes('"') || text.includes(',') || text.includes('\n')) {
@@ -1096,7 +1107,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       tradesView.innerHTML = '<div style="padding:8px;color:#93a5c4;">표시할 거래가 없습니다.</div>';
       return;
     }
-    const headerRow = `<div style="display:grid;grid-template-columns:32px 56px 1fr 1fr 90px;gap:8px;align-items:center;padding:8px;border-bottom:1px solid #2b3d5d;background:#17243a;color:#9fb3d5;font-size:11px;font-weight:700;">
+    const isMobileWidth = Math.max(320, panel.clientWidth) < 760;
+    const baseColumns = isMobileWidth ? '20px 34px 1fr 1.7fr 90px' : '32px 56px 1fr 1fr 90px';
+    const fullColumns = isMobileWidth ? '20px 34px 1fr 1.7fr 90px 88px' : '32px 56px 1fr 1fr 90px 88px';
+
+    const headerRow = `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:8px;border-bottom:1px solid #2b3d5d;background:#17243a;color:#9fb3d5;font-size:11px;font-weight:700;">
       <div>#</div>
       <div>타입</div>
       <div>진입 -> 청산</div>
@@ -1111,11 +1126,18 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       .map((t, idx) => {
         const pnlColor = t.pnl >= 0 ? '#39d98a' : '#ff7f7f';
         const sideColor = t.side === 'LONG' ? '#39d98a' : '#ff7f7f';
-        return `<div style="display:grid;grid-template-columns:32px 56px 1fr 1fr 90px;gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid #1f2b44;">
+        const entryTs = formatTradeTsLines(t.entryTime);
+        const exitTs = formatTradeTsLines(t.exitTime);
+        return `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid #1f2b44;">
           <div style="color:#8aa0c5;">${idx + 1}</div>
           <div style="color:${sideColor};font-weight:700;">${t.side}</div>
           <div style="color:#cdd8ee;">${formatAmount(t.entry)} -> ${formatAmount(t.exit)}<div style="color:#8ca0c5;font-size:11px;">bar ${t.entryIndex} -> ${t.exitIndex}</div></div>
-          <div style="color:#aab9d6;font-size:11px;">${formatTradeTs(t.entryTime)} -> ${formatTradeTs(t.exitTime)}</div>
+          <div style="color:#aab9d6;font-size:11px;line-height:1.22;">
+            <div>${entryTs.date}</div>
+            <div>${entryTs.time}</div>
+            <div>→ ${exitTs.date}</div>
+            <div>${exitTs.time}</div>
+          </div>
           <div style="color:${pnlColor};font-weight:700;text-align:right;">${formatAmount(t.pnl)}</div>
         </div>`;
       })
@@ -1130,14 +1152,14 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const rowEls = Array.from(table.children) as HTMLDivElement[];
     if (!rowEls.length) return;
 
-    rowEls[0].style.gridTemplateColumns = '32px 56px 1fr 1fr 90px 88px';
+    rowEls[0].style.gridTemplateColumns = fullColumns;
     const moveHeader = document.createElement('div');
     moveHeader.style.textAlign = 'center';
-    moveHeader.textContent = '이동';
+    moveHeader.textContent = isMobileWidth ? '확인' : '이동';
     rowEls[0].appendChild(moveHeader);
 
     rowEls.slice(1).forEach((rowEl, idx) => {
-      rowEl.style.gridTemplateColumns = '32px 56px 1fr 1fr 90px 88px';
+      rowEl.style.gridTemplateColumns = fullColumns;
       rowEl.style.cursor = 'pointer';
       rowEl.addEventListener('click', () => {
         const trade = displayedTrades[idx];
@@ -1146,7 +1168,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       });
       const moveBtn = document.createElement('button');
       moveBtn.type = 'button';
-      moveBtn.textContent = '시그널 이동';
+      moveBtn.textContent = isMobileWidth ? '차트확인' : '시그널 이동';
       moveBtn.style.cssText = 'height:24px;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:6px;font-size:11px;cursor:pointer;';
       moveBtn.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -1224,8 +1246,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const renderAll = () => {
+    const isMobileWidth = Math.max(320, panel.clientWidth) < 760;
     headerTitleText.textContent =
-      panelMode === 'expanded'
+      panelMode === 'expanded' && !isMobileWidth
         ? `전략 리포트 | ${latestMeta.symbol} ${latestMeta.timeframe} | ${latestMeta.strategyName}`
         : '전략 리포트';
 
@@ -1291,6 +1314,13 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let startClientY = 0;
   let startHeight = normalHeight;
   let dragTouchId: number | null = null;
+  const setResizeHandleVisual = (active: boolean) => {
+    resizeGrip.style.background = active ? 'rgba(99,158,255,0.78)' : (isTouchDevice ? 'rgba(180,190,210,0.35)' : '#2a2e3e');
+    resizeGrip.style.boxShadow = active
+      ? '0 0 0 1px rgba(99,158,255,0.35), 0 0 10px rgba(99,158,255,0.45), 0 0 18px rgba(99,158,255,0.24)'
+      : 'none';
+    resizeGrip.style.transform = active ? 'scaleY(1.12)' : 'scaleY(1)';
+  };
 
   const handleDragMove = (event: MouseEvent) => {
     if (!dragging || panelMode !== 'normal') return;
@@ -1301,6 +1331,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const stopDrag = () => {
     if (!dragging) return;
     dragging = false;
+    setResizeHandleVisual(false);
     window.removeEventListener('mousemove', handleDragMove);
     window.removeEventListener('mouseup', stopDrag);
   };
@@ -1311,6 +1342,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     dragging = true;
     startClientY = event.clientY;
     startHeight = normalHeight;
+    setResizeHandleVisual(true);
     window.addEventListener('mousemove', handleDragMove);
     window.addEventListener('mouseup', stopDrag);
   });
@@ -1329,6 +1361,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const stopTouchDrag = () => {
     if (!dragging) return;
     dragging = false;
+    setResizeHandleVisual(false);
     dragTouchId = null;
     window.removeEventListener('touchmove', handleTouchDragMove);
     window.removeEventListener('touchend', stopTouchDrag);
@@ -1344,6 +1377,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     dragTouchId = touch.identifier;
     startClientY = touch.clientY;
     startHeight = normalHeight;
+    setResizeHandleVisual(true);
     window.addEventListener('touchmove', handleTouchDragMove, { passive: false });
     window.addEventListener('touchend', stopTouchDrag);
     window.addEventListener('touchcancel', stopTouchDrag);
