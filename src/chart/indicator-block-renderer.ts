@@ -65,7 +65,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
     formatKUnit,
     formatWithComma,
     chartTextSecondary,
-  } = params;    // 6) ¸ÞÀÎ ÆÐ³Î ÁöÇ¥¼±
+  } = params;    // 6) ë©”ì¸ íŒ¨ë„ ì§€í‘œì„ 
     maSeries.forEach((maLine, index) => {
       if (!showLine(maLine.id)) return;
       const palette = ['#f7931a', '#2962ff', '#4caf50', '#9c27b0', '#ff5722', '#00bcd4', '#ffc107', '#e91e63'];
@@ -434,7 +434,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
     }
     ctx.restore();
 
-    // °Å·¡·® ¸·´ë´Â º¼·ý ÆÐ³Î ¹üÀ§·Î º°µµ Å¬¸®ÇÎÇØ¼­ ·»´õ.
+    // ê±°ëž˜ëŸ‰ ë§‰ëŒ€ëŠ” ë³¼ë¥¨ íŒ¨ë„ ë²”ìœ„ë¡œ ë³„ë„ í´ë¦¬í•‘í•´ì„œ ë Œë”.
     if (ind.volume.show && volH > 0 && showLine('volumeBars')) {
       ctx.save();
       ctx.beginPath();
@@ -459,7 +459,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
       ctx.restore();
     }
 
-    // 7) º¸Á¶ ÆÐ³Î ·»´õ
+    // 7) ë³´ì¡° íŒ¨ë„ ë Œë”
     const showCanvasPanelTitles = false;
     const subLabel = (text: string, top: number, color = chartTextSecondary) => {
       if (!showCanvasPanelTitles) return;
