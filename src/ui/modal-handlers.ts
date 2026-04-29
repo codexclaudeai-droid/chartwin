@@ -656,6 +656,27 @@ export function openChartSettingsModal(chart: any, onApply: () => void, onSymbol
   panMarginRow.appendChild(pmToggleTrack);
   body.appendChild(panMarginRow);
 
+  const mobileTooltipRow = document.createElement('div');
+  mobileTooltipRow.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+  const mobileTooltipLabel = document.createElement('div');
+  mobileTooltipLabel.innerHTML = '<div style="font-size:13px;font-weight:700;">모바일 열십자 툴팁</div><div style="font-size:11px;color:#84898e;margin-top:2px;">모바일 롱프레스 열십자 표시 시 OHLCV 툴팁 표시</div>';
+  let mobileTooltipOn = (chart.config.layout as any).mobileCrosshairTooltipEnabled !== false;
+  const mtToggleTrack = document.createElement('div');
+  mtToggleTrack.style.cssText = `position:relative;width:44px;height:24px;border-radius:12px;cursor:pointer;transition:background 0.2s;background:${mobileTooltipOn ? '#3b82f6' : '#3a4155'};flex-shrink:0;`;
+  const mtToggleThumb = document.createElement('div');
+  mtToggleThumb.style.cssText = `position:absolute;top:3px;left:${mobileTooltipOn ? '23px' : '3px'};width:18px;height:18px;border-radius:50%;background:#ffffff;box-shadow:0 1px 4px rgba(0,0,0,0.35);transition:left 0.18s;`;
+  mtToggleTrack.appendChild(mtToggleThumb);
+  mtToggleTrack.addEventListener('click', () => {
+    mobileTooltipOn = !mobileTooltipOn;
+    (chart as any).setMobileCrosshairTooltipEnabled(mobileTooltipOn);
+    mtToggleTrack.style.background = mobileTooltipOn ? '#3b82f6' : '#3a4155';
+    mtToggleThumb.style.left = mobileTooltipOn ? '23px' : '3px';
+    onApply();
+  });
+  mobileTooltipRow.appendChild(mobileTooltipLabel);
+  mobileTooltipRow.appendChild(mtToggleTrack);
+  body.appendChild(mobileTooltipRow);
+
   const candleRow = document.createElement('div');
   candleRow.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
   const candleLabel = document.createElement('div');

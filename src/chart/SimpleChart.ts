@@ -467,6 +467,7 @@ export class SimpleChart {
       rightGapBars: 0,
       marketInfoSide: 'right' as 'left' | 'right',
       panMarginEnabled: false,
+      mobileCrosshairTooltipEnabled: true,
     },
     candleStyle: {
       upColor: '#22ab94',
@@ -2951,6 +2952,11 @@ export class SimpleChart {
     this.draw();
   }
 
+  public setMobileCrosshairTooltipEnabled(enabled: boolean): void {
+    (this.config.layout as any).mobileCrosshairTooltipEnabled = enabled !== false;
+    this.draw();
+  }
+
   private clampPanStartIndex(startIndex: number, visibleCount: number): number {
     if (visibleCount <= 0) return 0;
     const dataLength = this.data.length;
@@ -2984,6 +2990,10 @@ export class SimpleChart {
 
   private isPanMarginEnabled(): boolean {
     return Boolean((this.config.layout as any).panMarginEnabled);
+  }
+
+  private isMobileCrosshairTooltipEnabled(): boolean {
+    return (this.config.layout as any).mobileCrosshairTooltipEnabled !== false;
   }
 
   private getMainPricePerPixel(): number {
@@ -6845,7 +6855,7 @@ export class SimpleChart {
       ctx.restore();
 
       // OHLCV 툴팁: 모바일=canvas floating, PC=헤더 콜백
-      if (noDrawingInteraction && _isTouchDevice) {
+      if (noDrawingInteraction && _isTouchDevice && this.isMobileCrosshairTooltipEnabled()) {
         const isUp = c.close >= c.open;
         const closeColor = isUp ? '#ef5350' : '#26a69a';
         const tradingValue = c.close * c.volume;
