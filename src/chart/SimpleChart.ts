@@ -305,6 +305,7 @@ export class SimpleChart {
   private focusedTradeRange: { startIndex: number; endIndex: number } | null = null;
   private focusVisualTimer: ReturnType<typeof setTimeout> | null = null;
   private focusVisualStartedAt = 0;
+  private gotoDateMarker: { candleIndex: number; label: string } | null = null;
 
   // 십자선 가격박스 옆 + 아이콘 히트 영역
   private crosshairPlusHit: { x: number; y: number; r: number; price: number } | null = null;
@@ -466,7 +467,8 @@ export class SimpleChart {
       rightPadding: 0,
       rightGapBars: 0,
       marketInfoSide: 'right' as 'left' | 'right',
-      panMarginEnabled: false,
+      leftPanEnabled: false,
+      verticalPanEnabled: false,
       mobileCrosshairTooltipEnabled: true,
     },
     candleStyle: {
@@ -2795,6 +2797,54 @@ export class SimpleChart {
     this.draw();
   }
 
+  private findNearestCandleIndexByEpochSec(epochSec: number): number {
+    if (!this.data.length) return 0;
+    if (!Number.isFinite(epochSec)) return Math.max(0, Math.min(this.data.length - 1, this.endIndex - 1));
+    let lo = 0;
+    let hi = this.data.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const t = Number(this.data[mid]?.time ?? 0);
+      if (t < epochSec) lo = mid + 1;
+      else if (t > epochSec) hi = mid - 1;
+      else return mid;
+    }
+    const left = Math.max(0, Math.min(this.data.length - 1, hi));
+    const right = Math.max(0, Math.min(this.data.length - 1, lo));
+    const leftDiff = Math.abs(Number(this.data[left]?.time ?? 0) - epochSec);
+    const rightDiff = Math.abs(Number(this.data[right]?.time ?? 0) - epochSec);
+    return rightDiff < leftDiff ? right : left;
+  }
+
+  public goToDateTime(epochSec: number, label: string): void {
+    if (!this.data.length || !Number.isFinite(epochSec)) return;
+    const targetIndex = this.findNearestCandleIndexByEpochSec(epochSec);
+    const visibleCount = Math.max(24, this.endIndex - this.startIndex);
+    const geometry = this.getChartGeometry(this.viewportWidth, this.lastDrawMeta?.axisPad);
+    const chartW = Math.max(1, geometry.chartWidth);
+    const gapBars = Math.min(
+      Math.max(0, this.config.layout.rightGapBars ?? 0),
+      50 / Math.max(1, chartW / Math.max(1, visibleCount)),
+    );
+    const totalSp = chartW / (visibleCount + gapBars);
+    const candleCenterOffset = totalSp * 0.4;
+    const desiredX = this.viewportWidth * 0.5;
+    const desiredLocal = ((desiredX - geometry.chartLeft - candleCenterOffset) / totalSp);
+    let start = Math.max(0, Math.round(targetIndex - desiredLocal));
+    if (start + visibleCount > this.data.length) {
+      start = Math.max(0, this.data.length - visibleCount);
+    }
+    this.startIndex = start;
+    this.endIndex = Math.min(this.data.length, Math.max(this.startIndex + 2, this.startIndex + visibleCount));
+    this.leftPanBars = 0;
+    this.gotoDateMarker = {
+      candleIndex: targetIndex,
+      label: String(label || ''),
+    };
+    this.draw();
+    this.focusSignalVisual(targetIndex, { showCrosshair: true });
+  }
+
   private clearFocusVisualTimer(): void {
     if (this.focusVisualTimer == null) return;
     clearTimeout(this.focusVisualTimer);
@@ -2918,11 +2968,11 @@ export class SimpleChart {
   /** 뷰포트를 좌/우로 이동 (음수: 왼쪽, 양수: 오른쪽) */
   public panViewport(shiftBars: number): void {
     if (!this.data.length) return;
-    if (!this.isPanMarginEnabled()) return;
     const shift = Number.isFinite(shiftBars) ? Math.trunc(shiftBars) : 0;
     if (!shift) return;
     const visibleCount = Math.max(1, this.endIndex - this.startIndex);
-    const virtualStart = (this.startIndex - this.leftPanBars) + shift;
+    const baseVirtualStart = this.startIndex - this.leftPanBars;
+    const virtualStart = this.normalizeHorizontalVirtualStart(baseVirtualStart + shift, baseVirtualStart);
     this.applyHorizontalPan(virtualStart, visibleCount);
     this.draw();
   }
@@ -2942,11 +2992,19 @@ export class SimpleChart {
     this.draw();
   }
 
-  public setPanMarginEnabled(enabled: boolean): void {
-    const next = enabled === true;
-    (this.config.layout as any).panMarginEnabled = next;
-    if (!next) {
-      this.leftPanBars = 0;
+  public setLeftPanEnabled(enabled: boolean): void {
+    (this.config.layout as any).leftPanEnabled = enabled === true;
+    this.leftPanBars = 0;
+    const visibleCount = Math.max(1, this.endIndex - this.startIndex);
+    const ns = this.clampPanStartIndex(this.startIndex, visibleCount);
+    this.startIndex = ns;
+    this.endIndex = ns + visibleCount;
+    this.draw();
+  }
+
+  public setVerticalPanEnabled(enabled: boolean): void {
+    (this.config.layout as any).verticalPanEnabled = enabled === true;
+    if (!(this.config.layout as any).verticalPanEnabled) {
       this.mainPricePanOffset = 0;
     }
     this.draw();
@@ -2960,25 +3018,16 @@ export class SimpleChart {
   private clampPanStartIndex(startIndex: number, visibleCount: number): number {
     if (visibleCount <= 0) return 0;
     const dataLength = this.data.length;
-    const panMarginEnabled = Boolean((this.config.layout as any).panMarginEnabled);
-    const maxStart = panMarginEnabled
+    const leftPanEnabled = Boolean((this.config.layout as any).leftPanEnabled);
+    const maxStart = leftPanEnabled
       ? Math.max(0, dataLength - 1 + Math.floor(visibleCount / 2))
-      : Math.max(0, dataLength - 2);
+      : Math.max(0, dataLength - visibleCount);
     return Math.max(0, Math.min(maxStart, startIndex));
   }
 
   /** 가상 시작 인덱스(음수 가능)를 적용 ? 좌측 여백 처리 포함 */
   private applyHorizontalPan(virtualStart: number, visibleCount: number): boolean {
-    const panMarginEnabled = Boolean((this.config.layout as any).panMarginEnabled);
-    const maxLeftBars = Math.floor(visibleCount / 2);
-    if (panMarginEnabled && virtualStart < 0) {
-      const newLeft = Math.min(maxLeftBars, -virtualStart);
-      const changed = newLeft !== this.leftPanBars || this.startIndex !== 0;
-      this.leftPanBars = newLeft;
-      this.startIndex = 0;
-      this.endIndex = visibleCount;
-      return changed;
-    }
+    // Right-shift(empty-left) is intentionally disabled.
     const newLeft = 0;
     const ns = this.clampPanStartIndex(virtualStart, visibleCount);
     const changed = ns !== this.startIndex || newLeft !== this.leftPanBars;
@@ -2988,8 +3037,28 @@ export class SimpleChart {
     return changed;
   }
 
-  private isPanMarginEnabled(): boolean {
-    return Boolean((this.config.layout as any).panMarginEnabled);
+  private isLeftPanEnabled(): boolean {
+    return Boolean((this.config.layout as any).leftPanEnabled);
+  }
+
+  private isVerticalPanEnabled(): boolean {
+    return Boolean((this.config.layout as any).verticalPanEnabled);
+  }
+
+  // When left-pan is OFF:
+  // - right-move (<) is always allowed
+  // - restore-move (>) is allowed only until latest-anchor (no right-side gap)
+  private normalizeHorizontalVirtualStart(virtualStart: number, baseVirtualStart: number): number {
+    if (this.isLeftPanEnabled()) return virtualStart;
+    const visibleCount = Math.max(1, this.endIndex - this.startIndex);
+    const latestAnchorStart = Math.max(0, this.data.length - visibleCount);
+    // Attempting to move toward latest-anchor direction (>)
+    if (virtualStart >= baseVirtualStart) {
+      if (baseVirtualStart >= latestAnchorStart) return baseVirtualStart;
+      return Math.min(virtualStart, latestAnchorStart);
+    }
+    // Opposite direction (<): always allow
+    return virtualStart;
   }
 
   private isMobileCrosshairTooltipEnabled(): boolean {
@@ -6788,6 +6857,44 @@ export class SimpleChart {
       }
     }
 
+    if (this.gotoDateMarker && mainScale) {
+      const idx = this.gotoDateMarker.candleIndex;
+      if (idx >= this.startIndex && idx < this.endIndex && this.data[idx]) {
+        const markerX = this.getCandleCenterX(idx) ?? (chartLeft + (idx - this.startIndex) * totalSp + candleW / 2);
+        const markerY = Math.max(R.top + 14, Math.min(mainH - 10, mainScale.toY(this.data[idx].high) - 10));
+        const text = this.gotoDateMarker.label;
+        ctx.save();
+        ctx.font = `700 11px ${CHART_FONT_STACK}`;
+        const textW = Math.ceil(ctx.measureText(text).width);
+        const boxW = Math.max(70, textW + 12);
+        const boxH = 20;
+        const boxX = Math.max(chartLeft + 4, Math.min(chartRight - boxW - 4, markerX - boxW / 2));
+        const boxY = Math.max(R.top + 2, markerY - boxH - 12);
+
+        ctx.beginPath();
+        ctx.moveTo(markerX, markerY);
+        ctx.lineTo(markerX - 6, boxY + boxH);
+        ctx.lineTo(markerX + 6, boxY + boxH);
+        ctx.closePath();
+        ctx.fillStyle = '#111827';
+        ctx.fill();
+
+        ctx.fillStyle = '#111827';
+        ctx.strokeStyle = '#374151';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxW, boxH, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#f9fafb';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, boxX + boxW / 2, boxY + boxH / 2 + 0.5);
+        ctx.restore();
+      }
+    }
+
     const _isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
 
     if (!this.isMouseOver) {
@@ -6843,12 +6950,9 @@ export class SimpleChart {
       const boxH = X_AXIS_HEIGHT;
       const boxX = Math.min(Math.max(chartLeft + 2, solidX - boxW / 2), chartRight - boxW - 2);
       const boxY = plotHeight;
-      ctx.fillStyle = 'rgba(184,190,199,0.92)';
+      ctx.fillStyle = 'rgba(70,76,88,0.96)';
       ctx.fillRect(boxX, boxY, boxW, boxH);
-      ctx.strokeStyle = '#8e959f';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(boxX, boxY, boxW, boxH);
-      ctx.fillStyle = '#1b212a';
+      ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(label, boxX + boxW / 2, boxY + boxH / 2 + 0.5);
@@ -7349,21 +7453,19 @@ export class SimpleChart {
   private handleWheel(e: WheelEvent) {
     e.preventDefault();
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-      if (!this.isPanMarginEnabled()) {
-        this.draw();
-        return;
-      }
       const shift = Math.floor(e.deltaX / 5);
       const visibleCount = Math.max(1, this.endIndex - this.startIndex);
-      const ns = this.clampPanStartIndex(this.startIndex + shift, visibleCount);
+      const nextStart = this.normalizeHorizontalVirtualStart(this.startIndex + shift, this.startIndex);
+      const ns = this.clampPanStartIndex(nextStart, visibleCount);
       this.startIndex = ns;
       this.endIndex = ns + visibleCount;
     } else {
       // 최신 캔들(오른쪽 끝)을 확대/축소 기준(anchor)으로 고정
-      const zoomStep = 6;
       const minVisible = 5;
       const maxVisible = this.data.length;
       const currentVisible = Math.max(minVisible, this.endIndex - this.startIndex);
+      // Dynamic acceleration: when many candles are visible, zoom faster.
+      const zoomStep = Math.max(8, Math.min(64, Math.round(currentVisible * 0.06)));
       const zoomOut = e.deltaY > 0;
       const nextVisible = zoomOut
         ? Math.min(maxVisible, currentVisible + zoomStep)   // 아래 스크롤: 축소(더 많은 캔들)
@@ -7777,11 +7879,6 @@ export class SimpleChart {
       return;
     }
     this.clearDrawingSelection();
-    if (!this.isPanMarginEnabled()) {
-      this.requestOverlayDraw();
-      this.updateChartCursor();
-      return;
-    }
     this.isDragging = true;
     this.dragStartX = e.clientX;
     this.dragStartY = e.clientY;
@@ -7879,12 +7976,13 @@ export class SimpleChart {
     const chartW = this.viewportWidth - this.config.layout.rightPadding;
     const cpw = chartW / (visibleCount + Math.max(0, this.config.layout.rightGapBars ?? 0));
     let changed = false;
-    if (this.isPanMarginEnabled() && cpw > 0) {
+    if (cpw > 0) {
       const shift = Math.floor(dx / cpw) * -1;
-      const virtualStart = (this.dragStartIndex - this.dragStartLeftPanBars) + shift;
+      const baseVirtualStart = this.dragStartIndex - this.dragStartLeftPanBars;
+      const virtualStart = this.normalizeHorizontalVirtualStart(baseVirtualStart + shift, baseVirtualStart);
       if (this.applyHorizontalPan(virtualStart, visibleCount)) changed = true;
     }
-    if (this.isPanMarginEnabled()) {
+    if (this.isVerticalPanEnabled()) {
       const pricePerPixel = this.getMainPricePerPixel();
       const nextPriceOffset = this.dragStartPriceOffset + dy * pricePerPixel;
       if (Number.isFinite(nextPriceOffset) && Math.abs(nextPriceOffset - this.mainPricePanOffset) > 1e-12) {
@@ -8224,7 +8322,7 @@ export class SimpleChart {
       }, SimpleChart.LONG_PRESS_MS);
 
       // ── 패닝 준비 ─────────────────────────────────────────────────────
-      this.isTouchPanning = this.isPanMarginEnabled();
+      this.isTouchPanning = true;
       this.touchStartIndex = this.startIndex;
       this.touchStartLeftPanBars = this.leftPanBars;
       this.touchStartPriceOffset = this.mainPricePanOffset;
@@ -8367,12 +8465,13 @@ export class SimpleChart {
         const chartW = this.viewportWidth - this.config.layout.rightPadding;
         const cpw    = chartW / (visibleCount + Math.max(0, this.config.layout.rightGapBars ?? 0));
         let changed = false;
-        if (this.isPanMarginEnabled() && cpw > 0) {
+        if (cpw > 0) {
           const shift = Math.floor(dx / cpw) * -1;
-          const virtualStart = (this.touchStartIndex - this.touchStartLeftPanBars) + shift;
+          const baseVirtualStart = this.touchStartIndex - this.touchStartLeftPanBars;
+          const virtualStart = this.normalizeHorizontalVirtualStart(baseVirtualStart + shift, baseVirtualStart);
           if (this.applyHorizontalPan(virtualStart, visibleCount)) changed = true;
         }
-        if (this.isPanMarginEnabled()) {
+        if (this.isVerticalPanEnabled()) {
           const pricePerPixel = this.getMainPricePerPixel();
           const nextPriceOffset = this.touchStartPriceOffset + dy * pricePerPixel;
           if (Number.isFinite(nextPriceOffset) && Math.abs(nextPriceOffset - this.mainPricePanOffset) > 1e-12) {

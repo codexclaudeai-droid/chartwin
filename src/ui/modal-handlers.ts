@@ -635,26 +635,47 @@ export function openChartSettingsModal(chart: any, onApply: () => void, onSymbol
   row.appendChild(controls);
   body.appendChild(row);
 
-  const panMarginRow = document.createElement('div');
-  panMarginRow.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
-  const panMarginLabel = document.createElement('div');
-  panMarginLabel.innerHTML = '<div style="font-size:13px;font-weight:700;">차트 이동 여백</div><div style="font-size:11px;color:#84898e;margin-top:2px;">좌우상하 이동 시 데이터 경계 너머 여백 허용</div>';
-  let panMarginOn = Boolean((chart.config.layout as any).panMarginEnabled);
-  const pmToggleTrack = document.createElement('div');
-  pmToggleTrack.style.cssText = `position:relative;width:44px;height:24px;border-radius:12px;cursor:pointer;transition:background 0.2s;background:${panMarginOn ? '#3b82f6' : '#3a4155'};flex-shrink:0;`;
-  const pmToggleThumb = document.createElement('div');
-  pmToggleThumb.style.cssText = `position:absolute;top:3px;left:${panMarginOn ? '23px' : '3px'};width:18px;height:18px;border-radius:50%;background:#ffffff;box-shadow:0 1px 4px rgba(0,0,0,0.35);transition:left 0.18s;`;
-  pmToggleTrack.appendChild(pmToggleThumb);
-  pmToggleTrack.addEventListener('click', () => {
-    panMarginOn = !panMarginOn;
-    (chart as any).setPanMarginEnabled(panMarginOn);
-    pmToggleTrack.style.background = panMarginOn ? '#3b82f6' : '#3a4155';
-    pmToggleThumb.style.left = panMarginOn ? '23px' : '3px';
+  const leftPanRow = document.createElement('div');
+  leftPanRow.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+  const leftPanLabel = document.createElement('div');
+  leftPanLabel.innerHTML = '<div style="font-size:13px;font-weight:700;">좌측 이동 허용</div><div style="font-size:11px;color:#84898e;margin-top:2px;">차트를 좌측으로 이동(우측 여백 확인) 허용</div>';
+  let leftPanOn = Boolean((chart.config.layout as any).leftPanEnabled);
+  const lpToggleTrack = document.createElement('div');
+  lpToggleTrack.style.cssText = `position:relative;width:44px;height:24px;border-radius:12px;cursor:pointer;transition:background 0.2s;background:${leftPanOn ? '#3b82f6' : '#3a4155'};flex-shrink:0;`;
+  const lpToggleThumb = document.createElement('div');
+  lpToggleThumb.style.cssText = `position:absolute;top:3px;left:${leftPanOn ? '23px' : '3px'};width:18px;height:18px;border-radius:50%;background:#ffffff;box-shadow:0 1px 4px rgba(0,0,0,0.35);transition:left 0.18s;`;
+  lpToggleTrack.appendChild(lpToggleThumb);
+  lpToggleTrack.addEventListener('click', () => {
+    leftPanOn = !leftPanOn;
+    (chart as any).setLeftPanEnabled(leftPanOn);
+    lpToggleTrack.style.background = leftPanOn ? '#3b82f6' : '#3a4155';
+    lpToggleThumb.style.left = leftPanOn ? '23px' : '3px';
     onApply();
   });
-  panMarginRow.appendChild(panMarginLabel);
-  panMarginRow.appendChild(pmToggleTrack);
-  body.appendChild(panMarginRow);
+  leftPanRow.appendChild(leftPanLabel);
+  leftPanRow.appendChild(lpToggleTrack);
+  body.appendChild(leftPanRow);
+
+  const verticalPanRow = document.createElement('div');
+  verticalPanRow.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+  const verticalPanLabel = document.createElement('div');
+  verticalPanLabel.innerHTML = '<div style="font-size:13px;font-weight:700;">상하 이동 허용</div><div style="font-size:11px;color:#84898e;margin-top:2px;">드래그로 가격축 상하 이동 허용</div>';
+  let verticalPanOn = Boolean((chart.config.layout as any).verticalPanEnabled);
+  const vpToggleTrack = document.createElement('div');
+  vpToggleTrack.style.cssText = `position:relative;width:44px;height:24px;border-radius:12px;cursor:pointer;transition:background 0.2s;background:${verticalPanOn ? '#3b82f6' : '#3a4155'};flex-shrink:0;`;
+  const vpToggleThumb = document.createElement('div');
+  vpToggleThumb.style.cssText = `position:absolute;top:3px;left:${verticalPanOn ? '23px' : '3px'};width:18px;height:18px;border-radius:50%;background:#ffffff;box-shadow:0 1px 4px rgba(0,0,0,0.35);transition:left 0.18s;`;
+  vpToggleTrack.appendChild(vpToggleThumb);
+  vpToggleTrack.addEventListener('click', () => {
+    verticalPanOn = !verticalPanOn;
+    (chart as any).setVerticalPanEnabled(verticalPanOn);
+    vpToggleTrack.style.background = verticalPanOn ? '#3b82f6' : '#3a4155';
+    vpToggleThumb.style.left = verticalPanOn ? '23px' : '3px';
+    onApply();
+  });
+  verticalPanRow.appendChild(verticalPanLabel);
+  verticalPanRow.appendChild(vpToggleTrack);
+  body.appendChild(verticalPanRow);
 
   const mobileTooltipRow = document.createElement('div');
   mobileTooltipRow.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
@@ -1590,37 +1611,36 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
           <span style="font-size:13px;font-weight:700;">${ind.label}</span>${panelBadge}
           <div style="font-size:11px;color:#555;margin-top:2px;">${ind.desc}</div>
         </div>
-        <div style="width:36px;height:20px;border-radius:10px;background:${isOn ? '#2962ff' : '#363a45'};
-          display:flex;align-items:center;padding:0 3px;box-sizing:border-box;transition:background 0.2s;flex-shrink:0;">
-          <div style="width:14px;height:14px;border-radius:50%;background:white;
-            transform:translateX(${isOn ? '16px' : '0'});transition:transform 0.2s;"></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          ${isMultiMain ? '<button type="button" data-ind-settings="1" style="height:24px;padding:0 8px;border:1px solid #3a4055;border-radius:6px;background:#1a1f2d;color:#c8cfde;cursor:pointer;font-size:11px;">세부</button>' : ''}
+          <div style="width:36px;height:20px;border-radius:10px;background:${isOn ? '#2962ff' : '#363a45'};
+            display:flex;align-items:center;padding:0 3px;box-sizing:border-box;transition:background 0.2s;">
+            <div style="width:14px;height:14px;border-radius:50%;background:white;
+              transform:translateX(${isOn ? '16px' : '0'});transition:transform 0.2s;"></div>
+          </div>
         </div>`;
         row.addEventListener('mouseenter', () => { if (!isOn) row.style.background = 'rgba(255,255,255,0.04)'; });
         row.addEventListener('mouseleave', () => { if (!isOn) row.style.background = 'transparent'; });
-        row.addEventListener('click', () => {
-          if (ind.id === 'ma' || ind.id === 'ema') {
-            if (ind.id === 'ma') {
-              if (!(chart.config.indicators as any).ma?.lines?.length) chart.addMaLine?.();
-              (chart.config.indicators as any).ma.show = true;
-              if ((chart.config.indicators as any).ema) (chart.config.indicators as any).ema.show = false;
-            } else {
-              if (!(chart.config.indicators as any).ema?.lines?.length) chart.addEmaLine?.();
-              (chart.config.indicators as any).ema.show = true;
-              if ((chart.config.indicators as any).ma) (chart.config.indicators as any).ma.show = false;
-            }
-            chart.draw();
-            refresh();
-            render(q);
-            renderOrder();
+        const settingsBtn = row.querySelector('button[data-ind-settings="1"]') as HTMLButtonElement | null;
+        if (settingsBtn) {
+          settingsBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
             window.setTimeout(() => openSettingsPopup(row, chart, ind.id, () => {
               chart.draw();
               refresh();
               render(q);
             }), 0);
-            return;
-          }
+          });
+        }
+        row.addEventListener('click', () => {
           if ((chart.config.indicators as any)[ind.id] !== undefined) {
             const nextOn = !isOn;
+            if (ind.id === 'ma' && nextOn && !((chart.config.indicators as any).ma?.lines?.length)) {
+              chart.addMaLine?.();
+            }
+            if (ind.id === 'ema' && nextOn && !((chart.config.indicators as any).ema?.lines?.length)) {
+              chart.addEmaLine?.();
+            }
             (chart.config.indicators as any)[ind.id].show = nextOn;
             if (ind.panel === 'sub') {
               const hiddenPanels = new Set<string>(((chart.config.panelState as any).hiddenPanels ?? []) as string[]);
