@@ -1,4 +1,4 @@
-import {
+﻿import {
   createDefaultPanelState,
   ensurePanelRatios,
   getActivePanels,
@@ -5421,7 +5421,9 @@ export class SimpleChart {
     if (text === '') {
       return { text: '', angle: 0, x: 0, y: 0, width: 0, height: 0, isPlaceholder: true };
     }
-    const angle = Math.atan2(by - ay, bx - ax);
+    let angle = Math.atan2(by - ay, bx - ax);
+    if (angle > Math.PI / 2) angle -= Math.PI;
+    else if (angle < -Math.PI / 2) angle += Math.PI;
     const x = (ax + bx) / 2;
     const y = (ay + by) / 2 - 10;
     this.overlayCtx.save();
@@ -5466,37 +5468,37 @@ export class SimpleChart {
 
   private openTrendlineTextEditor(shape: DrawingShape): void {
     const metrics = this.getMainViewportMetrics();
-    if (!metrics) {
-      this.editTrendlineTextPrompt(shape);
-      return;
-    }
-    const layout = this.getTrendlineTextLayout(shape, metrics, '텍스트 입력');
-    if (!layout.text) {
-      this.editTrendlineTextPrompt(shape);
-      return;
-    }
+    const fallbackX = Number.isFinite(this.mouseX) ? this.mouseX : this.canvas.clientWidth / 2;
+    const fallbackY = Number.isFinite(this.mouseY) ? this.mouseY : this.canvas.clientHeight / 2;
+    const layout = metrics
+      ? this.getTrendlineTextLayout(shape, metrics, '텍스트 입력')
+      : { text: (shape.text ?? '').trim() || '텍스트 입력', angle: 0, x: fallbackX, y: fallbackY, width: 120, height: 14, isPlaceholder: false };
     this.closeTrendlineTextEditor(false);
     const rect = this.canvas.getBoundingClientRect();
     const input = document.createElement('input');
     input.type = 'text';
     input.value = (shape.text ?? '').trim();
     input.placeholder = '텍스트 입력';
+    const angleDeg = (layout.angle * 180) / Math.PI;
     input.style.cssText = [
       'position:fixed',
       `left:${Math.round(rect.left + layout.x)}px`,
-      `top:${Math.round(rect.top + layout.y - 20)}px`,
-      'transform:translate(-50%,-100%)',
+      `top:${Math.round(rect.top + layout.y - layout.height * 0.5)}px`,
+      `transform:translate(-50%,-50%) rotate(${angleDeg.toFixed(3)}deg)`,
+      'transform-origin:center center',
       'z-index:2400',
       'min-width:140px',
       'max-width:260px',
-      'padding:6px 8px',
-      'border-radius:8px',
-      'border:1px solid #3f5f9c',
-      'background:#0e1525',
-      'color:#e6efff',
+      'padding:0 2px',
+      'border-radius:0',
+      'border:0',
+      'background:transparent',
+      'color:#f0f5ff',
       `font:600 12px ${CHART_FONT_STACK}`,
       'outline:none',
-      'box-shadow:0 8px 18px rgba(0,0,0,0.38)',
+      'box-shadow:none',
+      'text-align:center',
+      'caret-color:#f0f5ff',
     ].join(';');
     document.body.appendChild(input);
     this.trendlineTextEditorEl = input;
@@ -5514,8 +5516,13 @@ export class SimpleChart {
       }
     });
     input.addEventListener('blur', commit, { once: true });
-    input.focus();
-    input.select();
+    input.addEventListener('mousedown', (event) => event.stopPropagation());
+    input.addEventListener('touchstart', (event) => event.stopPropagation(), { passive: true });
+    setTimeout(() => {
+      if (this.trendlineTextEditorEl !== input) return;
+      input.focus();
+      input.select();
+    }, 0);
     this.requestOverlayDraw();
   }
 
