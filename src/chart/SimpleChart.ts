@@ -2940,6 +2940,16 @@ export class SimpleChart {
     this.draw();
   }
 
+  public setPanMarginEnabled(enabled: boolean): void {
+    const next = enabled === true;
+    (this.config.layout as any).panMarginEnabled = next;
+    if (!next) {
+      this.leftPanBars = 0;
+      this.mainPricePanOffset = 0;
+    }
+    this.draw();
+  }
+
   private clampPanStartIndex(startIndex: number, visibleCount: number): number {
     if (visibleCount <= 0) return 0;
     const dataLength = this.data.length;
@@ -2969,6 +2979,10 @@ export class SimpleChart {
     this.startIndex = ns;
     this.endIndex = ns + visibleCount;
     return changed;
+  }
+
+  private isPanMarginEnabled(): boolean {
+    return Boolean((this.config.layout as any).panMarginEnabled);
   }
 
   private getMainPricePerPixel(): number {
@@ -7850,11 +7864,13 @@ export class SimpleChart {
       const virtualStart = (this.dragStartIndex - this.dragStartLeftPanBars) + shift;
       if (this.applyHorizontalPan(virtualStart, visibleCount)) changed = true;
     }
-    const pricePerPixel = this.getMainPricePerPixel();
-    const nextPriceOffset = this.dragStartPriceOffset + dy * pricePerPixel;
-    if (Number.isFinite(nextPriceOffset) && Math.abs(nextPriceOffset - this.mainPricePanOffset) > 1e-12) {
-      this.mainPricePanOffset = nextPriceOffset;
-      changed = true;
+    if (this.isPanMarginEnabled()) {
+      const pricePerPixel = this.getMainPricePerPixel();
+      const nextPriceOffset = this.dragStartPriceOffset + dy * pricePerPixel;
+      if (Number.isFinite(nextPriceOffset) && Math.abs(nextPriceOffset - this.mainPricePanOffset) > 1e-12) {
+        this.mainPricePanOffset = nextPriceOffset;
+        changed = true;
+      }
     }
     if (changed) {
       this.draw();
@@ -8336,11 +8352,13 @@ export class SimpleChart {
           const virtualStart = (this.touchStartIndex - this.touchStartLeftPanBars) + shift;
           if (this.applyHorizontalPan(virtualStart, visibleCount)) changed = true;
         }
-        const pricePerPixel = this.getMainPricePerPixel();
-        const nextPriceOffset = this.touchStartPriceOffset + dy * pricePerPixel;
-        if (Number.isFinite(nextPriceOffset) && Math.abs(nextPriceOffset - this.mainPricePanOffset) > 1e-12) {
-          this.mainPricePanOffset = nextPriceOffset;
-          changed = true;
+        if (this.isPanMarginEnabled()) {
+          const pricePerPixel = this.getMainPricePerPixel();
+          const nextPriceOffset = this.touchStartPriceOffset + dy * pricePerPixel;
+          if (Number.isFinite(nextPriceOffset) && Math.abs(nextPriceOffset - this.mainPricePanOffset) > 1e-12) {
+            this.mainPricePanOffset = nextPriceOffset;
+            changed = true;
+          }
         }
         if (changed) {
           this.draw();
