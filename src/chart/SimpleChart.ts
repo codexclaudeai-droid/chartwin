@@ -5866,7 +5866,7 @@ export class SimpleChart {
     const by = shape.b ? metrics.getY(shape.b.price) : ay;
     const pad = 8;
     const isCoarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
-    const anchorHitPad = isCoarsePointer ? 20 : 8;
+    const anchorHitPad = isCoarsePointer ? 25 : 8;
     const pointInPolygon = (x: number, y: number, points: Array<{ x: number; y: number }>): boolean => {
       let inside = false;
       for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
