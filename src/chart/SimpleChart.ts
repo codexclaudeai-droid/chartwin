@@ -72,6 +72,7 @@ import type { DisplayCurrency } from '../types/market';
 import { formatKUnit, formatKUnitWithComma, formatThousandAdaptive } from '../utils/format';
 import { applyGapSmoothing, type GapMode } from '../utils/gap-smoothing';
 type ActiveDrawingToolId = DrawingToolId | 'eraser';
+type DrawingMagnetMode = 'off' | 'soft' | 'strong';
 
 export const X_AXIS_HEIGHT = 22;
 const MAX_CANVAS_PIXEL_RATIO = 3;
@@ -229,6 +230,7 @@ export class SimpleChart {
   private indicatorsVisible = true;
   private patternBoxesVisible = true;
   private drawingDraft: DrawingDraft | null = null;
+  private drawingMagnetMode: DrawingMagnetMode = 'soft';
   private drawingDragActive = false;
   private selectedDrawingId: string | null = null;
   private selectedDrawingPart: DrawingHitPart = 'line';
@@ -1550,6 +1552,15 @@ export class SimpleChart {
       this.subIndicatorAlertPopupEl.remove();
       this.subIndicatorAlertPopupEl = null;
     }
+  }
+
+  public setDrawingMagnetMode(mode: DrawingMagnetMode): void {
+    this.drawingMagnetMode = mode;
+    this.requestOverlayDraw();
+  }
+
+  public getDrawingMagnetMode(): DrawingMagnetMode {
+    return this.drawingMagnetMode;
   }
 
   private closePositionSettingsPopup(): void {
@@ -5626,14 +5637,15 @@ export class SimpleChart {
 
   /** 앵커 가격을 캔들 OHLC 중 가장 가까운 값으로 자석 스냅 (약한 자석: 12px 이내) */
   private drawing_apply_magnet(anchor: DrawingAnchor): DrawingAnchor {
+    if (this.drawingMagnetMode === 'off') return anchor;
     const metrics = this.getMainViewportMetrics();
     if (!metrics) return anchor;
     const nearIdx = Math.round(anchor.index);
     const candle  = this.data[Math.max(0, Math.min(this.data.length - 1, nearIdx))];
     if (!candle) return anchor;
 
-    // 자석 반경: Y축 픽셀 기준 12px 이내일 때만 스냅
-    const MAGNET_PIXELS = 12;
+    // 자석 반경: Y축 픽셀 기준
+    const MAGNET_PIXELS = this.drawingMagnetMode === 'strong' ? 24 : 12;
     const pxPerPrice    = Math.max(1, metrics.mainH - metrics.top) / Math.max(1e-6, metrics.range);
     const magnetPriceRange = MAGNET_PIXELS / pxPerPrice;
 
@@ -7260,11 +7272,13 @@ export class SimpleChart {
       return;
     }
 
-    // X축(세로선)은 메인 캔들 패널에서만 자석 스냅, 보조지표 패널에서는 자유 이동
+    // X축(세로선)은 메인 캔들 패널에서만 자석 스냅.
+    // 단, 드로잉 중 자석이 OFF면 자유 이동(비스냅) 유지.
     let snapX = this.mouseX;
     let snappedCandleIndex = -1;
     const isInMainPanelForMagnet = this.mouseY >= R.top && this.mouseY <= mainH;
-    if (isInMainPanelForMagnet && this.mouseX >= chartLeft && this.mouseX <= chartRight) {
+    const allowCrosshairXSnap = this.drawingMagnetMode !== 'off';
+    if (allowCrosshairXSnap && isInMainPanelForMagnet && this.mouseX >= chartLeft && this.mouseX <= chartRight) {
       const nearestIndex = Math.round((this.mouseX - chartLeft - candleW / 2) / totalSp);
       const clampedIndex = Math.max(0, Math.min(visibleCount - 1, nearestIndex));
       snapX = chartLeft + clampedIndex * totalSp + candleW / 2;

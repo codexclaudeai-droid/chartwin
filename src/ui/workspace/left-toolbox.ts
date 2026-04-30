@@ -3,6 +3,8 @@ const mobileBottomDrawingIcon = `<svg viewBox="0 0 24 24" width="18" height="18"
 const trendToolDefaultIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="18" x2="18" y2="4"></line><circle cx="4" cy="18" r="1.7"></circle><circle cx="18" cy="4" r="1.7"></circle></svg>`;
 const eyeHideIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.7"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`;
 const eyeShowIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.7"></circle></svg>`;
+const magnetOnIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5v6a5 5 0 0 0 10 0V5"></path><path d="M7 5h4v4H7zM13 5h4v4h-4z"></path></svg>`;
+const magnetOffIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5v6a5 5 0 0 0 10 0V5"></path><path d="M7 5h4v4H7zM13 5h4v4h-4z"></path><line x1="5" y1="19" x2="19" y2="5"></line></svg>`;
 const eraserIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="#ffffff" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.5 13.5 6a2.1 2.1 0 0 1 3 0l3.5 3.5a2.1 2.1 0 0 1 0 3L13 19.5H7.8a2.8 2.8 0 0 1-2-.8l-1-1a2.8 2.8 0 0 1-.8-2z"></path><line x1="11.5" y1="19.5" x2="20.5" y2="19.5"></line></svg>`;
 
 type ToolboxItem = {
@@ -141,6 +143,24 @@ const tools: ToolboxTool[] = [
     id: 'measure',
     label: '재기',
     icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16.5 16.5 4l3.5 3.5L7.5 20z"></path><path d="M8.2 12.3l2.5 2.5M11.1 9.4l2.5 2.5M14 6.5l2.5 2.5"></path></svg>`,
+  },
+  {
+    id: 'magnet',
+    label: '자석',
+    icon: magnetOnIcon,
+    menu: {
+      title: '자석',
+      sections: [
+        {
+          title: '스냅 강도',
+          items: [
+            { id: 'magnet-off', label: '자석 끄기' },
+            { id: 'magnet-soft', label: '자석 약하게' },
+            { id: 'magnet-strong', label: '자석 강하게' },
+          ],
+        },
+      ],
+    },
   },
   {
     id: 'hide',
@@ -301,6 +321,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   let drawingsVisible = true;
   let patternBoxesVisible = true;
   let eraserModeActive = false;
+  let magnetMode: 'off' | 'soft' | 'strong' = 'soft';
   let trashCounts = { drawings: 0, indicators: 0 };
   let trashDeleteLocked = false;
   let isMobileViewport = false;
@@ -338,6 +359,18 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     if (!eraserBtn) return;
     applyToolButtonActiveStyle(eraserBtn, eraserModeActive);
   };
+  const getMagnetModeIcon = () => (magnetMode === 'off' ? magnetOffIcon : magnetOnIcon);
+  const syncMagnetToolIcon = () => {
+    const nextIcon = getMagnetModeIcon();
+    selectedToolIconMap.set('magnet', nextIcon);
+    const magnetIconWrap = toolIconWrapMap.get('magnet');
+    if (magnetIconWrap) magnetIconWrap.innerHTML = nextIcon;
+  };
+  const syncMagnetButtonStyle = () => {
+    const magnetBtn = toolButtonMap.get('magnet');
+    if (!magnetBtn) return;
+    applyToolButtonActiveStyle(magnetBtn, magnetMode !== 'off');
+  };
 
   const clearActiveStyles = () => {
     tools.forEach((candidate) => {
@@ -347,11 +380,12 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       }
       const chev = toolChevronMap.get(candidate.id);
       if (chev) {
-        chev.style.opacity = candidate.id === 'hide' ? '1' : '0';
+        chev.style.opacity = (candidate.id === 'hide' || candidate.id === 'magnet') ? '1' : '0';
         chev.style.transform = 'rotate(0deg)';
       }
     });
     syncEraserButtonStyle();
+    syncMagnetButtonStyle();
   };
 
   const getHideDrawingsAction = () => (
@@ -506,6 +540,13 @@ export function createLeftToolbox(workspace: HTMLElement): void {
         });
         btn.addEventListener('click', (event) => {
           event.stopPropagation();
+          if (tool.id === 'magnet') {
+            if (item.id === 'magnet-off') magnetMode = 'off';
+            if (item.id === 'magnet-soft') magnetMode = 'soft';
+            if (item.id === 'magnet-strong') magnetMode = 'strong';
+            syncMagnetToolIcon();
+            syncMagnetButtonStyle();
+          }
           if (tool.id === 'hide' && item.id === 'hide-drawings') {
             drawingsVisible = !drawingsVisible;
             syncHideToolIcon();
@@ -644,7 +685,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
         'transition:opacity 150ms ease, transform 180ms ease',
         'pointer-events:auto',
       ].join(';');
-      if (tool.id === 'hide') {
+      if (tool.id === 'hide' || tool.id === 'magnet') {
         chevron.style.opacity = '1';
       }
       btn.appendChild(chevron);
@@ -686,7 +727,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       if (activeToolId !== tool.id && !isPinnedActive) {
         applyToolButtonActiveStyle(btn, false);
         const c = toolChevronMap.get(tool.id);
-        if (c) c.style.opacity = tool.id === 'hide' ? '1' : '0';
+        if (c) c.style.opacity = (tool.id === 'hide' || tool.id === 'magnet') ? '1' : '0';
       }
       if (tool.id === 'measure') {
         measureHint.style.display = 'none';
@@ -733,6 +774,23 @@ export function createLeftToolbox(workspace: HTMLElement): void {
             toolId: tool.id,
             itemId: 'hide-drawings',
             label: getHideDrawingsAction().label,
+            includeLocked: trashDeleteLocked,
+          },
+        }));
+        updateRailVisibility();
+        return;
+      }
+      if (tool.id === 'magnet' && !clickedChevron) {
+        magnetMode = magnetMode === 'off' ? 'soft' : 'off';
+        syncMagnetToolIcon();
+        activeToolId = null;
+        clearActiveStyles();
+        renderMenu(null);
+        window.dispatchEvent(new CustomEvent('chart-toolbox-select', {
+          detail: {
+            toolId: tool.id,
+            itemId: magnetMode === 'off' ? 'magnet-off' : 'magnet-soft',
+            label: magnetMode === 'off' ? '자석 끄기' : '자석 약하게',
             includeLocked: trashDeleteLocked,
           },
         }));
@@ -800,6 +858,8 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     eraserModeActive = customEvent.detail?.toolId === 'eraser';
     syncEraserButtonStyle();
   });
+  syncMagnetToolIcon();
+  syncMagnetButtonStyle();
 
   workspace.addEventListener('click', (event) => {
     const target = event.target as Node;
