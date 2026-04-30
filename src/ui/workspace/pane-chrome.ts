@@ -108,15 +108,15 @@ export function createPaneChrome<TKey extends string>({
   const marketPriceWrap = document.createElement('div');
   marketPriceWrap.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0;flex-shrink:0;';
   const symPriceLabel = document.createElement('span');
-  symPriceLabel.style.cssText = 'font-size:15px;font-weight:800;color:#9aa7c1;white-space:nowrap;line-height:1;';
+  symPriceLabel.style.cssText = 'font-size:15px;font-weight:800;color:#9aa7c1;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;min-width:108px;';
   symPriceLabel.textContent = '--';
   const symChangeWrap = document.createElement('span');
-  symChangeWrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1;gap:1px;min-width:40px;';
+  symChangeWrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1;gap:1px;width:68px;flex-shrink:0;';
   const symChangeMetaLabel = document.createElement('span');
   symChangeMetaLabel.style.cssText = 'font-size:9px;color:#7f889a;font-weight:600;line-height:1;';
   symChangeMetaLabel.textContent = '24h';
   const symChangeLabel = document.createElement('span');
-  symChangeLabel.style.cssText = 'font-size:13px;font-weight:800;color:#9aa7c1;white-space:nowrap;line-height:1;';
+  symChangeLabel.style.cssText = 'font-size:13px;font-weight:800;color:#9aa7c1;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;';
   symChangeLabel.textContent = '--';
   symChangeWrap.appendChild(symChangeMetaLabel);
   symChangeWrap.appendChild(symChangeLabel);
