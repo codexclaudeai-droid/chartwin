@@ -108,7 +108,7 @@ export function createPaneChrome<TKey extends string>({
   const marketPriceWrap = document.createElement('div');
   marketPriceWrap.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0;flex-shrink:0;';
   const symPriceLabel = document.createElement('span');
-  symPriceLabel.style.cssText = 'font-size:15px;font-weight:800;color:#9aa7c1;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;min-width:108px;';
+  symPriceLabel.style.cssText = 'font-size:15px;font-weight:800;color:#9aa7c1;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;';
   symPriceLabel.textContent = '--';
   const symChangeWrap = document.createElement('span');
   symChangeWrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1;gap:1px;width:68px;flex-shrink:0;';
