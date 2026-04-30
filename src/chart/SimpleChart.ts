@@ -8638,7 +8638,7 @@ export class SimpleChart {
           startY: pos.y,
           baseShape: this.cloneShape(hitDrawing.shape),
         };
-        if (hitDrawing.shape.kind === 'trendline') {
+        if (hitDrawing.shape.kind === 'trendline' && !this.drawingTool) {
           this.cancelLongPress();
           const capturedPos = { x: pos.x, y: pos.y };
           this.longPressTimer = setTimeout(() => {
@@ -8669,11 +8669,14 @@ export class SimpleChart {
       // ── 드로잉을 찾지 못함 → 이전 선택 해제 + 편집 종료 ─────────────
       if (!hitDrawing && this.selectedDrawingId) {
         this.clearDrawingSelection();
-        // Mobile UX: tapping outside while editing should finish editing
-        // instead of immediately falling through to a new drawing flow.
-        this.setDrawingTool(null);
+        if (!this.drawingTool) {
+          // 드로잉 툴 비활성 상태: 편집 완전 종료
+          this.setDrawingTool(null);
+          this.updateChartCursor();
+          return;
+        }
+        // 드로잉 툴 활성 상태: 선택만 해제 후 드로잉 흐름으로 진행
         this.updateChartCursor();
-        return;
       }
 
       // ??????????????????????????????????????????????????????????????????
