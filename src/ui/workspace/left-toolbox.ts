@@ -3,8 +3,9 @@ const mobileBottomDrawingIcon = `<svg viewBox="0 0 24 24" width="18" height="18"
 const trendToolDefaultIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="18" x2="18" y2="4"></line><circle cx="4" cy="18" r="1.7"></circle><circle cx="18" cy="4" r="1.7"></circle></svg>`;
 const eyeHideIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.7"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`;
 const eyeShowIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.7"></circle></svg>`;
-const magnetOnIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5v6a5 5 0 0 0 10 0V5"></path><path d="M7 5h4v4H7zM13 5h4v4h-4z"></path></svg>`;
-const magnetOffIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5v6a5 5 0 0 0 10 0V5"></path><path d="M7 5h4v4H7zM13 5h4v4h-4z"></path><line x1="5" y1="19" x2="19" y2="5"></line></svg>`;
+const magnetStrongIcon = `<svg viewBox="0 0 512 512" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="32"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="32"></path><line x1="192" y1="464" x2="192" y2="416" stroke-width="32"></line><line x1="90.18" y1="421.82" x2="124.12" y2="387.88" stroke-width="32"></line><line x1="48" y1="320" x2="96" y2="320" stroke-width="32"></line><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="32"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="32"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="32"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="32"></line></g></svg>`;
+const magnetSoftIcon = `<svg viewBox="0 0 512 512" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="32"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="32"></path><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="32"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="32"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="32"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="32"></line></g></svg>`;
+const magnetOffIcon = `<svg viewBox="0 0 512 512" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="32"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="32"></path><line x1="192" y1="464" x2="192" y2="416" stroke-width="32"></line><line x1="90.18" y1="421.82" x2="124.12" y2="387.88" stroke-width="32"></line><line x1="48" y1="320" x2="96" y2="320" stroke-width="32"></line><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="32"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="32"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="32"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="32"></line></g><line x1="80" y1="432" x2="432" y2="80" stroke-width="34"></line></svg>`;
 const eraserIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="#ffffff" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.5 13.5 6a2.1 2.1 0 0 1 3 0l3.5 3.5a2.1 2.1 0 0 1 0 3L13 19.5H7.8a2.8 2.8 0 0 1-2-.8l-1-1a2.8 2.8 0 0 1-.8-2z"></path><line x1="11.5" y1="19.5" x2="20.5" y2="19.5"></line></svg>`;
 
 type ToolboxItem = {
@@ -123,21 +124,6 @@ const tools: ToolboxTool[] = [
     id: 'text',
     label: '텍스트입력',
     icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="6" x2="19" y2="6"></line><line x1="12" y1="6" x2="12" y2="19"></line></svg>`,
-    menu: {
-      title: '텍스트입력',
-      sections: [
-        {
-          title: '텍스트',
-          items: [
-            {
-              id: 'text-note',
-              label: '텍스트 입력',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round"><line x1="5" y1="6" x2="19" y2="6"></line><line x1="12" y1="6" x2="12" y2="19"></line></svg>`,
-            },
-          ],
-        },
-      ],
-    },
   },
   {
     id: 'measure',
@@ -147,16 +133,16 @@ const tools: ToolboxTool[] = [
   {
     id: 'magnet',
     label: '자석',
-    icon: magnetOnIcon,
+    icon: magnetSoftIcon,
     menu: {
       title: '자석',
       sections: [
         {
           title: '스냅 강도',
           items: [
-            { id: 'magnet-off', label: '자석 끄기' },
-            { id: 'magnet-soft', label: '자석 약하게' },
-            { id: 'magnet-strong', label: '자석 강하게' },
+            { id: 'magnet-off', label: '자석 끄기', icon: magnetOffIcon },
+            { id: 'magnet-soft', label: '자석 약하게', icon: magnetSoftIcon },
+            { id: 'magnet-strong', label: '자석 강하게', icon: magnetStrongIcon },
           ],
         },
       ],
@@ -359,7 +345,10 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     if (!eraserBtn) return;
     applyToolButtonActiveStyle(eraserBtn, eraserModeActive);
   };
-  const getMagnetModeIcon = () => (magnetMode === 'off' ? magnetOffIcon : magnetOnIcon);
+  const getMagnetModeIcon = () => {
+    if (magnetMode === 'off') return magnetOffIcon;
+    return magnetStrongIcon;
+  };
   const syncMagnetToolIcon = () => {
     const nextIcon = getMagnetModeIcon();
     selectedToolIconMap.set('magnet', nextIcon);
