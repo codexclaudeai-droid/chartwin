@@ -8638,6 +8638,27 @@ export class SimpleChart {
           startY: pos.y,
           baseShape: this.cloneShape(hitDrawing.shape),
         };
+        if (hitDrawing.shape.kind === 'trendline') {
+          this.cancelLongPress();
+          const capturedPos = { x: pos.x, y: pos.y };
+          this.longPressTimer = setTimeout(() => {
+            if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
+            const dup: DrawingShape = {
+              ...this.cloneShape(hitDrawing.shape),
+              id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            };
+            this.drawings.push(dup);
+            this.selectedDrawingId = dup.id;
+            this.selectedDrawingPart = 'line';
+            this.drawingMoveState = {
+              startX: capturedPos.x,
+              startY: capturedPos.y,
+              baseShape: this.cloneShape(dup),
+            };
+            this.syncDrawingToolbar();
+            this.requestOverlayDraw();
+          }, SimpleChart.LONG_PRESS_MS);
+        }
         this.syncDrawingToolbar();
         this.requestOverlayDraw();
         this.updateChartCursor();
@@ -8784,6 +8805,9 @@ export class SimpleChart {
       if (this.drawingMoveState && this.selectedDrawingId) {
         const dx = pos.x - this.drawingMoveState.startX;
         const dy = pos.y - this.drawingMoveState.startY;
+        if (Math.sqrt(dx * dx + dy * dy) > SimpleChart.LONG_PRESS_MOVE_THRESHOLD) {
+          this.cancelLongPress();
+        }
         const moved = this.moveShapeByDelta(this.drawingMoveState.baseShape, dx, dy, this.selectedDrawingPart);
         this.upsertDrawing(moved);
         this.requestOverlayDraw();
