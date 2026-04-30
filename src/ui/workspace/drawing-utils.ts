@@ -14,6 +14,7 @@ export function cloneDrawingShape(shape: DrawingShape): DrawingShape {
     hidden: shape.hidden,
     locked: shape.locked,
     alert: shape.alert ? { ...shape.alert } : undefined,
+    position: shape.position ? { ...shape.position } : undefined,
   };
 }
 

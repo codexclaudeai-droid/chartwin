@@ -240,6 +240,7 @@ export class SimpleChart {
   private drawingToolbarEl: HTMLDivElement | null = null;
   private drawingToolbarBoundId: string | null = null;
   private drawingAlertPopupEl: HTMLDivElement | null = null;
+  private positionSettingsPopupEl: HTMLDivElement | null = null;
   private trendlineTextEditorEl: HTMLInputElement | null = null;
   private trendlineTextEditorShapeId: string | null = null;
   private hoveredDrawingId: string | null = null;
@@ -1176,6 +1177,7 @@ export class SimpleChart {
 
   private clearDrawingSelection(): void {
     this.closeTrendlineTextEditor(false);
+    this.closePositionSettingsPopup();
     this.selectedDrawingId = null;
     this.selectedDrawingPart = 'line';
     this.drawingMoveState = null;
@@ -1550,6 +1552,292 @@ export class SimpleChart {
     }
   }
 
+  private closePositionSettingsPopup(): void {
+    if (this.positionSettingsPopupEl) {
+      this.positionSettingsPopupEl.remove();
+      this.positionSettingsPopupEl = null;
+    }
+  }
+
+  private openPositionSettingsPopup(shape: DrawingShape): void {
+    if (shape.kind !== 'long-position' && shape.kind !== 'short-position') return;
+    const host = this.canvas.parentElement;
+    if (!host) return;
+    this.closePositionSettingsPopup();
+
+    const popup = document.createElement('div');
+    popup.style.cssText = [
+      'position:absolute',
+      'left:50%',
+      'top:48px',
+      'transform:translateX(-50%)',
+      'z-index:2400',
+      'width:min(364px, calc(100% - 20px))',
+      'padding:14px 14px 12px',
+      'border-radius:16px',
+      'background:#ffffff',
+      'border:1px solid #d8deea',
+      'box-shadow:0 18px 40px rgba(0,0,0,0.28)',
+      `font:500 12px ${CHART_FONT_STACK}`,
+      'color:#1f2533',
+    ].join(';');
+    popup.addEventListener('mousedown', (event) => event.stopPropagation());
+    popup.addEventListener('click', (event) => event.stopPropagation());
+
+    const title = document.createElement('div');
+    title.textContent = shape.kind === 'long-position' ? '매수 포지션' : '매도 포지션';
+    title.style.cssText = 'font:700 18px Pretendard, Segoe UI, Arial, sans-serif; margin-bottom:10px;';
+
+    const entry = shape.a.price;
+    const stop = shape.b?.price ?? shape.a.price;
+    const target = shape.a.price + (shape.channelOffset?.price ?? 0);
+    const symbolUpper = String(this.config.symbol || '').toUpperCase();
+    const riskCurrency = (symbolUpper === 'KOSPI' || symbolUpper === 'KOSDAQ' || symbolUpper === 'KOSPI200') ? 'KRW' : 'USD';
+    const digits = getSymbolPricePrecision(this.config.symbol, this.config.quoteCurrency);
+    const tickSize = Math.max(10 ** -digits, 1e-12);
+    const positionCfg = shape.position ?? {
+      accountSize: 1000,
+      accountUnit: 'default' as const,
+      riskMode: 'percent' as const,
+      riskPercent: 25,
+      riskAmount: 250,
+      leverageEnabled: false,
+      leverage: 10000,
+      quantityPrecision: 2,
+    };
+    const mkInput = (value: number, step = '0.01') => {
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.step = step;
+      input.value = step === '1' ? String(Math.round(value)) : String(value.toFixed(digits));
+      input.style.cssText = 'height:34px;width:120px;border:1px solid #cfd6e5;border-radius:9px;padding:0 10px;font:600 12px Segoe UI, Arial, sans-serif;box-sizing:border-box;background:#fff;';
+      return input;
+    };
+    const mkOptionButton = (text: string) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.style.cssText = 'position:relative;height:34px;width:120px;border:1px solid #cfd6e5;border-radius:9px;background:#fff;color:#1f2533;cursor:pointer;padding:0 26px 0 10px;font:600 12px Segoe UI, Arial, sans-serif;white-space:nowrap;text-align:center;';
+      const txt = document.createElement('span');
+      txt.textContent = text;
+      txt.style.cssText = 'display:block;width:100%;text-align:center;';
+      const arrow = document.createElement('span');
+      arrow.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg>';
+      arrow.style.cssText = 'position:absolute;right:8px;top:50%;transform:translateY(-50%);display:inline-flex;';
+      btn.append(txt, arrow);
+      return { btn, txt };
+    };
+
+    const accountSizeInput = mkInput(positionCfg.accountSize, '1');
+    const riskValueInput = mkInput(positionCfg.riskMode === 'amount' ? positionCfg.riskAmount : positionCfg.riskPercent);
+    const leverageInput = mkInput(positionCfg.leverage, '0.1');
+    const entryInput = mkInput(entry);
+    const targetInput = mkInput(target);
+    const stopInput = mkInput(stop);
+    const targetTickInput = mkInput(Math.abs(target - entry) / tickSize, '1');
+    const stopTickInput = mkInput(Math.abs(entry - stop) / tickSize, '1');
+    targetTickInput.min = '0';
+    stopTickInput.min = '0';
+
+    let accountUnit: 'default' | 'USD' | 'KRW' = positionCfg.accountUnit ?? 'default';
+    let riskMode: 'percent' | 'amount' = positionCfg.riskMode ?? 'percent';
+    const accountUnitOpt = mkOptionButton(accountUnit === 'default' ? '기본설정' : accountUnit);
+    const riskModeOpt = mkOptionButton(riskMode === 'percent' ? '%' : riskCurrency);
+    const syncAccountUnitText = () => { accountUnitOpt.txt.textContent = accountUnit === 'default' ? '기본설정' : accountUnit; };
+    const syncRiskModeText = () => { riskModeOpt.txt.textContent = riskMode === 'percent' ? '%' : riskCurrency; };
+    accountUnitOpt.btn.addEventListener('click', () => {
+      accountUnit = accountUnit === 'default' ? 'USD' : accountUnit === 'USD' ? 'KRW' : 'default';
+      syncAccountUnitText();
+    });
+    riskModeOpt.btn.addEventListener('click', () => {
+      const prev = riskMode;
+      riskMode = riskMode === 'percent' ? 'amount' : 'percent';
+      const currentVal = Math.max(0, Number(riskValueInput.value) || 0);
+      const accountSize = Math.max(0, Number(accountSizeInput.value) || 0);
+      if (prev === 'percent' && riskMode === 'amount') riskValueInput.value = (accountSize * (currentVal / 100)).toFixed(2);
+      if (prev === 'amount' && riskMode === 'percent') riskValueInput.value = accountSize > 0 ? ((currentVal / accountSize) * 100).toFixed(2) : '0';
+      syncRiskModeText();
+      syncInfo();
+    });
+
+    const leverageEnabledInput = document.createElement('input');
+    leverageEnabledInput.type = 'checkbox';
+    leverageEnabledInput.checked = Boolean(positionCfg.leverageEnabled);
+    leverageEnabledInput.style.cssText = 'width:18px;height:18px;';
+    const leverageUseLabel = document.createElement('label');
+    leverageUseLabel.style.cssText = 'display:flex;align-items:center;gap:6px;color:#3a4459;font-size:12px;';
+    const leverageUseText = document.createElement('span');
+    leverageUseText.textContent = '사용';
+    leverageUseLabel.append(leverageEnabledInput, leverageUseText);
+    const syncLeverageState = () => {
+      leverageInput.disabled = !leverageEnabledInput.checked;
+      leverageInput.style.opacity = leverageEnabledInput.checked ? '1' : '0.55';
+      syncInfo();
+    };
+    leverageEnabledInput.addEventListener('change', syncLeverageState);
+
+    let syncingTickAndPrice = false;
+    const applyPricesFromTicks = () => {
+      const ePrice = Number(entryInput.value);
+      if (!Number.isFinite(ePrice)) return;
+      const isLongPosition = shape.kind === 'long-position';
+      const sTicks = Math.max(0, Number(stopTickInput.value) || 0);
+      const tTicks = Math.max(0, Number(targetTickInput.value) || 0);
+      const stopPrice = isLongPosition ? (ePrice - sTicks * tickSize) : (ePrice + sTicks * tickSize);
+      const targetPrice = isLongPosition ? (ePrice + tTicks * tickSize) : (ePrice - tTicks * tickSize);
+      stopInput.value = stopPrice.toFixed(digits);
+      targetInput.value = targetPrice.toFixed(digits);
+    };
+    const syncTicksFromPrices = () => {
+      const ePrice = Number(entryInput.value);
+      const sPrice = Number(stopInput.value);
+      const tPrice = Number(targetInput.value);
+      const sTicks = Number.isFinite(ePrice) && Number.isFinite(sPrice) ? Math.max(0, Math.round(Math.abs(ePrice - sPrice) / tickSize)) : 0;
+      const tTicks = Number.isFinite(ePrice) && Number.isFinite(tPrice) ? Math.max(0, Math.round(Math.abs(tPrice - ePrice) / tickSize)) : 0;
+      stopTickInput.value = String(sTicks);
+      targetTickInput.value = String(tTicks);
+    };
+
+    const infoBox = document.createElement('div');
+    infoBox.style.cssText = 'display:flex;flex-direction:column;gap:4px;margin:4px 0 10px;padding:8px 10px;border:1px solid #d7e0f2;border-radius:9px;background:#f8fbff;';
+    const rrTextEl = document.createElement('div');
+    rrTextEl.style.cssText = 'font:600 12px Segoe UI, Arial, sans-serif;color:#1f2f46;';
+    const pnlTextEl = document.createElement('div');
+    pnlTextEl.style.cssText = 'font:600 12px Segoe UI, Arial, sans-serif;color:#1f2f46;';
+    infoBox.append(rrTextEl, pnlTextEl);
+    const syncInfo = () => {
+      const ePrice = Number(entryInput.value);
+      const sPrice = Number(stopInput.value);
+      const tPrice = Number(targetInput.value);
+      const risk = Math.abs(ePrice - sPrice);
+      const reward = Math.abs(tPrice - ePrice);
+      const rr = risk > 1e-8 ? reward / risk : 0;
+      const accountSize = Math.max(0, Number(accountSizeInput.value) || 0);
+      const rv = Math.max(0, Number(riskValueInput.value) || 0);
+      const riskBudget = riskMode === 'amount' ? rv : accountSize * (rv / 100);
+      const leverageFactor = leverageEnabledInput.checked ? Math.max(0.1, Number(leverageInput.value) || 1) : 1;
+      const qty = risk > 1e-8 ? (riskBudget / risk) * leverageFactor : 0;
+      const closePnl = qty * reward;
+      rrTextEl.textContent = `손익비: ${rr === 1 ? '1 : 1' : `1 : ${rr.toFixed(1)}`}`;
+      pnlTextEl.textContent = `청산손익: +${Math.round(closePnl).toLocaleString('ko-KR')} ${riskCurrency}`;
+    };
+
+    const mkRow = (label: string, right: HTMLElement) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;';
+      const lab = document.createElement('span');
+      lab.textContent = label;
+      lab.style.cssText = 'color:#3a4459;font-size:12px;';
+      row.append(lab, right);
+      return row;
+    };
+    const mkDualRow = (label: string, leftEl: HTMLElement, rightEl: HTMLElement) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;';
+      const lab = document.createElement('span');
+      lab.textContent = label;
+      lab.style.cssText = 'color:#3a4459;font-size:12px;';
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex;align-items:center;gap:8px;';
+      wrap.append(leftEl, rightEl);
+      row.append(lab, wrap);
+      return row;
+    };
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:10px;';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.textContent = '취소';
+    cancelBtn.style.cssText = 'height:34px;padding:0 12px;border-radius:8px;border:1px solid #aab4c8;background:#fff;color:#243146;cursor:pointer;';
+    const applyBtn = document.createElement('button');
+    applyBtn.type = 'button';
+    applyBtn.textContent = '확인';
+    applyBtn.style.cssText = 'height:34px;padding:0 12px;border-radius:8px;border:1px solid #101828;background:#111827;color:#fff;cursor:pointer;';
+    btnRow.append(cancelBtn, applyBtn);
+
+    cancelBtn.addEventListener('click', () => this.closePositionSettingsPopup());
+    applyBtn.addEventListener('click', () => {
+      const nextEntry = Number(entryInput.value);
+      const nextTarget = Number(targetInput.value);
+      const nextStop = Number(stopInput.value);
+      if (!Number.isFinite(nextEntry) || !Number.isFinite(nextTarget) || !Number.isFinite(nextStop)) {
+        this.showToast('유효한 가격 값을 입력하세요.');
+        return;
+      }
+      const next = this.cloneShape(shape);
+      next.a = { index: shape.a.index, price: nextEntry };
+      next.b = { index: shape.a.index, price: nextStop };
+      next.channelOffset = {
+        index: shape.channelOffset?.index ?? 8,
+        price: nextTarget - nextEntry,
+      };
+      const nextAccountSize = Math.max(0, Number(accountSizeInput.value) || 0);
+      const nextRiskVal = Math.max(0, Number(riskValueInput.value) || 0);
+      next.position = {
+        accountSize: nextAccountSize,
+        accountUnit,
+        riskMode,
+        riskPercent: riskMode === 'percent'
+          ? nextRiskVal
+          : (nextAccountSize > 0 ? (nextRiskVal / nextAccountSize) * 100 : 0),
+        riskAmount: riskMode === 'amount'
+          ? nextRiskVal
+          : nextAccountSize * (nextRiskVal / 100),
+        leverageEnabled: Boolean(leverageEnabledInput.checked),
+        leverage: Math.max(0.1, Number(leverageInput.value) || 1),
+        quantityPrecision: positionCfg.quantityPrecision ?? 2,
+      };
+      this.upsertDrawing(next);
+      this.syncDrawingToolbar();
+      this.requestOverlayDraw();
+      this.closePositionSettingsPopup();
+    });
+
+    [entryInput, targetInput, stopInput].forEach((el) => el.addEventListener('input', () => {
+      if (syncingTickAndPrice) return;
+      syncingTickAndPrice = true;
+      syncTicksFromPrices();
+      syncingTickAndPrice = false;
+      syncInfo();
+    }));
+    [targetTickInput, stopTickInput].forEach((el) => el.addEventListener('input', () => {
+      if (syncingTickAndPrice) return;
+      syncingTickAndPrice = true;
+      applyPricesFromTicks();
+      syncingTickAndPrice = false;
+      syncInfo();
+    }));
+    entryInput.addEventListener('input', () => {
+      if (syncingTickAndPrice) return;
+      syncingTickAndPrice = true;
+      applyPricesFromTicks();
+      syncingTickAndPrice = false;
+      syncInfo();
+    });
+    [accountSizeInput, riskValueInput, leverageInput].forEach((el) => el.addEventListener('input', () => syncInfo()));
+    syncAccountUnitText();
+    syncRiskModeText();
+    syncLeverageState();
+    syncTicksFromPrices();
+    syncInfo();
+
+    popup.append(
+      title,
+      mkDualRow('계좌 규모', accountSizeInput, accountUnitOpt.btn),
+      mkDualRow('리스크', riskValueInput, riskModeOpt.btn),
+      mkDualRow('레버리지', leverageInput, leverageUseLabel),
+      infoBox,
+      mkRow('진입가', entryInput),
+      mkRow('목표가', targetInput),
+      mkRow('틱', targetTickInput),
+      mkRow('손절가', stopInput),
+      mkRow('틱', stopTickInput),
+      btnRow,
+    );
+    host.appendChild(popup);
+    this.positionSettingsPopupEl = popup;
+  }
+
   private openSubIndicatorAlertPopup(
     x: number,
     y: number,
@@ -1871,6 +2159,7 @@ export class SimpleChart {
   private deleteDrawing(id: string): void {
     this.drawings = this.drawings.filter((shape) => shape.id !== id);
     if (this.selectedDrawingId === id) {
+      this.closePositionSettingsPopup();
       this.selectedDrawingId = null;
       this.selectedDrawingPart = 'line';
       this.drawingMoveState = null;
@@ -5711,6 +6000,15 @@ export class SimpleChart {
       let posLeft  = Math.min(ax, tx);
       let posRight = Math.max(ax, tx);
       if (Math.abs(posRight - posLeft) < 14) { posLeft -= 28; posRight += 28; }
+      const badgeCenterX = (posLeft + posRight) / 2;
+      const badgeW = Math.max(86, Math.abs(posRight - posLeft) * 0.62);
+      const badgeH = 20;
+      if (
+        mx >= badgeCenterX - badgeW / 2
+        && mx <= badgeCenterX + badgeW / 2
+        && my >= ay - badgeH / 2
+        && my <= ay + badgeH / 2
+      ) return 'position-entry-info';
 
       // 진입가 앵커 (원형) ? 박스 왼쪽 진입 라인
       if (Math.hypot(mx - posLeft, my - ay) <= 14) return 'start';
@@ -5854,6 +6152,9 @@ export class SimpleChart {
           index: next.channelOffset.index + deltaIndex, // X만 변경
           price: next.channelOffset.price,              // Y 고정
         };
+        return next;
+      }
+      if (part === 'position-entry-info') {
         return next;
       }
       if (part === 'line' || part === 'body') {
@@ -6480,9 +6781,28 @@ export class SimpleChart {
             const risk   = Math.abs(entryPrice - stopPrice);
             const reward = Math.abs(targetPrice - entryPrice);
             const rr     = risk > 1e-8 ? reward / risk : 0;
+            const symbolUpper = String(this.config.symbol || '').toUpperCase();
+            const pnlCurrency = (symbolUpper === 'KOSPI' || symbolUpper === 'KOSDAQ' || symbolUpper === 'KOSPI200') ? 'KRW' : 'USD';
+            const positionCfg = ('position' in shape && shape.position)
+              ? shape.position
+              : {
+                  accountSize: 1000,
+                  riskMode: 'percent' as const,
+                  riskPercent: 25,
+                  riskAmount: 250,
+                  leverageEnabled: false,
+                  leverage: 10000,
+                };
+            const baseRiskBudget = positionCfg.riskMode === 'amount'
+              ? Math.max(0, positionCfg.riskAmount ?? 0)
+              : Math.max(0, (positionCfg.accountSize ?? 0) * ((positionCfg.riskPercent ?? 0) / 100));
+            const leverageFactor = positionCfg.leverageEnabled ? Math.max(0.1, positionCfg.leverage ?? 1) : 1;
+            const qty = risk > 1e-8 ? (baseRiskBudget / risk) * leverageFactor : 0;
+            const closePnl = qty * reward;
             const pct    = (v: number) => entryPrice !== 0
               ? ((v / Math.abs(entryPrice)) * 100).toFixed(2) + '%' : '';
             const fmt    = (v: number) => v.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const fmtMoney = (v: number) => Math.round(v).toLocaleString('ko-KR');
 
             const drawBadge = (text: string, centerX: number, y: number, fill: string) => {
               ctx.save();
@@ -6500,6 +6820,27 @@ export class SimpleChart {
               ctx.fillText(text, centerX, y + 0.5);
               ctx.restore();
             };
+            const drawDoubleLineBadge = (lineTop: string, lineBottom: string, centerX: number, centerY: number, fill: string) => {
+              ctx.save();
+              ctx.font = `600 10px ${CHART_FONT_STACK}`;
+              const w = Math.max(
+                Math.ceil(ctx.measureText(lineTop).width),
+                Math.ceil(ctx.measureText(lineBottom).width),
+              ) + 12;
+              const h = 28;
+              const x = centerX - w / 2;
+              const y = centerY - h / 2;
+              ctx.fillStyle = fill;
+              ctx.beginPath();
+              (ctx as any).roundRect(x, y, w, h, 4);
+              ctx.fill();
+              ctx.fillStyle = '#f4f8ff';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(lineTop, centerX, centerY - 6);
+              ctx.fillText(lineBottom, centerX, centerY + 7);
+              ctx.restore();
+            };
 
             // 매수(Long): 목표가(위) / 손절가(아래) 배치
             // 매도(Short): 손절가(위) / 목표가(아래) ? 방향 반전
@@ -6507,7 +6848,7 @@ export class SimpleChart {
             const tLabelY = isLong ? (profitY - 10)      : (profitBottomY + 10);
             const sLabelY = isLong ? (lossBottomY + 10)  : (lossY - 10);
             // 손익비: 진입가 라인 바로 옆
-            const rrLabelY = entryY + (isLong ? 12 : -12);
+            const rrLabelY = entryY;
             const boxCenterX = (left + right) / 2;
 
             drawBadge(`목표 ${fmt(targetPrice)}  +${pct(reward)}`, boxCenterX, tLabelY, 'rgba(31,168,141,0.90)');
@@ -6515,7 +6856,13 @@ export class SimpleChart {
 
             // 손익비: 소수점 1자리 (기본 1:1은 정수 표시)
             const rrText = rr === 1.0 ? '1 : 1' : `1 : ${rr.toFixed(1)}`;
-            drawBadge(`손익비 ${rrText}`, boxCenterX, rrLabelY, 'rgba(27,152,128,0.90)');
+            drawDoubleLineBadge(
+              `청산손익 +${fmtMoney(closePnl)} (${pct(reward)}) ${pnlCurrency}`,
+              `손익비 ${rrText}`,
+              boxCenterX,
+              rrLabelY,
+              'rgba(27,152,128,0.90)',
+            );
           }
 
           // ── 앵커 핸들 ? 선택/hover 시 표시, 라인 위에 배치 ────────────
@@ -6929,12 +7276,17 @@ export class SimpleChart {
     const isTrendlineEditMode = !this.drawingTool && (
       (selectedShape?.kind === 'trendline') || this.trendlineTextEditorEl != null
     );
+    const isChannelEditMode = !this.drawingTool && selectedShape?.kind === 'channel';
     const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
-    const shouldDrawCrosshairGuides = noDrawingInteraction || isTrendlineEditMode;
+    const isDrawingEditMode = Boolean(this.drawingTool && this.drawingTool !== 'eraser');
+    const shouldDrawCrosshairGuides = noDrawingInteraction || isTrendlineEditMode || isChannelEditMode || isDrawingEditMode;
 
     if (shouldDrawCrosshairGuides) {
+      const useBlueEditGuide = isDrawingEditMode || isChannelEditMode;
+      const guideLineColor = useBlueEditGuide ? 'rgba(47,108,255,0.90)' : 'rgba(214,219,233,0.65)';
+      const guideCenterColor = useBlueEditGuide ? 'rgba(47,108,255,0.98)' : 'rgba(255,255,255,0.92)';
       ctx.save();
-      ctx.strokeStyle = 'rgba(214,219,233,0.65)';
+      ctx.strokeStyle = guideLineColor;
       ctx.lineWidth = 1;
       ctx.setLineDash([6, 5]);
       ctx.beginPath();
@@ -6944,13 +7296,20 @@ export class SimpleChart {
       ctx.restore();
 
       ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.strokeStyle = guideCenterColor;
       ctx.lineWidth = 1.4;
       const centerLen = 10;
       ctx.beginPath();
       ctx.moveTo(solidX - centerLen, this.mouseY); ctx.lineTo(solidX + centerLen, this.mouseY);
       ctx.moveTo(solidX, this.mouseY - centerLen); ctx.lineTo(solidX, this.mouseY + centerLen);
       ctx.stroke();
+      if (useBlueEditGuide) {
+        // 드로잉 완료 전 중심 포인트 유지
+        ctx.fillStyle = '#2f6cff';
+        ctx.beginPath();
+        ctx.arc(solidX, this.mouseY, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
 
@@ -7626,6 +7985,20 @@ export class SimpleChart {
     }
 
     const hitDrawing = this.findDrawingAt(this.mouseX, this.mouseY);
+    if (
+      hitDrawing
+      && (hitDrawing.shape.kind === 'long-position' || hitDrawing.shape.kind === 'short-position')
+      && hitDrawing.part === 'position-entry-info'
+    ) {
+      this.selectedDrawingId = hitDrawing.shape.id;
+      this.selectedDrawingPart = hitDrawing.part;
+      this.drawingMoveState = null;
+      this.syncDrawingToolbar();
+      this.openPositionSettingsPopup(hitDrawing.shape);
+      this.requestOverlayDraw();
+      this.updateChartCursor();
+      return;
+    }
     const hoveredGuideTrendline = (
       !this.drawingTool
       && this.hoveredDrawingPart === 'trendline-text-guide'
@@ -8209,6 +8582,20 @@ export class SimpleChart {
       // ? 기존 드로잉 선택: 드래그해서 편집 가능
       // ??????????????????????????????????????????????????????????????????
       const hitDrawing = this.findDrawingAt(pos.x, pos.y);
+      if (
+        hitDrawing
+        && (hitDrawing.shape.kind === 'long-position' || hitDrawing.shape.kind === 'short-position')
+        && hitDrawing.part === 'position-entry-info'
+      ) {
+        this.selectedDrawingId = hitDrawing.shape.id;
+        this.selectedDrawingPart = hitDrawing.part;
+        this.drawingMoveState = null;
+        this.syncDrawingToolbar();
+        this.openPositionSettingsPopup(hitDrawing.shape);
+        this.requestOverlayDraw();
+        this.updateChartCursor();
+        return;
+      }
       if (!this.drawingTool && hitDrawing && hitDrawing.shape.kind === 'trendline' && hitDrawing.part === 'trendline-text-guide') {
         this.selectedDrawingId = hitDrawing.shape.id;
         this.selectedDrawingPart = 'trendline-text-guide';

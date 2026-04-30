@@ -36,6 +36,16 @@ export type DrawingShape = {
     sound: boolean;
     lastTriggerBar?: number;
   };
+  position?: {
+    accountSize: number;
+    accountUnit: 'default' | 'USD' | 'KRW';
+    riskMode: 'percent' | 'amount';
+    riskPercent: number;
+    riskAmount: number;
+    leverageEnabled: boolean;
+    leverage: number;
+    quantityPrecision: number;
+  };
 };
 
 export type DrawingDraft = {
@@ -51,6 +61,7 @@ export type DrawingHitPart =
   | 'start'
   | 'end'
   | 'body'
+  | 'position-entry-info'
   | 'trendline-text-guide'
   | 'fib-offset'
   | 'position-target'
