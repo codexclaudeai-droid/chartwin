@@ -422,7 +422,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let periodEndSec: number | null = null;
   let feeBps = 4;
   let slippageBps = 1;
-  let initialCapital = 1_000_000;
+  let initialCapital = 10_000;
+  let leverage = 1;
   let sideFilter: SideFilter = 'all';
   let nextRequestId = 0;
   let lastAppliedRequestId = 0;
@@ -578,7 +579,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       <option value="all">전체</option><option value="long">롱만</option><option value="short">숏만</option>
     </select>
     <span>초기자본</span>
-    <input data-k="icap" type="number" min="1" step="1" value="1000000" style="width:88px;height:24px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;">
+    <input data-k="icap" type="number" min="1" step="1" value="10000" style="width:88px;height:24px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;">
+    <span>레버리지</span>
+    <input data-k="lev" type="number" min="1" max="1000" step="1" value="1" style="width:88px;height:24px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;">
     <span>수수료(bps)</span>
     <input data-k="fee" type="number" min="0" step="0.1" value="4" style="width:88px;height:24px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;">
     <span>슬리피지(bps)</span>
@@ -586,6 +589,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   `;
   const sideSelect = settingsMenu.querySelector('[data-k="side"]') as HTMLSelectElement;
   const initialCapitalInput = settingsMenu.querySelector('[data-k="icap"]') as HTMLInputElement;
+  const leverageInput = settingsMenu.querySelector('[data-k="lev"]') as HTMLInputElement;
   const feeInput = settingsMenu.querySelector('[data-k="fee"]') as HTMLInputElement;
   const slipInput = settingsMenu.querySelector('[data-k="slip"]') as HTMLInputElement;
 
@@ -614,10 +618,69 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   periodStartInput.classList.add('strategy-report-period-input');
   periodEndInput.classList.add('strategy-report-period-input');
 
+  let settingsCloseTimer: ReturnType<typeof setTimeout> | null = null;
+  const hideSettingsMenu = () => {
+    if (settingsCloseTimer != null) {
+      clearTimeout(settingsCloseTimer);
+      settingsCloseTimer = null;
+    }
+    const isMobileWidth = Math.max(320, panel.clientWidth) < 760;
+    if (isMobileWidth && settingsMenu.style.display === 'block') {
+      settingsMenu.style.transform = 'translateY(100%)';
+      settingsMenu.style.opacity = '0';
+      settingsCloseTimer = setTimeout(() => {
+        settingsMenu.style.display = 'none';
+        settingsCloseTimer = null;
+      }, 180);
+      return;
+    }
+    settingsMenu.style.display = 'none';
+  };
+
   const closeMenus = () => {
     periodMenu.style.display = 'none';
     widgetMenu.style.display = 'none';
-    settingsMenu.style.display = 'none';
+    hideSettingsMenu();
+  };
+
+  const openSettingsMenu = () => {
+    const isMobileWidth = Math.max(320, panel.clientWidth) < 760;
+    if (isMobileWidth) {
+      settingsMenu.style.display = 'block';
+      settingsMenu.style.position = 'fixed';
+      settingsMenu.style.left = '10px';
+      settingsMenu.style.right = '10px';
+      settingsMenu.style.bottom = '8px';
+      settingsMenu.style.top = 'auto';
+      settingsMenu.style.zIndex = '3200';
+      settingsMenu.style.borderRadius = '12px';
+      settingsMenu.style.maxWidth = 'none';
+      settingsMenu.style.width = 'auto';
+      settingsMenu.style.maxHeight = '62vh';
+      settingsMenu.style.overflowY = 'auto';
+      settingsMenu.style.transform = 'translateY(100%)';
+      settingsMenu.style.opacity = '0';
+      settingsMenu.style.transition = 'transform 0.18s ease, opacity 0.18s ease';
+      requestAnimationFrame(() => {
+        settingsMenu.style.transform = 'translateY(0)';
+        settingsMenu.style.opacity = '1';
+      });
+      return;
+    }
+    settingsMenu.style.position = 'absolute';
+    settingsMenu.style.left = '0';
+    settingsMenu.style.right = '';
+    settingsMenu.style.bottom = '';
+    settingsMenu.style.top = '0';
+    settingsMenu.style.zIndex = '950';
+    settingsMenu.style.borderRadius = '8px';
+    settingsMenu.style.maxHeight = '';
+    settingsMenu.style.overflowY = '';
+    settingsMenu.style.transform = '';
+    settingsMenu.style.opacity = '';
+    settingsMenu.style.transition = '';
+    placeMenuAtButton(settingsMenu, settingsBtn);
+    settingsMenu.style.display = 'block';
   };
 
   const placeMenuAtButton = (menu: HTMLDivElement, btn: HTMLButtonElement) => {
@@ -783,11 +846,27 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const applyCapitalBasedRatios = (result: ReportResult): ReportResult => {
-    const base = Number.isFinite(initialCapital) && initialCapital > 0 ? initialCapital : null;
-    if (base == null) return result;
-    return {
+    const lever = Math.max(1, Math.min(1000, Math.floor(leverage) || 1));
+    const applied = lever === 1 ? result : {
       ...result,
-      maxDrawdownPct: (result.maxDrawdown / base) * 100,
+      equity: result.equity.map((v) => v * lever),
+      buyHold: result.buyHold.map((v) => v * lever),
+      excursion: result.excursion.map((v) => v * lever),
+      runup: result.runup.map((v) => v * lever),
+      drawdown: result.drawdown.map((v) => v * lever),
+      netProfit: result.netProfit * lever,
+      maxDrawdown: result.maxDrawdown * lever,
+      grossProfit: result.grossProfit * lever,
+      grossLoss: result.grossLoss * lever,
+      averagePnl: result.averagePnl * lever,
+      trades: result.trades.map((t) => ({ ...t, pnl: t.pnl * lever })),
+    };
+
+    const base = Number.isFinite(initialCapital) && initialCapital > 0 ? initialCapital : null;
+    if (base == null) return applied;
+    return {
+      ...applied,
+      maxDrawdownPct: (applied.maxDrawdown / base) * 100,
     };
   };
 
@@ -1561,8 +1640,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const open = settingsMenu.style.display === 'block';
     closeMenus();
     if (!open) {
-      placeMenuAtButton(settingsMenu, settingsBtn);
-      settingsMenu.style.display = 'block';
+      openSettingsMenu();
     }
   });
   shotBtn.addEventListener('click', () => {
@@ -1598,8 +1676,13 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     refresh();
   });
   initialCapitalInput.addEventListener('change', () => {
-    initialCapital = Math.max(1, Number(initialCapitalInput.value || 1_000_000));
+    initialCapital = Math.max(1, Number(initialCapitalInput.value || 10_000));
     netProfitPctBase = initialCapital;
+    refresh();
+  });
+  leverageInput.addEventListener('change', () => {
+    leverage = Math.max(1, Math.min(1000, Math.floor(Number(leverageInput.value || 1))));
+    leverageInput.value = String(leverage);
     refresh();
   });
 

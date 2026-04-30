@@ -40,20 +40,44 @@ export type RangeChartLike = {
   setVisibleAll: () => void;
   setVisibleBySeconds: (seconds: number) => void;
   setVisibleByDateRange?: (fromSec: number, toSec: number) => void;
+  setTimeframe?: (timeframe: '1m' | '5m' | '30m' | '1h' | '2h' | '1d' | '1w' | '1M') => void;
 };
 
 export function applyRangeToChart(chart: RangeChartLike, key: string): void {
-  if (key === '전체') {
-    chart.setVisibleAll();
-    return;
+  const timeframeByRange: Partial<Record<string, '1m' | '5m' | '30m' | '1h' | '2h' | '1d' | '1w' | '1M'>> = {
+    '1D': '1m',
+    '5D': '5m',
+    '1M': '30m',
+    '3M': '1h',
+    '6M': '2h',
+    '1Y': '1d',
+    '5Y': '1w',
+    '전체': '1M',
+  };
+  const secondsByRange: Partial<Record<string, number>> = {
+    '1D': 1 * 86400,
+    '5D': 5 * 86400,
+    '1M': 30 * 86400,
+    '3M': 90 * 86400,
+    '6M': 180 * 86400,
+    '1Y': 365 * 86400,
+    '5Y': (365 * 5) * 86400,
+  };
+
+  const mappedTimeframe = timeframeByRange[key];
+  if (mappedTimeframe && typeof chart.setTimeframe === 'function') {
+    chart.setTimeframe(mappedTimeframe);
+    if (key === '전체') {
+      chart.setVisibleAll();
+      return;
+    }
+    const spanSec = secondsByRange[key];
+    if (Number.isFinite(spanSec)) {
+      chart.setVisibleBySeconds(spanSec as number);
+      return;
+    }
   }
-  if (key === '입력') {
-    const val = window.prompt('범위를 입력하세요 (예: 90)', '90');
-    const days = Number(val);
-    if (!Number.isFinite(days) || days <= 0) return;
-    chart.setVisibleBySeconds(days * 86400);
-    return;
-  }
+
   if (key === 'YTD') {
     const now = new Date();
     const start = new Date(now.getFullYear(), 0, 1);
@@ -61,8 +85,11 @@ export function applyRangeToChart(chart: RangeChartLike, key: string): void {
     chart.setVisibleBySeconds(sec);
     return;
   }
-  const map: Record<string, number> = {
-    '1D': 1, '5D': 5, '1M': 30, '3M': 90, '6M': 180, '1Y': 365, '5Y': 365 * 5,
-  };
-  chart.setVisibleBySeconds((map[key] ?? 30) * 86400);
+
+  if (key === '전체') {
+    chart.setVisibleAll();
+    return;
+  }
+
+  chart.setVisibleBySeconds(secondsByRange[key] ?? (30 * 86400));
 }

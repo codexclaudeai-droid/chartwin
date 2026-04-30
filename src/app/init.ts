@@ -532,6 +532,16 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     { key: '1M', label: '1M' },
   ];
   const RANGE_BTNS = ['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', '5Y', '전체', '??'];
+  const RANGE_TO_TIMEFRAME: Partial<Record<string, TimeframeKey>> = {
+    '1D': '1m',
+    '5D': '5m',
+    '1M': '30m',
+    '3M': '1h',
+    '6M': '2h',
+    '1Y': '1d',
+    '5Y': '1w',
+    '전체': '1M',
+  };
 
   const pageUrl = new URL(window.location.href);
   const isPopout = pageUrl.searchParams.get('popout') === '1';
@@ -1526,6 +1536,15 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       rangePanelEl.appendChild(rangeGrid);
 
       const CALENDAR_SVG_MOBILE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17,10.039c-3.859,0-7,3.14-7,7,0,3.838,3.141,6.961,7,6.961s7-3.14,7-7c0-3.838-3.141-6.961-7-6.961Zm0,11.961c-2.757,0-5-2.226-5-4.961,0-2.757,2.243-5,5-5s5,2.226,5,4.961c0,2.757-2.243,5-5,5Zm1.707-4.707c.391,.391,.391,1.023,0,1.414-.195,.195-.451,.293-.707,.293s-.512-.098-.707-.293l-1-1c-.188-.188-.293-.442-.293-.707v-2c0-.552,.447-1,1-1s1,.448,1,1v1.586l.707,.707Zm5.293-10.293v2c0,.552-.447,1-1,1s-1-.448-1-1v-2c0-1.654-1.346-3-3-3H5c-1.654,0-3,1.346-3,3v1H11c.552,0,1,.448,1,1s-.448,1-1,1H2v9c0,1.654,1.346,3,3,3h4c.552,0,1,.448,1,1s-.448,1-1,1H5c-2.757,0-5-2.243-5-5V7C0,4.243,2.243,2,5,2h1V1c0-.552,.448-1,1-1s1,.448,1,1v1h8V1c0-.552,.447-1,1-1s1,.448,1,1v1h1c2.757,0,5,2.243,5,5Z"/></svg>`;
+      const rangeTooltipMap: Record<string, string> = {
+        '1D': '1분 간격',
+        '5D': '5분 간격',
+        '1M': '30분 간격',
+        '3M': '1시간 간격',
+        '6M': '2시간 간격',
+        '1Y': '1일 간격',
+        '5Y': '1주 간격',
+      };
 
       RANGE_BTNS.forEach((label) => {
         const btn = document.createElement('button');
@@ -1535,6 +1554,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           btn.title = '기간 직접 입력';
         } else {
           btn.textContent = label;
+          if (rangeTooltipMap[label]) btn.title = rangeTooltipMap[label];
         }
         btn.style.cssText = [
           'background:#1c2840', `color:${isCalendar ? '#8ab4f8' : '#c2ccdf'}`, 'border:1px solid #2e3f5c',
@@ -1564,7 +1584,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           });
         } else {
           btn.addEventListener('click', () => {
-            applyRangeToChart(getActivePane().chart, label);
+            applyRangeSelection(label);
             display_close_panel();
           });
         }
@@ -1857,8 +1877,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         bottomOffset: reportPanelHeight,
         leftInset: drawingToolbarDockWidth,
         getActivePane,
-        onApplyRange: (label) => applyRangeToChart(getActivePane().chart, label),
+        onApplyRange: (label) => applyRangeSelection(label),
         onApplyDateRange: (fromSec, toSec) => getActivePane().chart.setVisibleByDateRange?.(fromSec, toSec),
+        onGoToDateTime: (targetSec, label) => getActivePane().chart.goToDateTime?.(targetSec, label),
         onOpenTimezone: (chart, onUpdated) => openTimezoneModal(chart, onUpdated),
         formatDateWithTimezone,
         formatTimezoneLabel,
@@ -1878,12 +1899,25 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     // 모바일에서는 전략 리포트 패널 비활성화
     if (isMobile) strategyReport.setVisible(false);
     const strategyReportOpenByPane = new Map<number, boolean>();
-    const resolvePaneIdByChart = (targetChart: unknown): number | null => {
-      for (const [paneId, pane] of paneControllers.entries()) {
-        if (pane.chart === targetChart) return paneId;
-      }
-      return null;
-    };
+  const resolvePaneIdByChart = (targetChart: unknown): number | null => {
+    for (const [paneId, pane] of paneControllers.entries()) {
+      if (pane.chart === targetChart) return paneId;
+    }
+    return null;
+  };
+  const applyRangeSelection = (label: string): void => {
+    const pane = getActivePane();
+    const nextTimeframe = RANGE_TO_TIMEFRAME[label];
+    if (nextTimeframe && pane.chart.config.timeframe !== nextTimeframe) {
+      pane.chart.setTimeframe(nextTimeframe);
+      saveTimeframe(nextTimeframe);
+      void pane.reloadLiveData().finally(() => {
+        applyRangeToChart(pane.chart, label);
+      });
+      return;
+    }
+    applyRangeToChart(pane.chart, label);
+  };
     strategyReport.setVisible(false);
     window.addEventListener('chart-toolbox-layout', (event: Event) => {
       if (isMobile) return;  // 모바일: 툴바 레이아웃 이벤트 무시
@@ -2023,7 +2057,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         emitToolboxTrashCounts();
         return;
       }
-      pane.chart.setDrawingTool(toolId);
+      if (toolId === 'magnet-off' || toolId === 'magnet-soft' || toolId === 'magnet-strong') {
+        const mode = toolId === 'magnet-off' ? 'off' : toolId === 'magnet-strong' ? 'strong' : 'soft';
+        (pane.chart as any).setDrawingMagnetMode(mode);
+        pane.refreshChartUi();
+        return;
+      }
+      pane.chart.setDrawingTool(toolId === 'text' ? 'text-note' : toolId);
     });
     window.addEventListener('keydown', (event: KeyboardEvent) => {
       const pane = getActivePane();
