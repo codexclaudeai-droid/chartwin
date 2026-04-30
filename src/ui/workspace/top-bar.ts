@@ -141,6 +141,52 @@ const splitTypeByCount = (count: number): LayoutIconType => {
   return 'grid-8';
 };
 
+const TOP_BRAND_STYLE_ID = 'tradingcore-brand-flare-style';
+const TOP_BRAND_INTERVAL_FLAG = '__tradingcoreBrandFlareIntervalBound__';
+const TOP_BRAND_INTERVAL_MS = 5 * 60 * 1000;
+
+const ensureTopBrandFlareStyle = () => {
+  if (document.getElementById(TOP_BRAND_STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = TOP_BRAND_STYLE_ID;
+  style.textContent = `
+    .tc-brand-logo{
+      position:relative;
+      display:flex;
+      align-items:center;
+      gap:2px;
+      transform-origin:left center;
+    }
+    .tc-brand-logo.flare-active{
+      animation:tcBrandGrow 0.9s ease-in-out;
+    }
+    @keyframes tcBrandGrow{
+      0%{transform:scale(1);filter:brightness(1);}
+      35%{transform:scale(1.08);filter:brightness(1.18);}
+      100%{transform:scale(1);filter:brightness(1);}
+    }
+  `;
+  document.head.appendChild(style);
+};
+
+const playTopBrandFlare = (el: HTMLElement) => {
+  el.classList.remove('flare-active');
+  void el.offsetWidth;
+  el.classList.add('flare-active');
+};
+
+const setupTopBrandFlare = (el: HTMLElement) => {
+  ensureTopBrandFlareStyle();
+  playTopBrandFlare(el);
+  const w = window as typeof window & { [TOP_BRAND_INTERVAL_FLAG]?: boolean };
+  if (w[TOP_BRAND_INTERVAL_FLAG]) return;
+  w[TOP_BRAND_INTERVAL_FLAG] = true;
+  window.setInterval(() => {
+    const activeLogo = document.querySelector('.tc-brand-logo') as HTMLElement | null;
+    if (activeLogo) playTopBrandFlare(activeLogo);
+  }, TOP_BRAND_INTERVAL_MS);
+};
+
 export function createTopBar({
   app,
   splitPresets,
@@ -164,15 +210,12 @@ export function createTopBar({
   app.appendChild(topBar);
 
   const logo = document.createElement('div');
-  logo.innerHTML = `<span style="font-weight:900;font-size:14px;color:#2962ff;letter-spacing:-0.5px;">S</span>
-    <span style="font-weight:800;font-size:13px;color:#d1d4dc;margin-left:2px;">SIGMA</span>`;
+  logo.className = 'tc-brand-logo';
+  logo.innerHTML = `<span style="font-weight:800;font-size:13px;color:#ffffff;">TRADING</span>
+    <span style="font-weight:800;font-size:13px;color:#2962ff;">CORE</span>`;
   logo.style.cssText = 'margin-right:6px;flex-shrink:0;display:flex;align-items:center;';
   topBar.appendChild(logo);
-
-  const info = document.createElement('div');
-  info.textContent = '패널별 심볼/지표/전략은 각 분할 헤더에서 개별 설정됩니다.';
-  info.style.cssText = 'color:#98a0ac;font-size:11px;';
-  topBar.appendChild(info);
+  setupTopBrandFlare(logo);
 
   const rightArea = document.createElement('div');
   rightArea.style.cssText = 'display:flex;align-items:center;gap:4px;margin-left:auto;';

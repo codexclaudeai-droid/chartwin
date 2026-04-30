@@ -1230,7 +1230,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
               : `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)} ${rowArrowSvg} ${formatAmount(t.exit)}</div>`
             }
           </div>
-          <div style="color:#aab9d6;font-size:${isPhoneWidth ? '15px' : '12px'};line-height:1.22;">
+          <div style="color:#aab9d6;font-size:${isPhoneWidth ? '9px' : '7px'};line-height:1.22;">
             ${isPhoneWidth
               ? `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${entryTs}</div>
                  <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${exitTs}</div>`
