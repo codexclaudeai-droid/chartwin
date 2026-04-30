@@ -8655,6 +8655,7 @@ export class SimpleChart {
               startY: capturedPos.y,
               baseShape: this.cloneShape(dup),
             };
+            this.showToast('추세선이 복사되었습니다');
             this.syncDrawingToolbar();
             this.requestOverlayDraw();
           }, SimpleChart.LONG_PRESS_MS);
