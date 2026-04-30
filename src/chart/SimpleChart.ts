@@ -5865,6 +5865,8 @@ export class SimpleChart {
     const bx = shape.b ? this.xForIndex(shape.b.index, metrics.totalSp, metrics.candleW) : ax;
     const by = shape.b ? metrics.getY(shape.b.price) : ay;
     const pad = 8;
+    const isCoarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    const anchorHitPad = isCoarsePointer ? 20 : 8;
     const pointInPolygon = (x: number, y: number, points: Array<{ x: number; y: number }>): boolean => {
       let inside = false;
       for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
@@ -5880,11 +5882,10 @@ export class SimpleChart {
     };
 
     if (shape.kind === 'trendline') {
-      const isCoarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
       const lineHitPad = isCoarsePointer ? 22 : 16;
-      const startHit = Math.hypot(mx - ax, my - ay) <= 8;
+      const startHit = Math.hypot(mx - ax, my - ay) <= anchorHitPad;
       if (startHit) return 'start';
-      const endHit = Math.hypot(mx - bx, my - by) <= 8;
+      const endHit = Math.hypot(mx - bx, my - by) <= anchorHitPad;
       if (endHit) return 'end';
       const hasText = (shape.text ?? '').trim().length > 0;
       const isHoveredGuide = shape.id === this.hoveredDrawingId
@@ -5927,8 +5928,8 @@ export class SimpleChart {
       const a2y = metrics.getY(g.a2.price);
       const b2x = this.xForIndex(g.b2.index, metrics.totalSp, metrics.candleW);
       const b2y = metrics.getY(g.b2.price);
-      if (Math.hypot(mx - ax, my - ay) <= 8) return 'channel-a';
-      if (Math.hypot(mx - bx, my - by) <= 8) return 'channel-b';
+      if (Math.hypot(mx - ax, my - ay) <= anchorHitPad) return 'channel-a';
+      if (Math.hypot(mx - bx, my - by) <= anchorHitPad) return 'channel-b';
       const baseMidX = (ax + bx) / 2;
       const baseMidY = (ay + by) / 2;
       const paraMidX = (a2x + b2x) / 2;
@@ -5956,15 +5957,15 @@ export class SimpleChart {
       return (mx >= left && mx <= right && my >= top && my <= bottom) ? 'body' : null;
     }
     if (shape.kind === 'fib-retracement' || shape.kind === 'fib-trend') {
-      const startHit = Math.hypot(mx - ax, my - ay) <= 9;
+      const startHit = Math.hypot(mx - ax, my - ay) <= anchorHitPad;
       if (startHit) return 'start';
-      const endHit = Math.hypot(mx - bx, my - by) <= 9;
+      const endHit = Math.hypot(mx - bx, my - by) <= anchorHitPad;
       if (endHit) return 'end';
       const fibRatios = [4.236, 3.618, 2.618, 1.618, 1, 0.786, 0.618, 0.5, 0.382, 0.236, 0];
       if (shape.kind === 'fib-trend' && shape.channelOffset) {
         const cx = this.xForIndex(shape.a.index + shape.channelOffset.index, metrics.totalSp, metrics.candleW);
         const cy = metrics.getY(shape.a.price + shape.channelOffset.price);
-        if (Math.hypot(mx - cx, my - cy) <= 9) return 'fib-offset';
+        if (Math.hypot(mx - cx, my - cy) <= anchorHitPad) return 'fib-offset';
       }
       if (shape.kind === 'fib-retracement') {
         const price0 = shape.a.price;
