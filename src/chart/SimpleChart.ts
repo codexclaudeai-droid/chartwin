@@ -5686,12 +5686,12 @@ export class SimpleChart {
     const range       = Math.max(1, metrics?.range ?? Math.abs(anchor.price) * 0.02);
     // 기본 포지션 높이는 "진입가 절대값"이 아닌 "현재 보이는 차트 범위" 기준으로 계산
     // (고가 종목에서 화면을 가득 채우는 문제 방지)
-    const baseRisk    = range * (isMobileCtx ? 0.06 : 0.045);
-    const minRisk     = range * (isMobileCtx ? 0.025 : 0.02);
-    const maxRisk     = range * (isMobileCtx ? 0.14 : 0.10);
+    const baseRisk    = range * (isMobileCtx ? 0.085 : 0.07);
+    const minRisk     = range * (isMobileCtx ? 0.04 : 0.03);
+    const maxRisk     = range * (isMobileCtx ? 0.20 : 0.16);
     const defaultRisk = Math.min(maxRisk, Math.max(minRisk, baseRisk));
-    // 박스 너비: 보이는 캔들의 18% (이전 10% → 18%)
-    const defaultBars = Math.max(15, Math.round(visibleBars * 0.18));
+    // 기본 포지션 영역 박스 너비: 보이는 캔들의 18%
+    const defaultBars = Math.max(7, Math.round(visibleBars * 0.075));
     return { anchor, defaultRisk, defaultBars };
   }
 
@@ -6819,10 +6819,10 @@ export class SimpleChart {
 
             const drawBadge = (text: string, centerX: number, y: number, fill: string) => {
               ctx.save();
-              ctx.font = `600 10px ${CHART_FONT_STACK}`;
+              ctx.font = `700 12px ${CHART_FONT_STACK}`;
               ctx.textBaseline = 'middle';
               const w = Math.ceil(ctx.measureText(text).width) + 10;
-              const h = 14;  // 터치 편의성 ? 너무 작지 않게
+              const h = 18;
               const x = centerX - w / 2;
               ctx.fillStyle = fill;
               ctx.beginPath();
@@ -6835,12 +6835,12 @@ export class SimpleChart {
             };
             const drawDoubleLineBadge = (lineTop: string, lineBottom: string, centerX: number, centerY: number, fill: string) => {
               ctx.save();
-              ctx.font = `600 10px ${CHART_FONT_STACK}`;
+              ctx.font = `700 12px ${CHART_FONT_STACK}`;
               const w = Math.max(
                 Math.ceil(ctx.measureText(lineTop).width),
                 Math.ceil(ctx.measureText(lineBottom).width),
               ) + 12;
-              const h = 28;
+              const h = 34;
               const x = centerX - w / 2;
               const y = centerY - h / 2;
               ctx.fillStyle = fill;
@@ -6850,8 +6850,8 @@ export class SimpleChart {
               ctx.fillStyle = '#f4f8ff';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
-              ctx.fillText(lineTop, centerX, centerY - 6);
-              ctx.fillText(lineBottom, centerX, centerY + 7);
+              ctx.fillText(lineTop, centerX, centerY - 8);
+              ctx.fillText(lineBottom, centerX, centerY + 9);
               ctx.restore();
             };
 
@@ -7116,15 +7116,23 @@ export class SimpleChart {
     // ????????????????????????????????????????????????????????????????????????????
     // ?? 터치 드로잉 모드: 십자선 렌더링 (TradingView 스타일)
     // ????????????????????????????????????????????????????????????????????????????
-    if (this.drawingTool && this.isMouseOver) {
+    const hasTouchCrosshair = this.touchDrawingCrosshairX > 0 || this.touchDrawingCrosshairY > 0;
+    const selectedShapeForDrawingCrosshair = this.selectedDrawingId
+      ? this.drawings.find((s) => s.id === this.selectedDrawingId) ?? null
+      : null;
+    const isSelectedPositionShape = Boolean(
+      selectedShapeForDrawingCrosshair && (selectedShapeForDrawingCrosshair.kind === 'long-position' || selectedShapeForDrawingCrosshair.kind === 'short-position'),
+    );
+    const shouldShowDrawingCrosshair = Boolean(this.drawingTool || this.drawingMoveState || isSelectedPositionShape);
+    if (shouldShowDrawingCrosshair && (this.isMouseOver || hasTouchCrosshair)) {
       ctx.save();
-      // Use live mouse position in PC mode; fall back to last-touch position in touch mode.
-      const x = this.mouseX;
-      const y = this.mouseY;
+      // PC는 마우스 좌표, 터치는 마지막 드로잉 십자 좌표를 사용
+      const x = this.isMouseOver ? this.mouseX : this.touchDrawingCrosshairX;
+      const y = this.isMouseOver ? this.mouseY : this.touchDrawingCrosshairY;
 
       // 얇은 파란 점선 (전체 축)
       ctx.strokeStyle = 'rgba(64, 180, 255, 0.5)';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 0.5;
       ctx.setLineDash([5, 4]);
       ctx.beginPath();
       ctx.moveTo(x, 0); ctx.lineTo(x, height);
@@ -7292,9 +7300,12 @@ export class SimpleChart {
       (selectedShape?.kind === 'trendline') || this.trendlineTextEditorEl != null
     );
     const isChannelEditMode = !this.drawingTool && selectedShape?.kind === 'channel';
+    const isPositionEditMode = !this.drawingTool && (
+      selectedShape?.kind === 'long-position' || selectedShape?.kind === 'short-position'
+    );
     const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
     const isDrawingEditMode = Boolean(this.drawingTool && this.drawingTool !== 'eraser');
-    const shouldDrawCrosshairGuides = noDrawingInteraction || isTrendlineEditMode || isChannelEditMode || isDrawingEditMode;
+    const shouldDrawCrosshairGuides = noDrawingInteraction || isTrendlineEditMode || isChannelEditMode || isPositionEditMode || isDrawingEditMode;
 
     if (shouldDrawCrosshairGuides) {
       const useBlueEditGuide = isDrawingEditMode || isChannelEditMode;

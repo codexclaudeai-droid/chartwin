@@ -2001,29 +2001,30 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     });
 
     window.addEventListener('chart-toolbox-select', (event: Event) => {
-      const customEvent = event as CustomEvent<{ itemId?: string; includeLocked?: boolean }>;
-      const toolId = customEvent.detail?.itemId ?? null;
+      const customEvent = event as CustomEvent<{ toolId?: string; itemId?: string; drawingTool?: string; includeLocked?: boolean }>;
+      const rawToolId = customEvent.detail?.itemId ?? customEvent.detail?.toolId ?? null;
+      const directDrawingTool = customEvent.detail?.drawingTool ?? null;
       const includeLocked = Boolean(customEvent.detail?.includeLocked);
       const pane = getActivePane();
-      if (toolId === 'hide-drawings') {
+      if (rawToolId === 'hide-drawings') {
         pane.chart.setDrawingsVisible(!pane.chart.isDrawingsVisible());
         pane.refreshChartUi();
         emitToolboxTrashCounts();
         return;
       }
-      if (toolId === 'hide-indicators') {
+      if (rawToolId === 'hide-indicators') {
         pane.chart.setIndicatorsVisible(!pane.chart.isIndicatorsVisible());
         pane.refreshChartUi();
         emitToolboxTrashCounts();
         return;
       }
-      if (toolId === 'hide-patterns') {
+      if (rawToolId === 'hide-patterns') {
         pane.chart.setPatternBoxesVisible(!pane.chart.isPatternBoxesVisible());
         pane.refreshChartUi();
         emitToolboxTrashCounts();
         return;
       }
-      if (toolId === 'hide-all') {
+      if (rawToolId === 'hide-all') {
         const nextVisible = !(pane.chart.isDrawingsVisible() && pane.chart.isIndicatorsVisible() && pane.chart.isPatternBoxesVisible());
         pane.chart.setDrawingsVisible(nextVisible);
         pane.chart.setIndicatorsVisible(nextVisible);
@@ -2032,38 +2033,49 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         emitToolboxTrashCounts();
         return;
       }
-      if (toolId === 'delete-selected-drawing') {
+      if (rawToolId === 'delete-selected-drawing') {
         const nextTool = pane.chart['drawingTool'] === 'eraser' ? null : 'eraser';
         pane.chart.setDrawingTool(nextTool);
         pane.refreshChartUi();
         return;
       }
-      if (toolId === 'trash-delete-drawings') {
+      if (rawToolId === 'trash-delete-drawings') {
         pane.chart.clearAllDrawings(includeLocked);
         pane.refreshChartUi();
         emitToolboxTrashCounts();
         return;
       }
-      if (toolId === 'trash-delete-indicators') {
+      if (rawToolId === 'trash-delete-indicators') {
         pane.chart.clearAllIndicators();
         pane.refreshChartUi();
         emitToolboxTrashCounts();
         return;
       }
-      if (toolId === 'trash-delete-all') {
+      if (rawToolId === 'trash-delete-all') {
         pane.chart.clearAllDrawings(includeLocked);
         pane.chart.clearAllIndicators();
         pane.refreshChartUi();
         emitToolboxTrashCounts();
         return;
       }
-      if (toolId === 'magnet-off' || toolId === 'magnet-soft' || toolId === 'magnet-strong') {
-        const mode = toolId === 'magnet-off' ? 'off' : toolId === 'magnet-strong' ? 'strong' : 'soft';
+      if (rawToolId === 'magnet-off' || rawToolId === 'magnet-soft' || rawToolId === 'magnet-strong') {
+        const mode = rawToolId === 'magnet-off' ? 'off' : rawToolId === 'magnet-strong' ? 'strong' : 'soft';
         (pane.chart as any).setDrawingMagnetMode(mode);
         pane.refreshChartUi();
         return;
       }
-      pane.chart.setDrawingTool(toolId === 'text' ? 'text-note' : toolId);
+      if (!rawToolId) return;
+      if (directDrawingTool) {
+        pane.chart.setDrawingTool(directDrawingTool);
+        return;
+      }
+      const normalizedToolId =
+        rawToolId === 'text' ? 'text-note'
+          : rawToolId === 'trend' ? 'trendline'
+            : rawToolId === 'fibonacci' ? 'fib-retracement'
+              : rawToolId === 'forecast' ? 'measure'
+                : rawToolId;
+      pane.chart.setDrawingTool(normalizedToolId);
     });
     window.addEventListener('keydown', (event: KeyboardEvent) => {
       const pane = getActivePane();

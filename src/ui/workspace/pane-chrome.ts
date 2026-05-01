@@ -106,12 +106,12 @@ export function createPaneChrome<TKey extends string>({
   paneHeader.appendChild(symBtn);
 
   const marketPriceWrap = document.createElement('div');
-  marketPriceWrap.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0;flex-shrink:0;';
+  marketPriceWrap.style.cssText = 'display:flex;align-items:center;gap:2px;min-width:0;flex-shrink:0;width:146px;justify-content:flex-start;';
   const symPriceLabel = document.createElement('span');
-  symPriceLabel.style.cssText = 'font-size:15px;font-weight:800;color:#9aa7c1;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;';
+  symPriceLabel.style.cssText = 'font-size:15px;font-weight:800;color:#9aa7c1;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;width:84px;display:inline-block;text-align:left;flex-shrink:0;';
   symPriceLabel.textContent = '--';
   const symChangeWrap = document.createElement('span');
-  symChangeWrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1;gap:1px;width:68px;flex-shrink:0;';
+  symChangeWrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1;gap:1px;width:58px;flex-shrink:0;';
   const symChangeMetaLabel = document.createElement('span');
   symChangeMetaLabel.style.cssText = 'font-size:9px;color:#7f889a;font-weight:600;line-height:1;';
   symChangeMetaLabel.textContent = '24h';
@@ -245,6 +245,8 @@ export function createPaneChrome<TKey extends string>({
       paneHeader.style.gap = '5px';
       paneHeader.style.padding = '0 5px';
       symBtn.style.maxWidth = '50%';
+      marketPriceWrap.style.width = '142px';
+      symPriceLabel.style.width = '82px';
       symPriceLabel.style.display = '';
       symChangeWrap.style.display = '';
       tfSelect.style.fontSize = '10px';
@@ -262,6 +264,8 @@ export function createPaneChrome<TKey extends string>({
       paneHeader.style.gap = '6px';
       paneHeader.style.padding = '0 7px';
       symBtn.style.maxWidth = '44%';
+      marketPriceWrap.style.width = '146px';
+      symPriceLabel.style.width = '84px';
       symPriceLabel.style.display = '';
       symChangeWrap.style.display = '';
       tfSelect.style.fontSize = '11px';
@@ -309,4 +313,3 @@ export function createPaneChrome<TKey extends string>({
     refreshSymbolVisual,
   };
 }
-

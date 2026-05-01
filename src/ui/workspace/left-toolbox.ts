@@ -1,12 +1,12 @@
 ﻿const iconStroke = '#d5deef';
-const mobileBottomDrawingIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="#ffffff"><path d="M9,16h1.59c1.07,0,2.07-.42,2.83-1.17L23.12,5.12c.57-.57,.88-1.32,.88-2.12s-.31-1.55-.88-2.12c-1.17-1.17-3.07-1.17-4.24,0L9.17,10.59c-.76,.76-1.17,1.76-1.17,2.83v1.59c0,.55,.45,1,1,1ZM21.71,2.29c.19,.19,.29,.44,.29,.71s-.1,.52-.29,.71l-1.29,1.29-1.41-1.41,1.29-1.29c.39-.39,1.02-.39,1.41,0ZM10,13.41c0-.53,.21-1.04,.59-1.41l7-7,1.41,1.41-7,7c-.38,.38-.88,.59-1.41,.59h-.59v-.59Zm14,9.59c0,.55-.45,1-1,1-1.54,0-2.29-1.12-2.83-1.95-.5-.75-.75-1.05-1.17-1.05-.51,0-.9,.44-1.51,1.15-.7,.83-1.57,1.85-3.03,1.85s-2.32-1.03-3-1.87c-.58-.7-.96-1.13-1.46-1.13-.39,0-.63,.25-1.16,.91-.72,.88-1.71,2.09-3.84,2.09-2.76,0-5-2.24-5-5s2.24-5,5-5c.55,0,1,.45,1,1s-.45,1-1,1c-1.65,0-3,1.35-3,3s1.35,3,3,3c1.18,0,1.67-.6,2.29-1.36,.6-.73,1.34-1.64,2.71-1.64,1.47,0,2.32,1.03,3,1.87,.58,.7,.96,1.13,1.46,1.13s.9-.44,1.51-1.15c.7-.83,1.57-1.85,3.03-1.85s2.29,1.12,2.83,1.95c.5,.75,.75,1.05,1.17,1.05,.55,0,1,.45,1,1Z"/></svg>`;
-const trendToolDefaultIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="18" x2="18" y2="4"></line><circle cx="4" cy="18" r="1.7"></circle><circle cx="18" cy="4" r="1.7"></circle></svg>`;
-const eyeHideIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.7"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`;
-const eyeShowIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.7"></circle></svg>`;
-const magnetStrongIcon = `<svg viewBox="0 0 512 512" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="32"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="32"></path><line x1="192" y1="464" x2="192" y2="416" stroke-width="32"></line><line x1="90.18" y1="421.82" x2="124.12" y2="387.88" stroke-width="32"></line><line x1="48" y1="320" x2="96" y2="320" stroke-width="32"></line><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="32"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="32"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="32"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="32"></line></g></svg>`;
-const magnetSoftIcon = `<svg viewBox="0 0 512 512" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="32"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="32"></path><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="32"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="32"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="32"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="32"></line></g></svg>`;
-const magnetOffIcon = `<svg viewBox="0 0 512 512" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="32"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="32"></path><line x1="192" y1="464" x2="192" y2="416" stroke-width="32"></line><line x1="90.18" y1="421.82" x2="124.12" y2="387.88" stroke-width="32"></line><line x1="48" y1="320" x2="96" y2="320" stroke-width="32"></line><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="32"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="32"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="32"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="32"></line></g><line x1="80" y1="432" x2="432" y2="80" stroke-width="34"></line></svg>`;
-const eraserIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="#ffffff" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.5 13.5 6a2.1 2.1 0 0 1 3 0l3.5 3.5a2.1 2.1 0 0 1 0 3L13 19.5H7.8a2.8 2.8 0 0 1-2-.8l-1-1a2.8 2.8 0 0 1-.8-2z"></path><line x1="11.5" y1="19.5" x2="20.5" y2="19.5"></line></svg>`;
+const mobileBottomDrawingIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#ffffff"><path d="M9,16h1.59c1.07,0,2.07-.42,2.83-1.17L23.12,5.12c.57-.57,.88-1.32,.88-2.12s-.31-1.55-.88-2.12c-1.17-1.17-3.07-1.17-4.24,0L9.17,10.59c-.76,.76-1.17,1.76-1.17,2.83v1.59c0,.55,.45,1,1,1ZM21.71,2.29c.19,.19,.29,.44,.29,.71s-.1,.52-.29,.71l-1.29,1.29-1.41-1.41,1.29-1.29c.39-.39,1.02-.39,1.41,0ZM10,13.41c0-.53,.21-1.04,.59-1.41l7-7,1.41,1.41-7,7c-.38,.38-.88,.59-1.41,.59h-.59v-.59Zm14,9.59c0,.55-.45,1-1,1-1.54,0-2.29-1.12-2.83-1.95-.5-.75-.75-1.05-1.17-1.05-.51,0-.9,.44-1.51,1.15-.7,.83-1.57,1.85-3.03,1.85s-2.32-1.03-3-1.87c-.58-.7-.96-1.13-1.46-1.13-.39,0-.63,.25-1.16,.91-.72,.88-1.71,2.09-3.84,2.09-2.76,0-5-2.24-5-5s2.24-5,5-5c.55,0,1,.45,1,1s-.45,1-1,1c-1.65,0-3,1.35-3,3s1.35,3,3,3c1.18,0,1.67-.6,2.29-1.36,.6-.73,1.34-1.64,2.71-1.64,1.47,0,2.32,1.03,3,1.87,.58,.7,.96,1.13,1.46,1.13s.9-.44,1.51-1.15c.7-.83,1.57-1.85,3.03-1.85s2.29,1.12,2.83,1.95c.5,.75,.75,1.05,1.17,1.05,.55,0,1,.45,1,1Z"/></svg>`;
+const trendToolDefaultIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5.2" y1="16.8" x2="16.8" y2="5.2"></line><circle cx="4" cy="18" r="1.7" fill="none"></circle><circle cx="18" cy="4" r="1.7" fill="none"></circle></svg>`;
+const eyeHideIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.7"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`;
+const eyeShowIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.7"></circle></svg>`;
+const magnetStrongIcon = `<svg viewBox="0 0 512 512" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="21"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="21"></path><line x1="192" y1="464" x2="192" y2="416" stroke-width="21"></line><line x1="90.18" y1="421.82" x2="124.12" y2="387.88" stroke-width="21"></line><line x1="48" y1="320" x2="96" y2="320" stroke-width="21"></line><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="21"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="21"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="21"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="21"></line></g></svg>`;
+const magnetSoftIcon = `<svg viewBox="0 0 512 512" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="21"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="21"></path><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="21"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="21"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="21"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="21"></line></g></svg>`;
+const magnetOffIcon = `<svg viewBox="0 0 512 512" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="21"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="21"></path><line x1="192" y1="464" x2="192" y2="416" stroke-width="21"></line><line x1="90.18" y1="421.82" x2="124.12" y2="387.88" stroke-width="21"></line><line x1="48" y1="320" x2="96" y2="320" stroke-width="21"></line><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="21"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="21"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="21"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="21"></line></g><line x1="80" y1="432" x2="432" y2="80" stroke-width="21"></line></svg>`;
+const eraserIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#ffffff" stroke="#ffffff" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.5 13.5 6a2.1 2.1 0 0 1 3 0l3.5 3.5a2.1 2.1 0 0 1 0 3L13 19.5H7.8a2.8 2.8 0 0 1-2-.8l-1-1a2.8 2.8 0 0 1-.8-2z"></path><line x1="11.5" y1="19.5" x2="20.5" y2="19.5"></line></svg>`;
 
 type ToolboxItem = {
   id: string;
@@ -46,13 +46,13 @@ const tools: ToolboxTool[] = [
             {
               id: 'trendline',
               label: '추세선',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="18" x2="18" y2="4"></line><circle cx="4" cy="18" r="1.7"></circle><circle cx="18" cy="4" r="1.7"></circle></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><line x1="5.2" y1="16.8" x2="16.8" y2="5.2"></line><circle cx="4" cy="18" r="1.7" fill="none"></circle><circle cx="18" cy="4" r="1.7" fill="none"></circle></svg>`,
               shortcut: 'Alt + T',
             },
             {
               id: 'hline',
               label: '수평선',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line></svg>`,
               shortcut: 'Alt + H',
             },
           ],
@@ -63,7 +63,7 @@ const tools: ToolboxTool[] = [
             {
               id: 'channel',
               label: '평행채널',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.7" stroke-linecap="round"><line x1="5" y1="8" x2="19" y2="3"></line><line x1="5" y1="16" x2="19" y2="11"></line></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><line x1="5" y1="8" x2="19" y2="3"></line><line x1="5" y1="16" x2="19" y2="11"></line></svg>`,
             },
           ],
         },
@@ -73,7 +73,7 @@ const tools: ToolboxTool[] = [
   {
     id: 'fibonacci',
     label: '피보나치',
-    icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="19" x2="20" y2="5"></line><line x1="4" y1="15" x2="9" y2="15"></line><line x1="7" y1="12" x2="12" y2="12"></line><line x1="10" y1="9" x2="15" y2="9"></line><line x1="13" y1="6" x2="18" y2="6"></line></svg>`,
+    icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="14" x2="17.5" y2="14"></line><line x1="20.5" y1="14" x2="21" y2="14"></line><line x1="3" y1="19" x2="3.3" y2="19"></line><line x1="6.7" y1="19" x2="21" y2="19"></line><line x1="5" y1="19" x2="19" y2="14" stroke-dasharray="4 3"></line><circle cx="5" cy="19" r="1.7" fill="none"></circle><circle cx="19" cy="14" r="1.7" fill="none"></circle></svg>`,
     menu: {
       title: '피보나치',
       sections: [
@@ -83,12 +83,12 @@ const tools: ToolboxTool[] = [
             {
               id: 'fib-retracement',
               label: '피보나치 되돌림',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.2" cy="6.2" r="1.5"></circle><circle cx="4.2" cy="17.8" r="1.5"></circle><line x1="5.7" y1="6.8" x2="10.2" y2="10.2"></line><line x1="5.7" y1="17.2" x2="10.2" y2="13.8"></line><line x1="8.8" y1="6.6" x2="21" y2="6.6"></line><line x1="7.4" y1="11.8" x2="21" y2="11.8"></line><line x1="8.8" y1="17.1" x2="21" y2="17.1"></line></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="14" x2="17.5" y2="14"></line><line x1="20.5" y1="14" x2="21" y2="14"></line><line x1="3" y1="19" x2="3.3" y2="19"></line><line x1="6.7" y1="19" x2="21" y2="19"></line><line x1="5" y1="19" x2="19" y2="14" stroke-dasharray="4 3"></line><circle cx="5" cy="19" r="1.7" fill="none"></circle><circle cx="19" cy="14" r="1.7" fill="none"></circle></svg>`,
             },
             {
               id: 'fib-trend',
               label: '추세기반 피보나치',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.2" cy="6.1" r="1.5"></circle><circle cx="4.2" cy="17.9" r="1.5"></circle><line x1="5.8" y1="6.8" x2="11.6" y2="10.5"></line><line x1="5.8" y1="17.2" x2="11.6" y2="13.5"></line><line x1="10.6" y1="6.7" x2="21" y2="6.7"></line><line x1="10.6" y1="11.9" x2="21" y2="11.9"></line><line x1="10.6" y1="17.1" x2="21" y2="17.1"></line></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"></line><line x1="3" y1="9" x2="10.3" y2="9"></line><line x1="13.7" y1="9" x2="21" y2="9"></line><line x1="3" y1="14" x2="17.5" y2="14"></line><line x1="20.5" y1="14" x2="21" y2="14"></line><line x1="6.3" y1="21.0" x2="10.8" y2="10.2" stroke-dasharray="4 3"></line><line x1="13.5" y1="9.9" x2="17.5" y2="13.1" stroke-dasharray="4 3"></line><circle cx="5" cy="22" r="1.7" fill="none"></circle><circle cx="12" cy="9" r="1.7" fill="none"></circle><circle cx="19" cy="14" r="1.7" fill="none"></circle></svg>`,
             },
           ],
         },
@@ -98,7 +98,7 @@ const tools: ToolboxTool[] = [
   {
     id: 'forecast',
     label: '예측',
-    icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-6 4 3 7-8"></path><polyline points="18 6 20 6 20 8"></polyline><polyline points="6 18 4 18 4 16"></polyline></svg>`,
+    icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-6 4 3 7-8"></path><polyline points="18 6 20 6 20 8"></polyline><polyline points="6 18 4 18 4 16"></polyline></svg>`,
     menu: {
       title: '예측',
       sections: [
@@ -108,12 +108,12 @@ const tools: ToolboxTool[] = [
             {
               id: 'long-position',
               label: '매수 포지션',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round"><path d="M5 16h14"></path><path d="M12 19V5"></path><path d="M9 8l3-3 3 3"></path></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><path d="M5 16h14"></path><path d="M12 19V5"></path><path d="M9 8l3-3 3 3"></path></svg>`,
             },
             {
               id: 'short-position',
               label: '매도 포지션',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round"><path d="M5 8h14"></path><path d="M12 5v14"></path><path d="M9 16l3 3 3-3"></path></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><path d="M5 8h14"></path><path d="M12 5v14"></path><path d="M9 16l3 3 3-3"></path></svg>`,
             },
           ],
         },
@@ -123,12 +123,12 @@ const tools: ToolboxTool[] = [
   {
     id: 'text',
     label: '텍스트입력',
-    icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="6" x2="19" y2="6"></line><line x1="12" y1="6" x2="12" y2="19"></line></svg>`,
+    icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="6" x2="19" y2="6"></line><line x1="12" y1="6" x2="12" y2="19"></line></svg>`,
   },
   {
     id: 'measure',
     label: '재기',
-    icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16.5 16.5 4l3.5 3.5L7.5 20z"></path><path d="M8.2 12.3l2.5 2.5M11.1 9.4l2.5 2.5M14 6.5l2.5 2.5"></path></svg>`,
+    icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16.5 16.5 4l3.5 3.5L7.5 20z"></path><path d="M8.2 12.3l2.5 2.5M11.1 9.4l2.5 2.5M14 6.5l2.5 2.5"></path></svg>`,
   },
   {
     id: 'magnet',
@@ -168,7 +168,7 @@ const tools: ToolboxTool[] = [
             {
               id: 'hide-indicators',
               label: '지표 감추기',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.7"><line x1="5" y1="17" x2="9" y2="11"></line><line x1="10" y1="14" x2="14" y2="8"></line><line x1="15" y1="12" x2="19" y2="6"></line><line x1="4" y1="20" x2="20" y2="4"></line></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0"><line x1="5" y1="17" x2="9" y2="11"></line><line x1="10" y1="14" x2="14" y2="8"></line><line x1="15" y1="12" x2="19" y2="6"></line><line x1="4" y1="20" x2="20" y2="4"></line></svg>`,
             },
             {
               id: 'hide-patterns',
@@ -178,7 +178,7 @@ const tools: ToolboxTool[] = [
             {
               id: 'hide-all',
               label: '모두 감추기',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="3"></rect><line x1="4" y1="20" x2="20" y2="4"></line></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0"><rect x="4" y="4" width="16" height="16" rx="3"></rect><line x1="4" y1="20" x2="20" y2="4"></line></svg>`,
             },
           ],
         },
@@ -193,7 +193,7 @@ const tools: ToolboxTool[] = [
   {
     id: 'trash',
     label: '휴지통',
-    icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="${iconStroke}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6m3 0V4h8v2"></path></svg>`,
+    icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6m3 0V4h8v2"></path></svg>`,
     menu: {
       title: '휴지통',
       sections: [
@@ -203,17 +203,17 @@ const tools: ToolboxTool[] = [
             {
               id: 'trash-delete-drawings',
               label: '0 드로잉 없애기',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6m3 0V4h8v2"></path></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6m3 0V4h8v2"></path></svg>`,
             },
             {
               id: 'trash-delete-indicators',
               label: '0 인디케이터 없애기',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.8" stroke-linecap="round"><line x1="5" y1="17" x2="9" y2="11"></line><line x1="10" y1="14" x2="14" y2="8"></line><line x1="15" y1="12" x2="19" y2="6"></line></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><line x1="5" y1="17" x2="9" y2="11"></line><line x1="10" y1="14" x2="14" y2="8"></line><line x1="15" y1="12" x2="19" y2="6"></line></svg>`,
             },
             {
               id: 'trash-delete-all',
               label: '0 드로잉 & 0 인디케이터 없애기',
-              icon: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6m3 0V4h8v2"></path><line x1="6" y1="16" x2="18" y2="8"></line></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6m3 0V4h8v2"></path><line x1="6" y1="16" x2="18" y2="8"></line></svg>`,
             },
           ],
         },
@@ -223,6 +223,13 @@ const tools: ToolboxTool[] = [
 ];
 
 export function createLeftToolbox(workspace: HTMLElement): void {
+  const normalizeDrawingTool = (toolId: string): string => (
+    toolId === 'text' ? 'text-note'
+      : toolId === 'trend' ? 'trendline'
+        : toolId === 'fibonacci' ? 'fib-retracement'
+          : toolId === 'forecast' ? 'measure'
+            : toolId
+  );
   if (!document.getElementById('toolbox-chevron-motion-style')) {
     const style = document.createElement('style');
     style.id = 'toolbox-chevron-motion-style';
@@ -314,6 +321,11 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   const toolButtonMap = new Map<string, HTMLButtonElement>();
   const toolIconWrapMap = new Map<string, HTMLSpanElement>();
   const selectedToolIconMap = new Map<string, string>();
+  const selectedMenuItemMap = new Map<string, { id: string; label: string }>([
+    ['trend', { id: 'trendline', label: '추세선' }],
+    ['fibonacci', { id: 'fib-retracement', label: '피보나치 되돌림' }],
+    ['forecast', { id: 'long-position', label: '매수 포지션' }],
+  ]);
   const toolChevronMap = new Map<string, HTMLSpanElement>();
 
   const emitLayoutWidth = () => {
@@ -347,7 +359,8 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   };
   const getMagnetModeIcon = () => {
     if (magnetMode === 'off') return magnetOffIcon;
-    return magnetStrongIcon;
+    if (magnetMode === 'strong') return magnetStrongIcon;
+    return magnetSoftIcon;
   };
   const syncMagnetToolIcon = () => {
     const nextIcon = getMagnetModeIcon();
@@ -358,7 +371,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   const syncMagnetButtonStyle = () => {
     const magnetBtn = toolButtonMap.get('magnet');
     if (!magnetBtn) return;
-    applyToolButtonActiveStyle(magnetBtn, magnetMode !== 'off');
+    applyToolButtonActiveStyle(magnetBtn, activeToolId === 'magnet');
   };
 
   const clearActiveStyles = () => {
@@ -369,7 +382,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       }
       const chev = toolChevronMap.get(candidate.id);
       if (chev) {
-        chev.style.opacity = (candidate.id === 'hide' || candidate.id === 'magnet') ? '1' : '0';
+        chev.style.opacity = '0';
         chev.style.transform = 'rotate(0deg)';
       }
     });
@@ -500,9 +513,9 @@ export function createLeftToolbox(workspace: HTMLElement): void {
           : tool.id === 'hide' && item.id === 'hide-patterns'
             ? getHidePatternsAction().icon
           : item.icon;
-        const baseIcon = resolvedIcon ?? `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${iconStroke}" stroke-width="2"><circle cx="12" cy="12" r="2.2"></circle></svg>`;
+        const baseIcon = resolvedIcon ?? `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0"><circle cx="12" cy="12" r="2.2"></circle></svg>`;
         itemIcon.innerHTML = baseIcon.replaceAll(iconStroke, 'currentColor');
-        itemIcon.style.cssText = 'width:15px;height:15px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:#26272b;opacity:1;';
+        itemIcon.style.cssText = 'width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:#26272b;opacity:1;';
         const leftWrap = document.createElement('span');
         leftWrap.style.cssText = 'display:inline-flex;align-items:center;gap:8px;min-width:0;';
         const itemLabel = document.createElement('span');
@@ -543,6 +556,9 @@ export function createLeftToolbox(workspace: HTMLElement): void {
             patternBoxesVisible = !patternBoxesVisible;
             syncHideToolIcon();
           } else if (tool.id !== 'trash' && item.icon) {
+            if (tool.id === 'trend' || tool.id === 'fibonacci' || tool.id === 'forecast') {
+              selectedMenuItemMap.set(tool.id, { id: item.id, label: resolvedLabel });
+            }
             if (tool.id === 'trend' && isMobileViewport) {
               selectedToolIconMap.delete(tool.id);
               const iconWrap = toolIconWrapMap.get(tool.id);
@@ -557,6 +573,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
             detail: {
               toolId: tool.id,
               itemId: item.id,
+              drawingTool: normalizeDrawingTool(item.id),
               label: resolvedLabel,
               includeLocked: trashDeleteLocked,
             },
@@ -635,7 +652,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     btn.type = 'button';
     btn.title = tool.label;
     const iconWrap = document.createElement('span');
-    iconWrap.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;pointer-events:none;';
+    iconWrap.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;pointer-events:none;';
     iconWrap.innerHTML = selectedToolIconMap.get(tool.id) ?? tool.icon;
     btn.style.cssText = [
       'width:34px',
@@ -655,15 +672,14 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     btn.appendChild(iconWrap);
     const chevron = document.createElement('span');
     if (tool.menu) {
-      chevron.innerHTML = `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="${iconStroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>`;
+      chevron.innerHTML = `<svg viewBox="0 0 24 24" width="10" height="13" fill="none" stroke="${iconStroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>`;
       chevron.className = 'toolbox-tool-chevron';
       chevron.style.cssText = [
         'position:absolute',
-        'right:-11px',
-        'top:50%',
-        'width:10px',
-        'height:10px',
-        'margin-top:-5px',
+        'right:-14px',
+        'top:0',
+        'width:16px',
+        'height:34px',
         'display:flex',
         'align-items:center',
         'justify-content:center',
@@ -674,9 +690,6 @@ export function createLeftToolbox(workspace: HTMLElement): void {
         'transition:opacity 150ms ease, transform 180ms ease',
         'pointer-events:auto',
       ].join(';');
-      if (tool.id === 'hide' || tool.id === 'magnet') {
-        chevron.style.opacity = '1';
-      }
       btn.appendChild(chevron);
       toolChevronMap.set(tool.id, chevron);
       const chevronSvg = chevron.querySelector('svg') as SVGElement | null;
@@ -691,8 +704,19 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       chevron.addEventListener('mouseenter', (event) => {
         event.stopPropagation();
         startChevronWiggle();
+        const isPinnedActive = tool.id === 'delete-selected-drawing' && eraserModeActive;
+        if (activeToolId !== tool.id && !isPinnedActive) {
+          btn.style.background = '#25324c';
+          btn.style.borderColor = '#42608f';
+        }
       });
-      chevron.addEventListener('mouseleave', stopChevronWiggle);
+      chevron.addEventListener('mouseleave', () => {
+        stopChevronWiggle();
+        const isPinnedActive = tool.id === 'delete-selected-drawing' && eraserModeActive;
+        if (activeToolId !== tool.id && !isPinnedActive) {
+          applyToolButtonActiveStyle(btn, false);
+        }
+      });
       btn.addEventListener('mouseleave', stopChevronWiggle);
     }
 
@@ -716,7 +740,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       if (activeToolId !== tool.id && !isPinnedActive) {
         applyToolButtonActiveStyle(btn, false);
         const c = toolChevronMap.get(tool.id);
-        if (c) c.style.opacity = (tool.id === 'hide' || tool.id === 'magnet') ? '1' : '0';
+        if (c) c.style.opacity = '0';
       }
       if (tool.id === 'measure') {
         measureHint.style.display = 'none';
@@ -747,7 +771,12 @@ export function createLeftToolbox(workspace: HTMLElement): void {
         clearActiveStyles();
         renderMenu(null);
         window.dispatchEvent(new CustomEvent('chart-toolbox-select', {
-          detail: { toolId: tool.id, itemId: tool.id, label: tool.label },
+          detail: {
+            toolId: tool.id,
+            itemId: tool.id,
+            drawingTool: normalizeDrawingTool(tool.id),
+            label: tool.label,
+          },
         }));
         updateRailVisibility();
         return;
@@ -780,6 +809,35 @@ export function createLeftToolbox(workspace: HTMLElement): void {
             toolId: tool.id,
             itemId: magnetMode === 'off' ? 'magnet-off' : 'magnet-soft',
             label: magnetMode === 'off' ? '자석 끄기' : '자석 약하게',
+            includeLocked: trashDeleteLocked,
+          },
+        }));
+        updateRailVisibility();
+        return;
+      }
+      if (!clickedChevron && tool.menu && (tool.id === 'trend' || tool.id === 'fibonacci' || tool.id === 'forecast')) {
+        const selected = selectedMenuItemMap.get(tool.id);
+        const defaultItemId = selected?.id
+          ?? (tool.id === 'trend' ? 'trendline'
+            : tool.id === 'fibonacci' ? 'fib-retracement'
+              : 'long-position');
+        const defaultItem = tool.menu.sections
+          .flatMap((section) => section.items)
+          .find((item) => item.id === defaultItemId);
+        if (defaultItem?.icon) {
+          selectedToolIconMap.set(tool.id, defaultItem.icon);
+          const iconWrap = toolIconWrapMap.get(tool.id);
+          if (iconWrap) iconWrap.innerHTML = defaultItem.icon;
+        }
+        activeToolId = null;
+        clearActiveStyles();
+        renderMenu(null);
+        window.dispatchEvent(new CustomEvent('chart-toolbox-select', {
+          detail: {
+            toolId: tool.id,
+            itemId: defaultItemId,
+            drawingTool: normalizeDrawingTool(defaultItemId),
+            label: defaultItem?.label ?? tool.label,
             includeLocked: trashDeleteLocked,
           },
         }));
@@ -891,4 +949,6 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   syncHideToolIcon();
   emitLayoutWidth();
 }
+
+
 
