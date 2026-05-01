@@ -566,6 +566,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   let monitorMode: 'single' | 'multi' = 'single';
   let refreshTopControlIcons = () => {};
   let refreshStrategyReport = () => {};
+  let setTopBarSignalNotification = (_count: number) => {};
+  let onSignalNotificationClick = () => {};
+  const acknowledgedSignalCountByPane = new Map<number, number>();
 
   const topBarHeight = isPopout ? 0 : 40;
   // 모바일: 좌측 툴바 숨김 (width=0), 하단바도 숨김
@@ -1451,8 +1454,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       },
       isPaneMaximized: () => paneState.maximizedPaneId !== null,
       onExitMaximize: exitMaximize,
+      onClickSignalNotification: () => onSignalNotificationClick(),
     });
     refreshTopControlIcons = topBarControls.refreshTopControlIcons;
+    setTopBarSignalNotification = topBarControls.setSignalNotification;
 
     if (isMobile) {
       // ??????????????????????????????????????????????????????????????????????
@@ -1761,7 +1766,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       tzWrap.style.cssText = 'margin-left:auto;display:flex;align-items:center;gap:8px;padding-right:4px;flex-shrink:0;';
 
       const clockEl = document.createElement('span');
-      clockEl.style.color = '#d1d4dc';
+      clockEl.style.cssText = 'color:#d1d4dc;font-size:11px;line-height:1;';
 
       const tzBtn = document.createElement('button');
       tzBtn.type = 'button';
@@ -1899,6 +1904,43 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     // 모바일에서는 전략 리포트 패널 비활성화
     if (isMobile) strategyReport.setVisible(false);
     const strategyReportOpenByPane = new Map<number, boolean>();
+    const getSignalEventCountByPane = (paneId: number): number => {
+      const pane = paneControllers.get(paneId) ?? ensurePane(paneId);
+      const strategyName = pane.chart.getActiveStrategyName();
+      if (!strategyName) return 0;
+      const series = pane.chart.getStrategySignalSeries();
+      if (!Array.isArray(series) || !series.length) return 0;
+      return series.reduce<number>((acc, value) => (Number(value) !== 0 ? acc + 1 : acc), 0);
+    };
+    const refreshSignalNotification = () => {
+      const paneId = paneState.activePaneId;
+      const totalSignals = getSignalEventCountByPane(paneId);
+      const acknowledged = acknowledgedSignalCountByPane.get(paneId) ?? 0;
+      const unreadCount = Math.max(0, totalSignals - acknowledged);
+      setTopBarSignalNotification(unreadCount);
+      strategyReport.setTradeViewAlertActive(unreadCount > 0);
+    };
+    onSignalNotificationClick = () => {
+      const paneId = paneState.activePaneId;
+      const pane = getActivePane();
+      const hasActiveStrategy = Boolean(pane.chart.getActiveStrategyName());
+      if (!hasActiveStrategy) {
+        setTopBarSignalNotification(0);
+        strategyReport.setTradeViewAlertActive(false);
+        return;
+      }
+      strategyReportOpenByPane.set(paneId, true);
+      strategyReport.setVisible(true);
+      strategyReport.refresh();
+      strategyReport.openTradesTab();
+      acknowledgedSignalCountByPane.set(paneId, getSignalEventCountByPane(paneId));
+      refreshSignalNotification();
+    };
+    window.addEventListener('chart-signal-trade-viewed', () => {
+      const paneId = paneState.activePaneId;
+      acknowledgedSignalCountByPane.set(paneId, getSignalEventCountByPane(paneId));
+      refreshSignalNotification();
+    });
   const resolvePaneIdByChart = (targetChart: unknown): number | null => {
     for (const [paneId, pane] of paneControllers.entries()) {
       if (pane.chart === targetChart) return paneId;
@@ -1961,6 +2003,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (shouldOpen) {
         strategyReport.refresh();
       }
+      refreshSignalNotification();
     };
     startManagedInterval(() => {
       refreshStrategyReport();

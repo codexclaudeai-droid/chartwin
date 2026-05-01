@@ -624,7 +624,7 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
   const tzWrap = document.createElement('div');
   tzWrap.style.cssText = 'display:flex;align-items:center;gap:8px;';
   const clockEl = document.createElement('span');
-  clockEl.style.color = '#d1d4dc';
+  clockEl.style.cssText = 'color:#d1d4dc;font-size:11px;line-height:1;';
   const tzBtn = document.createElement('button');
   tzBtn.type = 'button';
   tzBtn.style.cssText = 'background:#1c2030;color:#d1d4dc;border:1px solid #2a2e3e;border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer;';

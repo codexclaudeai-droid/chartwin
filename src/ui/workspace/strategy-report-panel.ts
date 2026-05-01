@@ -405,6 +405,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   setVisible: (visible: boolean) => void;
   isVisible: () => boolean;
   setLeftInset: (left: number) => void;
+  openTradesTab: () => void;
+  setTradeViewAlertActive: (active: boolean) => void;
 } {
   ensurePeriodPickerStyle();
   const headerHeight = 34;
@@ -431,6 +433,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let timelineTimes: number[] = [];
   let netProfitPctBase: number | null = null;
   let latestMeta = { symbol: '', timeframe: '', strategyName: '전략 없음' };
+  let tradeViewAlertActive = false;
   const sectionOpen: Record<Exclude<WidgetKey, 'equity'>, boolean> = {
     performance: true,
     tradeAnalysis: true,
@@ -445,6 +448,48 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const worker = createReportWorker();
+  const ensureTradeViewAlertStyle = () => {
+    if (document.getElementById('strategy-report-trade-view-alert-style')) return;
+    const style = document.createElement('style');
+    style.id = 'strategy-report-trade-view-alert-style';
+    style.textContent = `
+      @keyframes strategyTradeViewAlertSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes strategyTradeViewInnerSweep {
+        0% { transform: translateX(-130%); opacity: 0; }
+        20% { opacity: 0.9; }
+        55% { opacity: 0.7; }
+        100% { transform: translateX(130%); opacity: 0; }
+      }
+      @keyframes strategyTradeViewInnerPulse {
+        0% { background-color: #1b2a43; box-shadow: inset 0 0 0 1px rgba(79,121,201,0.35); }
+        50% { background-color: #233a5d; box-shadow: inset 0 0 0 1px rgba(128,186,255,0.55), 0 0 8px rgba(79,140,255,0.28); }
+        100% { background-color: #1b2a43; box-shadow: inset 0 0 0 1px rgba(79,121,201,0.35); }
+      }
+      .strategy-trade-view-alert {
+        position: relative;
+        overflow: hidden;
+        border-color: #4f79c9 !important;
+        animation: strategyTradeViewInnerPulse 1.6s ease-in-out infinite;
+      }
+      .strategy-trade-view-alert::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 42%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, rgba(255,255,255,0), rgba(170,225,255,0.95), rgba(255,255,255,0));
+        animation: strategyTradeViewInnerSweep 1.25s ease-out infinite;
+        pointer-events: none;
+      }
+    `;
+    document.head.appendChild(style);
+  };
+  ensureTradeViewAlertStyle();
 
   const panel = document.createElement('div');
   panel.style.cssText = `position:absolute;left:${leftInset}px;right:0;bottom:0;height:${normalHeight}px;background:#0f1524;border-top:1px solid #2a2e3e;z-index:1010;display:flex;flex-direction:column;`;
@@ -1185,10 +1230,14 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const moveToTradeSignal = (trade: ReportTrade) => {
+    if (panelMode === 'expanded') {
+      applyPanelMode('normal');
+    }
     const chart = getActiveChart();
     if (typeof chart.focusRangeByIndex !== 'function') return;
     const padding = panelMode === 'expanded' ? 10 : 6;
     chart.focusRangeByIndex(trade.entryIndex, trade.exitIndex, padding, { showCrosshair: false });
+    window.dispatchEvent(new CustomEvent('chart-signal-trade-viewed'));
   };
 
   const renderTradesTable = () => {
@@ -1271,6 +1320,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       moveBtn.style.cssText = isPhoneWidth
         ? 'height:20px;min-width:48px;padding:0 4px;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:5px;font-size:10px;cursor:pointer;'
         : 'height:24px;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:6px;font-size:11px;cursor:pointer;';
+      if (tradeViewAlertActive) moveBtn.classList.add('strategy-trade-view-alert');
       moveBtn.addEventListener('click', (event) => {
         event.stopPropagation();
         const trade = displayedTrades[idx];
@@ -1723,6 +1773,14 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     isVisible: () => panelVisible,
     setLeftInset: (left: number) => {
       panel.style.left = `${Math.max(0, Math.round(left))}px`;
+    },
+    openTradesTab: () => {
+      activeTab = 'trades';
+      renderAll();
+    },
+    setTradeViewAlertActive: (active: boolean) => {
+      tradeViewAlertActive = Boolean(active);
+      if (activeTab === 'trades') renderTradesTable();
     },
   };
 }

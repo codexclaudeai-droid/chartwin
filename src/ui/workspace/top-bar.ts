@@ -14,6 +14,7 @@ type CreateTopBarArgs = {
   onOpenSettings: () => void;
   isPaneMaximized: () => boolean;
   onExitMaximize: () => void;
+  onClickSignalNotification: () => void;
 };
 
 type LayoutIconType =
@@ -142,8 +143,6 @@ const splitTypeByCount = (count: number): LayoutIconType => {
 };
 
 const TOP_BRAND_STYLE_ID = 'tradingcore-brand-flare-style';
-const TOP_BRAND_INTERVAL_FLAG = '__tradingcoreBrandFlareIntervalBound__';
-const TOP_BRAND_INTERVAL_MS = 5 * 60 * 1000;
 
 const ensureTopBrandFlareStyle = () => {
   if (document.getElementById(TOP_BRAND_STYLE_ID)) return;
@@ -154,16 +153,135 @@ const ensureTopBrandFlareStyle = () => {
       position:relative;
       display:flex;
       align-items:center;
-      gap:2px;
+      gap:0;
       transform-origin:left center;
+      overflow:hidden;
     }
     .tc-brand-logo.flare-active{
-      animation:tcBrandGrow 0.9s ease-in-out;
+      animation:tcBrandLogoFadeIn 1.2s ease-out forwards;
     }
-    @keyframes tcBrandGrow{
-      0%{transform:scale(1);filter:brightness(1);}
-      35%{transform:scale(1.08);filter:brightness(1.18);}
-      100%{transform:scale(1);filter:brightness(1);}
+    .tc-brand-logo .tc-brand-trading{
+      color:#9ba5b7;
+      background:none;
+      -webkit-background-clip:initial;
+      background-clip:initial;
+      -webkit-text-fill-color:initial;
+      transition:color 0.18s linear;
+    }
+    .tc-brand-logo .tc-brand-core{
+      color:#9ba5b7;
+      background:none;
+      -webkit-background-clip:initial;
+      background-clip:initial;
+      -webkit-text-fill-color:initial;
+    }
+    .tc-brand-logo .tc-brand-word{
+      position:relative;
+      display:inline-block;
+      overflow:hidden;
+      line-height:1;
+      letter-spacing:0;
+    }
+    .tc-brand-logo .tc-brand-trading::after{
+      position:absolute;
+      top:0;
+      left:0;
+      bottom:0;
+      width:135%;
+      pointer-events:none;
+      opacity:0;
+      transform:translateX(-120%);
+      background:linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 52%, rgba(255,255,255,0) 100%);
+      mix-blend-mode:screen;
+    }
+    .tc-brand-logo .tc-brand-trading .tc-trading-letter,
+    .tc-brand-logo .tc-brand-core .tc-core-letter{
+      display:inline-block;
+      color:#9ba5b7;
+      transition:color 0.16s linear;
+    }
+    .tc-brand-logo .tc-brand-core .tc-core-letter{
+      background:none;
+      -webkit-background-clip:initial;
+      background-clip:initial;
+      -webkit-text-fill-color:initial;
+    }
+    .tc-brand-logo.flare-active .tc-brand-trading{
+      animation:none;
+    }
+    .tc-brand-logo.flare-active .tc-brand-trading::after{
+      animation:tcBrandTradingSweep 1.0s ease-out forwards;
+      animation-delay:0.15s;
+    }
+    .tc-brand-logo.flare-active .tc-brand-trading .tc-trading-letter{
+      animation:tcBrandTradingLetterWhite 0.45s ease-out forwards;
+      animation-delay:calc(0.3s + var(--i) * 0.26s);
+    }
+    .tc-brand-logo.flare-active .tc-brand-core .tc-core-letter{
+      animation:tcBrandCoreWaveFill 0.9s ease-out forwards;
+      animation-delay:calc(3.2s + var(--i) * 0.12s);
+    }
+    @keyframes tcBrandTradingSweep{
+      0%{ opacity:0; transform:translateX(-120%); }
+      30%{ opacity:0.95; }
+      100%{ opacity:0; transform:translateX(95%); }
+    }
+    @keyframes tcBrandTradingLetterWhite{
+      0%{ color:#9ba5b7; }
+      55%{ color:#d6dde9; }
+      100%{ color:#ffffff; }
+    }
+    @keyframes tcBrandCoreLetterBlue{
+      0%{ color:#9ba5b7; }
+      100%{ color:#1d4ed8; }
+    }
+    @keyframes tcBrandCoreWaveFill{
+      0%{
+        color:#9ba5b7;
+        background:linear-gradient(180deg, #9ba5b7 0%, #9ba5b7 100%);
+        background-size:100% 100%;
+        background-position:0 100%;
+        -webkit-background-clip:text;
+        background-clip:text;
+        -webkit-text-fill-color:transparent;
+      }
+      35%{
+        background:linear-gradient(180deg, #1d4ed8 0%, #2563eb 45%, #1d4ed8 100%);
+        background-size:180% 160%;
+        background-position:18% 78%;
+        -webkit-background-clip:text;
+        background-clip:text;
+        -webkit-text-fill-color:transparent;
+      }
+      62%{
+        background:linear-gradient(180deg, #1d4ed8 0%, #3b82f6 50%, #1d4ed8 100%);
+        background-size:200% 190%;
+        background-position:62% 42%;
+        -webkit-background-clip:text;
+        background-clip:text;
+        -webkit-text-fill-color:transparent;
+      }
+      82%{
+        background:linear-gradient(180deg, #1d4ed8 0%, #2563eb 54%, #1d4ed8 100%);
+        background-size:180% 170%;
+        background-position:35% 16%;
+        -webkit-background-clip:text;
+        background-clip:text;
+        -webkit-text-fill-color:transparent;
+      }
+      100%{
+        color:#1d4ed8;
+        background:linear-gradient(180deg, #1d4ed8 0%, #1d4ed8 100%);
+        background-size:100% 100%;
+        background-position:0 0;
+        -webkit-background-clip:text;
+        background-clip:text;
+        -webkit-text-fill-color:transparent;
+      }
+    }
+    @keyframes tcBrandLogoFadeIn{
+      0%{ opacity:0.2; filter:brightness(0); }
+      100%{ opacity:1; filter:brightness(1); }
     }
   `;
   document.head.appendChild(style);
@@ -178,13 +296,6 @@ const playTopBrandFlare = (el: HTMLElement) => {
 const setupTopBrandFlare = (el: HTMLElement) => {
   ensureTopBrandFlareStyle();
   playTopBrandFlare(el);
-  const w = window as typeof window & { [TOP_BRAND_INTERVAL_FLAG]?: boolean };
-  if (w[TOP_BRAND_INTERVAL_FLAG]) return;
-  w[TOP_BRAND_INTERVAL_FLAG] = true;
-  window.setInterval(() => {
-    const activeLogo = document.querySelector('.tc-brand-logo') as HTMLElement | null;
-    if (activeLogo) playTopBrandFlare(activeLogo);
-  }, TOP_BRAND_INTERVAL_MS);
 };
 
 export function createTopBar({
@@ -201,19 +312,63 @@ export function createTopBar({
   onOpenSettings,
   isPaneMaximized,
   onExitMaximize,
-}: CreateTopBarArgs): { refreshTopControlIcons: () => void } {
+  onClickSignalNotification,
+}: CreateTopBarArgs): { refreshTopControlIcons: () => void; setSignalNotification: (count: number) => void } {
   const topBar = document.createElement('div');
+  topBar.dataset.topbarRoot = 'true';
   topBar.style.cssText = `position:absolute;top:0;left:0;right:0;height:40px;
     background:#1a1e2e;display:flex;align-items:center;padding:0 12px;gap:8px;
     border-bottom:1px solid #2a2e3e;z-index:1000;color:white;
     font-family:'Segoe UI',Arial,sans-serif;font-size:13px;user-select:none;`;
   app.appendChild(topBar);
 
+  const signalBtn = document.createElement('button');
+  signalBtn.type = 'button';
+  signalBtn.title = '시그널 알림';
+  signalBtn.style.cssText = 'position:relative;width:34px;height:34px;min-width:34px;margin-right:2px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px;';
+  signalBtn.innerHTML = `
+    <span style="position:relative;display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 0 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"></path>
+        <path d="M9.5 17a2.5 2.5 0 0 0 5 0"></path>
+      </svg>
+      <span data-signal-badge style="position:absolute;top:-3px;right:-8px;height:16px;min-width:16px;padding:0 4px;background:#d91f3a;color:#fff;border:2px solid #fff;border-radius:999px;font:700 8px/1 Segoe UI,Arial,sans-serif;display:none;align-items:center;justify-content:center;box-sizing:border-box;">0</span>
+    </span>
+  `;
+  const signalBadge = signalBtn.querySelector('[data-signal-badge]') as HTMLSpanElement;
+  let signalCount = 0;
+  const renderSignalBadge = () => {
+    if (signalCount <= 0) {
+      signalBadge.style.display = 'none';
+      return;
+    }
+    signalBadge.style.display = 'inline-flex';
+    signalBadge.textContent = String(signalCount);
+  };
+  signalBtn.addEventListener('mouseenter', () => {
+    signalBtn.style.background = '#252a3a';
+    signalBtn.style.color = '#f3f6ff';
+  });
+  signalBtn.addEventListener('mouseleave', () => {
+    signalBtn.style.background = 'transparent';
+    signalBtn.style.color = '#9ba5b7';
+  });
+  signalBtn.addEventListener('click', () => {
+    onClickSignalNotification();
+  });
+  signalBtn.style.color = '#9ba5b7';
+
   const logo = document.createElement('div');
   logo.className = 'tc-brand-logo';
-  logo.innerHTML = `<span style="font-weight:800;font-size:13px;color:#ffffff;">TRADING</span>
-    <span style="font-weight:800;font-size:13px;color:#2962ff;">CORE</span>`;
-  logo.style.cssText = 'margin-right:6px;flex-shrink:0;display:flex;align-items:center;';
+  logo.title = '홈';
+  logo.innerHTML = `<span class="tc-brand-word tc-brand-trading" data-text="TRADING" style="font-weight:800;font-size:14.4px;"><span class="tc-trading-letter" style="--i:0;">T</span><span class="tc-trading-letter" style="--i:1;">R</span><span class="tc-trading-letter" style="--i:2;">A</span><span class="tc-trading-letter" style="--i:3;">D</span><span class="tc-trading-letter" style="--i:4;">I</span><span class="tc-trading-letter" style="--i:5;">N</span><span class="tc-trading-letter" style="--i:6;">G</span></span><span class="tc-brand-word tc-brand-core" data-text="CORE" style="font-weight:800;font-size:14.4px;"><span class="tc-core-letter" style="--i:0;">C</span><span class="tc-core-letter" style="--i:1;">O</span><span class="tc-core-letter" style="--i:2;">R</span><span class="tc-core-letter" style="--i:3;">E</span></span>`;
+  logo.style.cssText = 'margin-right:6px;flex-shrink:0;display:flex;align-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent;outline:none;';
+  logo.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+  });
+  logo.addEventListener('click', () => {
+    window.location.reload();
+  });
   topBar.appendChild(logo);
   setupTopBrandFlare(logo);
 
@@ -338,6 +493,7 @@ export function createTopBar({
   document.addEventListener('click', () => {
     if (splitMenuOpen) closeSplitMenu();
   });
+  rightArea.appendChild(signalBtn);
   rightArea.appendChild(splitWrap);
 
   const restoreViewBtn = iconBtn(restoreSvgIcon, '화면 복귀', onExitMaximize);
@@ -371,5 +527,11 @@ export function createTopBar({
   };
 
   refreshTopControlIcons();
-  return { refreshTopControlIcons };
+  return {
+    refreshTopControlIcons,
+    setSignalNotification: (count: number) => {
+      signalCount = Math.max(0, Math.floor(Number(count) || 0));
+      renderSignalBadge();
+    },
+  };
 }
