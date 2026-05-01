@@ -84,6 +84,8 @@ const HLINE_DEFAULT_WIDTH = 1.2;
 const LOCK_ICON_CLOSED_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 1 1 8 0v3"></path></svg>';
 const LOCK_ICON_OPEN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M16 11V8a4 4 0 1 0-8 0"></path></svg>';
 const ERASER_CURSOR = 'url("/eraser-cursor.svg") 4 20, pointer';
+const NS_RESIZE_CURSOR = `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"0 0 40 40\"><g fill=\"none\" stroke=\"white\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"20\" y1=\"7\" x2=\"20\" y2=\"33\"/><polyline points=\"14,13 20,7 26,13\"/><polyline points=\"14,27 20,33 26,27\"/></g></svg>')}") 20 20, ns-resize`;
+const EW_RESIZE_CURSOR = `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"0 0 40 40\"><g fill=\"none\" stroke=\"white\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"7\" y1=\"20\" x2=\"33\" y2=\"20\"/><polyline points=\"13,14 7,20 13,26\"/><polyline points=\"27,14 33,20 27,26\"/></g></svg>')}") 20 20, ew-resize`;
 
 function drawPriceArrowBox(
   ctx: CanvasRenderingContext2D,
@@ -318,6 +320,7 @@ export class SimpleChart {
   private _lastCrosshairOHLCIdx = -2;
   // 기본 십자선 자동 숨김 타이머 (5초)
   private static readonly CROSSHAIR_AUTO_HIDE_MS = 5000;
+  private static readonly MOUSE_TOOLTIP_LONGPRESS_MS = 350;
   private crosshairAutoHideTimer: ReturnType<typeof setTimeout> | null = null;
   // 십자선 활성 직후 터치-업 무시 플래그 (롱프레스 해제와 구분)
   private crosshairJustActivated = false;
@@ -343,6 +346,10 @@ export class SimpleChart {
   private static readonly LONG_PRESS_MOVE_THRESHOLD = 8;
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private isCrosshairMode = false;
+  private pointerMode: 'auto' | 'cross' | 'dot' | 'arrow' | 'demo' = 'auto';
+  private isMouseDownForTooltip = false;
+  private mouseLongPressTooltipActive = false;
+  private mouseLongPressTooltipTimer: ReturnType<typeof setTimeout> | null = null;
   private touchCrosshairX = 0;
   private touchCrosshairY = 0;
 
@@ -2978,6 +2985,8 @@ export class SimpleChart {
     this.canvas.addEventListener('dblclick',  this.handleDoubleClick.bind(this));
     this.canvas.addEventListener('mouseleave', () => {
       this.isMouseOver = false;
+      this.isMouseDownForTooltip = false;
+      this.stopMouseLongPressTooltip();
       this.hoveredDrawingId = null;
       this.hoveredDrawingPart = null;
       this.canvas.style.cursor = 'default';
@@ -3313,6 +3322,36 @@ export class SimpleChart {
   public setMobileCrosshairTooltipEnabled(enabled: boolean): void {
     (this.config.layout as any).mobileCrosshairTooltipEnabled = enabled !== false;
     this.draw();
+  }
+
+  public setPointerMode(mode: 'auto' | 'cross' | 'dot' | 'arrow' | 'demo'): void {
+    this.pointerMode = mode;
+    this.updateChartCursor();
+    this.draw();
+  }
+
+  private startMouseLongPressTooltip(): void {
+    this.stopMouseLongPressTooltip();
+    if (!this.isMobileCrosshairTooltipEnabled()) return;
+    if (this.drawingTool || this.selectedDrawingId || this.drawingMoveState || this.isDragging) return;
+    this.mouseLongPressTooltipTimer = setTimeout(() => {
+      this.mouseLongPressTooltipTimer = null;
+      if (!this.isMouseDownForTooltip) return;
+      if (this.drawingTool || this.selectedDrawingId || this.drawingMoveState || this.isDragging) return;
+      this.mouseLongPressTooltipActive = true;
+      this.requestOverlayDraw();
+    }, SimpleChart.MOUSE_TOOLTIP_LONGPRESS_MS);
+  }
+
+  private stopMouseLongPressTooltip(): void {
+    if (this.mouseLongPressTooltipTimer) {
+      clearTimeout(this.mouseLongPressTooltipTimer);
+      this.mouseLongPressTooltipTimer = null;
+    }
+    if (this.mouseLongPressTooltipActive) {
+      this.mouseLongPressTooltipActive = false;
+      this.requestOverlayDraw();
+    }
   }
 
   private clampPanStartIndex(startIndex: number, visibleCount: number): number {
@@ -5690,8 +5729,11 @@ export class SimpleChart {
     const minRisk     = range * (isMobileCtx ? 0.04 : 0.03);
     const maxRisk     = range * (isMobileCtx ? 0.20 : 0.16);
     const defaultRisk = Math.min(maxRisk, Math.max(minRisk, baseRisk));
-    // 기본 포지션 영역 박스 너비: 보이는 캔들의 18%
-    const defaultBars = Math.max(7, Math.round(visibleBars * 0.075));
+    // 기본 포지션 영역 박스 너비: 최소 렌더 폭과 일치시켜 생성 직후 첫 리사이즈 괴리를 방지
+    const defaultBarsByViewport = Math.max(7, Math.round(visibleBars * 0.075));
+    const minBoxWidthPx = 228;
+    const minBarsByBoxWidth = metrics ? (minBoxWidthPx / Math.max(1e-6, metrics.totalSp)) : 0;
+    const defaultBars = Math.max(defaultBarsByViewport, minBarsByBoxWidth);
     return { anchor, defaultRisk, defaultBars };
   }
 
@@ -6006,13 +6048,49 @@ export class SimpleChart {
       return guideHit ? 'line' : null;
     }
     if (shape.kind === 'long-position' || shape.kind === 'short-position') {
+      const positionAnchorHitPad = isCoarsePointer ? 28 : 20;
       const targetOffset = shape.channelOffset ?? { index: 0, price: 0 };
       const tx = this.xForIndex(shape.a.index + targetOffset.index, metrics.totalSp, metrics.candleW);
       const ty = metrics.getY(shape.a.price + targetOffset.price);
       // 박스 좌우 경계 계산
       let posLeft  = Math.min(ax, tx);
       let posRight = Math.max(ax, tx);
-      if (Math.abs(posRight - posLeft) < 14) { posLeft -= 28; posRight += 28; }
+      const minBoxWidthPx = 228;
+      const currentWidth = Math.abs(posRight - posLeft);
+      if (currentWidth < minBoxWidthPx) {
+        // Match draw behavior: keep entry-side edge fixed at minimum width clamp.
+        if (tx >= ax) {
+          posLeft = ax;
+          posRight = ax + minBoxWidthPx;
+        } else {
+          posRight = ax;
+          posLeft = ax - minBoxWidthPx;
+        }
+      }
+
+      // 진입가 앵커 (원형) ? 박스 왼쪽 진입 라인
+      if (Math.hypot(mx - posLeft, my - ay) <= positionAnchorHitPad) return 'start';
+      // 손절가 앵커 (사각) ? 박스 왼쪽 손절 라인
+      if (Math.hypot(mx - posLeft, my - by) <= positionAnchorHitPad) return 'end';
+      // 목표가 앵커 (사각) ? 박스 왼쪽 목표 라인
+      if (shape.channelOffset) {
+        if (Math.hypot(mx - posLeft, my - ty) <= positionAnchorHitPad) return 'position-target';
+      }
+      // 우측 앵커 (사각) ? 박스 오른쪽 라인 · 진입가 Y
+      if (Math.hypot(mx - posRight, my - ay) <= positionAnchorHitPad) return 'position-right' as DrawingHitPart;
+      // 앵커 첫 클릭 안정화: 앵커 주변 사각 히트존 추가
+      if (mx >= posRight - (positionAnchorHitPad + 8) && mx <= posRight + (positionAnchorHitPad + 8) && my >= ay - (positionAnchorHitPad + 8) && my <= ay + (positionAnchorHitPad + 8)) {
+        return 'position-right' as DrawingHitPart;
+      }
+      if (mx >= posLeft - (positionAnchorHitPad + 6) && mx <= posLeft + (positionAnchorHitPad + 6) && my >= by - (positionAnchorHitPad + 6) && my <= by + (positionAnchorHitPad + 6)) {
+        return 'end';
+      }
+      if (shape.channelOffset) {
+        if (mx >= posLeft - (positionAnchorHitPad + 6) && mx <= posLeft + (positionAnchorHitPad + 6) && my >= ty - (positionAnchorHitPad + 6) && my <= ty + (positionAnchorHitPad + 6)) {
+          return 'position-target';
+        }
+      }
+      // 중앙 정보 배지 (앵커보다 낮은 우선순위)
       const badgeCenterX = (posLeft + posRight) / 2;
       const badgeW = Math.max(86, Math.abs(posRight - posLeft) * 0.62);
       const badgeH = 20;
@@ -6022,17 +6100,6 @@ export class SimpleChart {
         && my >= ay - badgeH / 2
         && my <= ay + badgeH / 2
       ) return 'position-entry-info';
-
-      // 진입가 앵커 (원형) ? 박스 왼쪽 진입 라인
-      if (Math.hypot(mx - posLeft, my - ay) <= 14) return 'start';
-      // 손절가 앵커 (사각) ? 박스 왼쪽 손절 라인
-      if (Math.hypot(mx - posLeft, my - by) <= 14) return 'end';
-      // 목표가 앵커 (사각) ? 박스 왼쪽 목표 라인
-      if (shape.channelOffset) {
-        if (Math.hypot(mx - posLeft, my - ty) <= 14) return 'position-target';
-      }
-      // 우측 앵커 (사각) ? 박스 오른쪽 라인 · 진입가 Y
-      if (Math.hypot(mx - posRight, my - ay) <= 14) return 'position-right' as DrawingHitPart;
       // 라인 히트
       if (Math.abs(my - ty) <= 7 && mx >= posLeft - 4 && mx <= posRight + 4) return 'position-target';
       if (Math.abs(my - by) <= 7 && mx >= posLeft - 4 && mx <= posRight + 4) return 'end';
@@ -6063,8 +6130,18 @@ export class SimpleChart {
     if (!this.drawingsVisible) return null;
     const metrics = this.getMainViewportMetrics();
     if (!metrics) return null;
+    if (this.selectedDrawingId) {
+      const selected = this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null;
+      if (selected) {
+        const selectedPart = this.hitTestDrawing(selected, mx, my, metrics);
+        if (selectedPart) {
+          return { shape: selected, part: selectedPart };
+        }
+      }
+    }
     for (let i = this.drawings.length - 1; i >= 0; i -= 1) {
       const shape = this.drawings[i];
+      if (shape.id === this.selectedDrawingId) continue;
       const part = this.hitTestDrawing(shape, mx, my, metrics);
       if (part) {
         return { shape, part };
@@ -6145,8 +6222,7 @@ export class SimpleChart {
       if (part === 'end' || part === 'position-stop') {
         // 손절가 앵커: Y축(상하)만 이동
         if (!base.b) return next;
-        const movedY = moveAnchor(base.b);
-        next.b = { index: base.a.index, price: movedY.price };
+        next.b = { index: base.a.index, price: base.b.price + deltaPrice };
         return next;
       }
       if (part === 'position-target') {
@@ -6161,8 +6237,13 @@ export class SimpleChart {
       if (part === 'position-right') {
         // 우측 앵커: X축(좌우)만 이동
         if (!next.channelOffset) next.channelOffset = { index: 0, price: 0 };
+        const minBoxWidthPx = 228;
+        const minOffsetIndex = minBoxWidthPx / Math.max(1e-6, metrics.totalSp);
+        const rawNextIndex = next.channelOffset.index + deltaIndex;
         next.channelOffset = {
-          index: next.channelOffset.index + deltaIndex, // X만 변경
+          index: rawNextIndex >= 0
+            ? Math.max(minOffsetIndex, rawNextIndex)
+            : Math.min(-minOffsetIndex, rawNextIndex), // X만 변경(최소 박스 폭 유지)
           price: next.channelOffset.price,              // Y 고정
         };
         return next;
@@ -6754,7 +6835,19 @@ export class SimpleChart {
         const targetY = metrics.getY(a.price + targetAnchor.price);
         let left  = Math.min(entryX, targetX);
         let right = Math.max(entryX, targetX);
-        if (Math.abs(right - left) < 14) { left -= 28; right += 28; }
+        // Keep a readable default position box width even when anchors are near each other.
+        const minBoxWidthPx = 228;
+        const currentWidth = Math.abs(right - left);
+        if (currentWidth < minBoxWidthPx) {
+          // Keep entry-side edge fixed; clamp only the target-side edge at minimum width.
+          if (targetX >= entryX) {
+            left = entryX;
+            right = entryX + minBoxWidthPx;
+          } else {
+            right = entryX;
+            left = entryX - minBoxWidthPx;
+          }
+        }
 
         const profitY       = Math.min(entryY, targetY);
         const profitBottomY = Math.max(entryY, targetY);
@@ -7117,6 +7210,7 @@ export class SimpleChart {
     // ?? 터치 드로잉 모드: 십자선 렌더링 (TradingView 스타일)
     // ????????????????????????????????????????????????????????????????????????????
     const hasTouchCrosshair = this.touchDrawingCrosshairX > 0 || this.touchDrawingCrosshairY > 0;
+    const isCoarsePointerDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
     const selectedShapeForDrawingCrosshair = this.selectedDrawingId
       ? this.drawings.find((s) => s.id === this.selectedDrawingId) ?? null
       : null;
@@ -7124,7 +7218,7 @@ export class SimpleChart {
       selectedShapeForDrawingCrosshair && (selectedShapeForDrawingCrosshair.kind === 'long-position' || selectedShapeForDrawingCrosshair.kind === 'short-position'),
     );
     const shouldShowDrawingCrosshair = Boolean(this.drawingTool || this.drawingMoveState || isSelectedPositionShape);
-    if (shouldShowDrawingCrosshair && (this.isMouseOver || hasTouchCrosshair)) {
+    if (isCoarsePointerDevice && shouldShowDrawingCrosshair && (this.isMouseOver || hasTouchCrosshair)) {
       ctx.save();
       // PC는 마우스 좌표, 터치는 마지막 드로잉 십자 좌표를 사용
       const x = this.isMouseOver ? this.mouseX : this.touchDrawingCrosshairX;
@@ -7281,12 +7375,12 @@ export class SimpleChart {
       return;
     }
 
-    // X축(세로선)은 메인 캔들 패널에서만 자석 스냅.
-    // 단, 드로잉 중 자석이 OFF면 자유 이동(비스냅) 유지.
+    // Crosshair guides should follow raw mouse position (no magnet snap).
+    // Magnet is still applied to drawing anchors via drawing_apply_magnet().
     let snapX = this.mouseX;
     let snappedCandleIndex = -1;
     const isInMainPanelForMagnet = this.mouseY >= R.top && this.mouseY <= mainH;
-    const allowCrosshairXSnap = this.drawingMagnetMode !== 'off';
+    const allowCrosshairXSnap = false;
     if (allowCrosshairXSnap && isInMainPanelForMagnet && this.mouseX >= chartLeft && this.mouseX <= chartRight) {
       const nearestIndex = Math.round((this.mouseX - chartLeft - candleW / 2) / totalSp);
       const clampedIndex = Math.max(0, Math.min(visibleCount - 1, nearestIndex));
@@ -7303,9 +7397,12 @@ export class SimpleChart {
     const isPositionEditMode = !this.drawingTool && (
       selectedShape?.kind === 'long-position' || selectedShape?.kind === 'short-position'
     );
+    const isFibEditMode = !this.drawingTool && (
+      selectedShape?.kind === 'fib-retracement' || selectedShape?.kind === 'fib-trend'
+    );
     const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
     const isDrawingEditMode = Boolean(this.drawingTool && this.drawingTool !== 'eraser');
-    const shouldDrawCrosshairGuides = noDrawingInteraction || isTrendlineEditMode || isChannelEditMode || isPositionEditMode || isDrawingEditMode;
+    const shouldDrawCrosshairGuides = noDrawingInteraction || isTrendlineEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isDrawingEditMode || Boolean(this.drawingMoveState);
 
     if (shouldDrawCrosshairGuides) {
       const useBlueEditGuide = isDrawingEditMode || isChannelEditMode;
@@ -7325,16 +7422,32 @@ export class SimpleChart {
       ctx.strokeStyle = guideCenterColor;
       ctx.lineWidth = 1.4;
       const centerLen = 10;
-      ctx.beginPath();
-      ctx.moveTo(solidX - centerLen, this.mouseY); ctx.lineTo(solidX + centerLen, this.mouseY);
-      ctx.moveTo(solidX, this.mouseY - centerLen); ctx.lineTo(solidX, this.mouseY + centerLen);
-      ctx.stroke();
-      if (useBlueEditGuide) {
-        // 드로잉 완료 전 중심 포인트 유지
-        ctx.fillStyle = '#2f6cff';
+      if (this.pointerMode === 'dot') {
+        ctx.fillStyle = guideCenterColor;
         ctx.beginPath();
-        ctx.arc(solidX, this.mouseY, 2.6, 0, Math.PI * 2);
+        ctx.arc(solidX, this.mouseY, 2.8, 0, Math.PI * 2);
         ctx.fill();
+      } else if (this.pointerMode === 'demo') {
+        ctx.fillStyle = 'rgba(47,108,255,0.28)';
+        ctx.beginPath();
+        ctx.arc(solidX, this.mouseY, 18, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (this.pointerMode === 'arrow') {
+        // Arrow mode: no extra center marker.
+      } else if (this.pointerMode === 'cross') {
+        // Cross mode: keep dashed guides only, no extra center marker.
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(solidX - centerLen, this.mouseY); ctx.lineTo(solidX + centerLen, this.mouseY);
+        ctx.moveTo(solidX, this.mouseY - centerLen); ctx.lineTo(solidX, this.mouseY + centerLen);
+        ctx.stroke();
+        if (useBlueEditGuide) {
+          // 드로잉 완료 전 중심 포인트 유지
+          ctx.fillStyle = '#2f6cff';
+          ctx.beginPath();
+          ctx.arc(solidX, this.mouseY, 2.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
       ctx.restore();
     }
@@ -7357,7 +7470,7 @@ export class SimpleChart {
       ctx.restore();
 
       // OHLCV 툴팁: 모바일=canvas floating, PC=헤더 콜백
-      if (noDrawingInteraction && _isTouchDevice && this.isMobileCrosshairTooltipEnabled()) {
+      if (noDrawingInteraction && this.isMobileCrosshairTooltipEnabled() && (_isTouchDevice || this.mouseLongPressTooltipActive)) {
         const isUp = c.close >= c.open;
         const closeColor = isUp ? '#ef5350' : '#26a69a';
         const tradingValue = c.close * c.volume;
@@ -7797,14 +7910,6 @@ export class SimpleChart {
       this.canvas.style.cursor = 'default';
       return;
     }
-    const selectedShape = this.getSelectedDrawing();
-    const isTrendlineEditMode = !this.drawingTool && (
-      (selectedShape?.kind === 'trendline') || this.trendlineTextEditorEl != null
-    );
-    if (isTrendlineEditMode) {
-      this.canvas.style.cursor = 'none';
-      return;
-    }
     // 십자선 + 아이콘 위 → pointer
     if (this.crosshairPlusHit) {
       const { x: hx, y: hy, r: hr } = this.crosshairPlusHit;
@@ -7829,7 +7934,21 @@ export class SimpleChart {
       return;
     }
     if (this.drawingMoveState) {
-      this.canvas.style.cursor = 'grabbing';
+      const movingShape = this.selectedDrawingId
+        ? this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null
+        : null;
+      const isPositionShape = Boolean(movingShape && (movingShape.kind === 'long-position' || movingShape.kind === 'short-position'));
+      if (isPositionShape) {
+        if (this.selectedDrawingPart === 'position-target' || this.selectedDrawingPart === 'end' || this.selectedDrawingPart === 'position-stop') {
+          this.canvas.style.cursor = NS_RESIZE_CURSOR;
+          return;
+        }
+        if (this.selectedDrawingPart === 'position-right') {
+          this.canvas.style.cursor = EW_RESIZE_CURSOR;
+          return;
+        }
+      }
+      this.canvas.style.cursor = 'default';
       return;
     }
     const hitSubAlert = this.findSubIndicatorAlertHit(this.mouseX, this.mouseY);
@@ -7837,16 +7956,44 @@ export class SimpleChart {
       this.canvas.style.cursor = 'pointer';
       return;
     }
-    if (hitDrawing && hitDrawing.shape.kind === 'trendline') {
-      this.canvas.style.cursor = 'none';
-      return;
-    }
     if (hitDrawing) {
+      const isPositionShape = hitDrawing.shape.kind === 'long-position' || hitDrawing.shape.kind === 'short-position';
+      if (isPositionShape) {
+        if (hitDrawing.part === 'position-target' || hitDrawing.part === 'end' || hitDrawing.part === 'position-stop') {
+          this.canvas.style.cursor = NS_RESIZE_CURSOR;
+          return;
+        }
+        if (hitDrawing.part === 'position-right') {
+          this.canvas.style.cursor = EW_RESIZE_CURSOR;
+          return;
+        }
+      }
+      const anchorParts: DrawingHitPart[] = ['start', 'channel-a', 'channel-b', 'channel-offset', 'fib-offset'];
+      if (anchorParts.includes(hitDrawing.part)) {
+        this.canvas.style.cursor = 'default';
+        return;
+      }
       this.canvas.style.cursor = 'pointer';
       return;
     }
     if (this.isHoveringCandle(this.mouseX, this.mouseY)) {
       this.canvas.style.cursor = 'pointer';
+      return;
+    }
+    if (this.pointerMode === 'arrow') {
+      this.canvas.style.cursor = 'default';
+      return;
+    }
+    if (this.pointerMode === 'cross') {
+      this.canvas.style.cursor = 'crosshair';
+      return;
+    }
+    if (this.pointerMode === 'dot') {
+      this.canvas.style.cursor = 'none';
+      return;
+    }
+    if (this.pointerMode === 'demo') {
+      this.canvas.style.cursor = 'default';
       return;
     }
     this.canvas.style.cursor = 'none';
@@ -7885,6 +8032,8 @@ export class SimpleChart {
     this.mouseX = e.clientX - rect.left;
     this.mouseY = e.clientY - rect.top;
     this.isMouseOver = true;
+    this.isMouseDownForTooltip = true;
+    this.startMouseLongPressTooltip();
 
     // 십자선 + 아이콘 클릭 → 수평선(hline) 생성
     // stale crosshairPlusHovered 의존하지 않고 클릭 시점 좌표로 직접 재계산
@@ -8015,6 +8164,7 @@ export class SimpleChart {
       hitDrawing
       && (hitDrawing.shape.kind === 'long-position' || hitDrawing.shape.kind === 'short-position')
       && hitDrawing.part === 'position-entry-info'
+      && e.detail >= 2
     ) {
       this.selectedDrawingId = hitDrawing.shape.id;
       this.selectedDrawingPart = hitDrawing.part;
@@ -8105,8 +8255,82 @@ export class SimpleChart {
       }
     }
     if (!this.drawingTool && hitDrawing) {
+      if (
+        (hitDrawing.shape.kind === 'long-position' || hitDrawing.shape.kind === 'short-position')
+        && (hitDrawing.part === 'body' || hitDrawing.part === 'line' || hitDrawing.part === 'position-entry-info')
+      ) {
+        const metrics = this.getMainViewportMetrics();
+        if (metrics) {
+          const ax = this.xForIndex(hitDrawing.shape.a.index, metrics.totalSp, metrics.candleW);
+          const ay = metrics.getY(hitDrawing.shape.a.price);
+          const by = metrics.getY(hitDrawing.shape.b?.price ?? hitDrawing.shape.a.price);
+          const targetOffset = hitDrawing.shape.channelOffset ?? { index: 0, price: 0 };
+          const tx = this.xForIndex(hitDrawing.shape.a.index + targetOffset.index, metrics.totalSp, metrics.candleW);
+          const ty = metrics.getY(hitDrawing.shape.a.price + targetOffset.price);
+          const minBoxWidthPx = 228;
+          let posLeft = Math.min(ax, tx);
+          let posRight = Math.max(ax, tx);
+          const currentWidth = Math.abs(posRight - posLeft);
+          if (currentWidth < minBoxWidthPx) {
+            if (tx >= ax) {
+              posLeft = ax;
+              posRight = ax + minBoxWidthPx;
+            } else {
+              posRight = ax;
+              posLeft = ax - minBoxWidthPx;
+            }
+          }
+          const anchorPad = 24;
+          if (Math.abs(this.mouseX - posRight) <= anchorPad && Math.abs(this.mouseY - ay) <= anchorPad) {
+            hitDrawing.part = 'position-right';
+          } else if (Math.abs(this.mouseX - posLeft) <= anchorPad && Math.abs(this.mouseY - by) <= anchorPad) {
+            hitDrawing.part = 'end';
+          } else if (Math.abs(this.mouseX - posLeft) <= anchorPad && Math.abs(this.mouseY - ty) <= anchorPad) {
+            hitDrawing.part = 'position-target';
+          }
+        }
+      }
+      let normalizedPart: DrawingHitPart = hitDrawing.part;
+      if (
+        (hitDrawing.shape.kind === 'long-position' || hitDrawing.shape.kind === 'short-position')
+        && (hitDrawing.part === 'body' || hitDrawing.part === 'line' || hitDrawing.part === 'position-entry-info')
+      ) {
+        const metrics = this.getMainViewportMetrics();
+        if (metrics) {
+          const ax = this.xForIndex(hitDrawing.shape.a.index, metrics.totalSp, metrics.candleW);
+          const ay = metrics.getY(hitDrawing.shape.a.price);
+          const by = metrics.getY(hitDrawing.shape.b?.price ?? hitDrawing.shape.a.price);
+          const targetOffset = hitDrawing.shape.channelOffset ?? { index: 0, price: 0 };
+          const tx = this.xForIndex(hitDrawing.shape.a.index + targetOffset.index, metrics.totalSp, metrics.candleW);
+          const ty = metrics.getY(hitDrawing.shape.a.price + targetOffset.price);
+          const minBoxWidthPx = 228;
+          let posLeft = Math.min(ax, tx);
+          let posRight = Math.max(ax, tx);
+          const currentWidth = Math.abs(posRight - posLeft);
+          if (currentWidth < minBoxWidthPx) {
+            if (tx >= ax) {
+              posLeft = ax;
+              posRight = ax + minBoxWidthPx;
+            } else {
+              posRight = ax;
+              posLeft = ax - minBoxWidthPx;
+            }
+          }
+          const distRight = Math.hypot(this.mouseX - posRight, this.mouseY - ay);
+          const distStop = Math.hypot(this.mouseX - posLeft, this.mouseY - by);
+          const distTarget = Math.hypot(this.mouseX - posLeft, this.mouseY - ty);
+          const minDist = Math.min(distRight, distStop, distTarget);
+          const forceAnchorPad = 24;
+          if (minDist <= forceAnchorPad) {
+            if (minDist === distRight) normalizedPart = 'position-right';
+            else if (minDist === distTarget) normalizedPart = 'position-target';
+            else normalizedPart = 'end';
+          }
+        }
+      }
+
       this.selectedDrawingId = hitDrawing.shape.id;
-      this.selectedDrawingPart = hitDrawing.part;
+      this.selectedDrawingPart = normalizedPart;
       this.drawingMoveState = hitDrawing.shape.locked
         ? null
         : {
@@ -8331,6 +8555,19 @@ export class SimpleChart {
   private handleMouseMove(e: MouseEvent) {
     const rect = this.canvas.getBoundingClientRect();
     this.mouseX = e.clientX - rect.left; this.mouseY = e.clientY - rect.top;
+    if (this.drawingMoveState) {
+      const movingShape = this.selectedDrawingId
+        ? this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null
+        : null;
+      const isPositionShape = Boolean(movingShape && (movingShape.kind === 'long-position' || movingShape.kind === 'short-position'));
+      if (isPositionShape) {
+        if (this.selectedDrawingPart === 'position-right') {
+          this.mouseY = this.drawingMoveState.startY;
+        } else if (this.selectedDrawingPart === 'position-target' || this.selectedDrawingPart === 'end' || this.selectedDrawingPart === 'position-stop') {
+          this.mouseX = this.drawingMoveState.startX;
+        }
+      }
+    }
     this.isMouseOver = true;
     const hoveredDrawing = this.findDrawingAt(this.mouseX, this.mouseY);
     this.hoveredDrawingId = hoveredDrawing?.shape.id ?? null;
@@ -8412,6 +8649,8 @@ export class SimpleChart {
   }
 
   private handleMouseUp() {
+    this.isMouseDownForTooltip = false;
+    this.stopMouseLongPressTooltip();
     if (this.drawingMoveState) {
       if (this.pendingChannelId && this.selectedDrawingId === this.pendingChannelId && this.selectedDrawingPart === 'channel-offset') {
         this.pendingChannelId = null;

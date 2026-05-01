@@ -34,6 +34,31 @@ type ToolboxTool = {
 
 const tools: ToolboxTool[] = [
   {
+    id: 'pointer',
+    label: '마우스 포인터',
+    icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><line x1="12" y1="4" x2="12" y2="10"></line><line x1="12" y1="14" x2="12" y2="20"></line><line x1="4" y1="12" x2="10" y2="12"></line><line x1="14" y1="12" x2="20" y2="12"></line></svg>`,
+    menu: {
+      title: '마우스 포인터',
+      sections: [
+        {
+          title: '커서',
+          items: [
+            { id: 'cursor-cross', label: '크로스', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><line x1="12" y1="4" x2="12" y2="10"></line><line x1="12" y1="14" x2="12" y2="20"></line><line x1="4" y1="12" x2="10" y2="12"></line><line x1="14" y1="12" x2="20" y2="12"></line></svg>` },
+            { id: 'cursor-dot', label: '점', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0"><circle cx="12" cy="12" r="2.2"></circle></svg>` },
+            { id: 'cursor-arrow', label: '화살표', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0"><path d="M6 3l12 9-5 1 2 7-2 1-3-7-4 4z"></path></svg>` },
+            { id: 'cursor-demo', label: '데모', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#76a9ff" stroke-width="1.0" stroke-linecap="round"><circle cx="12" cy="12" r="8" fill="rgba(47,108,255,0.35)" stroke="none"></circle></svg>` },
+          ],
+        },
+        {
+          title: '옵션',
+          items: [
+            { id: 'cursor-eraser', label: '지우개', icon: eraserIcon },
+          ],
+        },
+      ],
+    },
+  },
+  {
     id: 'trend',
     label: '추세선',
     icon: trendToolDefaultIcon,
@@ -318,10 +343,12 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   let trashCounts = { drawings: 0, indicators: 0 };
   let trashDeleteLocked = false;
   let isMobileViewport = false;
+  let pointerLongPressTooltip = true;
   const toolButtonMap = new Map<string, HTMLButtonElement>();
   const toolIconWrapMap = new Map<string, HTMLSpanElement>();
   const selectedToolIconMap = new Map<string, string>();
   const selectedMenuItemMap = new Map<string, { id: string; label: string }>([
+    ['pointer', { id: 'cursor-cross', label: '크로스' }],
     ['trend', { id: 'trendline', label: '추세선' }],
     ['fibonacci', { id: 'fib-retracement', label: '피보나치 되돌림' }],
     ['forecast', { id: 'long-position', label: '매수 포지션' }],
@@ -628,6 +655,59 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       lockedRow.appendChild(lockedLabel);
       lockedRow.appendChild(toggle);
       wrap.appendChild(lockedRow);
+    }
+
+    if (tool.id === 'pointer') {
+      const divider = document.createElement('div');
+      divider.style.cssText = 'height:1px;background:#c2c2c6;margin:10px 0 8px;';
+      wrap.appendChild(divider);
+
+      const toggleRow = document.createElement('div');
+      toggleRow.style.cssText = 'height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-radius:8px;background:rgba(0,0,0,0.03);';
+      const toggleLabel = document.createElement('span');
+      toggleLabel.textContent = '길게 눌러 값 툴팁 표시';
+      toggleLabel.style.cssText = 'font:600 14px/1 Segoe UI, Arial, sans-serif;color:#2f3137;';
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.style.cssText = [
+        'position:relative',
+        'width:48px',
+        'height:28px',
+        'border:1px solid #a4a7ad',
+        'border-radius:999px',
+        `background:${pointerLongPressTooltip ? '#5f636c' : '#b7b8bd'}`,
+        'padding:0',
+        'cursor:pointer',
+      ].join(';');
+      const thumb = document.createElement('span');
+      thumb.style.cssText = [
+        'position:absolute',
+        'top:3px',
+        `left:${pointerLongPressTooltip ? '24px' : '3px'}`,
+        'width:20px',
+        'height:20px',
+        'border-radius:50%',
+        'background:#ffffff',
+        'box-shadow:0 1px 4px rgba(0,0,0,0.24)',
+        'transition:left 140ms ease',
+      ].join(';');
+      toggle.appendChild(thumb);
+      toggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+        pointerLongPressTooltip = !pointerLongPressTooltip;
+        toggle.style.background = pointerLongPressTooltip ? '#5f636c' : '#b7b8bd';
+        thumb.style.left = pointerLongPressTooltip ? '24px' : '3px';
+        window.dispatchEvent(new CustomEvent('chart-toolbox-select', {
+          detail: {
+            toolId: 'pointer',
+            itemId: 'cursor-longpress-tooltip',
+            enabled: pointerLongPressTooltip,
+          },
+        }));
+      });
+      toggleRow.appendChild(toggleLabel);
+      toggleRow.appendChild(toggle);
+      wrap.appendChild(toggleRow);
     }
 
     submenu.style.opacity = '1';

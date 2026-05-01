@@ -2001,7 +2001,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     });
 
     window.addEventListener('chart-toolbox-select', (event: Event) => {
-      const customEvent = event as CustomEvent<{ toolId?: string; itemId?: string; drawingTool?: string; includeLocked?: boolean }>;
+      const customEvent = event as CustomEvent<{ toolId?: string; itemId?: string; drawingTool?: string; label?: string; enabled?: boolean; includeLocked?: boolean }>;
       const rawToolId = customEvent.detail?.itemId ?? customEvent.detail?.toolId ?? null;
       const directDrawingTool = customEvent.detail?.drawingTool ?? null;
       const includeLocked = Boolean(customEvent.detail?.includeLocked);
@@ -2061,6 +2061,29 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (rawToolId === 'magnet-off' || rawToolId === 'magnet-soft' || rawToolId === 'magnet-strong') {
         const mode = rawToolId === 'magnet-off' ? 'off' : rawToolId === 'magnet-strong' ? 'strong' : 'soft';
         (pane.chart as any).setDrawingMagnetMode(mode);
+        pane.refreshChartUi();
+        return;
+      }
+      if (rawToolId === 'cursor-cross' || rawToolId === 'cursor-dot' || rawToolId === 'cursor-arrow' || rawToolId === 'cursor-demo') {
+        pane.chart.setDrawingTool(null);
+        const pointerMode =
+          rawToolId === 'cursor-cross' ? 'cross'
+            : rawToolId === 'cursor-dot' ? 'dot'
+              : rawToolId === 'cursor-arrow' ? 'arrow'
+                : 'demo';
+        (pane.chart as any).setPointerMode(pointerMode);
+        pane.refreshChartUi();
+        return;
+      }
+      if (rawToolId === 'cursor-eraser') {
+        (pane.chart as any).setPointerMode('auto');
+        pane.chart.setDrawingTool('eraser');
+        pane.refreshChartUi();
+        return;
+      }
+      if (rawToolId === 'cursor-longpress-tooltip') {
+        const enabled = customEvent.detail?.enabled !== false;
+        (pane.chart as any).setMobileCrosshairTooltipEnabled(enabled);
         pane.refreshChartUi();
         return;
       }
