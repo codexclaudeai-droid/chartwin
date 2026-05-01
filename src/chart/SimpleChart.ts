@@ -2888,6 +2888,7 @@ export class SimpleChart {
       const x = meta.chartLeft + (i + meta.leftGap) * meta.totalSp + meta.candleW / 2;
       const y = signal > 0 ? meta.getY(candle.low) + 12 : meta.getY(candle.high) - 12;
       const entryPrice = candle.close;
+      const entryY = meta.getY(entryPrice);
       const isLatest = gi === latestSignalIndex;
       const detail = doubleBreakDetails.get(gi);
       if (detail) {
@@ -2920,6 +2921,27 @@ export class SimpleChart {
 
       ctx.fillStyle = '#ffffff';
       ctx.fillText(signal > 0 ? '▲' : '▼', x, y + 0.3);
+
+      // Mark the entry-price Y level beside the signal candle body with a small triangle.
+      if (entryY >= 0 && entryY <= meta.mainH) {
+        const bodyLeft = x - meta.candleW / 2;
+        const triW = Math.max(7, Math.min(12, meta.candleW * 0.55));
+        const triH = Math.max(5, Math.min(9, meta.candleW * 0.4));
+        const tipX = bodyLeft - 1;
+        const baseX = bodyLeft - triW - 2;
+        const fill = signal > 0
+          ? (isLatest ? '#f2be2b' : 'rgba(242,190,43,0.82)')
+          : (isLatest ? '#ff9f43' : 'rgba(255,159,67,0.82)');
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(tipX, entryY);
+        ctx.lineTo(baseX, entryY - triH);
+        ctx.lineTo(baseX, entryY + triH);
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+        ctx.restore();
+      }
 
       this.signalHitAreas.push({
         x,
@@ -7385,6 +7407,12 @@ export class SimpleChart {
       const nearestIndex = Math.round((this.mouseX - chartLeft - candleW / 2) / totalSp);
       const clampedIndex = Math.max(0, Math.min(visibleCount - 1, nearestIndex));
       snapX = chartLeft + clampedIndex * totalSp + candleW / 2;
+      snappedCandleIndex = this.startIndex + clampedIndex;
+    }
+    // Keep crosshair guides unsnapped, but still resolve nearest candle for timeline/tooltip label.
+    if (snappedCandleIndex < 0 && this.mouseX >= chartLeft && this.mouseX <= chartRight) {
+      const nearestIndex = Math.round((this.mouseX - chartLeft - candleW / 2) / totalSp);
+      const clampedIndex = Math.max(0, Math.min(visibleCount - 1, nearestIndex));
       snappedCandleIndex = this.startIndex + clampedIndex;
     }
 
