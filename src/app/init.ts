@@ -1904,13 +1904,194 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     // 모바일에서는 전략 리포트 패널 비활성화
     if (isMobile) strategyReport.setVisible(false);
     const strategyReportOpenByPane = new Map<number, boolean>();
+    const announcedSignalKeys = new Set<string>();
+    const getSignalNoticeHost = (): HTMLDivElement => {
+      const w = window as typeof window & { __signalNoticeHost__?: HTMLDivElement };
+      const existing = w.__signalNoticeHost__;
+      if (existing && document.body.contains(existing)) return existing;
+      const host = document.createElement('div');
+      host.id = 'signal-live-notice-host';
+      host.style.cssText = 'position:fixed;top:54px;right:14px;z-index:4200;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:min(92vw,420px);';
+      document.body.appendChild(host);
+      w.__signalNoticeHost__ = host;
+      return host;
+    };
+    const ensureSignalNoticeStyle = () => {
+      if (document.getElementById('signal-live-notice-style')) return;
+      const style = document.createElement('style');
+      style.id = 'signal-live-notice-style';
+      style.textContent = `
+        @keyframes signalNoticeIn {
+          0% { opacity: 0; transform: translateY(-8px) scale(0.98); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes signalNoticeOut {
+          0% { opacity: 1; transform: translateY(0) scale(1); }
+          100% { opacity: 0; transform: translateY(-6px) scale(0.985); }
+        }
+      `;
+      document.head.appendChild(style);
+    };
+    ensureSignalNoticeStyle();
+    const speakSignalNotice = (side: 'LONG' | 'SHORT') => {
+      const message = side === 'LONG' ? '매수신호발생' : '매도신호발생';
+      const ss = window.speechSynthesis;
+      if (!ss) return;
+      try {
+        ss.cancel();
+        const utter = new SpeechSynthesisUtterance(message);
+        utter.lang = 'ko-KR';
+        utter.rate = 1;
+        utter.pitch = 1;
+        utter.volume = 1;
+        ss.speak(utter);
+      } catch {
+        // ignore speech errors
+      }
+    };
+    const showSignalNoticePopup = (args: {
+      side: 'LONG' | 'SHORT';
+      symbol: string;
+      entry: number;
+      timeSec: number;
+      timezone: string;
+    }) => {
+      const { side, symbol, entry, timeSec, timezone } = args;
+      const sideLabel = side === 'LONG' ? 'Long' : 'Short';
+      const sideText = side === 'LONG' ? '매수신호발생' : '매도신호발생';
+      const sideColor = side === 'LONG' ? '#39d98a' : '#ff7f7f';
+      const timeText = formatDateWithTimezone(new Date(timeSec * 1000), timezone, {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      });
+      const card = document.createElement('div');
+      card.style.cssText = 'pointer-events:auto;background:#0f1728;border:1px solid #334766;border-left:4px solid #4f8cff;border-radius:10px;box-shadow:0 12px 26px rgba(0,0,0,0.35);padding:10px 12px;color:#dce6ff;font:12px Segoe UI,Arial,sans-serif;animation:signalNoticeIn 0.18s ease-out forwards;';
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="font-weight:800;color:${sideColor};">${sideText}</div>
+          <button type="button" data-k="close" style="border:none;background:transparent;color:#9fb0d4;cursor:pointer;font-size:14px;line-height:1;">×</button>
+        </div>
+        <div style="margin-top:8px;display:grid;grid-template-columns:58px 1fr;row-gap:4px;column-gap:8px;">
+          <div style="color:#8fa2c6;">시그널</div><div style="color:${sideColor};font-weight:700;">${sideLabel}</div>
+          <div style="color:#8fa2c6;">시간</div><div>${timeText}</div>
+          <div style="color:#8fa2c6;">종목</div><div>${symbol}</div>
+          <div style="color:#8fa2c6;">진입가</div><div>${formatWithComma(entry)}</div>
+        </div>
+      `;
+      getSignalNoticeHost().prepend(card);
+      const closeCard = () => {
+        card.style.animation = 'signalNoticeOut 0.18s ease-in forwards';
+        window.setTimeout(() => card.remove(), 180);
+      };
+      const closeBtn = card.querySelector('[data-k="close"]') as HTMLButtonElement | null;
+      closeBtn?.addEventListener('click', closeCard);
+      window.setTimeout(closeCard, 6500);
+    };
     const getSignalEventCountByPane = (paneId: number): number => {
       const pane = paneControllers.get(paneId) ?? ensurePane(paneId);
       const strategyName = pane.chart.getActiveStrategyName();
       if (!strategyName) return 0;
+      const timezone = pane.chart.config.timezone;
+      const todayKey = formatDateWithTimezone(new Date(), timezone, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const candles = pane.chart.getCandles();
       const series = pane.chart.getStrategySignalSeries();
       if (!Array.isArray(series) || !series.length) return 0;
-      return series.reduce<number>((acc, value) => (Number(value) !== 0 ? acc + 1 : acc), 0);
+      return series.reduce<number>((acc, value, index) => {
+        if (Number(value) === 0) return acc;
+        const sec = Number(candles[index]?.time);
+        if (!Number.isFinite(sec)) return acc;
+        const signalDateKey = formatDateWithTimezone(new Date(sec * 1000), timezone, {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        });
+        return signalDateKey === todayKey ? acc + 1 : acc;
+      }, 0);
+    };
+    const findUnannouncedTodaySignals = (paneId: number): Array<{
+      key: string;
+      side: 'LONG' | 'SHORT';
+      symbol: string;
+      entry: number;
+      timeSec: number;
+      timezone: string;
+    }> => {
+      const pane = paneControllers.get(paneId) ?? ensurePane(paneId);
+      const strategyName = pane.chart.getActiveStrategyName();
+      if (!strategyName) return [];
+      const timezone = pane.chart.config.timezone;
+      const todayKey = formatDateWithTimezone(new Date(), timezone, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const candles = pane.chart.getCandles();
+      const series = pane.chart.getStrategySignalSeries();
+      const symbol = pane.chart.config.symbol;
+      const found: Array<{
+        key: string;
+        side: 'LONG' | 'SHORT';
+        symbol: string;
+        entry: number;
+        timeSec: number;
+        timezone: string;
+      }> = [];
+      const n = Math.min(candles.length, series.length);
+      for (let i = 0; i < n; i += 1) {
+        const sig = Number(series[i] || 0);
+        if (sig !== 1 && sig !== -1) continue;
+        const sec = Number(candles[i]?.time);
+        if (!Number.isFinite(sec)) continue;
+        const signalDateKey = formatDateWithTimezone(new Date(sec * 1000), timezone, {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        });
+        if (signalDateKey !== todayKey) continue;
+        const key = `${paneId}:${symbol}:${sec}:${sig}`;
+        if (announcedSignalKeys.has(key)) continue;
+        announcedSignalKeys.add(key);
+        found.push({
+          key,
+          side: sig === 1 ? 'LONG' : 'SHORT',
+          symbol,
+          entry: Number(candles[i]?.close ?? 0),
+          timeSec: sec,
+          timezone,
+        });
+      }
+      return found;
+    };
+    const notifyLiveSignals = () => {
+      const paneIds = paneState.currentVisiblePaneIds.length
+        ? paneState.currentVisiblePaneIds
+        : [paneState.activePaneId];
+      const detected: Array<{
+        key: string;
+        side: 'LONG' | 'SHORT';
+        symbol: string;
+        entry: number;
+        timeSec: number;
+        timezone: string;
+      }> = [];
+      paneIds.forEach((paneId) => {
+        detected.push(...findUnannouncedTodaySignals(paneId));
+      });
+      if (!detected.length) return;
+      detected
+        .sort((a, b) => a.timeSec - b.timeSec)
+        .forEach((item) => {
+          showSignalNoticePopup(item);
+          speakSignalNotice(item.side);
+        });
     };
     const refreshSignalNotification = () => {
       const paneId = paneState.activePaneId;
@@ -2007,6 +2188,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     };
     startManagedInterval(() => {
       refreshStrategyReport();
+      notifyLiveSignals();
     }, 1000);
     refreshStrategyReport();
     applyViewportOffsets();
@@ -2204,6 +2386,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   bindGlobalShortcuts({
     onToggleFullscreen: toggleFullscreen,
     onSaveScreenshot: saveActivePaneScreenshot,
+    onPanLeft: () => getActivePane().chart.panViewport?.(-1),
+    onPanRight: () => getActivePane().chart.panViewport?.(1),
   });
 }
 

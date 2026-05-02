@@ -6,6 +6,7 @@ export function cloneDrawingShape(shape: DrawingShape): DrawingShape {
     kind: shape.kind,
     a: { index: shape.a.index, price: shape.a.price },
     b: shape.b ? { index: shape.b.index, price: shape.b.price } : undefined,
+    points: shape.points ? shape.points.map((p) => ({ index: p.index, price: p.price })) : undefined,
     text: shape.text,
     color: shape.color,
     width: shape.width,

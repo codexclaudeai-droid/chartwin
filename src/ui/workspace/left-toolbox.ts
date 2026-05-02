@@ -146,6 +146,36 @@ const tools: ToolboxTool[] = [
     },
   },
   {
+    id: 'draw',
+    label: '그리기',
+    icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19l5-1 9-9-4-4-9 9-1 5z"></path><path d="M13 6l4 4"></path></svg>`,
+    menu: {
+      title: '그리기',
+      sections: [
+        {
+          title: '드로잉',
+          items: [
+            {
+              id: 'draw-pencil',
+              label: '연필',
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19l5-1 9-9-4-4-9 9-1 5z"></path><path d="M13 6l4 4"></path></svg>`,
+            },
+            {
+              id: 'draw-highlighter',
+              label: '형광펜',
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l8-8 4 4-8 8H6z"></path><path d="M5 19h8"></path></svg>`,
+            },
+            {
+              id: 'draw-box',
+              label: '박스',
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="16.3" y2="6"></line><line x1="19.7" y1="6" x2="20" y2="6"></line><line x1="20" y1="6" x2="20" y2="16.3"></line><line x1="20" y1="19.7" x2="20" y2="20"></line><line x1="20" y1="20" x2="9.7" y2="20"></line><line x1="6.3" y1="20" x2="6" y2="20"></line><line x1="6" y1="20" x2="6" y2="9.7"></line><line x1="6" y1="6.3" x2="6" y2="6"></line><circle cx="6" cy="6" r="1.7" fill="none"></circle><circle cx="20" cy="6" r="1.7" fill="none"></circle><circle cx="20" cy="20" r="1.7" fill="none"></circle><circle cx="6" cy="20" r="1.7" fill="none"></circle></svg>`,
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     id: 'text',
     label: '텍스트입력',
     icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="6" x2="19" y2="6"></line><line x1="12" y1="6" x2="12" y2="19"></line></svg>`,
@@ -253,6 +283,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       : toolId === 'trend' ? 'trendline'
         : toolId === 'fibonacci' ? 'fib-retracement'
           : toolId === 'forecast' ? 'measure'
+            : toolId === 'draw' ? 'draw-pencil'
             : toolId
   );
   if (!document.getElementById('toolbox-chevron-motion-style')) {
@@ -352,6 +383,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     ['trend', { id: 'trendline', label: '추세선' }],
     ['fibonacci', { id: 'fib-retracement', label: '피보나치 되돌림' }],
     ['forecast', { id: 'long-position', label: '매수 포지션' }],
+    ['draw', { id: 'draw-pencil', label: '연필' }],
   ]);
   const toolChevronMap = new Map<string, HTMLSpanElement>();
 
@@ -583,7 +615,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
             patternBoxesVisible = !patternBoxesVisible;
             syncHideToolIcon();
           } else if (tool.id !== 'trash' && item.icon) {
-            if (tool.id === 'trend' || tool.id === 'fibonacci' || tool.id === 'forecast') {
+            if (tool.id === 'trend' || tool.id === 'fibonacci' || tool.id === 'forecast' || tool.id === 'draw') {
               selectedMenuItemMap.set(tool.id, { id: item.id, label: resolvedLabel });
             }
             if (tool.id === 'trend' && isMobileViewport) {
@@ -895,12 +927,13 @@ export function createLeftToolbox(workspace: HTMLElement): void {
         updateRailVisibility();
         return;
       }
-      if (!clickedChevron && tool.menu && (tool.id === 'trend' || tool.id === 'fibonacci' || tool.id === 'forecast')) {
+      if (!clickedChevron && tool.menu && (tool.id === 'trend' || tool.id === 'fibonacci' || tool.id === 'forecast' || tool.id === 'draw')) {
         const selected = selectedMenuItemMap.get(tool.id);
         const defaultItemId = selected?.id
           ?? (tool.id === 'trend' ? 'trendline'
             : tool.id === 'fibonacci' ? 'fib-retracement'
-              : 'long-position');
+              : tool.id === 'forecast' ? 'long-position'
+                : 'draw-pencil');
         const defaultItem = tool.menu.sections
           .flatMap((section) => section.items)
           .find((item) => item.id === defaultItemId);

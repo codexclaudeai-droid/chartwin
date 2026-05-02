@@ -4,6 +4,9 @@
   | 'channel'
   | 'fib-retracement'
   | 'fib-trend'
+  | 'draw-pencil'
+  | 'draw-highlighter'
+  | 'draw-box'
   | 'long-position'
   | 'short-position'
   | 'measure'
@@ -19,6 +22,7 @@ export type DrawingShape = {
   kind: DrawingToolId;
   a: DrawingAnchor;
   b?: DrawingAnchor;
+  points?: DrawingAnchor[];
   text?: string;
   color?: string;
   width?: number;
@@ -52,6 +56,7 @@ export type DrawingDraft = {
   kind: DrawingToolId;
   a: DrawingAnchor;
   b: DrawingAnchor;
+  points?: DrawingAnchor[];
   channelOffset?: DrawingAnchor;
   stage?: number;  // Position 드로잉: 0=미완성, 1=진입만 설정, 2=모두 설정
 };
@@ -72,4 +77,8 @@ export type DrawingHitPart =
   | 'channel-offset'
   | 'channel-center'
   | 'channel-mid-base'
-  | 'channel-mid-parallel';
+  | 'channel-mid-parallel'
+  | 'box-tl'
+  | 'box-tr'
+  | 'box-br'
+  | 'box-bl';
