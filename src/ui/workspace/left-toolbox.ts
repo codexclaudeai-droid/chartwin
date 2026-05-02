@@ -1018,6 +1018,15 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     eraserModeActive = customEvent.detail?.toolId === 'eraser';
     syncEraserButtonStyle();
   });
+  window.addEventListener('chart-magnet-mode-changed', (event: Event) => {
+    const customEvent = event as CustomEvent<{ mode?: string }>;
+    const mode = customEvent.detail?.mode;
+    if (mode === 'off' || mode === 'soft' || mode === 'strong') {
+      magnetMode = mode;
+      syncMagnetToolIcon();
+      syncMagnetButtonStyle();
+    }
+  });
   syncMagnetToolIcon();
   syncMagnetButtonStyle();
 

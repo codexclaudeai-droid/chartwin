@@ -891,8 +891,12 @@ export class SimpleChart {
     ];
     if (!tool || !allowed.includes(tool as ActiveDrawingToolId)) {
       this.drawingTool = null;
+      this.drawingMagnetMode = 'soft';
       window.dispatchEvent(new CustomEvent('chart-drawing-tool-changed', {
         detail: { toolId: this.drawingTool },
+      }));
+      window.dispatchEvent(new CustomEvent('chart-magnet-mode-changed', {
+        detail: { mode: 'soft' },
       }));
       this.drawingDraft = null;
       this.drawingDragActive = false;
@@ -7681,12 +7685,12 @@ export class SimpleChart {
       return;
     }
 
-    // Crosshair guides should follow raw mouse position (no magnet snap).
-    // Magnet is still applied to drawing anchors via drawing_apply_magnet().
+    // 드로잉 중에는 십자선 스냅 비활성(앵커 자석은 drawing_apply_magnet에서 별도 처리).
+    // 드로잉 모드 밖에서는 자석 설정에 따라 십자선이 캔들에 스냅.
     let snapX = this.mouseX;
     let snappedCandleIndex = -1;
     const isInMainPanelForMagnet = this.mouseY >= R.top && this.mouseY <= mainH;
-    const allowCrosshairXSnap = false;
+    const allowCrosshairXSnap = !this.drawingTool && this.drawingMagnetMode !== 'off';
     if (allowCrosshairXSnap && isInMainPanelForMagnet && this.mouseX >= chartLeft && this.mouseX <= chartRight) {
       const nearestIndex = Math.round((this.mouseX - chartLeft - candleW / 2) / totalSp);
       const clampedIndex = Math.max(0, Math.min(visibleCount - 1, nearestIndex));
