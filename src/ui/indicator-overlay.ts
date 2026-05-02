@@ -819,19 +819,19 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
 
     // 펼치기/감추기 쉐브론 토글 버튼 (전략태그 아래)
     if (hasAnyIndicators) {
-      const btnSz = touchLarge ? 22 : 20;
-      const chevSz = touchLarge ? 17 : 14;
+      const btnSz = touchLarge ? 28 : 24;
+      const chevSz = touchLarge ? 26 : 21;
       const toggleBtn = document.createElement('button');
       toggleBtn.type = 'button';
       toggleBtn.title = allTagsCollapsed ? '지표 펼치기' : '지표 감추기';
       toggleBtn.style.cssText = `pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;
-        width:${btnSz}px;height:${btnSz}px;border:none;border-radius:3px;flex-shrink:0;
-        background:rgba(15,21,33,0.45);color:#8899b8;cursor:pointer;padding:0;transition:color 0.15s;`;
+        width:${btnSz}px;height:${btnSz}px;border:1px solid rgba(136,153,184,0.35);border-radius:4px;flex-shrink:0;
+        background:rgba(15,21,33,0.45);color:#8899b8;cursor:pointer;padding:0;transition:color 0.15s,border-color 0.15s;`;
       toggleBtn.innerHTML = allTagsCollapsed
         ? `<svg viewBox="0 0 24 24" width="${chevSz}" height="${chevSz}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`
         : `<svg viewBox="0 0 24 24" width="${chevSz}" height="${chevSz}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>`;
-      toggleBtn.addEventListener('mouseenter', () => { toggleBtn.style.color = '#c8d4ee'; });
-      toggleBtn.addEventListener('mouseleave', () => { toggleBtn.style.color = '#8899b8'; });
+      toggleBtn.addEventListener('mouseenter', () => { toggleBtn.style.color = '#c8d4ee'; toggleBtn.style.borderColor = 'rgba(136,153,184,0.65)'; });
+      toggleBtn.addEventListener('mouseleave', () => { toggleBtn.style.color = '#8899b8'; toggleBtn.style.borderColor = 'rgba(136,153,184,0.35)'; });
       toggleBtn.addEventListener('click', () => {
         allTagsCollapsed = !allTagsCollapsed;
         renderOverlay();
