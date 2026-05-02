@@ -133,6 +133,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
   let panelHoverControllers: Array<{ id: string; top: number; bottom: number; setExpanded: (expanded: boolean) => void }> = [];
   let hoveredPanelId: string | null = null;
   let activeMobileMainTag: HTMLDivElement | null = null;
+  let allTagsCollapsed = false;
   const TITLE_COLLAPSED_PX = 26;
   const getValueHint = (panelId: string, valueIndex: number): string => {
     const map: Record<string, string[]> = {
@@ -315,7 +316,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     ) => {
       const actions = document.createElement('span');
       actions.className = 'indicator-overlay-tag-actions';
-      actions.style.cssText = `display:none;align-items:center;gap:${touchLarge ? 3 : 2}px;`;
+      actions.style.cssText = `display:none;align-items:center;gap:${touchLarge ? 5 : 3}px;`;
       const currentlyVisible = isIndicatorLineVisible(key);
       const hideBtn = makeTagActionButton(
         currentlyVisible ? '감추기' : '표시',
@@ -417,7 +418,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       const reportSvgSz = touchLarge ? 14 : (compactOverlay ? 10 : 10);
       const reportBtnSz = touchLarge ? 18 : (compactOverlay ? 14 : 16);
       visibilityBtn.style.cssText = `width:${eyeBtnSz}px;height:${eyeBtnSz}px;border:none;border-radius:4px;
-        background:transparent;color:#edf3ff;display:inline-flex;align-items:center;justify-content:center;
+        background:transparent;color:#edf3ff;display:none;align-items:center;justify-content:center;
         padding:0;cursor:pointer;transition:color 0.15s ease;flex:0 0 auto;`;
       visibilityBtn.innerHTML = isVisible
         ? `<svg viewBox="0 0 24 24" width="${eyeSvgSz}" height="${eyeSvgSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><path class="eye-lid-top" d="M3 12c2.6-3.4 5.5-5 9-5 3.5 0 6.4 1.6 9 5"></path><path class="eye-lid-bottom" d="M3 12c2.6 3.4 5.5 5 9 5 3.5 0 6.4-1.6 9-5"></path><circle class="eye-iris" cx="12" cy="12" r="2.8"></circle></svg>`
@@ -449,6 +450,12 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       tag.appendChild(textEl);
       tag.appendChild(visibilityBtn);
       tag.appendChild(reportBtn);
+      if (!isMobileOverlay) {
+        tag.addEventListener('mouseenter', () => { visibilityBtn.style.display = 'inline-flex'; });
+        tag.addEventListener('mouseleave', () => { visibilityBtn.style.display = 'none'; });
+      } else {
+        visibilityBtn.style.display = 'inline-flex';
+      }
       return tag;
     };
 
@@ -677,24 +684,55 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       'supertrend','statisticalTrailingStop','zeroLagMaTrendLevels',
       'rsi','dmi','macd','stochF','stochS','cci','obv','volume',
     ];
+    // 표시할 지표가 있는지 미리 파악
+    let hasAnyIndicators = false;
     allKeys.forEach(key => {
-      const enabled = Boolean((ind as any)[key]?.show);
-      if (enabled && !collapsedPanels.has(key)) {
-        try {
-          const tag = getMainIndicatorTag(key);
-          tag.style.pointerEvents = 'auto';
-          if (panelMap[key] === 'main') {
-            mainRow.appendChild(tag);
-          } else {
-            subColumn.appendChild(tag);
-          }
-        } catch (_) { /* skip indicator with incomplete config */ }
-      }
+      if (Boolean((ind as any)[key]?.show) && !collapsedPanels.has(key)) hasAnyIndicators = true;
     });
+    if (activeStrategy) hasAnyIndicators = true;
 
-    if (activeStrategy) {
-      const strategyLabel = `전략: ${activeStrategy.name}${activeStrategy.version ? ` (v${activeStrategy.version})` : ''}`;
-      strategyRow.appendChild(makeStrategyTag(strategyLabel));
+    // 펼치기/감추기 쉐브론 토글 버튼
+    if (hasAnyIndicators) {
+      const btnSz = touchLarge ? 16 : 14;
+      const chevSz = touchLarge ? 12 : 10;
+      const toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.title = allTagsCollapsed ? '지표 펼치기' : '지표 감추기';
+      toggleBtn.style.cssText = `pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;
+        width:${btnSz}px;height:${btnSz}px;border:none;border-radius:3px;flex-shrink:0;
+        background:rgba(15,21,33,0.45);color:#8899b8;cursor:pointer;padding:0;transition:color 0.15s;`;
+      toggleBtn.innerHTML = allTagsCollapsed
+        ? `<svg viewBox="0 0 24 24" width="${chevSz}" height="${chevSz}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`
+        : `<svg viewBox="0 0 24 24" width="${chevSz}" height="${chevSz}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>`;
+      toggleBtn.addEventListener('mouseenter', () => { toggleBtn.style.color = '#c8d4ee'; });
+      toggleBtn.addEventListener('mouseleave', () => { toggleBtn.style.color = '#8899b8'; });
+      toggleBtn.addEventListener('click', () => {
+        allTagsCollapsed = !allTagsCollapsed;
+        renderOverlay();
+      });
+      mainRow.appendChild(toggleBtn);
+    }
+
+    if (!allTagsCollapsed) {
+      allKeys.forEach(key => {
+        const enabled = Boolean((ind as any)[key]?.show);
+        if (enabled && !collapsedPanels.has(key)) {
+          try {
+            const tag = getMainIndicatorTag(key);
+            tag.style.pointerEvents = 'auto';
+            if (panelMap[key] === 'main') {
+              mainRow.appendChild(tag);
+            } else {
+              subColumn.appendChild(tag);
+            }
+          } catch (_) { /* skip indicator with incomplete config */ }
+        }
+      });
+
+      if (activeStrategy) {
+        const strategyLabel = `전략: ${activeStrategy.name}${activeStrategy.version ? ` (v${activeStrategy.version})` : ''}`;
+        strategyRow.appendChild(makeStrategyTag(strategyLabel));
+      }
     }
 
     if (mainRow.children.length) overlay.appendChild(mainRow);
