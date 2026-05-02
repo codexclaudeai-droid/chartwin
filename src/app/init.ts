@@ -2179,16 +2179,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         : null;
       const paneId = requestedPaneId ?? paneState.activePaneId;
       const pane = ensurePane(paneId);
-      const hasActiveStrategy = Boolean(pane.chart.getActiveStrategyName());
-      if (!hasActiveStrategy) return;
-      strategyReportOpenByPane.set(paneId, true);
-      if (paneId !== paneState.activePaneId) {
-        setActivePane(paneId);
-        return;
-      }
-      strategyReport.setVisible(true);
-      strategyReport.refresh();
-      strategyReport.openSettings();
+      openStrategyModal(pane.chart, pane.refreshChartUi);
     });
     refreshStrategyReport = () => {
       const activePane = getActivePane();
