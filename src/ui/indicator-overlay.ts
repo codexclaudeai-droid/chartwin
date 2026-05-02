@@ -111,6 +111,11 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       .strategy-visibility-btn:hover .eye-lid-top { animation: panel-eye-blink-top 620ms ease-in-out 1; }
       .strategy-visibility-btn:hover .eye-lid-bottom { animation: panel-eye-blink-bottom 620ms ease-in-out 1; }
       .strategy-visibility-btn:hover .eye-iris { animation: panel-eye-iris-fade 620ms ease-in-out 1; }
+      .ind-tag-trash-btn:hover .trash-lid { animation: panel-trash-lid-open 660ms ease-in-out 1; transform-origin: 8px 7px; }
+      .ind-tag-trash-btn:hover .trash-body { animation: panel-trash-body-pop 660ms ease-in-out 1; }
+      .ind-tag-trash-btn:hover .trash-dot-1 { animation: panel-trash-dot-drop 660ms ease-in-out 1 30ms; }
+      .ind-tag-trash-btn:hover .trash-dot-2 { animation: panel-trash-dot-drop 660ms ease-in-out 1 90ms; }
+      .ind-tag-trash-btn:hover .trash-dot-3 { animation: panel-trash-dot-drop 660ms ease-in-out 1 150ms; }
     `;
     document.head.appendChild(style);
   }
@@ -328,8 +333,35 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         `<svg viewBox="0 0 24 24" width="${actionIconSz}" height="${actionIconSz}" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"></line><circle cx="9" cy="7" r="2"></circle><line x1="4" y1="12" x2="20" y2="12"></line><circle cx="15" cy="12" r="2"></circle><line x1="4" y1="17" x2="20" y2="17"></line><circle cx="11" cy="17" r="2"></circle></svg>`,
         openSettings,
       );
+      const actionBtnSz = touchLarge ? 19 : (compactOverlay ? 15 : 16);
+      const trashBtn = document.createElement('button');
+      trashBtn.type = 'button';
+      trashBtn.title = '지표 삭제';
+      trashBtn.className = 'ind-tag-trash-btn';
+      trashBtn.style.cssText = `width:${actionBtnSz}px;height:${actionBtnSz}px;
+        display:inline-flex;align-items:center;justify-content:center;
+        border:1px solid rgba(121,136,166,0.45);border-radius:4px;background:rgba(15,21,33,0.9);
+        color:#d3def4;cursor:pointer;padding:0;transition:color 0.15s,border-color 0.15s;`;
+      trashBtn.innerHTML = `<svg viewBox="0 0 24 24" width="${actionIconSz}" height="${actionIconSz}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline class="trash-lid" points="3 6 5 6 21 6"></polyline><path class="trash-body" d="M19 6l-1 14H6L5 6m3 0V4h8v2"></path><circle class="trash-dot-1" cx="9" cy="10.4" r="0.9" fill="currentColor" stroke="none" opacity="0"></circle><circle class="trash-dot-2" cx="12" cy="10.4" r="0.9" fill="currentColor" stroke="none" opacity="0"></circle><circle class="trash-dot-3" cx="15" cy="10.4" r="0.9" fill="currentColor" stroke="none" opacity="0"></circle></svg>`;
+      trashBtn.addEventListener('mouseenter', () => { trashBtn.style.color = '#ff7875'; trashBtn.style.borderColor = 'rgba(255,80,80,0.5)'; });
+      trashBtn.addEventListener('mouseleave', () => { trashBtn.style.color = '#d3def4'; trashBtn.style.borderColor = 'rgba(121,136,166,0.45)'; });
+      trashBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if ((chart.config.indicators as any)[key]) {
+          (chart.config.indicators as any)[key].show = false;
+          collapsedPanels.delete(key);
+          collapsedRatioMemory.delete(key);
+          if (maximizedPanelId === key) {
+            maximizedPanelId = null;
+            maximizedPanelWasCollapsed = false;
+            maximizeRatioMemory = null;
+          }
+          refreshAll();
+        }
+      });
       actions.appendChild(hideBtn);
       actions.appendChild(settingsBtn);
+      actions.appendChild(trashBtn);
       tag.appendChild(actions);
       const valueEls = Array.from(tag.querySelectorAll<HTMLElement>('.indicator-overlay-tag-value'));
       const setMobileActiveState = (active: boolean) => {
@@ -452,8 +484,26 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         window.dispatchEvent(new CustomEvent('chart-open-strategy-settings', { detail: { chart } }));
       });
 
+      const stratTrashBtn = document.createElement('button');
+      stratTrashBtn.type = 'button';
+      stratTrashBtn.title = '전략 삭제';
+      stratTrashBtn.className = 'ind-tag-trash-btn';
+      stratTrashBtn.style.cssText = `width:${eyeBtnSz}px;height:${eyeBtnSz}px;border:none;border-radius:4px;
+        background:transparent;color:#edf3ff;display:inline-flex;align-items:center;justify-content:center;
+        padding:0;cursor:pointer;transition:color 0.15s ease;flex:0 0 auto;`;
+      stratTrashBtn.innerHTML = `<svg viewBox="0 0 24 24" width="${eyeSvgSz}" height="${eyeSvgSz}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline class="trash-lid" points="3 6 5 6 21 6"></polyline><path class="trash-body" d="M19 6l-1 14H6L5 6m3 0V4h8v2"></path><circle class="trash-dot-1" cx="9" cy="10.4" r="0.9" fill="currentColor" stroke="none" opacity="0"></circle><circle class="trash-dot-2" cx="12" cy="10.4" r="0.9" fill="currentColor" stroke="none" opacity="0"></circle><circle class="trash-dot-3" cx="15" cy="10.4" r="0.9" fill="currentColor" stroke="none" opacity="0"></circle></svg>`;
+      stratTrashBtn.addEventListener('mouseenter', () => { stratTrashBtn.style.color = '#ff7875'; });
+      stratTrashBtn.addEventListener('mouseleave', () => { stratTrashBtn.style.color = '#edf3ff'; });
+      stratTrashBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        chart.setActiveStrategy?.(null);
+        chart.draw?.();
+        renderOverlay();
+      });
+
       strategyActions.appendChild(visibilityBtn);
       strategyActions.appendChild(settingsBtn);
+      strategyActions.appendChild(stratTrashBtn);
 
       const reportBtn = document.createElement('button');
       reportBtn.type = 'button';
