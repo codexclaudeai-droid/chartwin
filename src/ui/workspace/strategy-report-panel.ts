@@ -406,6 +406,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   isVisible: () => boolean;
   setLeftInset: (left: number) => void;
   openTradesTab: () => void;
+  openSettings: () => void;
   setTradeViewAlertActive: (active: boolean) => void;
 } {
   ensurePeriodPickerStyle();
@@ -1777,6 +1778,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     openTradesTab: () => {
       activeTab = 'trades';
       renderAll();
+    },
+    openSettings: () => {
+      openSettingsMenu();
     },
     setTradeViewAlertActive: (active: boolean) => {
       tradeViewAlertActive = Boolean(active);

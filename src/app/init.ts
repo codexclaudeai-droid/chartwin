@@ -2172,6 +2172,24 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       }
       refreshStrategyReport();
     });
+    window.addEventListener('chart-open-strategy-settings', (event: Event) => {
+      const customEvent = event as CustomEvent<{ chart?: unknown }>;
+      const requestedPaneId = customEvent.detail?.chart != null
+        ? resolvePaneIdByChart(customEvent.detail.chart)
+        : null;
+      const paneId = requestedPaneId ?? paneState.activePaneId;
+      const pane = ensurePane(paneId);
+      const hasActiveStrategy = Boolean(pane.chart.getActiveStrategyName());
+      if (!hasActiveStrategy) return;
+      strategyReportOpenByPane.set(paneId, true);
+      if (paneId !== paneState.activePaneId) {
+        setActivePane(paneId);
+        return;
+      }
+      strategyReport.setVisible(true);
+      strategyReport.refresh();
+      strategyReport.openSettings();
+    });
     refreshStrategyReport = () => {
       const activePane = getActivePane();
       const activePaneId = paneState.activePaneId;

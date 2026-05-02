@@ -401,24 +401,30 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
 
     const makeStrategyTag = (label: string) => {
       const tag = document.createElement('div');
-      tag.style.cssText = `display:inline-flex;align-items:center;gap:2px;max-width:none;
-        background:transparent;border:none;border-radius:0;
+      tag.style.cssText = `display:inline-flex;align-items:center;gap:3px;max-width:none;
+        background:transparent;border:1px solid transparent;border-radius:3px;
         padding:${tagPadX};font-size:${tagFontSize}px;font-family:${CHART_FONT_STACK};color:#f5f7fb;
-        pointer-events:auto;cursor:default;box-sizing:border-box;overflow:visible;white-space:nowrap;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);`;
+        pointer-events:auto;cursor:default;box-sizing:border-box;overflow:visible;white-space:nowrap;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);transition:border-color 0.15s;`;
       const textEl = document.createElement('span');
       textEl.textContent = label;
       textEl.style.cssText = 'white-space:nowrap;';
       const isVisible = chart.isStrategySignalVisible?.() !== false;
-      const visibilityBtn = document.createElement('button');
-      visibilityBtn.type = 'button';
-      visibilityBtn.className = 'strategy-visibility-btn';
-      visibilityBtn.title = isVisible ? '전략시그널 감추기' : '전략시그널 보이기';
       const eyeSvgSz = actionIconSz;
       const eyeBtnSz = touchLarge ? 22 : (compactOverlay ? 16 : 18);
       const reportSvgSz = touchLarge ? 14 : (compactOverlay ? 10 : 10);
       const reportBtnSz = touchLarge ? 18 : (compactOverlay ? 14 : 16);
+
+      // 눈 + 설정 버튼을 묶은 액션 컨테이너 (호버/탭시에만 표시)
+      const strategyActions = document.createElement('span');
+      strategyActions.className = 'strategy-tag-actions';
+      strategyActions.style.cssText = `display:none;align-items:center;gap:${touchLarge ? 5 : 3}px;`;
+
+      const visibilityBtn = document.createElement('button');
+      visibilityBtn.type = 'button';
+      visibilityBtn.className = 'strategy-visibility-btn';
+      visibilityBtn.title = isVisible ? '전략시그널 감추기' : '전략시그널 보이기';
       visibilityBtn.style.cssText = `width:${eyeBtnSz}px;height:${eyeBtnSz}px;border:none;border-radius:4px;
-        background:transparent;color:#edf3ff;display:none;align-items:center;justify-content:center;
+        background:transparent;color:#edf3ff;display:inline-flex;align-items:center;justify-content:center;
         padding:0;cursor:pointer;transition:color 0.15s ease;flex:0 0 auto;`;
       visibilityBtn.innerHTML = isVisible
         ? `<svg viewBox="0 0 24 24" width="${eyeSvgSz}" height="${eyeSvgSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><path class="eye-lid-top" d="M3 12c2.6-3.4 5.5-5 9-5 3.5 0 6.4 1.6 9 5"></path><path class="eye-lid-bottom" d="M3 12c2.6 3.4 5.5 5 9 5 3.5 0 6.4-1.6 9-5"></path><circle class="eye-iris" cx="12" cy="12" r="2.8"></circle></svg>`
@@ -430,8 +436,28 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         chart.setStrategySignalVisible?.(!isVisible);
         renderOverlay();
       });
+
+      const stratSettingsSvgSz = eyeSvgSz;
+      const settingsBtn = document.createElement('button');
+      settingsBtn.type = 'button';
+      settingsBtn.title = '전략 설정';
+      settingsBtn.style.cssText = `width:${eyeBtnSz}px;height:${eyeBtnSz}px;border:none;border-radius:4px;
+        background:transparent;color:#edf3ff;display:inline-flex;align-items:center;justify-content:center;
+        padding:0;cursor:pointer;transition:color 0.15s ease;flex:0 0 auto;`;
+      settingsBtn.innerHTML = `<svg viewBox="0 0 24 24" width="${stratSettingsSvgSz}" height="${stratSettingsSvgSz}" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"></line><circle cx="9" cy="7" r="2"></circle><line x1="4" y1="12" x2="20" y2="12"></line><circle cx="15" cy="12" r="2"></circle><line x1="4" y1="17" x2="20" y2="17"></line><circle cx="11" cy="17" r="2"></circle></svg>`;
+      settingsBtn.addEventListener('mouseenter', () => { settingsBtn.style.color = '#ffffff'; });
+      settingsBtn.addEventListener('mouseleave', () => { settingsBtn.style.color = '#edf3ff'; });
+      settingsBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        window.dispatchEvent(new CustomEvent('chart-open-strategy-settings', { detail: { chart } }));
+      });
+
+      strategyActions.appendChild(visibilityBtn);
+      strategyActions.appendChild(settingsBtn);
+
       const reportBtn = document.createElement('button');
       reportBtn.type = 'button';
+      reportBtn.className = 'strategy-report-open-btn';
       reportBtn.title = '전략리포트';
       reportBtn.style.cssText = `width:${reportBtnSz}px;height:${reportBtnSz}px;border:1px solid #3a4158;border-radius:3px;
         background:#ffffff;color:#0f1218;display:inline-flex;align-items:center;justify-content:center;
@@ -447,14 +473,38 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         event.stopPropagation();
         window.dispatchEvent(new CustomEvent('chart-open-strategy-report', { detail: { chart } }));
       });
+
       tag.appendChild(textEl);
-      tag.appendChild(visibilityBtn);
+      tag.appendChild(strategyActions);
       tag.appendChild(reportBtn);
+
       if (!isMobileOverlay) {
-        tag.addEventListener('mouseenter', () => { visibilityBtn.style.display = 'inline-flex'; });
-        tag.addEventListener('mouseleave', () => { visibilityBtn.style.display = 'none'; });
+        // PC: 호버시에만 액션 표시
+        tag.addEventListener('mouseenter', () => {
+          strategyActions.style.display = 'inline-flex';
+          tag.style.borderColor = 'rgba(74,78,94,0.6)';
+        });
+        tag.addEventListener('mouseleave', () => {
+          strategyActions.style.display = 'none';
+          tag.style.borderColor = 'transparent';
+        });
       } else {
-        visibilityBtn.style.display = 'inline-flex';
+        // 모바일: 탭으로 토글 (보조지표와 동일한 방식)
+        tag.addEventListener('click', (event) => {
+          if ((event.target as HTMLElement).closest('button')) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const nextActive = activeMobileMainTag !== (tag as HTMLDivElement);
+          if (activeMobileMainTag && activeMobileMainTag !== (tag as HTMLDivElement)) {
+            const prevActions = activeMobileMainTag.querySelector<HTMLElement>('.strategy-tag-actions,.indicator-overlay-tag-actions');
+            if (prevActions) prevActions.style.display = 'none';
+            activeMobileMainTag.classList.remove('indicator-overlay-main-tag-mobile-active');
+            Array.from(activeMobileMainTag.querySelectorAll<HTMLElement>('.indicator-overlay-tag-value'))
+              .forEach((el) => { el.style.display = ''; });
+          }
+          activeMobileMainTag = nextActive ? (tag as HTMLDivElement) : null;
+          strategyActions.style.display = nextActive ? 'inline-flex' : 'none';
+        });
       }
       return tag;
     };
@@ -691,28 +741,6 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     });
     if (activeStrategy) hasAnyIndicators = true;
 
-    // 펼치기/감추기 쉐브론 토글 버튼
-    if (hasAnyIndicators) {
-      const btnSz = touchLarge ? 16 : 14;
-      const chevSz = touchLarge ? 12 : 10;
-      const toggleBtn = document.createElement('button');
-      toggleBtn.type = 'button';
-      toggleBtn.title = allTagsCollapsed ? '지표 펼치기' : '지표 감추기';
-      toggleBtn.style.cssText = `pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;
-        width:${btnSz}px;height:${btnSz}px;border:none;border-radius:3px;flex-shrink:0;
-        background:rgba(15,21,33,0.45);color:#8899b8;cursor:pointer;padding:0;transition:color 0.15s;`;
-      toggleBtn.innerHTML = allTagsCollapsed
-        ? `<svg viewBox="0 0 24 24" width="${chevSz}" height="${chevSz}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`
-        : `<svg viewBox="0 0 24 24" width="${chevSz}" height="${chevSz}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>`;
-      toggleBtn.addEventListener('mouseenter', () => { toggleBtn.style.color = '#c8d4ee'; });
-      toggleBtn.addEventListener('mouseleave', () => { toggleBtn.style.color = '#8899b8'; });
-      toggleBtn.addEventListener('click', () => {
-        allTagsCollapsed = !allTagsCollapsed;
-        renderOverlay();
-      });
-      mainRow.appendChild(toggleBtn);
-    }
-
     if (!allTagsCollapsed) {
       allKeys.forEach(key => {
         const enabled = Boolean((ind as any)[key]?.show);
@@ -738,6 +766,28 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     if (mainRow.children.length) overlay.appendChild(mainRow);
     if (strategyRow.children.length) overlay.appendChild(strategyRow);
     // Sub-indicator tags are hidden here because each sub panel has its own header.
+
+    // 펼치기/감추기 쉐브론 토글 버튼 (전략태그 아래)
+    if (hasAnyIndicators) {
+      const btnSz = touchLarge ? 22 : 20;
+      const chevSz = touchLarge ? 17 : 14;
+      const toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.title = allTagsCollapsed ? '지표 펼치기' : '지표 감추기';
+      toggleBtn.style.cssText = `pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;
+        width:${btnSz}px;height:${btnSz}px;border:none;border-radius:3px;flex-shrink:0;
+        background:rgba(15,21,33,0.45);color:#8899b8;cursor:pointer;padding:0;transition:color 0.15s;`;
+      toggleBtn.innerHTML = allTagsCollapsed
+        ? `<svg viewBox="0 0 24 24" width="${chevSz}" height="${chevSz}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`
+        : `<svg viewBox="0 0 24 24" width="${chevSz}" height="${chevSz}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>`;
+      toggleBtn.addEventListener('mouseenter', () => { toggleBtn.style.color = '#c8d4ee'; });
+      toggleBtn.addEventListener('mouseleave', () => { toggleBtn.style.color = '#8899b8'; });
+      toggleBtn.addEventListener('click', () => {
+        allTagsCollapsed = !allTagsCollapsed;
+        renderOverlay();
+      });
+      overlay.appendChild(toggleBtn);
+    }
 
     const panels = chart.activePanels as string[];
     if (!panels.length) return;
