@@ -338,6 +338,8 @@ export class SimpleChart {
   private touchStartPriceOffset = 0;
   private touchPinchDist  = 0;
   private touchPinchStartVisible = 0;
+  private touchPinchAnchorIndex = 0;
+  private touchPinchAnchorRatio = 0.5;
   private isTouchPanning  = false;
   private isTouchPinching = false;
 
@@ -874,6 +876,9 @@ export class SimpleChart {
   public setDrawingTool(tool: string | null): void {
     const allowed: ActiveDrawingToolId[] = [
       'trendline',
+      'draw-pencil',
+      'draw-highlighter',
+      'draw-box',
       'hline',
       'channel',
       'fib-retracement',
@@ -910,8 +915,10 @@ export class SimpleChart {
     this.touchDrawingTapCount = 0;
     if (this.drawingTool !== 'channel') this.pendingChannelId = null;
     if (this.drawingTool !== 'fib-trend') this.fibTrendPointStage = 0;
-    // 드로잉 시작 시 기본 십자선 즉시 해제
-    if (this.isCrosshairMode) this.exitCrosshairMode();
+    // 자유 드로잉은 기본 열십자 라인을 유지
+    if (this.isCrosshairMode && this.drawingTool !== 'draw-pencil' && this.drawingTool !== 'draw-highlighter') {
+      this.exitCrosshairMode();
+    }
     this.updateChartCursor();
     this.syncDrawingToolbar();
     this.requestOverlayDraw();
@@ -930,6 +937,9 @@ export class SimpleChart {
 
     const guideMap: Partial<Record<DrawingToolId, string[]>> = {
       'trendline':       ['① 시작점을 탭하세요', '② 끝점을 탭해 추세선을 완성하세요'],
+      'draw-pencil':     ['① 시작점을 탭하세요', '② 끝점을 탭해 연필선을 완성하세요'],
+      'draw-highlighter':['① 시작점을 탭하세요', '② 끝점을 탭해 형광펜선을 완성하세요'],
+      'draw-box':        ['① 첫 번째 꼭짓점 탭', '② 반대 꼭짓점 탭으로 박스를 완성하세요'],
       'hline':           ['탭한 위치에 수평선이 그려집니다'],
       'channel':         ['① 첫 번째 선의 시작점 탭', '② 끝점 탭', '③ 두 번째 선 위치 탭'],
       'fib-retracement': ['① 시작점을 탭하세요', '② 끝점을 탭해 피보나치를 완성하세요'],
@@ -3006,7 +3016,10 @@ export class SimpleChart {
     this.canvas.addEventListener('mouseup',   this.handleMouseUp.bind(this));
     this.canvas.addEventListener('dblclick',  this.handleDoubleClick.bind(this));
     this.canvas.addEventListener('mouseleave', () => {
-      this.isMouseOver = false;
+      const keepCrosshair = Boolean(this.drawingTool && this.drawingTool !== 'eraser')
+        || Boolean(this.drawingDraft)
+        || Boolean(this.drawingMoveState);
+      this.isMouseOver = keepCrosshair;
       this.isMouseDownForTooltip = false;
       this.stopMouseLongPressTooltip();
       this.hoveredDrawingId = null;
@@ -5139,6 +5152,19 @@ export class SimpleChart {
 
   private ensureDrawingToolbar() {
     if (this.drawingToolbarEl) return;
+    if (!document.getElementById('drawing-toolbar-scrollbar-style')) {
+      const style = document.createElement('style');
+      style.id = 'drawing-toolbar-scrollbar-style';
+      style.textContent = `
+        .drawing-width-menu-scroll::-webkit-scrollbar { width: 6px; }
+        .drawing-width-menu-scroll::-webkit-scrollbar-track { background: transparent; }
+        .drawing-width-menu-scroll::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #c2cbe0 0%, #9aa7c4 100%);
+          border-radius: 999px;
+        }
+      `;
+      document.head.appendChild(style);
+    }
     const host = this.canvas.parentElement;
     if (!host) return;
     const bar = document.createElement('div');
@@ -5193,6 +5219,23 @@ export class SimpleChart {
       'color:#2f6cff',
     ].join(';');
     colorBtn.innerHTML = '<span style="position:relative;width:22px;height:24px;display:block;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:0;top:-2px"><path d="M3 17.25V21h3.75L19.81 7.94 16.06 4.19 3 17.25z"></path><path d="M14.5 5.75l3.75 3.75"></path></svg><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" style="position:absolute;left:1px;top:9px"><line x1="6" y1="12" x2="21.5" y2="12"></line></svg></span>';
+    const opacityWrap = document.createElement('div');
+    opacityWrap.dataset.k = 'shape-opacity-wrap';
+    opacityWrap.style.cssText = 'display:none;align-items:center;gap:6px;height:32px;padding:0 4px;';
+    const opacityLabel = document.createElement('span');
+    opacityLabel.dataset.k = 'shape-opacity-label';
+    opacityLabel.style.cssText = 'font:700 11px Segoe UI, Arial, sans-serif;color:#374151;min-width:38px;text-align:right;';
+    opacityLabel.textContent = '40%';
+    const opacityInput = document.createElement('input');
+    opacityInput.type = 'range';
+    opacityInput.min = '5';
+    opacityInput.max = '100';
+    opacityInput.step = '1';
+    opacityInput.value = '40';
+    opacityInput.dataset.k = 'shape-opacity';
+    opacityInput.title = '투명도';
+    opacityInput.style.cssText = 'width:88px;accent-color:#f5c542;cursor:pointer;';
+    opacityWrap.append(opacityLabel, opacityInput);
     const colorMenu = document.createElement('div');
     colorMenu.style.cssText = [
       'position:absolute',
@@ -5257,7 +5300,7 @@ export class SimpleChart {
     widthSelect.title = '선 두께';
     widthSelect.style.cssText = 'position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;';
     widthSelect.dataset.k = 'width';
-    [1, 2, 3, 4].forEach((w) => {
+    [1, 2, 3, 4, 6, 8, 10, 12, 16, 20, 24, 30, 40, 50].forEach((w) => {
       const opt = document.createElement('option');
       opt.value = String(w);
       opt.textContent = `${w}px`;
@@ -5271,6 +5314,7 @@ export class SimpleChart {
     widthBtn.style.cssText = 'height:32px;min-width:58px;padding:0 4px;border:none;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:#1f2533;';
 
     const widthMenu = document.createElement('div');
+    widthMenu.className = 'drawing-width-menu-scroll';
     widthMenu.style.cssText = [
       'position:absolute',
       'display:none',
@@ -5278,6 +5322,11 @@ export class SimpleChart {
       'left:0',
       'z-index:2200',
       'min-width:92px',
+      'max-height:220px',
+      'overflow-y:auto',
+      'overflow-x:hidden',
+      'scrollbar-width:thin',
+      'scrollbar-color:#9aa7c4 transparent',
       'padding:4px',
       'border-radius:8px',
       'background:#f2f4f8',
@@ -5286,15 +5335,17 @@ export class SimpleChart {
     ].join(';');
 
     const renderWidthButton = () => {
-      const w = Math.max(1, Math.min(4, Number(widthSelect.value || '2')));
-      widthBtn.innerHTML = `<svg viewBox="0 0 56 18" width="56" height="18" fill="none"><line x1="3" y1="9" x2="30" y2="9" stroke="currentColor" stroke-width="${w}" stroke-linecap="round"></line><text x="36" y="12" font-size="11" fill="currentColor" font-weight="700">${w}px</text></svg>`;
+      const w = Math.max(1, Math.min(50, Number(widthSelect.value || '2')));
+      const previewW = 4;
+      widthBtn.innerHTML = `<svg viewBox="0 0 56 18" width="56" height="18" fill="none"><line x1="3" y1="9" x2="30" y2="9" stroke="currentColor" stroke-width="${previewW}" stroke-linecap="round"></line><text x="36" y="12" font-size="11" fill="currentColor" font-weight="700">${w}px</text></svg>`;
     };
 
-    [1, 2, 3, 4].forEach((w) => {
+    [1, 2, 3, 4, 6, 8, 10, 12, 16, 20, 24, 30, 40, 50].forEach((w) => {
       const item = document.createElement('button');
       item.type = 'button';
       item.style.cssText = 'width:100%;height:30px;border:none;background:transparent;border-radius:6px;display:flex;align-items:center;justify-content:flex-start;padding:0 6px;cursor:pointer;color:#1f2533;';
-      item.innerHTML = `<svg viewBox="0 0 74 18" width="74" height="18" fill="none"><line x1="3" y1="9" x2="38" y2="9" stroke="currentColor" stroke-width="${w}" stroke-linecap="round"></line><text x="46" y="12" font-size="11" fill="currentColor" font-weight="700">${w}px</text></svg>`;
+      const previewW = 4;
+      item.innerHTML = `<svg viewBox="0 0 74 18" width="74" height="18" fill="none"><line x1="3" y1="9" x2="38" y2="9" stroke="currentColor" stroke-width="${previewW}" stroke-linecap="round"></line><text x="46" y="12" font-size="11" fill="currentColor" font-weight="700">${w}px</text></svg>`;
       item.addEventListener('mouseenter', () => { item.style.background = '#e6ebf4'; });
       item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
       item.addEventListener('click', (event) => {
@@ -5414,6 +5465,7 @@ export class SimpleChart {
     bar.append(
       colorBtn,
       colorInput,
+      opacityWrap,
       widthBtn,
       widthSelect,
       styleBtn,
@@ -5430,8 +5482,22 @@ export class SimpleChart {
     const applyToolbarToShape = () => {
       const selected = this.getSelectedDrawing();
       if (!selected) return;
-      selected.color = colorInput.value || '#2f6cff';
-      colorBtn.style.color = selected.color;
+      const opacityValue = Math.max(5, Math.min(100, Number(opacityInput.value || '40')));
+      opacityLabel.textContent = `${opacityValue}%`;
+      if (selected.kind === 'draw-highlighter' || selected.kind === 'draw-box') {
+        const hex = colorInput.value || '#f5c542';
+        const toRgb = (h: string) => {
+          const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);
+          if (!m) return { r: 245, g: 197, b: 66 };
+          return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+        };
+        const { r, g, b } = toRgb(hex);
+        selected.color = `rgba(${r},${g},${b},${(opacityValue / 100).toFixed(2)})`;
+        colorBtn.style.color = hex;
+      } else {
+        selected.color = colorInput.value || '#2f6cff';
+        colorBtn.style.color = selected.color;
+      }
       selected.width = Number(widthSelect.value || '2');
       selected.lineStyle = (styleSelect.value as DrawingShape['lineStyle']) ?? 'solid';
       this.upsertDrawing(selected);
@@ -5443,7 +5509,7 @@ export class SimpleChart {
       lockBtn.style.color = locked ? '#2f6cff' : '#1f2533';
     };
 
-    [colorInput, widthSelect, styleSelect]
+    [colorInput, widthSelect, styleSelect, opacityInput]
       .forEach((el) => {
         el.addEventListener('input', applyToolbarToShape);
         el.addEventListener('change', applyToolbarToShape);
@@ -5613,14 +5679,41 @@ export class SimpleChart {
     const q = <T extends HTMLElement>(k: string) => bar.querySelector<T>(`[data-k="${k}"]`);
     const colorInput = q<HTMLInputElement>('color');
     const colorBtn = q<HTMLButtonElement>('color-btn');
+    const shapeOpacityWrap = q<HTMLDivElement>('shape-opacity-wrap');
+    const shapeOpacity = q<HTMLInputElement>('shape-opacity');
+    const shapeOpacityLabel = q<HTMLSpanElement>('shape-opacity-label');
     const widthSelect = q<HTMLSelectElement>('width');
     const styleSelect = q<HTMLSelectElement>('style');
     const lockBtn = q<HTMLButtonElement>('lock');
     const hideBtn = q<HTMLButtonElement>('hide');
-    if (colorInput) colorInput.value = selected.color ?? '#2f6cff';
-    if (colorBtn) colorBtn.style.color = selected.color ?? '#2f6cff';
+    if (selected.kind === 'draw-highlighter' || selected.kind === 'draw-box') {
+      if (shapeOpacityWrap) shapeOpacityWrap.style.display = 'inline-flex';
+      const parseRgba = (raw: string | undefined) => {
+        const fallback = { hex: selected.kind === 'draw-box' ? '#7ea6ff' : '#f5c542', alpha: selected.kind === 'draw-box' ? 20 : 40 };
+        if (!raw) return fallback;
+        const m = raw.match(/rgba?\(([^)]+)\)/i);
+        if (!m) return { hex: raw.startsWith('#') ? raw : fallback.hex, alpha: fallback.alpha };
+        const parts = m[1].split(',').map((s) => s.trim());
+        const r = Number(parts[0] ?? (selected.kind === 'draw-box' ? '126' : '245'));
+        const g = Number(parts[1] ?? (selected.kind === 'draw-box' ? '166' : '197'));
+        const b = Number(parts[2] ?? (selected.kind === 'draw-box' ? '255' : '66'));
+        const a = parts.length >= 4 ? Number(parts[3]) : (selected.kind === 'draw-box' ? 0.2 : 0.4);
+        const toHex = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+        return { hex: `#${toHex(r)}${toHex(g)}${toHex(b)}`, alpha: Math.max(5, Math.min(100, Math.round((Number.isFinite(a) ? a : 0.4) * 100))) };
+      };
+      const parsed = parseRgba(selected.color);
+      if (colorInput) colorInput.value = parsed.hex;
+      if (colorBtn) colorBtn.style.color = parsed.hex;
+      if (shapeOpacity) shapeOpacity.value = String(parsed.alpha);
+      if (shapeOpacityLabel) shapeOpacityLabel.textContent = `${parsed.alpha}%`;
+    } else {
+      if (shapeOpacityWrap) shapeOpacityWrap.style.display = 'none';
+      if (colorInput) colorInput.value = selected.color ?? '#2f6cff';
+      if (colorBtn) colorBtn.style.color = selected.color ?? '#2f6cff';
+    }
     if (widthSelect) {
-      const nextWidth = String(Math.max(1, Math.min(4, Math.round(selected.width ?? 2))));
+      const maxWidth = selected.kind === 'draw-highlighter' ? 50 : 4;
+      const nextWidth = String(Math.max(1, Math.min(maxWidth, Math.round(selected.width ?? 2))));
       widthSelect.value = nextWidth;
       const widthBtn = q<HTMLButtonElement>('width-btn');
       if (widthBtn) {
@@ -5986,6 +6079,44 @@ export class SimpleChart {
       if (Math.abs(my - ay) <= 9) return 'line';
       return Math.abs(my - ay) <= 16 ? 'body' : null;
     }
+    if (shape.kind === 'draw-pencil' || shape.kind === 'draw-highlighter') {
+      const points = shape.points ?? [shape.a, shape.b ?? shape.a];
+      const pxy = points.map((p) => ({
+        x: this.xForIndex(p.index, metrics.totalSp, metrics.candleW),
+        y: metrics.getY(p.price),
+      }));
+      for (let i = 0; i < pxy.length - 1; i += 1) {
+        if (this.pointToSegmentDistance(mx, my, pxy[i].x, pxy[i].y, pxy[i + 1].x, pxy[i + 1].y) <= pad) return 'line';
+      }
+      const xs = pxy.map((p) => p.x);
+      const ys = pxy.map((p) => p.y);
+      if (xs.length > 0) {
+        const left = Math.min(...xs) - pad;
+        const right = Math.max(...xs) + pad;
+        const top = Math.min(...ys) - pad;
+        const bottom = Math.max(...ys) + pad;
+        return (mx >= left && mx <= right && my >= top && my <= bottom) ? 'body' : null;
+      }
+      return null;
+    }
+    if (shape.kind === 'draw-box') {
+      const left = Math.min(ax, bx);
+      const right = Math.max(ax, bx);
+      const top = Math.min(ay, by);
+      const bottom = Math.max(ay, by);
+      if (Math.hypot(mx - left, my - top) <= anchorHitPad) return 'box-tl';
+      if (Math.hypot(mx - right, my - top) <= anchorHitPad) return 'box-tr';
+      if (Math.hypot(mx - right, my - bottom) <= anchorHitPad) return 'box-br';
+      if (Math.hypot(mx - left, my - bottom) <= anchorHitPad) return 'box-bl';
+      const onEdge = (
+        (Math.abs(my - top) <= 8 && mx >= left - pad && mx <= right + pad)
+        || (Math.abs(my - bottom) <= 8 && mx >= left - pad && mx <= right + pad)
+        || (Math.abs(mx - left) <= 8 && my >= top - pad && my <= bottom + pad)
+        || (Math.abs(mx - right) <= 8 && my >= top - pad && my <= bottom + pad)
+      );
+      if (onEdge) return 'line';
+      return (mx >= left - pad && mx <= right + pad && my >= top - pad && my <= bottom + pad) ? 'body' : null;
+    }
     if (shape.kind === 'channel') {
       const g = this.getChannelGeometry(shape);
       const a2x = this.xForIndex(g.a2.index, metrics.totalSp, metrics.candleW);
@@ -6296,6 +6427,66 @@ export class SimpleChart {
         return next;
       }
     }
+    if (base.kind === 'draw-pencil' || base.kind === 'draw-highlighter') {
+      const next = this.cloneShape(base) as DrawingShape;
+      const pts = (base.points ?? [base.a, base.b ?? base.a]).map((p) => ({ ...p }));
+      const moveAnchorRaw = (a: DrawingAnchor): DrawingAnchor => ({
+        index: Math.max(0, Math.min(this.data.length - 1, a.index + deltaIndex)),
+        price: a.price + deltaPrice,
+      });
+      // 자유 드로잉은 재편집 시에도 경로 전체를 그대로 평행이동한다.
+      for (let i = 0; i < pts.length; i += 1) pts[i] = moveAnchorRaw(pts[i]);
+      next.points = pts;
+      next.a = pts[0] ?? next.a;
+      next.b = pts[pts.length - 1] ?? next.b;
+      return next;
+    }
+    if (base.kind === 'draw-box') {
+      const next = this.cloneShape(base);
+      const a0 = { ...base.a };
+      const b0 = base.b ? { ...base.b } : { ...base.a };
+      const left = Math.min(a0.index, b0.index);
+      const right = Math.max(a0.index, b0.index);
+      const top = Math.max(a0.price, b0.price);
+      const bottom = Math.min(a0.price, b0.price);
+      const moved = moveAnchor({ index: left, price: top });
+      const movedTR = moveAnchor({ index: right, price: top });
+      const movedBR = moveAnchor({ index: right, price: bottom });
+      const movedBL = moveAnchor({ index: left, price: bottom });
+      if (part === 'box-tl') {
+        next.a = { index: moved.index, price: moved.price };
+        next.b = { index: right, price: bottom };
+        return next;
+      }
+      if (part === 'box-tr') {
+        next.a = { index: left, price: movedTR.price };
+        next.b = { index: movedTR.index, price: bottom };
+        return next;
+      }
+      if (part === 'box-br') {
+        next.a = { index: left, price: top };
+        next.b = { index: movedBR.index, price: movedBR.price };
+        return next;
+      }
+      if (part === 'box-bl') {
+        next.a = { index: movedBL.index, price: top };
+        next.b = { index: right, price: movedBL.price };
+        return next;
+      }
+      if (part === 'start') {
+        next.a = moveAnchor(base.a);
+        return next;
+      }
+      if (part === 'end' && base.b) {
+        next.b = moveAnchor(base.b);
+        return next;
+      }
+      if (part === 'line' || part === 'body') {
+        next.a = moveAnchor(base.a);
+        next.b = base.b ? moveAnchor(base.b) : base.b;
+        return next;
+      }
+    }
     if (base.kind === 'channel') {
       const next = this.cloneShape(base);
       if (!next.channelOffset) next.channelOffset = { index: 0, price: 0 };
@@ -6386,13 +6577,19 @@ export class SimpleChart {
       // position: 전용 앵커 핸들이 있으므로 노란 점선 박스 불필요
     } else if (shape.kind === 'fib-retracement' || shape.kind === 'fib-trend') {
       // 피보나치: 레벨선·수치값이 이미 표시되므로 노란 점선 박스 불필요
+    } else if (shape.kind === 'draw-box') {
+      // 박스: 전용 앵커 핸들 표시를 사용
+    } else if (shape.kind === 'draw-pencil' || shape.kind === 'draw-highlighter') {
+      // 자유 드로잉: 노란 점선 선택 박스/점 표시 제거
     } else {
       ctx.strokeRect(left - 4, top - 4, Math.max(8, right - left + 8), Math.max(8, bottom - top + 8));
     }
     ctx.setLineDash([]);
     if (shape.kind !== 'trendline' && shape.kind !== 'hline' && shape.kind !== 'measure'
         && shape.kind !== 'long-position' && shape.kind !== 'short-position'
-        && shape.kind !== 'fib-retracement' && shape.kind !== 'fib-trend') {
+        && shape.kind !== 'fib-retracement' && shape.kind !== 'fib-trend'
+        && shape.kind !== 'draw-box'
+        && shape.kind !== 'draw-pencil' && shape.kind !== 'draw-highlighter') {
       ctx.fillStyle = '#ffe08a';
       ctx.beginPath();
       ctx.arc(ax, ay, 4.5, 0, Math.PI * 2);
@@ -6432,21 +6629,52 @@ export class SimpleChart {
     };
 
     switch (shape.kind) {
-      case 'trendline': {
-        setStroke(strokeColor, strokeWidth, dashByStyle[lineStyle]);
-        ctx.beginPath();
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(bx, by);
-        ctx.stroke();
+      case 'trendline':
+      case 'draw-pencil':
+      case 'draw-highlighter': {
+        const isPencil = shape.kind === 'draw-pencil';
+        const isHighlighter = shape.kind === 'draw-highlighter';
+        const activeStrokeColor = isPencil
+          ? (strokeColor || '#6ea8ff')
+          : (isHighlighter ? (strokeColor || 'rgba(255, 234, 86, 0.4)') : strokeColor);
+        const activeStrokeWidth = isHighlighter ? Math.max(8, strokeWidth * 3.5) : strokeWidth;
+        setStroke(activeStrokeColor, activeStrokeWidth, dashByStyle[lineStyle]);
+        ctx.lineCap = (isPencil || isHighlighter) ? 'round' : 'butt';
+        ctx.lineJoin = (isPencil || isHighlighter) ? 'round' : 'miter';
+        const pathPoints = (shape as DrawingShape).points ?? [a, b ?? a];
+        if (pathPoints.length > 0) {
+          const toXY = (pt: DrawingAnchor) => ({
+            x: this.xForIndex(pt.index, metrics.totalSp, metrics.candleW),
+            y: metrics.getY(pt.price),
+          });
+          const pts = pathPoints.map(toXY);
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          if (pts.length === 1) {
+            ctx.lineTo(pts[0].x + 0.001, pts[0].y + 0.001);
+          } else if (pts.length === 2) {
+            ctx.lineTo(pts[1].x, pts[1].y);
+          } else {
+            // Catmull-Rom 느낌의 미드포인트 스무딩
+            for (let i = 1; i < pts.length - 1; i += 1) {
+              const xc = (pts[i].x + pts[i + 1].x) / 2;
+              const yc = (pts[i].y + pts[i + 1].y) / 2;
+              ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+            }
+            const n = pts.length - 1;
+            ctx.quadraticCurveTo(pts[n - 1].x, pts[n - 1].y, pts[n].x, pts[n].y);
+          }
+          ctx.stroke();
+        }
         if (!isDraft) {
           const shapeId = ('id' in shape) ? shape.id : null;
           const showHandles = shapeId != null && (shapeId === this.selectedDrawingId || shapeId === this.hoveredDrawingId);
           if (showHandles) {
             const isHovered = shapeId != null && shapeId === this.hoveredDrawingId;
             const pulse = (Math.sin(performance.now() * 0.012) + 1) * 0.5;
-            const r = 8.25;  // 150% 확대: 5.5 → 8.25
-            ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = strokeWidth;  // 드로잉 두께와 동일
+            const r = (isPencil || isHighlighter) ? 5.8 : 8.25;  // 자유 드로잉은 앵커만 작게 유지
+            ctx.strokeStyle = activeStrokeColor;
+            ctx.lineWidth = isPencil || isHighlighter ? Math.max(1, strokeWidth * 0.8) : strokeWidth;
             ctx.setLineDash([]);
             ctx.fillStyle = '#000000';
             ctx.beginPath();
@@ -6457,7 +6685,7 @@ export class SimpleChart {
             ctx.arc(bx, by, r, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
-            if (isHovered) {
+            if (isHovered && !(isPencil || isHighlighter)) {
               ctx.save();
               ctx.globalAlpha = 0.24 + pulse * 0.28;
               ctx.strokeStyle = strokeColor;
@@ -6471,14 +6699,15 @@ export class SimpleChart {
               ctx.restore();
             }
           }
-          const hasText = ((shape as DrawingShape).text ?? '').trim().length > 0;
+          const hasText = shape.kind === 'trendline' && ((shape as DrawingShape).text ?? '').trim().length > 0;
           const isHoveredGuide = shapeId != null
             && shapeId === this.hoveredDrawingId
+            && shape.kind === 'trendline'
             && (this.hoveredDrawingPart === 'line' || this.hoveredDrawingPart === 'trendline-text-guide');
           const isEditingText = shapeId != null && shapeId === this.trendlineTextEditorShapeId;
           const placeholder = !hasText && isHoveredGuide ? '텍스트 입력' : '';
-          const layout = this.getTrendlineTextLayout(shape as DrawingShape, metrics, placeholder);
-          if (layout.text && !isEditingText) {
+          const layout = shape.kind === 'trendline' ? this.getTrendlineTextLayout(shape as DrawingShape, metrics, placeholder) : null;
+          if (layout && layout.text && !isEditingText) {
             ctx.save();
             ctx.translate(layout.x, layout.y);
             ctx.rotate(layout.angle);
@@ -6496,6 +6725,57 @@ export class SimpleChart {
               ctx.lineTo(layout.width / 2 + 4, 2);
               ctx.stroke();
             }
+            ctx.restore();
+          }
+        }
+        break;
+      }
+      case 'draw-box': {
+        const left = Math.min(ax, bx);
+        const right = Math.max(ax, bx);
+        const top = Math.min(ay, by);
+        const bottom = Math.max(ay, by);
+        const rawColor = strokeColor || 'rgba(126,166,255,0.2)';
+        const rgbaMatch = rawColor.match(/rgba?\(([^)]+)\)/i);
+        let sr = 126; let sg = 166; let sb = 255; let sa = 0.2;
+        if (rgbaMatch) {
+          const parts = rgbaMatch[1].split(',').map((s) => s.trim());
+          sr = Number(parts[0] ?? '126');
+          sg = Number(parts[1] ?? '166');
+          sb = Number(parts[2] ?? '255');
+          sa = parts.length >= 4 ? Number(parts[3]) : 0.2;
+        }
+        const fillColor = `rgba(${sr},${sg},${sb},${Math.max(0.05, Math.min(1, sa)).toFixed(2)})`;
+        const strokeBoxColor = `rgba(${sr},${sg},${sb},1)`;
+        setStroke(strokeBoxColor, Math.max(1.2, strokeWidth), dashByStyle[lineStyle]);
+        ctx.beginPath();
+        ctx.rect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
+        ctx.stroke();
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = fillColor;
+        ctx.fillRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
+        ctx.restore();
+        if (!isDraft) {
+          const shapeId = ('id' in shape) ? shape.id : null;
+          const showHandles = shapeId != null && (shapeId === this.selectedDrawingId || shapeId === this.hoveredDrawingId);
+          if (showHandles) {
+            ctx.save();
+            ctx.setLineDash([]);
+            ctx.strokeStyle = strokeBoxColor;
+            ctx.fillStyle = '#0f172a';
+            ctx.lineWidth = Math.max(1, strokeWidth);
+            const r = 6.5;
+            const drawAnchor = (hx: number, hy: number) => {
+              ctx.beginPath();
+              ctx.arc(hx, hy, r, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.stroke();
+            };
+            drawAnchor(left, top);
+            drawAnchor(right, top);
+            drawAnchor(right, bottom);
+            drawAnchor(left, bottom);
             ctx.restore();
           }
         }
@@ -7389,7 +7669,11 @@ export class SimpleChart {
 
     const _isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
 
-    if (!this.isMouseOver) {
+    const keepCrosshairForDrawing = Boolean(this.drawingTool && this.drawingTool !== 'eraser')
+      || Boolean(this.drawingDraft)
+      || Boolean(this.drawingMoveState)
+      || Boolean(this.selectedDrawingId);
+    if (!this.isMouseOver && !keepCrosshairForDrawing) {
       if (!_isTouchDevice && this.onCrosshairOHLC && this._lastCrosshairOHLCIdx !== -1) {
         this._lastCrosshairOHLCIdx = -1;
         this.onCrosshairOHLC(null);
@@ -7428,9 +7712,12 @@ export class SimpleChart {
     const isFibEditMode = !this.drawingTool && (
       selectedShape?.kind === 'fib-retracement' || selectedShape?.kind === 'fib-trend'
     );
+    const isFreeDrawEditMode = !this.drawingTool && (
+      selectedShape?.kind === 'draw-pencil' || selectedShape?.kind === 'draw-highlighter' || selectedShape?.kind === 'draw-box'
+    );
     const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
     const isDrawingEditMode = Boolean(this.drawingTool && this.drawingTool !== 'eraser');
-    const shouldDrawCrosshairGuides = noDrawingInteraction || isTrendlineEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isDrawingEditMode || Boolean(this.drawingMoveState);
+    const shouldDrawCrosshairGuides = noDrawingInteraction || isTrendlineEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isDrawingEditMode || Boolean(this.drawingMoveState);
 
     if (shouldDrawCrosshairGuides) {
       const useBlueEditGuide = isDrawingEditMode || isChannelEditMode;
@@ -8375,6 +8662,17 @@ export class SimpleChart {
 
     const anchor = this.getMouseAnchor(this.mouseX, this.mouseY);
     if (this.drawingTool && anchor) {
+      if (this.drawingTool === 'draw-pencil' || this.drawingTool === 'draw-highlighter') {
+        this.drawingDraft = {
+          kind: this.drawingTool,
+          a: anchor,
+          b: anchor,
+          points: [anchor],
+        };
+        this.drawingDragActive = true;
+        this.requestOverlayDraw();
+        return;
+      }
       if (this.drawingTool === 'measure') {
         const snappedAnchor: DrawingAnchor = { index: Math.round(anchor.index), price: anchor.price };
         if (!this.drawingDraft || this.drawingDraft.kind !== 'measure') {
@@ -8640,7 +8938,11 @@ export class SimpleChart {
     if (this.drawingDragActive && this.drawingDraft) {
       const anchor = this.getMouseAnchor(this.mouseX, this.mouseY);
       if (anchor) {
-        if (this.drawingDraft.kind === 'measure') {
+        if (this.drawingDraft.kind === 'draw-pencil' || this.drawingDraft.kind === 'draw-highlighter') {
+          if (!this.drawingDraft.points) this.drawingDraft.points = [this.drawingDraft.a];
+          this.drawingDraft.points.push(anchor);
+          this.drawingDraft.b = anchor;
+        } else if (this.drawingDraft.kind === 'measure') {
           this.drawingDraft.b = { index: Math.round(anchor.index), price: anchor.price };
         } else {
           this.drawingDraft.b = anchor;
@@ -8700,13 +9002,23 @@ export class SimpleChart {
       const b = this.drawingDraft.b;
       const moved = Math.abs(a.index - b.index) > 0.2 || Math.abs(a.price - b.price) > Math.max(1e-6, (this.lastDrawMeta?.maxP ?? 1) * 0.0005);
       if (moved) {
+        const draftKind = this.drawingDraft.kind;
+        const draftColor = draftKind === 'draw-pencil'
+          ? '#6ea8ff'
+          : draftKind === 'draw-highlighter'
+            ? 'rgba(255,234,86,0.4)'
+          : draftKind === 'draw-box'
+              ? 'rgba(126,166,255,0.20)'
+              : '#2f6cff';
+        const draftWidth = draftKind === 'draw-highlighter' ? 8 : 2;
         const created: DrawingShape = {
           id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          kind: this.drawingDraft.kind,
+          kind: draftKind,
           a,
           b,
-          color: '#2f6cff',
-          width: 2,
+          points: this.drawingDraft.points ? this.drawingDraft.points.map((p) => ({ ...p })) : undefined,
+          color: draftColor,
+          width: draftWidth,
           lineStyle: 'solid',
           alert: {
             enabled: false,
@@ -8772,13 +9084,23 @@ export class SimpleChart {
       || Math.abs(a.price - (b?.price ?? a.price)) > Math.max(1e-6, (this.lastDrawMeta?.maxP ?? 1) * 0.0005);
     
     if (moved) {
+      const draftKind = this.drawingDraft.kind;
+      const draftColor = draftKind === 'draw-pencil'
+        ? '#6ea8ff'
+        : draftKind === 'draw-highlighter'
+          ? 'rgba(255,234,86,0.4)'
+        : draftKind === 'draw-box'
+            ? 'rgba(126,166,255,0.20)'
+            : '#2f6cff';
+      const draftWidth = draftKind === 'draw-highlighter' ? 8 : 2;
       const created: DrawingShape = {
         id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        kind: this.drawingDraft.kind,
+        kind: draftKind,
         a: this.drawingDraft.a,
         b: this.drawingDraft.b,
-        color: '#2f6cff',
-        width: 2,
+        points: this.drawingDraft.points ? this.drawingDraft.points.map((p) => ({ ...p })) : undefined,
+        color: draftColor,
+        width: draftWidth,
         lineStyle: 'solid',
         alert: {
           enabled: false,
@@ -8964,8 +9286,10 @@ export class SimpleChart {
         this.mouseX = snapped.x;
         this.mouseY = snapped.y;
         this.isMouseOver = true;
-        // 기본 열십자 즉시 해제
-        if (this.isCrosshairMode) this.exitCrosshairMode();
+        // 자유 드로잉은 기본 열십자 라인을 유지
+        if (this.isCrosshairMode && this.drawingTool !== 'draw-pencil' && this.drawingTool !== 'draw-highlighter') {
+          this.exitCrosshairMode();
+        }
 
         // ── Position: 십자선 이동만, 박스생성은 touchEnd ──────────────────
         if (this.drawingTool === 'long-position' || this.drawingTool === 'short-position') {
@@ -8975,6 +9299,19 @@ export class SimpleChart {
 
         // ── fib-trend: 십자선 이동만, 앵커 확정은 touchEnd ─────────────────
         if (this.drawingTool === 'fib-trend') {
+          this.requestOverlayDraw();
+          return;
+        }
+        if (this.drawingTool === 'draw-pencil' || this.drawingTool === 'draw-highlighter') {
+          const anchor = this.getMouseAnchor(pos.x, pos.y);
+          if (!anchor) { this.requestOverlayDraw(); return; }
+          this.drawingDraft = {
+            kind: this.drawingTool,
+            a: anchor,
+            b: anchor,
+            points: [anchor],
+          };
+          this.drawingDragActive = true;
           this.requestOverlayDraw();
           return;
         }
@@ -9053,6 +9390,15 @@ export class SimpleChart {
       this.isTouchPanning = false;
       this.touchPinchDist = this.getTouchDist(e.touches);
       this.touchPinchStartVisible = Math.max(1, this.endIndex - this.startIndex);
+      // 두 손가락 중점 기준 앵커: 현재 뷰포트에서 중점이 가리키는 캔들 인덱스를 기록
+      const t0 = this.touchPos(e.touches[0]);
+      const t1 = this.touchPos(e.touches[1]);
+      const midX = (t0.x + t1.x) / 2;
+      const geo = this.getChartGeometry(this.viewportWidth, this.lastDrawMeta?.axisPad);
+      const chartW = Math.max(1, geo.chartWidth);
+      const ratio = Math.max(0, Math.min(1, (midX - geo.chartLeft) / chartW));
+      this.touchPinchAnchorRatio = ratio;
+      this.touchPinchAnchorIndex = this.startIndex + ratio * (this.endIndex - this.startIndex);
     }
   }
 
@@ -9064,11 +9410,16 @@ export class SimpleChart {
       // ── 핀치 줌 ──────────────────────────────────────────────────────
       const newDist = this.getTouchDist(e.touches);
       if (this.touchPinchDist === 0) return;
-      const scale      = this.touchPinchDist / newDist;
+      const scale       = this.touchPinchDist / newDist;
       const nextVisible = Math.round(this.touchPinchStartVisible * scale);
-      const clamped    = Math.max(5, Math.min(this.data.length, nextVisible));
-      this.endIndex    = this.data.length;
-      this.startIndex  = Math.max(0, this.endIndex - clamped);
+      const clamped     = Math.max(5, Math.min(this.data.length, nextVisible));
+      // 두 손가락 중점 앵커를 기준으로 뷰포트 확대/축소 (위치 유지)
+      let newStart = Math.round(this.touchPinchAnchorIndex - this.touchPinchAnchorRatio * clamped);
+      let newEnd   = newStart + clamped;
+      if (newStart < 0) { newStart = 0; newEnd = clamped; }
+      if (newEnd > this.data.length) { newEnd = this.data.length; newStart = Math.max(0, newEnd - clamped); }
+      this.startIndex = newStart;
+      this.endIndex   = newEnd;
       this.draw();
       return;
     }
@@ -9135,7 +9486,11 @@ export class SimpleChart {
               const dy2 = pos.y - this.touchStartY;
               if (Math.sqrt(dx2 * dx2 + dy2 * dy2) > 4) this.drawingDragActive = true;
             }
-            if (this.drawingDraft.kind === 'measure') {
+            if (this.drawingDraft.kind === 'draw-pencil' || this.drawingDraft.kind === 'draw-highlighter') {
+              if (!this.drawingDraft.points) this.drawingDraft.points = [this.drawingDraft.a];
+              this.drawingDraft.points.push(anchor);
+              this.drawingDraft.b = anchor;
+            } else if (this.drawingDraft.kind === 'measure') {
               this.drawingDraft.b = { index: Math.round(anchor.index), price: anchor.price };
             } else if (this.drawingDraft.kind === 'channel' && !this.drawingDraft.b ||
                        (this.drawingDraft.b &&
