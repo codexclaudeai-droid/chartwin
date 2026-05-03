@@ -983,6 +983,152 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     toolIconWrapMap.set(tool.id, iconWrap);
   });
 
+  // ---- Zoom In / Zoom Out buttons ----
+  {
+    const zoomInSvg  = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="21" y2="21"/><line x1="10.5" y1="7.5" x2="10.5" y2="13.5"/><line x1="7.5" y1="10.5" x2="13.5" y2="10.5"/></svg>`;
+    const zoomOutSvg = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="21" y2="21"/><line x1="7.5" y1="10.5" x2="13.5" y2="10.5"/></svg>`;
+
+    let zoomActive = false;
+    let zoomOverlay: HTMLDivElement | null = null;
+
+    const makeZBtn = (svg: string, label: string): HTMLButtonElement => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.title = label;
+      b.style.cssText = 'width:34px;height:34px;border:1px solid #304467;border-radius:8px;background:#1a2336;color:#d5deef;cursor:pointer;display:flex;align-items:center;justify-content:center;margin:0 auto;transition:background 140ms ease,border-color 140ms ease;';
+      const w = document.createElement('span');
+      w.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;pointer-events:none;';
+      w.innerHTML = svg;
+      b.appendChild(w);
+      return b;
+    };
+
+    const zoomInBtn  = makeZBtn(zoomInSvg,  '박스 확대');
+    const zoomOutBtn = makeZBtn(zoomOutSvg, '축소');
+    zoomOutBtn.style.display = 'none';
+
+    const setZoomInActive = (on: boolean) => {
+      zoomInBtn.style.background   = on ? '#2a3f6a' : '#1a2336';
+      zoomInBtn.style.borderColor  = on ? '#5b8fe8' : '#304467';
+    };
+
+    const destroyOverlay = () => {
+      zoomOverlay?.remove();
+      zoomOverlay = null;
+    };
+
+    const deactivateZoom = () => {
+      if (!zoomActive) return;
+      zoomActive = false;
+      setZoomInActive(false);
+      zoomOutBtn.style.display = 'none';
+      destroyOverlay();
+    };
+
+    const activateZoom = () => {
+      zoomActive = true;
+      setZoomInActive(true);
+      zoomOutBtn.style.display = 'block';
+      closeSubmenu();
+      activeToolId = null;
+      clearActiveStyles();
+      renderMenu(null);
+
+      destroyOverlay();
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `position:absolute;left:${currentDockCollapsedWidth}px;top:0;right:0;bottom:0;z-index:1200;cursor:zoom-in;user-select:none;`;
+
+      const hLine = document.createElement('div');
+      hLine.style.cssText = 'position:absolute;left:0;right:0;height:1px;background:rgba(91,143,232,0.65);pointer-events:none;display:none;';
+      const vLine = document.createElement('div');
+      vLine.style.cssText = 'position:absolute;top:0;bottom:0;width:1px;background:rgba(91,143,232,0.65);pointer-events:none;display:none;';
+      const selBox = document.createElement('div');
+      selBox.style.cssText = 'position:absolute;border:1.5px solid rgba(91,143,232,0.9);background:rgba(91,143,232,0.07);pointer-events:none;display:none;';
+      overlay.appendChild(hLine);
+      overlay.appendChild(vLine);
+      overlay.appendChild(selBox);
+      workspace.appendChild(overlay);
+      zoomOverlay = overlay;
+
+      let dragStartX = 0;
+      let dragStartY = 0;
+      let dragging = false;
+
+      overlay.addEventListener('mousemove', (e) => {
+        const r = overlay.getBoundingClientRect();
+        const ox = e.clientX - r.left;
+        const oy = e.clientY - r.top;
+        hLine.style.top  = `${oy}px`;
+        vLine.style.left = `${ox}px`;
+        hLine.style.display = 'block';
+        vLine.style.display = 'block';
+        if (dragging) {
+          const x1 = Math.min(dragStartX, ox);
+          const y1 = Math.min(dragStartY, oy);
+          selBox.style.left    = `${x1}px`;
+          selBox.style.top     = `${y1}px`;
+          selBox.style.width   = `${Math.abs(ox - dragStartX)}px`;
+          selBox.style.height  = `${Math.abs(oy - dragStartY)}px`;
+          selBox.style.display = 'block';
+        }
+      });
+
+      overlay.addEventListener('mouseleave', () => {
+        if (!dragging) { hLine.style.display = 'none'; vLine.style.display = 'none'; }
+      });
+
+      overlay.addEventListener('mousedown', (e) => {
+        const r = overlay.getBoundingClientRect();
+        dragStartX = e.clientX - r.left;
+        dragStartY = e.clientY - r.top;
+        dragging = true;
+        overlay.style.cursor = 'crosshair';
+        e.preventDefault();
+      });
+
+      const endDrag = (e: MouseEvent) => {
+        if (!dragging) return;
+        dragging = false;
+        overlay.style.cursor = 'zoom-in';
+        selBox.style.display = 'none';
+        hLine.style.display  = 'none';
+        vLine.style.display  = 'none';
+
+        const r = overlay.getBoundingClientRect();
+        const endX = e.clientX - r.left;
+        const rawX1 = Math.min(dragStartX, endX);
+        const rawX2 = Math.max(dragStartX, endX);
+        if (rawX2 - rawX1 < 8) return;
+
+        window.dispatchEvent(new CustomEvent('chart-zoom-box-select', {
+          detail: { x1: rawX1, x2: rawX2, overlayWidth: overlay.offsetWidth },
+        }));
+        deactivateZoom();
+      };
+
+      overlay.addEventListener('mouseup', endDrag);
+      window.addEventListener('mouseup', (e) => { if (zoomOverlay) endDrag(e); }, { passive: true });
+    };
+
+    zoomInBtn.addEventListener('mouseenter', () => { if (!zoomActive) { zoomInBtn.style.background = '#25324c'; zoomInBtn.style.borderColor = '#42608f'; } });
+    zoomInBtn.addEventListener('mouseleave', () => { if (!zoomActive) { zoomInBtn.style.background = '#1a2336'; zoomInBtn.style.borderColor = '#304467'; } });
+    zoomInBtn.addEventListener('click', () => {
+      if (zoomActive) deactivateZoom();
+      else activateZoom();
+    });
+
+    zoomOutBtn.addEventListener('mouseenter', () => { zoomOutBtn.style.background = '#25324c'; zoomOutBtn.style.borderColor = '#42608f'; });
+    zoomOutBtn.addEventListener('mouseleave', () => { zoomOutBtn.style.background = '#1a2336'; zoomOutBtn.style.borderColor = '#304467'; });
+    zoomOutBtn.addEventListener('click', () => { window.dispatchEvent(new CustomEvent('chart-zoom-out')); });
+
+    rail.appendChild(zoomInBtn);
+    rail.appendChild(zoomOutBtn);
+
+    window.addEventListener('chart-toolbox-select', () => { deactivateZoom(); });
+    window.addEventListener('chart-drawing-tool-changed', () => { deactivateZoom(); });
+    window.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Escape') deactivateZoom(); });
+  }
+
   window.addEventListener('chart-toolbox-trash-counts', (event: Event) => {
     const customEvent = event as CustomEvent<{ drawings?: number; indicators?: number }>;
     const nextDrawings = Number(customEvent.detail?.drawings ?? 0);

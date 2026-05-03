@@ -3340,6 +3340,10 @@ export class SimpleChart {
     this.draw();
   }
 
+  public getVisibleCandleRange(): { startIndex: number; endIndex: number } {
+    return { startIndex: this.startIndex, endIndex: this.endIndex };
+  }
+
   public setLeftPanEnabled(enabled: boolean): void {
     (this.config.layout as any).leftPanEnabled = enabled === true;
     this.leftPanBars = 0;

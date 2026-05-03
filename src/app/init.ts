@@ -2343,6 +2343,35 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
                 : rawToolId;
       pane.chart.setDrawingTool(normalizedToolId);
     });
+
+    window.addEventListener('chart-zoom-box-select', (event: Event) => {
+      const ce = event as CustomEvent<{ x1: number; x2: number; overlayWidth: number }>;
+      const { x1, x2, overlayWidth } = ce.detail;
+      const chart = getActivePane().chart;
+      const axisWidth = chart.currentAxisPad;
+      const drawWidth = Math.max(1, overlayWidth - axisWidth);
+      const lo = Math.max(0, Math.min(1, x1 / drawWidth));
+      const hi = Math.max(0, Math.min(1, x2 / drawWidth));
+      const range = chart.getVisibleCandleRange();
+      const candles = chart.getCandles();
+      const totalVisible = Math.max(1, range.endIndex - range.startIndex);
+      const si = Math.max(0, Math.min(candles.length - 1, range.startIndex + Math.round(lo * totalVisible)));
+      const ei = Math.max(0, Math.min(candles.length - 1, range.startIndex + Math.round(hi * totalVisible)));
+      if (si >= ei) return;
+      const fromSec = candles[si]?.time;
+      const toSec   = candles[ei]?.time;
+      if (fromSec != null && toSec != null && fromSec < toSec) {
+        chart.setVisibleByDateRange(fromSec, toSec);
+      }
+    });
+
+    window.addEventListener('chart-zoom-out', () => {
+      const chart = getActivePane().chart;
+      const range = chart.getVisibleCandleRange();
+      const currentVisible = Math.max(10, range.endIndex - range.startIndex);
+      chart.zoomByCandles(currentVisible);
+    });
+
     window.addEventListener('keydown', (event: KeyboardEvent) => {
       const pane = getActivePane();
       const target = event.target as HTMLElement | null;
