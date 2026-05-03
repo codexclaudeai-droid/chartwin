@@ -1036,7 +1036,19 @@ export function createLeftToolbox(workspace: HTMLElement): void {
 
       destroyOverlay();
       const overlay = document.createElement('div');
-      overlay.style.cssText = `position:absolute;left:${currentDockCollapsedWidth}px;top:0;right:0;bottom:0;z-index:1200;cursor:zoom-in;user-select:none;`;
+      // rail의 실제 뷰포트 위치를 기준으로 position:fixed로 잡아야
+      // workspace가 56px 툴바 레이어일 때도 차트 영역 전체를 덮을 수 있다
+      const railR = rail.getBoundingClientRect();
+      overlay.style.cssText = [
+        'position:fixed',
+        `left:${railR.right}px`,
+        `top:${railR.top}px`,
+        'right:0',
+        `bottom:${Math.max(0, window.innerHeight - railR.bottom)}px`,
+        'z-index:2000',
+        'cursor:zoom-in',
+        'user-select:none',
+      ].join(';');
 
       const hLine = document.createElement('div');
       hLine.style.cssText = 'position:absolute;left:0;right:0;height:1px;background:rgba(91,143,232,0.65);pointer-events:none;display:none;';
@@ -1047,7 +1059,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       overlay.appendChild(hLine);
       overlay.appendChild(vLine);
       overlay.appendChild(selBox);
-      workspace.appendChild(overlay);
+      document.body.appendChild(overlay);
       zoomOverlay = overlay;
 
       let dragStartX = 0;
