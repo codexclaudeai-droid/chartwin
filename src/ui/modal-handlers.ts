@@ -3,7 +3,7 @@ import { INDICATOR_CATALOG } from '../catalog/indicators';
 import { CUSTOM_SYMBOLS, SYMBOL_CATALOG, createSymbolIconElement, getAllSymbolCatalog, getSymbolIconUrl, persistSymbolRegistry, type SymbolCatalogItem } from '../catalog/symbols';
 import { TIMEZONE_OPTIONS, UTC_OFFSET_OPTIONS, type TimezoneOption } from '../catalog/time';
 import { toRgba } from '../chart/color-utils';
-import { buildStrategyDefinition, isStrategyVisibleInFrontend, type StrategyDefinition, type StrategyLang } from '../strategy/strategy-service';
+import { buildStrategyDefinition, isStrategyManagementVisible, type StrategyDefinition, type StrategyLang } from '../strategy/strategy-service';
 
 function createModal(title: string, options: { anchorTop?: boolean } = {}) {
   const overlay = document.createElement('div');
@@ -371,8 +371,7 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
   };
 
   const render = () => {
-    const allStrategies = chart.getStrategies() as StrategyDefinition[];
-    const strategies = isAdmin ? allStrategies : allStrategies.filter((s) => isStrategyVisibleInFrontend(s.id));
+    const strategies = chart.getStrategies() as StrategyDefinition[];
     const activeId = chart.getActiveStrategyId();
     const activeIsDoubleBreak = activeId === 'strategy_js_double_break';
     const activeIsBollinger = activeId === 'strategy_pine_bbands_directed';
@@ -404,7 +403,7 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
       });
       right.appendChild(applyBtn);
 
-      if (isAdmin) {
+      if (isAdmin && isStrategyManagementVisible(s.id)) {
         const sourceBtn = document.createElement('button');
         sourceBtn.textContent = 'JS보기';
         sourceBtn.style.cssText = 'padding:4px 8px;border-radius:4px;border:1px solid #3b4360;background:#232b3d;color:#c9d1e3;font-size:11px;cursor:pointer;';

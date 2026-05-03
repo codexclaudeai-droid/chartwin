@@ -16,13 +16,13 @@ void fetch('/admin/strategies', { cache: 'no-store' })
   .then((r) => r.json())
   .then((json: unknown) => {
     const j = json as { ok?: boolean; hidden?: unknown };
-    if (j.ok && Array.isArray(j.hidden)) setAdminHiddenStrategyIds(j.hidden as string[]);
+    if (j.ok && Array.isArray(j.hidden)) setAdminHiddenStrategyButtonIds(j.hidden as string[]);
   })
   .catch(() => {});
 import {
   loadStrategies,
   saveStrategies,
-  setAdminHiddenStrategyIds,
+  setAdminHiddenStrategyButtonIds,
   type StrategyDefinition,
   type StrategySignal,
 } from '../strategy/strategy-service';

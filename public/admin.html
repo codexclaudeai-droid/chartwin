@@ -136,10 +136,10 @@
   <div class="symbols-wrap" id="strategy-wrap">
     <div class="card">
       <div class="card-title">전략시그널 표시 설정</div>
-      <p style="font-size:12px;color:#8b949e;margin-bottom:14px;line-height:1.5;">표시 OFF로 설정된 전략은 사용자 화면에 노출되지 않습니다.</p>
+      <p style="font-size:12px;color:#8b949e;margin-bottom:14px;line-height:1.5;">ON으로 설정된 전략에 한해 전략시그널 설정 모달에서 JS보기 · 수정 · 삭제 버튼이 표시됩니다.</p>
       <div class="col-headers" style="grid-template-columns:1fr 72px;">
         <div class="col-hdr">전략</div>
-        <div class="col-hdr">표시</div>
+        <div class="col-hdr">관리버튼</div>
       </div>
       <div class="symbol-grid" id="strategy-list"></div>
     </div>
@@ -431,8 +431,8 @@ function renderStrategyList() {
 
 function updateStrategySummary() {
   const el = document.getElementById('strategy-summary');
-  const h = currentHiddenStrategies.size;
-  el.innerHTML = h > 0 ? `<b>${h}개</b> 숨김` : '모든 전략 표시';
+  const on = DEFAULT_STRATEGIES.length - currentHiddenStrategies.size;
+  el.innerHTML = on > 0 ? `<span>${on}개</span> 관리버튼 표시` : '모든 전략 관리버튼 숨김';
 }
 
 async function saveStrategies() {
