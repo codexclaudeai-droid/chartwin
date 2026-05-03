@@ -482,6 +482,211 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
   });
   bottomBar.appendChild(rangeWrap);
 
+  // ---- Live Ticker (PC/태블릿 전용, 모바일 숨김) ----
+  {
+    type TDef = {
+      sym: string; name: string; badge: string; currency: string;
+      src: 'spot' | 'futures' | 'gateway'; apiSym?: string; gatewayMarket?: string; color: string;
+    };
+    const TDEFS: TDef[] = [
+      { sym: 'NQ1!',      name: 'NQ',     badge: 'NQ', currency: '',     src: 'gateway', gatewayMarket: 'index',     color: '#4a9eff' },
+      { sym: 'SPX500',    name: 'SPX',    badge: 'SP', currency: '',     src: 'gateway', gatewayMarket: 'index',     color: '#48bb78' },
+      { sym: 'HSI',       name: 'HSI',    badge: 'HS', currency: '',     src: 'gateway', gatewayMarket: 'index',     color: '#fc8181' },
+      { sym: 'KOSPI',     name: 'KOSPI',  badge: 'KP', currency: '',     src: 'gateway', gatewayMarket: 'index',     color: '#fbb040' },
+      { sym: 'KOSPI200',  name: 'KP200',  badge: 'K2', currency: '',     src: 'gateway', gatewayMarket: 'index',     color: '#fb8a00' },
+      { sym: 'KOSDAQ',    name: 'KOSDAQ', badge: 'KD', currency: '',     src: 'gateway', gatewayMarket: 'index',     color: '#fdd835' },
+      { sym: 'BTCUSDT',   name: 'BTC',    badge: 'BT', currency: 'USDT', src: 'spot',    color: '#f7931a' },
+      { sym: 'ETHUSDT',   name: 'ETH',    badge: 'ET', currency: 'USDT', src: 'spot',    color: '#627eea' },
+      { sym: 'XRPUSDT',   name: 'XRP',    badge: 'XR', currency: 'USDT', src: 'spot',    color: '#00a3e0' },
+      { sym: 'SOLUSDT',   name: 'SOL',    badge: 'SO', currency: 'USDT', src: 'spot',    color: '#9945ff' },
+      { sym: 'BNBUSDT',   name: 'BNB',    badge: 'BN', currency: 'USDT', src: 'spot',    color: '#f3ba2f' },
+      { sym: 'TRXUSDT',   name: 'TRX',    badge: 'TR', currency: 'USDT', src: 'spot',    color: '#ef0027' },
+      { sym: 'XAUUSDT.P', name: 'XAU',    badge: 'AU', currency: 'USDT', src: 'futures', apiSym: 'XAUUSDT', color: '#d4af37' },
+      { sym: 'XAGUSDT.P', name: 'XAG',    badge: 'AG', currency: 'USDT', src: 'futures', apiSym: 'XAGUSDT', color: '#a8a9ad' },
+      { sym: 'WTI1!',     name: 'WTI',    badge: 'OL', currency: 'USD',  src: 'gateway', gatewayMarket: 'commodity', color: '#8d6233' },
+    ];
+    type TState = { price: number; change: number };
+    const tState = new Map<string, TState>(TDEFS.map((d) => [d.sym, { price: NaN, change: NaN }]));
+
+    if (!document.getElementById('sigma-lticker-css')) {
+      const s = document.createElement('style');
+      s.id = 'sigma-lticker-css';
+      s.textContent = '@keyframes slt-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}'
+        + '.slt-track{display:flex;align-items:center;animation:slt-scroll 80s linear infinite;will-change:transform;}'
+        + '.slt-item{display:inline-flex;align-items:center;gap:5px;padding:0 13px;white-space:nowrap;border-right:1px solid #1e2336;}';
+      document.head.appendChild(s);
+    }
+
+    const tickerWrap = document.createElement('div');
+    tickerWrap.style.cssText = 'flex:1;min-width:0;overflow:hidden;height:100%;align-self:stretch;margin:0 4px;display:flex;align-items:center;';
+
+    const viewport = document.createElement('div');
+    viewport.style.cssText = 'overflow:hidden;width:100%;height:100%;display:flex;align-items:center;'
+      + '-webkit-mask-image:linear-gradient(to right,transparent 0,#000 28px,#000 calc(100% - 28px),transparent 100%);'
+      + 'mask-image:linear-gradient(to right,transparent 0,#000 28px,#000 calc(100% - 28px),transparent 100%);';
+
+    const track = document.createElement('div');
+    track.className = 'slt-track';
+
+    const fmtPrice = (p: number): string => {
+      if (!Number.isFinite(p) || p <= 0) return '—';
+      if (p >= 10000) return p.toLocaleString('en', { maximumFractionDigits: 0 });
+      if (p >= 1000) return p.toLocaleString('en', { maximumFractionDigits: 1 });
+      if (p >= 10) return p.toLocaleString('en', { maximumFractionDigits: 2 });
+      if (p >= 1) return p.toLocaleString('en', { maximumFractionDigits: 3 });
+      return p.toLocaleString('en', { maximumFractionDigits: 4 });
+    };
+
+    const fmtChange = (c: number): string =>
+      !Number.isFinite(c) ? '—' : `${c >= 0 ? '+' : ''}${c.toFixed(2)}%`;
+
+    const makeItem = (def: TDef): HTMLDivElement => {
+      const el = document.createElement('div');
+      el.className = 'slt-item';
+      el.dataset.sym = def.sym;
+
+      const badge = document.createElement('span');
+      badge.style.cssText = `width:18px;height:18px;border-radius:3px;background:${def.color};display:inline-flex;align-items:center;justify-content:center;font-size:6.5px;font-weight:900;color:rgba(255,255,255,0.92);letter-spacing:-0.2px;flex-shrink:0;`;
+      badge.textContent = def.badge;
+
+      const nameEl = document.createElement('span');
+      nameEl.style.cssText = 'font-weight:600;color:#d1d4dc;font-size:11px;';
+      nameEl.textContent = def.name;
+
+      const priceEl = document.createElement('span');
+      priceEl.style.cssText = 'color:#e0e3eb;font-size:11px;';
+      priceEl.dataset.role = 'p';
+      priceEl.textContent = '—';
+
+      const changeEl = document.createElement('span');
+      changeEl.style.cssText = 'font-size:11px;color:#8892a4;';
+      changeEl.dataset.role = 'c';
+      changeEl.textContent = '—';
+
+      el.appendChild(badge);
+      el.appendChild(nameEl);
+      el.appendChild(priceEl);
+
+      if (def.currency) {
+        const cur = document.createElement('span');
+        cur.style.cssText = 'color:#5a6478;font-size:7px;line-height:1;margin-top:3px;align-self:flex-end;margin-bottom:1px;';
+        cur.textContent = def.currency;
+        el.appendChild(cur);
+      }
+
+      el.appendChild(changeEl);
+      return el;
+    };
+
+    const buildTrack = () => {
+      track.innerHTML = '';
+      for (let g = 0; g < 2; g++) {
+        const grp = document.createElement('div');
+        grp.style.cssText = 'display:inline-flex;align-items:center;';
+        TDEFS.forEach((def) => grp.appendChild(makeItem(def)));
+        track.appendChild(grp);
+      }
+    };
+    buildTrack();
+
+    const updateDisplay = () => {
+      track.querySelectorAll<HTMLElement>('.slt-item').forEach((el) => {
+        const sym = el.dataset.sym;
+        if (!sym) return;
+        const st = tState.get(sym);
+        if (!st) return;
+        const pe = el.querySelector<HTMLElement>('[data-role="p"]');
+        const ce = el.querySelector<HTMLElement>('[data-role="c"]');
+        if (pe && Number.isFinite(st.price)) pe.textContent = fmtPrice(st.price);
+        if (ce && Number.isFinite(st.change)) {
+          ce.textContent = fmtChange(st.change);
+          ce.style.color = st.change >= 0 ? '#26a69a' : '#ef5350';
+        }
+      });
+    };
+
+    const adjustSpeed = () => {
+      const grp = track.children[0] as HTMLElement;
+      if (!grp) return;
+      const w = grp.offsetWidth;
+      if (w > 50) track.style.animationDuration = `${Math.max(20, Math.round(w / 60))}s`;
+    };
+
+    const gwBase = (): string => {
+      const win = window as Window & { __DATA_GATEWAY_URL__?: string };
+      const fw = (win.__DATA_GATEWAY_URL__ ?? '').trim();
+      const fs = (localStorage.getItem('my-chart-lib.data-gateway-url') ?? '').trim();
+      if (fw) return fw.replace(/\/+$/, '');
+      if (fs) return fs.replace(/\/+$/, '');
+      const h = window.location.hostname;
+      return (h === 'localhost' || h === '127.0.0.1') ? 'http://127.0.0.1:8787' : window.location.origin;
+    };
+
+    const fetchAll = async (): Promise<void> => {
+      const spotDefs = TDEFS.filter((d) => d.src === 'spot');
+      const futDefs  = TDEFS.filter((d) => d.src === 'futures');
+      const gwDefs   = TDEFS.filter((d) => d.src === 'gateway');
+      const jobs: Promise<void>[] = [
+        (async () => {
+          if (!spotDefs.length) return;
+          const syms = JSON.stringify(spotDefs.map((d) => d.sym));
+          const r = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(syms)}`, { cache: 'no-store' });
+          if (!r.ok) return;
+          const data = await r.json() as Array<{ symbol: string; lastPrice: string; priceChangePercent: string }>;
+          data.forEach((it) => {
+            const def = spotDefs.find((d) => d.sym === it.symbol);
+            if (!def) return;
+            const p = Number(it.lastPrice), c = Number(it.priceChangePercent);
+            if (Number.isFinite(p)) tState.set(def.sym, { price: p, change: Number.isFinite(c) ? c : NaN });
+          });
+        })(),
+        (async () => {
+          if (!futDefs.length) return;
+          const apiSyms = futDefs.map((d) => d.apiSym ?? d.sym.replace('.P', ''));
+          const syms = JSON.stringify(apiSyms);
+          const r = await fetch(`https://fapi.binance.com/fapi/v1/ticker/24hr?symbols=${encodeURIComponent(syms)}`, { cache: 'no-store' });
+          if (!r.ok) return;
+          const data = await r.json() as Array<{ symbol: string; lastPrice: string; priceChangePercent: string }>;
+          data.forEach((it) => {
+            const def = futDefs.find((d) => (d.apiSym ?? d.sym.replace('.P', '')) === it.symbol);
+            if (!def) return;
+            const p = Number(it.lastPrice), c = Number(it.priceChangePercent);
+            if (Number.isFinite(p)) tState.set(def.sym, { price: p, change: Number.isFinite(c) ? c : NaN });
+          });
+        })(),
+        ...gwDefs.map((def) => (async () => {
+          const url = `${gwBase()}/candles?market=${def.gatewayMarket}&symbol=${encodeURIComponent(def.sym)}&timeframe=1d&limit=2`;
+          const r = await fetch(url, { cache: 'no-store' });
+          if (!r.ok) return;
+          const json = await r.json() as { candles?: Array<{ open: number; close: number }> };
+          const cans = json.candles;
+          if (!Array.isArray(cans) || !cans.length) return;
+          const last = cans[cans.length - 1];
+          const p = Number(last.close);
+          const prev = cans.length >= 2 ? Number(cans[cans.length - 2].close) : Number(last.open);
+          const c = (Number.isFinite(prev) && prev !== 0) ? ((p - prev) / Math.abs(prev)) * 100 : NaN;
+          if (Number.isFinite(p)) tState.set(def.sym, { price: p, change: c });
+        })()),
+      ];
+      await Promise.allSettled(jobs);
+      updateDisplay();
+    };
+
+    void fetchAll().then(() => requestAnimationFrame(adjustSpeed));
+    window.setInterval(fetchAll, 30_000);
+    window.addEventListener('resize', adjustSpeed, { passive: true });
+
+    viewport.appendChild(track);
+    tickerWrap.appendChild(viewport);
+    bottomBar.appendChild(tickerWrap);
+
+    const applyTickerVisibility = () => {
+      tickerWrap.style.display = window.matchMedia('(max-width: 767px)').matches ? 'none' : 'flex';
+    };
+    applyTickerVisibility();
+    window.addEventListener('resize', applyTickerVisibility, { passive: true });
+  }
+
   const navPanel = document.createElement('div');
   navPanel.style.cssText = `position:absolute;left:50%;transform:translate(-50%,8px);bottom:${bottomOffset + 26}px;
     display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:10px;
