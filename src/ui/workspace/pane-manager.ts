@@ -10,6 +10,7 @@ export type PaneLike = {
 export type PaneManagerState = {
   splitCount: number;
   splitPreset: number;
+  splitOrientation: 'cols' | 'rows';
   activePaneId: number;
   maximizedPaneId: number | null;
   currentVisiblePaneIds: number[];
@@ -19,15 +20,20 @@ export type PaneManagerState = {
   splitPresets: readonly number[];
 };
 
-export function updateGridByCount(grid: HTMLDivElement, count: number): void {
+export function updateGridByCount(grid: HTMLDivElement, count: number, orientation: 'cols' | 'rows' = 'cols'): void {
   if (count <= 1) {
     grid.style.gridTemplateColumns = '1fr';
     grid.style.gridTemplateRows = '1fr';
     return;
   }
   if (count <= 2) {
-    grid.style.gridTemplateColumns = '1fr 1fr';
-    grid.style.gridTemplateRows = '1fr';
+    if (orientation === 'rows') {
+      grid.style.gridTemplateColumns = '1fr';
+      grid.style.gridTemplateRows = '1fr 1fr';
+    } else {
+      grid.style.gridTemplateColumns = '1fr 1fr';
+      grid.style.gridTemplateRows = '1fr';
+    }
     return;
   }
   if (count <= 4) {
@@ -82,7 +88,7 @@ export function createPaneManager(args: {
   ensurePane: (paneId: number) => PaneLike;
   getPaneIfAny: (paneId: number) => PaneLike | undefined;
   refreshTopControlIcons: () => void;
-  updateGridByCount: (count: number) => void;
+  updateGridByCount: (count: number, orientation?: 'cols' | 'rows') => void;
 }) {
   const {
     state,
@@ -124,7 +130,7 @@ export function createPaneManager(args: {
   const renderPaneVisibility = () => {
     const maximizedVisible = state.maximizedPaneId !== null && state.currentVisiblePaneIds.includes(state.maximizedPaneId);
     const renderIds = maximizedVisible ? [state.maximizedPaneId!] : [...state.currentVisiblePaneIds];
-    updateGrid(renderIds.length);
+    updateGrid(renderIds.length, state.splitOrientation);
 
     for (let i = 0; i < paneSlots.length; i += 1) {
       const slot = paneSlots[i];
@@ -164,7 +170,7 @@ export function createPaneManager(args: {
 
   const applySplitLayout = (
     count: number,
-    options: { resetClosed?: boolean; updatePreset?: boolean } = {},
+    options: { resetClosed?: boolean; updatePreset?: boolean; orientation?: 'cols' | 'rows' } = {},
   ) => {
     if (options.resetClosed) {
       state.closedPaneIds.clear();
@@ -180,6 +186,7 @@ export function createPaneManager(args: {
 
     const targetCount = Math.max(1, Math.min(count, availableIds.length));
     state.splitCount = targetCount;
+    state.splitOrientation = targetCount === 2 ? (options.orientation ?? 'cols') : 'cols';
     state.currentVisiblePaneIds = availableIds.slice(0, targetCount);
     if (options.updatePreset && state.splitPresets.includes(targetCount)) {
       state.splitPreset = targetCount;

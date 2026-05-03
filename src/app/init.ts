@@ -555,6 +555,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   const paneState: PaneManagerState = {
     splitCount: isPopout ? 1 : 1,
     splitPreset: 1,
+    splitOrientation: 'cols',
     activePaneId: 0,
     maximizedPaneId: null,
     currentVisiblePaneIds: [0],
@@ -1379,7 +1380,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
 
   const applySplitLayout = (
     count: number,
-    options: { resetClosed?: boolean; updatePreset?: boolean } = {},
+    options: { resetClosed?: boolean; updatePreset?: boolean; orientation?: 'cols' | 'rows' } = {},
   ) => {
     paneManager.applySplitLayout(count, options);
   };
@@ -1437,11 +1438,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       splitPresets,
       getSplitCount: () => paneState.splitCount,
       getSplitPreset: () => paneState.splitPreset,
+      getSplitOrientation: () => paneState.splitOrientation,
       getMonitorMode: () => monitorMode,
       setMonitorMode: (mode) => {
         monitorMode = mode;
       },
-      onApplySplitLayout: (count) => applySplitLayout(count, { resetClosed: true, updatePreset: true }),
+      onApplySplitLayout: (count, orientation) => applySplitLayout(count, { resetClosed: true, updatePreset: true, orientation }),
       onOpenMultiMonitor: () => openMultiMonitor(),
       onSaveScreenshot: saveActivePaneScreenshot,
       onToggleFullscreen: toggleFullscreen,

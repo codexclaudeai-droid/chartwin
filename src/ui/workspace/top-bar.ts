@@ -5,9 +5,10 @@ type CreateTopBarArgs = {
   splitPresets: readonly number[];
   getSplitCount: () => number;
   getSplitPreset: () => number;
+  getSplitOrientation: () => 'cols' | 'rows';
   getMonitorMode: () => MonitorMode;
   setMonitorMode: (mode: MonitorMode) => void;
-  onApplySplitLayout: (count: number) => void;
+  onApplySplitLayout: (count: number, orientation?: 'cols' | 'rows') => void;
   onOpenMultiMonitor: () => void;
   onSaveScreenshot: () => void;
   onToggleFullscreen: () => void;
@@ -20,6 +21,7 @@ type CreateTopBarArgs = {
 type LayoutIconType =
   | 'single'
   | 'v-split'
+  | 'h-split'
   | 'grid-4'
   | 'grid-6'
   | 'grid-8'
@@ -101,6 +103,11 @@ const layoutIconSvg = (type: LayoutIconType, size = 18, color = 'currentColor') 
         return `
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
           <line x1="12" y1="3" x2="12" y2="21"></line>
+        `;
+      case 'h-split':
+        return `
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
         `;
       case 'monitor-single':
         return `
@@ -303,6 +310,7 @@ export function createTopBar({
   splitPresets,
   getSplitCount,
   getSplitPreset,
+  getSplitOrientation,
   getMonitorMode,
   setMonitorMode,
   onApplySplitLayout,
@@ -422,8 +430,9 @@ export function createTopBar({
   };
 
   const splitIconGrid = document.createElement('div');
-  splitIconGrid.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:6px;';
+  splitIconGrid.style.cssText = 'display:grid;grid-template-columns:repeat(6,1fr);gap:6px;';
   const splitOptions = [...splitPresets];
+  const splitOptionBtns: HTMLButtonElement[] = [];
   splitOptions.forEach((count) => {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -434,8 +443,21 @@ export function createTopBar({
       onApplySplitLayout(count);
       closeSplitMenu();
     });
+    splitOptionBtns.push(btn);
     splitIconGrid.appendChild(btn);
   });
+
+  const hSplitBtn = document.createElement('button');
+  hSplitBtn.type = 'button';
+  hSplitBtn.title = '세로 2분할';
+  hSplitBtn.style.cssText = 'height:32px;background:#1f2533;color:#d1d4dc;border:1px solid #2a2e3e;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+  hSplitBtn.innerHTML = layoutIconSvg('h-split', 18, '#d1d4dc');
+  hSplitBtn.addEventListener('click', () => {
+    onApplySplitLayout(2, 'rows');
+    closeSplitMenu();
+  });
+  splitIconGrid.insertBefore(hSplitBtn, splitOptionBtns[2]);
+
   splitMenu.appendChild(splitIconGrid);
 
   const menuSep = document.createElement('div');
@@ -509,13 +531,19 @@ export function createTopBar({
   topBar.appendChild(rightArea);
 
   const refreshTopControlIcons = () => {
-    splitBtn.innerHTML = layoutIconSvg(splitTypeByCount(getSplitCount()), 16, 'currentColor');
-    splitIconGrid.querySelectorAll('button').forEach((el, index) => {
+    const curCount = getSplitCount();
+    const curOrientation = getSplitOrientation();
+    const isHSplitActive = curCount === 2 && curOrientation === 'rows';
+    const mainIconType = isHSplitActive ? 'h-split' : splitTypeByCount(curCount);
+    splitBtn.innerHTML = layoutIconSvg(mainIconType, 16, 'currentColor');
+    splitOptionBtns.forEach((el, index) => {
       const count = splitOptions[index];
-      const isActive = count === getSplitPreset();
-      (el as HTMLButtonElement).style.borderColor = isActive ? '#4f8cff' : '#2a2e3e';
-      (el as HTMLButtonElement).style.background = isActive ? '#243659' : '#1f2533';
+      const isActive = curCount === count && !(count === 2 && curOrientation === 'rows');
+      el.style.borderColor = isActive ? '#4f8cff' : '#2a2e3e';
+      el.style.background = isActive ? '#243659' : '#1f2533';
     });
+    hSplitBtn.style.borderColor = isHSplitActive ? '#4f8cff' : '#2a2e3e';
+    hSplitBtn.style.background = isHSplitActive ? '#243659' : '#1f2533';
     const monitorMode = getMonitorMode();
     singleModeBtn.style.borderColor = monitorMode === 'single' ? '#4f8cff' : '#2a2e3e';
     singleModeBtn.style.background = monitorMode === 'single' ? '#243659' : '#1f2533';
