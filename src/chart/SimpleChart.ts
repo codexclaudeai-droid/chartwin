@@ -84,7 +84,7 @@ const HLINE_DEFAULT_WIDTH = 1.2;
 const LOCK_ICON_CLOSED_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 1 1 8 0v3"></path></svg>';
 const LOCK_ICON_OPEN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M16 11V8a4 4 0 1 0-8 0"></path></svg>';
 const ERASER_CURSOR = 'url("/eraser-cursor.svg") 4 20, pointer';
-const NS_RESIZE_CURSOR = `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"0 0 40 40\"><g fill=\"none\" stroke=\"white\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"20\" y1=\"7\" x2=\"20\" y2=\"33\"/><polyline points=\"14,13 20,7 26,13\"/><polyline points=\"14,27 20,33 26,27\"/></g></svg>')}") 20 20, ns-resize`;
+const NS_RESIZE_CURSOR = `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"48\" viewBox=\"0 0 40 48\"><polygon points=\"20,13 24,19 16,19\" fill=\"white\"/><polygon points=\"20,35 24,29 16,29\" fill=\"white\"/><line x1=\"20\" y1=\"19\" x2=\"20\" y2=\"29\" stroke=\"white\" stroke-width=\"2\"/></svg>')}") 20 24, ns-resize`;
 const EW_RESIZE_CURSOR = `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"0 0 40 40\"><g fill=\"none\" stroke=\"white\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"7\" y1=\"20\" x2=\"33\" y2=\"20\"/><polyline points=\"13,14 7,20 13,26\"/><polyline points=\"27,14 33,20 27,26\"/></g></svg>')}") 20 20, ew-resize`;
 
 function drawPriceArrowBox(
@@ -300,6 +300,14 @@ export class SimpleChart {
   private dragStartIndex = 0;
   private dragStartPriceOffset = 0;
   private mainPricePanOffset = 0;
+  private yScaleFactor = 1.0;
+  private logScale = false;
+  private yAxisDragging = false;
+  private yAxisDragStartY = 0;
+  private yAxisDragStartFactor = 1.0;
+  private logBtn: HTMLButtonElement | null = null;
+  private _logBtnHovered = false;
+  private logBtnHideTimer: ReturnType<typeof setTimeout> | null = null;
   private leftPanBars = 0;
   private dragStartLeftPanBars = 0;
   private touchStartLeftPanBars = 0;
@@ -2793,6 +2801,7 @@ export class SimpleChart {
     maxP: number;
     leftGap: number;
     getY: (p: number) => number;
+    getYLinear: (p: number) => number;
   } = null;
 
   private drawSignalLayer(meta: {
@@ -2808,6 +2817,7 @@ export class SimpleChart {
     maxP: number;
     leftGap: number;
     getY: (p: number) => number;
+    getYLinear: (p: number) => number;
   } | null, timeMs = performance.now()): void {
     const ctx = this.signalCtx;
     const w = this.viewportWidth;
@@ -2988,6 +2998,37 @@ export class SimpleChart {
       position: 'absolute', top: '0', left: '0', pointerEvents: 'none',
     });
     container.appendChild(this.overlayCanvas);
+
+    // Y축 로그 스케일 버튼
+    const logBtn = document.createElement('button');
+    this.logBtn = logBtn;
+    logBtn.textContent = 'Log';
+    Object.assign(logBtn.style, {
+      position: 'absolute', zIndex: '10',
+      border: '1px solid #4a5568', borderRadius: '3px',
+      background: '#1a2035', color: '#8899b4',
+      fontSize: '11px', fontWeight: '500',
+      padding: '2px 6px', cursor: 'pointer',
+      lineHeight: '1.4', userSelect: 'none', display: 'none',
+    });
+    logBtn.addEventListener('click', () => {
+      this.logScale = !this.logScale;
+      logBtn.style.background = this.logScale ? '#2563eb' : '#1a2035';
+      logBtn.style.color = this.logScale ? '#ffffff' : '#8899b4';
+      logBtn.style.borderColor = this.logScale ? '#3b82f6' : '#4a5568';
+      this.draw();
+    });
+    logBtn.addEventListener('mouseenter', () => {
+      this._logBtnHovered = true;
+      if (this.logBtnHideTimer) { clearTimeout(this.logBtnHideTimer); this.logBtnHideTimer = null; }
+      logBtn.style.display = 'block';
+    });
+    logBtn.addEventListener('mouseleave', () => {
+      this._logBtnHovered = false;
+      this.scheduleLogBtnHide();
+    });
+    container.appendChild(logBtn);
+
     this.ensureDrawingToolbar();
     [this.ctx, this.signalCtx, this.overlayCtx].forEach((ctx) => {
       ctx.imageSmoothingEnabled = false;
@@ -3029,6 +3070,7 @@ export class SimpleChart {
       this.hoveredDrawingId = null;
       this.hoveredDrawingPart = null;
       this.canvas.style.cursor = 'default';
+      if (!this.yAxisDragging) this.scheduleLogBtnHide();
       this.requestOverlayDraw();
     });
     // ── 터치 이벤트 (모바일 핀치줌 + 스와이프 패닝) ──
@@ -4422,19 +4464,38 @@ export class SimpleChart {
     const pPad = Math.max(priceRange * pPadRatio, 1e-12);
     const rawMinP = minP - pPad;
     const rawMaxP = maxP + pPad;
-    const rawRange = Math.max(1e-12, rawMaxP - rawMinP);
+    // Apply yScaleFactor before step calculation so ticks auto-space correctly
+    let scaledRawMin = rawMinP;
+    let scaledRawMax = rawMaxP;
+    if (this.yScaleFactor !== 1.0) {
+      const mid = (rawMinP + rawMaxP) / 2;
+      const half = ((rawMaxP - rawMinP) / 2) * this.yScaleFactor;
+      scaledRawMin = mid - half;
+      scaledRawMax = mid + half;
+    }
+    const scaledRawRange = Math.max(1e-12, scaledRawMax - scaledRawMin);
     const plotHeightPx = Math.max(1, mainH - R.top);
-    const mainAxisStep = getMainAxisStepByRange(rawRange, plotHeightPx, this.config.quoteCurrency);
+    const mainAxisStep = getMainAxisStepByRange(scaledRawRange, plotHeightPx, this.config.quoteCurrency);
 
-    minP = Math.floor(rawMinP / mainAxisStep) * mainAxisStep;
-    maxP = Math.ceil(rawMaxP / mainAxisStep) * mainAxisStep;
+    minP = Math.floor(scaledRawMin / mainAxisStep) * mainAxisStep;
+    maxP = Math.ceil(scaledRawMax / mainAxisStep) * mainAxisStep;
     if (this.mainPricePanOffset !== 0) {
       minP += this.mainPricePanOffset;
       maxP += this.mainPricePanOffset;
     }
     if (maxP <= minP) maxP = minP + mainAxisStep;
     const pRng = maxP - minP || 1;
-    const getY = (p: number) => R.top + (maxP - p) / pRng * (mainH - R.top);
+    // Linear getY: always used for axis grid/labels so grid never shifts on log toggle
+    const getYLinear = (p: number) => R.top + (maxP - p) / pRng * (mainH - R.top);
+    const getY = (p: number) => {
+      if (this.logScale && minP > 0) {
+        const lMin = Math.log(minP);
+        const lMax = Math.log(Math.max(minP * 1.00001, maxP));
+        const lRng = lMax - lMin || 1;
+        return R.top + (lMax - Math.log(Math.max(1e-10, p))) / lRng * (mainH - R.top);
+      }
+      return getYLinear(p);
+    };
 
     // 메인 패널 라인 그리기 헬퍼
     const line = (data: (number|null)[], color: string, lw = 1.5, dash: number[] = []) => {
@@ -4507,7 +4568,7 @@ export class SimpleChart {
     for (let i = 0; i < tickCount; i += 1) {
       const p = maxP - i * mainAxisStep;
       if (p < minP - mainAxisStep * 0.5) break;
-      const y = getY(p);
+      const y = getYLinear(p);
       if (y >= mainH - axisBottomPadding) continue;
       ctx.beginPath(); ctx.moveTo(chartLeft, y); ctx.lineTo(chartRight, y); ctx.stroke();
       const axisTextX = geometry.side === 'left'
@@ -5078,7 +5139,7 @@ export class SimpleChart {
       for (let i = 0; i < tickCount; i += 1) {
         const p = maxP - i * mainAxisStep;
         if (p < minP - mainAxisStep * 0.5) break;
-        const y = getY(p);
+        const y = getYLinear(p);
         if (y >= mainH - axisBottomPadding) continue;
         ctx.fillText(formatWithComma(Number(p.toFixed(axisDigits)), symbolPriceDigits), geometry.axisPad - 6, y + 4);
       }
@@ -5128,7 +5189,9 @@ export class SimpleChart {
       maxP,
       leftGap,
       getY,
+      getYLinear,
     };
+    this.updateLogBtnPosition();
     this.drawConfirmedPatternBoxes(this.lastDrawMeta);
     this.evaluateSubIndicatorAlerts({
       volume: this.data.map((d) => d.volume),
@@ -7462,13 +7525,14 @@ export class SimpleChart {
     const mainScale = this.lastDrawMeta
       ? { lo: this.lastDrawMeta.minP, hi: this.lastDrawMeta.maxP, toY: this.lastDrawMeta.getY }
       : null;
+    const linearToY = this.lastDrawMeta?.getYLinear ?? null;
 
-    // 현재가 라인: draw()에서 계산된 캐시 스케일 재사용
-    if (this.data.length && mainScale) {
+    // 현재가 라인: draw()에서 계산된 캐시 스케일 재사용 (linear Y - log 전환 시 위치 유지)
+    if (this.data.length && mainScale && linearToY) {
       const priceIdx = Math.max(this.startIndex, this.endIndex - 1);
       const last = this.data[priceIdx].close;
       const prev = priceIdx > 0 ? this.data[priceIdx - 1].close : last;
-      const py = mainScale.toY(last);
+      const py = linearToY(last);
       if (py >= R.top && py <= mainH) {
         const isUp = last >= prev;
         const boxColor = isUp ? '#22ab94' : '#f23645';
@@ -7725,7 +7789,8 @@ export class SimpleChart {
     );
     const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
     const isDrawingEditMode = Boolean(this.drawingTool && this.drawingTool !== 'eraser');
-    const shouldDrawCrosshairGuides = noDrawingInteraction || isTrendlineEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isDrawingEditMode || Boolean(this.drawingMoveState);
+    const onYAxis = this.isOnMainYAxis(this.mouseX, this.mouseY);
+    const shouldDrawCrosshairGuides = !onYAxis && (noDrawingInteraction || isTrendlineEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isDrawingEditMode || Boolean(this.drawingMoveState));
 
     if (shouldDrawCrosshairGuides) {
       const useBlueEditGuide = isDrawingEditMode || isChannelEditMode;
@@ -7863,7 +7928,7 @@ export class SimpleChart {
       }
     }
 
-    if (this.mouseY < mainH && mainScale && noDrawingInteraction) {
+    if (this.mouseY < mainH && mainScale && noDrawingInteraction && !onYAxis) {
       const lo = mainScale.lo;
       const hi = mainScale.hi;
       const price = hi - (this.mouseY - R.top) / (mainH - R.top || 1) * (hi - lo);
@@ -8228,6 +8293,45 @@ export class SimpleChart {
     return xHit && yHit;
   }
 
+  private isOnMainYAxis(x: number, y: number): boolean {
+    const meta = this.lastDrawMeta;
+    if (!meta) return false;
+    if (y < 0 || y > meta.mainH) return false;
+    if (meta.axisSide === 'right') return x >= meta.chartRight;
+    return x >= 0 && x <= meta.axisPad;
+  }
+
+  private scheduleLogBtnHide(): void {
+    if (this.logBtnHideTimer) return;
+    this.logBtnHideTimer = setTimeout(() => {
+      this.logBtnHideTimer = null;
+      if (this.logBtn && !this._logBtnHovered && !this.yAxisDragging
+          && !this.isOnMainYAxis(this.mouseX, this.mouseY)) {
+        this.logBtn.style.display = 'none';
+      }
+    }, 250);
+  }
+
+  private updateLogBtnPosition(): void {
+    if (!this.logBtn) return;
+    const meta = this.lastDrawMeta;
+    if (!meta) { this.logBtn.style.display = 'none'; return; }
+    const btnH = 22;
+    const axisCenter = meta.axisSide === 'right'
+      ? meta.chartRight + (this.viewportWidth - meta.chartRight) / 2
+      : meta.axisPad / 2;
+    const btnW = this.logBtn.offsetWidth || 38;
+    const onAxis = this.isOnMainYAxis(this.mouseX, this.mouseY) || this.yAxisDragging || this._logBtnHovered;
+    if (onAxis) {
+      if (this.logBtnHideTimer) { clearTimeout(this.logBtnHideTimer); this.logBtnHideTimer = null; }
+      this.logBtn.style.display = 'block';
+    } else {
+      this.scheduleLogBtnHide();
+    }
+    this.logBtn.style.left = `${Math.round(axisCenter - btnW / 2)}px`;
+    this.logBtn.style.top = `${Math.round(meta.mainH - btnH - 8)}px`;
+  }
+
   private updateChartCursor(): void {
     if (!this.isMouseOver) {
       this.canvas.style.cursor = 'default';
@@ -8250,6 +8354,10 @@ export class SimpleChart {
         return;
       }
       this.canvas.style.cursor = 'crosshair';
+      return;
+    }
+    if (this.yAxisDragging) {
+      this.canvas.style.cursor = NS_RESIZE_CURSOR;
       return;
     }
     if (this.isDragging) {
@@ -8303,6 +8411,10 @@ export class SimpleChart {
       this.canvas.style.cursor = 'pointer';
       return;
     }
+    if (!this.drawingTool && !this.drawingMoveState && this.isOnMainYAxis(this.mouseX, this.mouseY)) {
+      this.canvas.style.cursor = NS_RESIZE_CURSOR;
+      return;
+    }
     if (this.pointerMode === 'arrow') {
       this.canvas.style.cursor = 'default';
       return;
@@ -8324,6 +8436,12 @@ export class SimpleChart {
 
   private handleWheel(e: WheelEvent) {
     e.preventDefault();
+    if (Math.abs(e.deltaY) >= Math.abs(e.deltaX) && this.isOnMainYAxis(this.mouseX, this.mouseY)) {
+      const factor = e.deltaY > 0 ? 1.1 : (1 / 1.1);
+      this.yScaleFactor = Math.max(0.1, Math.min(20, this.yScaleFactor * factor));
+      this.draw();
+      return;
+    }
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
       const shift = Math.floor(e.deltaX / 5);
       const visibleCount = Math.max(1, this.endIndex - this.startIndex);
@@ -8367,6 +8485,16 @@ export class SimpleChart {
     this.isMouseOver = true;
     this.isMouseDownForTooltip = true;
     this.startMouseLongPressTooltip();
+
+    // Y축 드래그 시작
+    if (this.isOnMainYAxis(this.mouseX, this.mouseY)) {
+      this.yAxisDragging = true;
+      this.yAxisDragStartY = e.clientY;
+      this.yAxisDragStartFactor = this.yScaleFactor;
+      this.updateChartCursor();
+      e.preventDefault();
+      return;
+    }
 
     // 십자선 + 아이콘 클릭 → 수평선(hline) 생성
     // stale crosshairPlusHovered 의존하지 않고 클릭 시점 좌표로 직접 재계산
@@ -8913,6 +9041,14 @@ export class SimpleChart {
       }
     }
     this.isMouseOver = true;
+
+    if (this.yAxisDragging) {
+      const dy = e.clientY - this.yAxisDragStartY;
+      this.yScaleFactor = Math.max(0.1, Math.min(20, this.yAxisDragStartFactor * Math.exp(dy * 0.005)));
+      this.draw();
+      return;
+    }
+
     const hoveredDrawing = this.findDrawingAt(this.mouseX, this.mouseY);
     this.hoveredDrawingId = hoveredDrawing?.shape.id ?? null;
     this.hoveredDrawingPart = hoveredDrawing?.part ?? null;
@@ -8929,6 +9065,7 @@ export class SimpleChart {
     }
 
     this.updateChartCursor();
+    this.updateLogBtnPosition();
     if (this.drawingMoveState && this.selectedDrawingId) {
       const dx = this.mouseX - this.drawingMoveState.startX;
       const dy = this.mouseY - this.drawingMoveState.startY;
@@ -8999,6 +9136,11 @@ export class SimpleChart {
   private handleMouseUp() {
     this.isMouseDownForTooltip = false;
     this.stopMouseLongPressTooltip();
+    if (this.yAxisDragging) {
+      this.yAxisDragging = false;
+      this.updateChartCursor();
+      return;
+    }
     if (this.drawingMoveState) {
       if (this.pendingChannelId && this.selectedDrawingId === this.pendingChannelId && this.selectedDrawingPart === 'channel-offset') {
         this.pendingChannelId = null;
