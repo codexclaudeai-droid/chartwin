@@ -632,8 +632,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   const paneControllers = new Map<number, PaneController>();
   paneState.allPaneIds = Array.from({ length: 8 }, (_, index) => index);
 
-  const updateGridByCount = (count: number) => {
-    updateGridTemplateByCount(grid, count);
+  const updateGridByCount = (count: number, orientation?: 'cols' | 'rows') => {
+    updateGridTemplateByCount(grid, count, orientation);
   };
 
   const createPane = (paneId: number, host: HTMLDivElement): PaneController => {

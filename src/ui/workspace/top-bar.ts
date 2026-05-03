@@ -436,7 +436,7 @@ export function createTopBar({
   splitOptions.forEach((count) => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.title = `${count}분할`;
+    btn.title = count === 2 ? '가로 2분할' : `${count}분할`;
     btn.style.cssText = 'height:32px;background:#1f2533;color:#d1d4dc;border:1px solid #2a2e3e;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
     btn.innerHTML = layoutIconSvg(splitTypeByCount(count), 18, '#d1d4dc');
     btn.addEventListener('click', () => {
