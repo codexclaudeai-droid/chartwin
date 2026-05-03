@@ -1149,7 +1149,11 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     window.addEventListener('chart-zoom-history-updated', (event: Event) => {
       const ce = event as CustomEvent<{ count: number }>;
       zoomHistoryCount = ce.detail?.count ?? 0;
-      syncZoomOutBtn();
+      if (zoomHistoryCount === 0) {
+        deactivateZoom();
+      } else {
+        syncZoomOutBtn();
+      }
     });
     window.addEventListener('chart-toolbox-select', () => { deactivateZoom(); });
     window.addEventListener('chart-drawing-tool-changed', () => { deactivateZoom(); });
