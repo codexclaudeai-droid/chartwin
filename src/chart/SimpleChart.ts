@@ -8328,7 +8328,6 @@ export class SimpleChart {
       this.startIndex = ns;
       this.endIndex = ns + visibleCount;
     } else {
-      // 최신 캔들(오른쪽 끝)을 확대/축소 기준(anchor)으로 고정
       const minVisible = 5;
       const maxVisible = this.data.length;
       const currentVisible = Math.max(minVisible, this.endIndex - this.startIndex);
@@ -8339,8 +8338,19 @@ export class SimpleChart {
         ? Math.min(maxVisible, currentVisible + zoomStep)   // 아래 스크롤: 축소(더 많은 캔들)
         : Math.max(minVisible, currentVisible - zoomStep);  // 위 스크롤: 확대(더 적은 캔들)
 
-      this.endIndex = this.data.length;
-      this.startIndex = Math.max(0, this.endIndex - nextVisible);
+      // 마우스 커서 위치를 앵커로 삼아 줌: 커서 아래 캔들이 제자리 유지
+      const metrics = this.getMainViewportMetrics();
+      if (metrics && nextVisible !== currentVisible) {
+        const chartWidth = Math.max(1, metrics.chartRight - metrics.chartLeft);
+        const ratio = Math.max(0, Math.min(1, (this.mouseX - metrics.chartLeft) / chartWidth));
+        const newStart = Math.round(this.startIndex + ratio * (currentVisible - nextVisible));
+        const clampedStart = Math.max(0, Math.min(this.data.length - nextVisible, newStart));
+        this.startIndex = clampedStart;
+        this.endIndex = clampedStart + nextVisible;
+      } else {
+        this.endIndex = this.data.length;
+        this.startIndex = Math.max(0, this.endIndex - nextVisible);
+      }
     }
     this.draw();
   }
