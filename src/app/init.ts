@@ -2344,6 +2344,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       pane.chart.setDrawingTool(normalizedToolId);
     });
 
+    const zoomHistory: Array<{ fromSec: number; toSec: number }> = [];
+
+    const dispatchZoomHistoryUpdated = () => {
+      window.dispatchEvent(new CustomEvent('chart-zoom-history-updated', { detail: { count: zoomHistory.length } }));
+    };
+
     window.addEventListener('chart-zoom-box-select', (event: Event) => {
       const ce = event as CustomEvent<{ x1: number; x2: number; overlayWidth: number }>;
       const { x1, x2, overlayWidth } = ce.detail;
@@ -2361,15 +2367,28 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const fromSec = candles[si]?.time;
       const toSec   = candles[ei]?.time;
       if (fromSec != null && toSec != null && fromSec < toSec) {
+        const prevFrom = candles[range.startIndex]?.time;
+        const prevTo   = candles[Math.min(candles.length - 1, range.endIndex)]?.time;
+        if (prevFrom != null && prevTo != null) {
+          zoomHistory.push({ fromSec: prevFrom, toSec: prevTo });
+          dispatchZoomHistoryUpdated();
+        }
         chart.setVisibleByDateRange(fromSec, toSec);
       }
     });
 
     window.addEventListener('chart-zoom-out', () => {
       const chart = getActivePane().chart;
-      const range = chart.getVisibleCandleRange();
-      const currentVisible = Math.max(10, range.endIndex - range.startIndex);
-      chart.zoomByCandles(currentVisible);
+      const prev = zoomHistory.pop();
+      dispatchZoomHistoryUpdated();
+      if (prev) {
+        chart.setVisibleByDateRange(prev.fromSec, prev.toSec);
+      } else {
+        const candles = chart.getCandles();
+        if (candles.length > 0) {
+          chart.setVisibleByDateRange(candles[0].time, candles[candles.length - 1].time);
+        }
+      }
     });
 
     window.addEventListener('keydown', (event: KeyboardEvent) => {

@@ -990,6 +990,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
 
     let zoomActive = false;
     let zoomOverlay: HTMLDivElement | null = null;
+    let zoomHistoryCount = 0;
 
     const makeZBtn = (svg: string, label: string): HTMLButtonElement => {
       const b = document.createElement('button');
@@ -1017,18 +1018,22 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       zoomOverlay = null;
     };
 
+    const syncZoomOutBtn = () => {
+      zoomOutBtn.style.display = (zoomActive || zoomHistoryCount > 0) ? 'block' : 'none';
+    };
+
     const deactivateZoom = () => {
       if (!zoomActive) return;
       zoomActive = false;
       setZoomInActive(false);
-      zoomOutBtn.style.display = 'none';
       destroyOverlay();
+      syncZoomOutBtn();
     };
 
     const activateZoom = () => {
       zoomActive = true;
       setZoomInActive(true);
-      zoomOutBtn.style.display = 'block';
+      syncZoomOutBtn();
       closeSubmenu();
       activeToolId = null;
       clearActiveStyles();
@@ -1115,7 +1120,6 @@ export function createLeftToolbox(workspace: HTMLElement): void {
         window.dispatchEvent(new CustomEvent('chart-zoom-box-select', {
           detail: { x1: rawX1, x2: rawX2, overlayWidth: overlay.offsetWidth },
         }));
-        deactivateZoom();
       };
 
       overlay.addEventListener('mouseup', endDrag);
@@ -1133,9 +1137,20 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     zoomOutBtn.addEventListener('mouseleave', () => { zoomOutBtn.style.background = '#1a2336'; zoomOutBtn.style.borderColor = '#304467'; });
     zoomOutBtn.addEventListener('click', () => { window.dispatchEvent(new CustomEvent('chart-zoom-out')); });
 
-    rail.appendChild(zoomInBtn);
-    rail.appendChild(zoomOutBtn);
+    const forecastBtn = toolButtonMap.get('forecast');
+    if (forecastBtn) {
+      forecastBtn.insertAdjacentElement('afterend', zoomOutBtn);
+      forecastBtn.insertAdjacentElement('afterend', zoomInBtn);
+    } else {
+      rail.appendChild(zoomInBtn);
+      rail.appendChild(zoomOutBtn);
+    }
 
+    window.addEventListener('chart-zoom-history-updated', (event: Event) => {
+      const ce = event as CustomEvent<{ count: number }>;
+      zoomHistoryCount = ce.detail?.count ?? 0;
+      syncZoomOutBtn();
+    });
     window.addEventListener('chart-toolbox-select', () => { deactivateZoom(); });
     window.addEventListener('chart-drawing-tool-changed', () => { deactivateZoom(); });
     window.addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Escape') deactivateZoom(); });
