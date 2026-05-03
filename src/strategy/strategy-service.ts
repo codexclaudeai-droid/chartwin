@@ -14,6 +14,7 @@ export interface StrategyDefinition {
   version: number;
   active: boolean;
   updatedAt: number;
+  frontendVisible?: boolean;
 }
 
 const STRATEGY_STORAGE_KEY = 'my-chart-lib-strategies-v1';

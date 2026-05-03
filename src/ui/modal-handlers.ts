@@ -86,16 +86,19 @@ function createModal(title: string, options: { anchorTop?: boolean } = {}) {
   return { overlay, modal, body, close };
 }
 
-export function openStrategyModal(chart: any, onApply: () => void) {
-  const { body, close } = createModal('전략시그널 관리', { anchorTop: true });
+export function openStrategyModal(chart: any, onApply: () => void, options?: { mode?: 'admin' | 'frontend' }) {
+  const isAdmin = (options?.mode ?? 'admin') === 'admin';
+  const { body, close } = createModal(isAdmin ? '전략시그널 관리' : '전략 선택', { anchorTop: true });
 
-  const info = document.createElement('div');
-  info.style.cssText = 'font-size:12px;color:#9aa0ab;line-height:1.5;margin-bottom:12px;';
-  info.textContent = '전략 목록에서 바로 적용할 수 있습니다. 전략 등록 탭에서 JS/Pine 전략을 저장하면 Pine은 JS로 변환되어 Worker에서 실행됩니다.';
-  body.appendChild(info);
+  if (isAdmin) {
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:12px;color:#9aa0ab;line-height:1.5;margin-bottom:12px;';
+    info.textContent = '전략 목록에서 바로 적용할 수 있습니다. 전략 등록 탭에서 JS/Pine 전략을 저장하면 Pine은 JS로 변환되어 Worker에서 실행됩니다.';
+    body.appendChild(info);
+  }
 
   const topMenu = document.createElement('div');
-  topMenu.style.cssText = 'display:flex;gap:8px;margin-bottom:10px;';
+  topMenu.style.cssText = `display:${isAdmin ? 'flex' : 'none'};gap:8px;margin-bottom:10px;`;
   const listMenuBtn = document.createElement('button');
   listMenuBtn.textContent = '전략 목록';
   listMenuBtn.style.cssText = 'padding:7px 12px;border-radius:999px;border:none;background:#2a2e3e;color:#fff;font-size:12px;cursor:pointer;';
@@ -368,7 +371,8 @@ export function openStrategyModal(chart: any, onApply: () => void) {
   };
 
   const render = () => {
-    const strategies = chart.getStrategies() as StrategyDefinition[];
+    const allStrategies = chart.getStrategies() as StrategyDefinition[];
+    const strategies = isAdmin ? allStrategies : allStrategies.filter((s) => s.frontendVisible !== false);
     const activeId = chart.getActiveStrategyId();
     const activeIsDoubleBreak = activeId === 'strategy_js_double_break';
     const activeIsBollinger = activeId === 'strategy_pine_bbands_directed';
@@ -386,6 +390,7 @@ export function openStrategyModal(chart: any, onApply: () => void) {
 
       const right = document.createElement('div');
       right.style.cssText = 'display:flex;align-items:center;gap:6px;flex-shrink:0;';
+
       const applyBtn = document.createElement('button');
       applyBtn.textContent = isApplied ? '적용중' : '적용';
       applyBtn.disabled = isApplied;
@@ -397,39 +402,64 @@ export function openStrategyModal(chart: any, onApply: () => void) {
         onApply();
         render();
       });
-      const sourceBtn = document.createElement('button');
-      sourceBtn.textContent = 'JS보기';
-      sourceBtn.style.cssText = 'padding:4px 8px;border-radius:4px;border:1px solid #3b4360;background:#232b3d;color:#c9d1e3;font-size:11px;cursor:pointer;';
-      sourceBtn.addEventListener('click', () => openCompiledSourceModal(s));
-      const editBtn = document.createElement('button');
-      editBtn.textContent = '수정';
-      editBtn.style.cssText = 'padding:4px 8px;border-radius:4px;border:1px solid #2f4f78;background:#1a2a3f;color:#90caf9;font-size:11px;cursor:pointer;';
-      editBtn.addEventListener('click', () => {
-        editingId = s.id;
-        nameField.input.value = s.name;
-        descField.input.value = s.description;
-        langSel.value = s.language;
-        srcInput.value = s.sourceCode;
-        saveBtn.textContent = '수정 저장';
-        err.textContent = '';
-        activeView = 'register';
-        applyViewState();
-      });
-      const delBtn = document.createElement('button');
-      delBtn.textContent = '삭제';
-      delBtn.style.cssText = 'padding:4px 8px;border-radius:4px;border:1px solid #5a2e34;background:#2b1b1f;color:#ff8a80;font-size:11px;cursor:pointer;';
-      delBtn.addEventListener('click', () => {
-        const next = (chart.getStrategies() as StrategyDefinition[]).filter((item: StrategyDefinition) => item.id !== s.id);
-        chart.setStrategies(next);
-        if (chart.getActiveStrategyId() === s.id) chart.setActiveStrategy(null);
-        if (editingId === s.id) resetForm();
-        onApply();
-        render();
-      });
       right.appendChild(applyBtn);
-      right.appendChild(sourceBtn);
-      right.appendChild(editBtn);
-      right.appendChild(delBtn);
+
+      if (isAdmin) {
+        const sourceBtn = document.createElement('button');
+        sourceBtn.textContent = 'JS보기';
+        sourceBtn.style.cssText = 'padding:4px 8px;border-radius:4px;border:1px solid #3b4360;background:#232b3d;color:#c9d1e3;font-size:11px;cursor:pointer;';
+        sourceBtn.addEventListener('click', () => openCompiledSourceModal(s));
+
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '수정';
+        editBtn.style.cssText = 'padding:4px 8px;border-radius:4px;border:1px solid #2f4f78;background:#1a2a3f;color:#90caf9;font-size:11px;cursor:pointer;';
+        editBtn.addEventListener('click', () => {
+          editingId = s.id;
+          nameField.input.value = s.name;
+          descField.input.value = s.description;
+          langSel.value = s.language;
+          srcInput.value = s.sourceCode;
+          saveBtn.textContent = '수정 저장';
+          err.textContent = '';
+          activeView = 'register';
+          applyViewState();
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '삭제';
+        delBtn.style.cssText = 'padding:4px 8px;border-radius:4px;border:1px solid #5a2e34;background:#2b1b1f;color:#ff8a80;font-size:11px;cursor:pointer;';
+        delBtn.addEventListener('click', () => {
+          const next = (chart.getStrategies() as StrategyDefinition[]).filter((item: StrategyDefinition) => item.id !== s.id);
+          chart.setStrategies(next);
+          if (chart.getActiveStrategyId() === s.id) chart.setActiveStrategy(null);
+          if (editingId === s.id) resetForm();
+          onApply();
+          render();
+        });
+
+        const isFrontendVisible = s.frontendVisible !== false;
+        const visToggle = document.createElement('button');
+        visToggle.title = isFrontendVisible ? '프론트 표시 끄기' : '프론트 표시 켜기';
+        visToggle.style.cssText = `padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;
+          border:1px solid ${isFrontendVisible ? '#2e6b45' : '#4a4a4a'};
+          background:${isFrontendVisible ? '#163328' : '#252525'};
+          color:${isFrontendVisible ? '#6ee0a0' : '#888'};`;
+        visToggle.textContent = isFrontendVisible ? '표시 ON' : '표시 OFF';
+        visToggle.addEventListener('click', () => {
+          const updated = (chart.getStrategies() as StrategyDefinition[]).map((item: StrategyDefinition) =>
+            item.id === s.id ? { ...item, frontendVisible: !isFrontendVisible } : item,
+          );
+          chart.setStrategies(updated);
+          onApply();
+          render();
+        });
+
+        right.appendChild(sourceBtn);
+        right.appendChild(editBtn);
+        right.appendChild(delBtn);
+        right.appendChild(visToggle);
+      }
+
       row.appendChild(right);
       listWrap.appendChild(row);
     });

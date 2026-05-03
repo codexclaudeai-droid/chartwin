@@ -2190,7 +2190,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         : null;
       const paneId = requestedPaneId ?? paneState.activePaneId;
       const pane = ensurePane(paneId);
-      openStrategyModal(pane.chart, pane.refreshChartUi);
+      openStrategyModal(pane.chart, pane.refreshChartUi, { mode: 'frontend' });
     });
     refreshStrategyReport = () => {
       const activePane = getActivePane();
