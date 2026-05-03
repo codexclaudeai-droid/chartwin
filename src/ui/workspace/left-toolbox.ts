@@ -1120,6 +1120,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
         window.dispatchEvent(new CustomEvent('chart-zoom-box-select', {
           detail: { x1: rawX1, x2: rawX2, overlayWidth: overlay.offsetWidth },
         }));
+        deactivateZoom();
       };
 
       overlay.addEventListener('mouseup', endDrag);
@@ -1149,11 +1150,8 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     window.addEventListener('chart-zoom-history-updated', (event: Event) => {
       const ce = event as CustomEvent<{ count: number }>;
       zoomHistoryCount = ce.detail?.count ?? 0;
-      if (zoomHistoryCount === 0) {
-        deactivateZoom();
-      } else {
-        syncZoomOutBtn();
-      }
+      if (zoomHistoryCount === 0) deactivateZoom();
+      syncZoomOutBtn();
     });
     window.addEventListener('chart-toolbox-select', () => { deactivateZoom(); });
     window.addEventListener('chart-drawing-tool-changed', () => { deactivateZoom(); });
