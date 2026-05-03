@@ -12,9 +12,17 @@ import {
   loadAdminConfig,
 } from '../catalog/symbols';
 void loadAdminConfig();
+void fetch('/admin/strategies', { cache: 'no-store' })
+  .then((r) => r.json())
+  .then((json: unknown) => {
+    const j = json as { ok?: boolean; hidden?: unknown };
+    if (j.ok && Array.isArray(j.hidden)) setAdminHiddenStrategyIds(j.hidden as string[]);
+  })
+  .catch(() => {});
 import {
   loadStrategies,
   saveStrategies,
+  setAdminHiddenStrategyIds,
   type StrategyDefinition,
   type StrategySignal,
 } from '../strategy/strategy-service';

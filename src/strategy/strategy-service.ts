@@ -14,7 +14,14 @@ export interface StrategyDefinition {
   version: number;
   active: boolean;
   updatedAt: number;
-  frontendVisible?: boolean;
+}
+
+let _adminHiddenIds = new Set<string>();
+export function setAdminHiddenStrategyIds(ids: string[]): void {
+  _adminHiddenIds = new Set(ids);
+}
+export function isStrategyVisibleInFrontend(id: string): boolean {
+  return !_adminHiddenIds.has(id);
 }
 
 const STRATEGY_STORAGE_KEY = 'my-chart-lib-strategies-v1';

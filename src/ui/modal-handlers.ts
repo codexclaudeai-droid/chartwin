@@ -3,7 +3,7 @@ import { INDICATOR_CATALOG } from '../catalog/indicators';
 import { CUSTOM_SYMBOLS, SYMBOL_CATALOG, createSymbolIconElement, getAllSymbolCatalog, getSymbolIconUrl, persistSymbolRegistry, type SymbolCatalogItem } from '../catalog/symbols';
 import { TIMEZONE_OPTIONS, UTC_OFFSET_OPTIONS, type TimezoneOption } from '../catalog/time';
 import { toRgba } from '../chart/color-utils';
-import { buildStrategyDefinition, type StrategyDefinition, type StrategyLang } from '../strategy/strategy-service';
+import { buildStrategyDefinition, isStrategyVisibleInFrontend, type StrategyDefinition, type StrategyLang } from '../strategy/strategy-service';
 
 function createModal(title: string, options: { anchorTop?: boolean } = {}) {
   const overlay = document.createElement('div');
@@ -372,7 +372,7 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
 
   const render = () => {
     const allStrategies = chart.getStrategies() as StrategyDefinition[];
-    const strategies = isAdmin ? allStrategies : allStrategies.filter((s) => s.frontendVisible !== false);
+    const strategies = isAdmin ? allStrategies : allStrategies.filter((s) => isStrategyVisibleInFrontend(s.id));
     const activeId = chart.getActiveStrategyId();
     const activeIsDoubleBreak = activeId === 'strategy_js_double_break';
     const activeIsBollinger = activeId === 'strategy_pine_bbands_directed';
@@ -437,27 +437,9 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
           render();
         });
 
-        const isFrontendVisible = s.frontendVisible !== false;
-        const visToggle = document.createElement('button');
-        visToggle.title = isFrontendVisible ? '프론트 표시 끄기' : '프론트 표시 켜기';
-        visToggle.style.cssText = `padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;
-          border:1px solid ${isFrontendVisible ? '#2e6b45' : '#4a4a4a'};
-          background:${isFrontendVisible ? '#163328' : '#252525'};
-          color:${isFrontendVisible ? '#6ee0a0' : '#888'};`;
-        visToggle.textContent = isFrontendVisible ? '표시 ON' : '표시 OFF';
-        visToggle.addEventListener('click', () => {
-          const updated = (chart.getStrategies() as StrategyDefinition[]).map((item: StrategyDefinition) =>
-            item.id === s.id ? { ...item, frontendVisible: !isFrontendVisible } : item,
-          );
-          chart.setStrategies(updated);
-          onApply();
-          render();
-        });
-
         right.appendChild(sourceBtn);
         right.appendChild(editBtn);
         right.appendChild(delBtn);
-        right.appendChild(visToggle);
       }
 
       row.appendChild(right);

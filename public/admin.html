@@ -132,6 +132,24 @@
     <div class="status" id="save-status"></div>
   </div>
 
+  <!-- Strategy Signal Settings -->
+  <div class="symbols-wrap" id="strategy-wrap">
+    <div class="card">
+      <div class="card-title">전략시그널 표시 설정</div>
+      <p style="font-size:12px;color:#8b949e;margin-bottom:14px;line-height:1.5;">표시 OFF로 설정된 전략은 사용자 화면에 노출되지 않습니다.</p>
+      <div class="col-headers" style="grid-template-columns:1fr 72px;">
+        <div class="col-hdr">전략</div>
+        <div class="col-hdr">표시</div>
+      </div>
+      <div class="symbol-grid" id="strategy-list"></div>
+    </div>
+    <div class="save-row">
+      <button class="primary" onclick="saveStrategies()">전략 설정 저장</button>
+      <span class="summary" id="strategy-summary"></span>
+    </div>
+    <div class="status" id="strategy-status"></div>
+  </div>
+
   <!-- Password Change -->
   <div class="symbols-wrap" id="pw-wrap">
     <div class="card">
@@ -195,8 +213,17 @@ const CATALOG = {
   },
 };
 
+const DEFAULT_STRATEGIES = [
+  { id: 'strategy_js_sma_9_21',            name: 'SMA 9/21 Cross (JS)',             desc: 'Fast/slow SMA crossover signal' },
+  { id: 'strategy_pine_sma_5_20',          name: 'SMA 5/20 Cross (Pine)',           desc: 'Pine 입력 전략을 JS로 변환해 실행' },
+  { id: 'strategy_pine_bbands_directed',   name: 'Bollinger Bands Directed (Pine)', desc: 'Bollinger breakout + trend-aware signals' },
+  { id: 'strategy_js_double_break',        name: 'Double Break Strategy (JS)',      desc: 'BB upper/lower + Envelope upper/lower breakout' },
+  { id: 'strategy_js_shayhuang_vwap_fast', name: 'ShayHuang_VWAP_Fast',            desc: 'VWAP 돌파 + 연속 양봉/음봉' },
+];
+
 let currentHidden   = new Set();
 let currentDisabled = new Set();
+let currentHiddenStrategies = new Set();
 
 async function loadSettings() {
   const pass = document.getElementById('passphrase').value;
@@ -209,7 +236,9 @@ async function loadSettings() {
     currentHidden   = new Set((json.hidden   || []).map(s => s.toUpperCase()));
     currentDisabled = new Set((json.disabled || []).map(s => s.toUpperCase()));
     renderSymbols();
+    await loadStrategySettings();
     document.getElementById('symbols-wrap').style.display = 'block';
+    document.getElementById('strategy-wrap').style.display = 'block';
     document.getElementById('pw-wrap').style.display = 'block';
     showStatus('auth-status', 'ok', '불러오기 완료');
   } catch (e) {
@@ -352,6 +381,74 @@ async function changePassword() {
     showStatus('pw-status', 'ok', '비밀번호가 변경됐습니다.');
   } catch (e) {
     showStatus('pw-status', 'err', '변경 실패: ' + e.message);
+  }
+}
+
+async function loadStrategySettings() {
+  try {
+    const res = await fetch('/admin/strategies', { cache: 'no-store' });
+    const json = await res.json();
+    if (json.ok && Array.isArray(json.hidden)) {
+      currentHiddenStrategies = new Set(json.hidden);
+    }
+  } catch {}
+  renderStrategyList();
+}
+
+function renderStrategyList() {
+  const list = document.getElementById('strategy-list');
+  list.innerHTML = '';
+  DEFAULT_STRATEGIES.forEach(s => {
+    const isVisible = !currentHiddenStrategies.has(s.id);
+    const uid = s.id.replace(/[^a-z0-9]/gi, '_');
+    const item = document.createElement('div');
+    item.className = 'symbol-item';
+    item.style.gridTemplateColumns = '1fr 72px';
+    item.innerHTML = `
+      <div class="sym-info">
+        <div class="sym-name">${s.name}</div>
+        <div class="sym-desc">${s.desc}</div>
+      </div>
+      <div class="toggle-col">
+        <label class="toggle">
+          <input class="vis-input" type="checkbox" data-id="${s.id}" ${isVisible ? 'checked' : ''}>
+          <span class="track"></span>
+        </label>
+        <span class="toggle-state ${isVisible ? 'on-vis' : 'off-vis'}" id="sv_${uid}">${isVisible ? 'ON' : 'OFF'}</span>
+      </div>`;
+    item.querySelector('.vis-input').addEventListener('change', (e) => {
+      const sid = e.target.dataset.id;
+      const checked = e.target.checked;
+      const stateEl = document.getElementById('sv_' + sid.replace(/[^a-z0-9]/gi, '_'));
+      if (checked) { currentHiddenStrategies.delete(sid); stateEl.textContent = 'ON'; stateEl.className = 'toggle-state on-vis'; }
+      else          { currentHiddenStrategies.add(sid);    stateEl.textContent = 'OFF'; stateEl.className = 'toggle-state off-vis'; }
+      updateStrategySummary();
+    });
+    list.appendChild(item);
+  });
+  updateStrategySummary();
+}
+
+function updateStrategySummary() {
+  const el = document.getElementById('strategy-summary');
+  const h = currentHiddenStrategies.size;
+  el.innerHTML = h > 0 ? `<b>${h}개</b> 숨김` : '모든 전략 표시';
+}
+
+async function saveStrategies() {
+  const pass = document.getElementById('passphrase').value;
+  if (!pass) { showStatus('strategy-status', 'err', 'Passphrase를 입력하세요.'); return; }
+  try {
+    const res = await fetch('/admin/strategies', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ passphrase: pass, hidden: Array.from(currentHiddenStrategies) }),
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.message || 'failed');
+    showStatus('strategy-status', 'ok', `저장 완료 — 숨김 ${json.hidden.length}개`);
+  } catch (e) {
+    showStatus('strategy-status', 'err', '저장 실패: ' + e.message);
   }
 }
 
