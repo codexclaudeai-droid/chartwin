@@ -1888,6 +1888,15 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         onOpenTimezone: (chart, onUpdated) => openTimezoneModal(chart, onUpdated),
         formatDateWithTimezone,
         formatTimezoneLabel,
+        onTickerSymbolClick: (symbolId) => {
+          const pane = getActivePane();
+          const canonical = canonicalizeUiSymbol(symbolId);
+          pane.chart.config.symbol = canonical;
+          saveSymbol(canonical);
+          void pane.applyDefaultQuoteCurrencyForSymbol(canonical).then(() => {
+            void pane.reloadLiveData();
+          });
+        },
       });
     }
 

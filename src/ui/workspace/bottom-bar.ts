@@ -1,3 +1,5 @@
+import { disabledSymbols, getSymbolIconUrl } from '../../catalog/symbols';
+
 type TimezoneChartLike = {
   config: {
     timezone: string;
@@ -26,6 +28,7 @@ type CreateBottomBarArgs<TChart extends TimezoneChartLike> = {
   onOpenTimezone: (chart: TChart, onUpdated: () => void) => void;
   formatDateWithTimezone: (date: Date, timezone: string, options: Intl.DateTimeFormatOptions) => string;
   formatTimezoneLabel: (timezone: string) => string;
+  onTickerSymbolClick?: (symbolId: string) => void;
 };
 
 function toYmd(date: Date): string {
@@ -53,6 +56,7 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
   onOpenTimezone,
   formatDateWithTimezone,
   formatTimezoneLabel,
+  onTickerSymbolClick,
 }: CreateBottomBarArgs<TChart>): HTMLDivElement {
   const bottomBar = document.createElement('div');
   bottomBar.style.cssText = `position:absolute;left:${leftInset}px;right:0;bottom:${bottomOffset}px;height:32px;
@@ -485,25 +489,25 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
   // ---- Live Ticker (PC/태블릿 전용, 모바일 숨김) ----
   {
     type TDef = {
-      sym: string; name: string; badge: string; currency: string;
-      src: 'spot' | 'futures' | 'gateway'; apiSym?: string; gatewayMarket?: string; color: string;
+      sym: string; name: string; currency: string;
+      src: 'spot' | 'futures' | 'gateway'; apiSym?: string; gatewayMarket?: string;
     };
     const TDEFS: TDef[] = [
-      { sym: 'NQ1!',      name: 'NQ',     badge: 'NQ', currency: '',     src: 'gateway', gatewayMarket: 'index',     color: '#4a9eff' },
-      { sym: 'SPX500',    name: 'SPX',    badge: 'SP', currency: '',     src: 'gateway', gatewayMarket: 'index',     color: '#48bb78' },
-      { sym: 'HSI',       name: 'HSI',    badge: 'HS', currency: '',     src: 'gateway', gatewayMarket: 'index',     color: '#fc8181' },
-      { sym: 'KOSPI',     name: 'KOSPI',  badge: 'KP', currency: '',     src: 'gateway', gatewayMarket: 'index',     color: '#fbb040' },
-      { sym: 'KOSPI200',  name: 'KP200',  badge: 'K2', currency: '',     src: 'gateway', gatewayMarket: 'index',     color: '#fb8a00' },
-      { sym: 'KOSDAQ',    name: 'KOSDAQ', badge: 'KD', currency: '',     src: 'gateway', gatewayMarket: 'index',     color: '#fdd835' },
-      { sym: 'BTCUSDT',   name: 'BTC',    badge: 'BT', currency: 'USDT', src: 'spot',    color: '#f7931a' },
-      { sym: 'ETHUSDT',   name: 'ETH',    badge: 'ET', currency: 'USDT', src: 'spot',    color: '#627eea' },
-      { sym: 'XRPUSDT',   name: 'XRP',    badge: 'XR', currency: 'USDT', src: 'spot',    color: '#00a3e0' },
-      { sym: 'SOLUSDT',   name: 'SOL',    badge: 'SO', currency: 'USDT', src: 'spot',    color: '#9945ff' },
-      { sym: 'BNBUSDT',   name: 'BNB',    badge: 'BN', currency: 'USDT', src: 'spot',    color: '#f3ba2f' },
-      { sym: 'TRXUSDT',   name: 'TRX',    badge: 'TR', currency: 'USDT', src: 'spot',    color: '#ef0027' },
-      { sym: 'XAUUSDT.P', name: 'XAU',    badge: 'AU', currency: 'USDT', src: 'futures', apiSym: 'XAUUSDT', color: '#d4af37' },
-      { sym: 'XAGUSDT.P', name: 'XAG',    badge: 'AG', currency: 'USDT', src: 'futures', apiSym: 'XAGUSDT', color: '#a8a9ad' },
-      { sym: 'WTI1!',     name: 'WTI',    badge: 'OL', currency: 'USD',  src: 'gateway', gatewayMarket: 'commodity', color: '#8d6233' },
+      { sym: 'NQ1!',      name: 'NQ',     currency: '',     src: 'gateway', gatewayMarket: 'index'     },
+      { sym: 'SPX500',    name: 'SPX',    currency: '',     src: 'gateway', gatewayMarket: 'index'     },
+      { sym: 'HSI',       name: 'HSI',    currency: '',     src: 'gateway', gatewayMarket: 'index'     },
+      { sym: 'KOSPI',     name: 'KOSPI',  currency: '',     src: 'gateway', gatewayMarket: 'index'     },
+      { sym: 'KOSPI200',  name: 'KP200',  currency: '',     src: 'gateway', gatewayMarket: 'index'     },
+      { sym: 'KOSDAQ',    name: 'KOSDAQ', currency: '',     src: 'gateway', gatewayMarket: 'index'     },
+      { sym: 'BTCUSDT',   name: 'BTC',    currency: 'USDT', src: 'spot'                                },
+      { sym: 'ETHUSDT',   name: 'ETH',    currency: 'USDT', src: 'spot'                                },
+      { sym: 'XRPUSDT',   name: 'XRP',    currency: 'USDT', src: 'spot'                                },
+      { sym: 'SOLUSDT',   name: 'SOL',    currency: 'USDT', src: 'spot'                                },
+      { sym: 'BNBUSDT',   name: 'BNB',    currency: 'USDT', src: 'spot'                                },
+      { sym: 'TRXUSDT',   name: 'TRX',    currency: 'USDT', src: 'spot'                                },
+      { sym: 'XAUUSDT.P', name: 'XAU',    currency: 'USDT', src: 'futures', apiSym: 'XAUUSDT'          },
+      { sym: 'XAGUSDT.P', name: 'XAG',    currency: 'USDT', src: 'futures', apiSym: 'XAGUSDT'          },
+      { sym: 'WTI1!',     name: 'WTI',    currency: 'USD',  src: 'gateway', gatewayMarket: 'commodity' },
     ];
     type TState = { price: number; change: number };
     const tState = new Map<string, TState>(TDEFS.map((d) => [d.sym, { price: NaN, change: NaN }]));
@@ -512,8 +516,9 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
       const s = document.createElement('style');
       s.id = 'sigma-lticker-css';
       s.textContent = '@keyframes slt-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}'
-        + '.slt-track{display:flex;align-items:center;animation:slt-scroll 80s linear infinite;will-change:transform;}'
-        + '.slt-item{display:inline-flex;align-items:center;gap:5px;padding:0 13px;white-space:nowrap;border-right:1px solid #1e2336;}';
+        + '.slt-track{display:flex;align-items:center;animation:slt-scroll 120s linear infinite;will-change:transform;}'
+        + '.slt-item{display:inline-flex;align-items:center;gap:6px;padding:0 29px;white-space:nowrap;border-right:1px solid #1e2336;cursor:pointer;}'
+        + '.slt-item:hover{background:rgba(255,255,255,0.04);}';
       document.head.appendChild(s);
     }
 
@@ -531,7 +536,7 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
     const fmtPrice = (p: number): string => {
       if (!Number.isFinite(p) || p <= 0) return '—';
       if (p >= 10000) return p.toLocaleString('en', { maximumFractionDigits: 0 });
-      if (p >= 1000) return p.toLocaleString('en', { maximumFractionDigits: 1 });
+      if (p >= 1000) return p.toLocaleString('en', { maximumFractionDigits: 2 });
       if (p >= 10) return p.toLocaleString('en', { maximumFractionDigits: 2 });
       if (p >= 1) return p.toLocaleString('en', { maximumFractionDigits: 3 });
       return p.toLocaleString('en', { maximumFractionDigits: 4 });
@@ -544,10 +549,18 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
       const el = document.createElement('div');
       el.className = 'slt-item';
       el.dataset.sym = def.sym;
+      el.addEventListener('click', () => { onTickerSymbolClick?.(def.sym); });
 
-      const badge = document.createElement('span');
-      badge.style.cssText = `width:18px;height:18px;border-radius:3px;background:${def.color};display:inline-flex;align-items:center;justify-content:center;font-size:6.5px;font-weight:900;color:rgba(255,255,255,0.92);letter-spacing:-0.2px;flex-shrink:0;`;
-      badge.textContent = def.badge;
+      const iconUrl = getSymbolIconUrl(def.sym);
+      if (iconUrl) {
+        const img = document.createElement('img');
+        img.src = iconUrl;
+        img.alt = def.name;
+        img.width = 18;
+        img.height = 18;
+        img.style.cssText = 'border-radius:50%;object-fit:cover;flex-shrink:0;background:#0f1420;';
+        el.appendChild(img);
+      }
 
       const nameEl = document.createElement('span');
       nameEl.style.cssText = 'font-weight:600;color:#d1d4dc;font-size:11px;';
@@ -563,13 +576,12 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
       changeEl.dataset.role = 'c';
       changeEl.textContent = '—';
 
-      el.appendChild(badge);
       el.appendChild(nameEl);
       el.appendChild(priceEl);
 
       if (def.currency) {
         const cur = document.createElement('span');
-        cur.style.cssText = 'color:#5a6478;font-size:7px;line-height:1;margin-top:3px;align-self:flex-end;margin-bottom:1px;';
+        cur.style.cssText = 'color:#8a96aa;font-size:8.4px;line-height:1;margin-top:3px;align-self:flex-end;margin-bottom:1px;';
         cur.textContent = def.currency;
         el.appendChild(cur);
       }
@@ -578,16 +590,21 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
       return el;
     };
 
+    let lastBuiltSyms = '';
+
     const buildTrack = () => {
+      const activeDefs = TDEFS.filter((d) => !disabledSymbols.has(d.sym.toUpperCase()));
+      const key = activeDefs.map((d) => d.sym).join(',');
+      if (key === lastBuiltSyms) return;
+      lastBuiltSyms = key;
       track.innerHTML = '';
       for (let g = 0; g < 2; g++) {
         const grp = document.createElement('div');
         grp.style.cssText = 'display:inline-flex;align-items:center;';
-        TDEFS.forEach((def) => grp.appendChild(makeItem(def)));
+        activeDefs.forEach((def) => grp.appendChild(makeItem(def)));
         track.appendChild(grp);
       }
     };
-    buildTrack();
 
     const updateDisplay = () => {
       track.querySelectorAll<HTMLElement>('.slt-item').forEach((el) => {
@@ -609,7 +626,7 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
       const grp = track.children[0] as HTMLElement;
       if (!grp) return;
       const w = grp.offsetWidth;
-      if (w > 50) track.style.animationDuration = `${Math.max(20, Math.round(w / 60))}s`;
+      if (w > 50) track.style.animationDuration = `${Math.max(20, Math.round(w / 30))}s`;
     };
 
     const gwBase = (): string => {
@@ -623,9 +640,10 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
     };
 
     const fetchAll = async (): Promise<void> => {
-      const spotDefs = TDEFS.filter((d) => d.src === 'spot');
-      const futDefs  = TDEFS.filter((d) => d.src === 'futures');
-      const gwDefs   = TDEFS.filter((d) => d.src === 'gateway');
+      const activeDefs = TDEFS.filter((d) => !disabledSymbols.has(d.sym.toUpperCase()));
+      const spotDefs = activeDefs.filter((d) => d.src === 'spot');
+      const futDefs  = activeDefs.filter((d) => d.src === 'futures');
+      const gwDefs   = activeDefs.filter((d) => d.src === 'gateway');
       const jobs: Promise<void>[] = [
         (async () => {
           if (!spotDefs.length) return;
@@ -669,6 +687,8 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
         })()),
       ];
       await Promise.allSettled(jobs);
+      buildTrack();
+      requestAnimationFrame(adjustSpeed);
       updateDisplay();
     };
 
