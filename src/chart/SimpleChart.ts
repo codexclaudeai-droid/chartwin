@@ -2289,7 +2289,14 @@ export class SimpleChart {
           const ta = buildTa();
           const ctx = { open, high, low, close, volume, __doubleBreakConfig: payload.doubleBreakConfig };
           const previous = payload.previousSignals ?? [];
-          const signals = previous.length === candles.length ? [...previous] : new Array(candles.length).fill(0);
+          let signals;
+          if (previous.length === candles.length) {
+            signals = [...previous];
+          } else if (previous.length < candles.length) {
+            signals = [...previous, ...new Array(candles.length - previous.length).fill(0)];
+          } else {
+            signals = previous.slice(0, candles.length);
+          }
           const from = Math.max(0, Math.min(payload.changedFrom - 300, candles.length - 1));
           for (let i = from; i < candles.length; i += 1) {
             signals[i] = toSignal(strategyFn(ctx, i, ta));
