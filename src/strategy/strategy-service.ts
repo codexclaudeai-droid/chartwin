@@ -32,7 +32,7 @@ function obfuscateStrategyJs(js: string): string {
     .replace(/\bcontext\b/g, 'a')
     .replace(/\bindex\b/g, 'b')
     .replace(/\bseries\b/g, 'c')
-    .replace(/\s+/g, ' ')
+    .replace(/[ \t]+/g, ' ')
     .trim();
 }
 
