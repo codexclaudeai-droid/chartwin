@@ -47,6 +47,16 @@ const fullscreenSvgIcon = `
   </svg>
 `;
 
+const exitFullscreenSvgIcon = `
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <polyline points="4 14 10 14 10 20"></polyline>
+    <polyline points="20 10 14 10 14 4"></polyline>
+    <line x1="10" y1="14" x2="3" y2="21"></line>
+    <line x1="21" y1="3" x2="14" y2="10"></line>
+  </svg>
+`;
+
 const settingsSvgIcon = `
   <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M12,8a4,4,0,1,0,4,4A4,4,0,0,0,12,8Zm0,6a2,2,0,1,1,2-2A2,2,0,0,1,12,14Z"/>
@@ -321,7 +331,7 @@ export function createTopBar({
   isPaneMaximized,
   onExitMaximize,
   onClickSignalNotification,
-}: CreateTopBarArgs): { refreshTopControlIcons: () => void; setSignalNotification: (count: number) => void } {
+}: CreateTopBarArgs): { refreshTopControlIcons: () => void; syncFullscreenIcon: () => void; setSignalNotification: (count: number) => void } {
   const topBar = document.createElement('div');
   topBar.dataset.topbarRoot = 'true';
   topBar.style.cssText = `position:absolute;top:0;left:0;right:0;height:40px;
@@ -526,9 +536,16 @@ export function createTopBar({
   rightArea.appendChild(exitMaxBtn);
 
   rightArea.appendChild(iconBtn(screenshotSvgIcon, '활성 패널 이미지 저장 (Ctrl+S)', onSaveScreenshot));
-  rightArea.appendChild(iconBtn(fullscreenSvgIcon, '전체화면 (F)', onToggleFullscreen));
+  const fullscreenBtn = iconBtn(fullscreenSvgIcon, '전체화면 (F)', onToggleFullscreen);
+  rightArea.appendChild(fullscreenBtn);
   rightArea.appendChild(iconBtn(settingsSvgIcon, '활성 패널 설정', onOpenSettings));
   topBar.appendChild(rightArea);
+
+  const syncFullscreenIcon = () => {
+    const inFS = Boolean(document.fullscreenElement);
+    fullscreenBtn.innerHTML = inFS ? exitFullscreenSvgIcon : fullscreenSvgIcon;
+    fullscreenBtn.title = inFS ? '전체화면 종료 (F)' : '전체화면 (F)';
+  };
 
   const refreshTopControlIcons = () => {
     const curCount = getSplitCount();
@@ -557,6 +574,7 @@ export function createTopBar({
   refreshTopControlIcons();
   return {
     refreshTopControlIcons,
+    syncFullscreenIcon,
     setSignalNotification: (count: number) => {
       signalCount = Math.max(0, Math.floor(Number(count) || 0));
       renderSignalBadge();

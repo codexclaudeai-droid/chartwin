@@ -422,7 +422,6 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let periodBars = 0;
   let periodStartSec: number | null = null;
   let periodEndSec: number | null = null;
-  let periodLabel: string | null = null;
   let feeBps = 4;
   let slippageBps = 1;
   let initialCapital = 10_000;
@@ -828,16 +827,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const updatePeriodText = () => {
-    if (periodLabel) {
-      if (periodEndSec != null) {
-        periodText.textContent = `${periodLabel} ~ ${fmtShortDate(periodEndSec)}`;
-      } else {
-        periodText.textContent = periodLabel;
-      }
-      return;
-    }
     if (periodStartSec != null && periodEndSec != null) {
-      periodText.textContent = `${formatTsLabel(periodStartSec)} ~ ${formatTsLabel(periodEndSec)}`;
+      periodText.textContent = `${fmtShortDate(periodStartSec)}~${fmtShortDate(periodEndSec)}`;
       return;
     }
     if (periodBars > 0) {
@@ -1699,12 +1690,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       if (days === 0) {
         periodStartSec = null;
         periodEndSec = null;
-        periodLabel = '전체 이력';
       } else {
         const nowSec = Math.floor(Date.now() / 1000);
         periodStartSec = nowSec - days * 86400;
         periodEndSec = nowSec;
-        periodLabel = btn.textContent?.trim() ?? null;
       }
       periodBars = 0;
       closeMenus();
@@ -1738,7 +1727,6 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     periodStartSec = startSec;
     periodEndSec = endSec;
     periodBars = 0;
-    periodLabel = null;
     closeMenus();
     refresh();
   });
@@ -1747,7 +1735,6 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     periodStartSec = null;
     periodEndSec = null;
     periodBars = 0;
-    periodLabel = null;
     periodStartInput.value = '';
     periodEndInput.value = '';
     closeMenus();

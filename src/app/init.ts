@@ -992,22 +992,22 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         symChangeLabel.textContent = '--';
       }
       if (liveStatus === 'live') {
-        headerTitle.textContent = 'LIVE';
+        headerTitle.textContent = 'L';
         headerTitle.style.background = '#1d3a30';
         headerTitle.style.borderColor = '#2a6c56';
         headerTitle.style.color = '#4ae3a5';
       } else if (liveStatus === 'connecting') {
-        headerTitle.textContent = 'CONNECTING';
+        headerTitle.textContent = 'C';
         headerTitle.style.background = '#3a3020';
         headerTitle.style.borderColor = '#7d5a2e';
         headerTitle.style.color = '#ffd27a';
       } else if (liveStatus === 'fallback') {
-        headerTitle.textContent = 'FALLBACK';
+        headerTitle.textContent = 'F';
         headerTitle.style.background = '#3a2323';
         headerTitle.style.borderColor = '#7b3a3a';
         headerTitle.style.color = '#ff9b9b';
       } else {
-        headerTitle.textContent = 'IDLE';
+        headerTitle.textContent = 'I';
         headerTitle.style.background = '#22293a';
         headerTitle.style.borderColor = '#3a4155';
         headerTitle.style.color = '#b5bece';
@@ -1468,6 +1468,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     });
     refreshTopControlIcons = topBarControls.refreshTopControlIcons;
     setTopBarSignalNotification = topBarControls.setSignalNotification;
+
+    document.addEventListener('fullscreenchange', () => {
+      topBarControls.syncFullscreenIcon();
+    });
+    // 페이지 로드 시 전체화면 자동 진입
+    document.documentElement.requestFullscreen().catch(() => {});
 
     if (isMobile) {
       // ??????????????????????????????????????????????????????????????????????
