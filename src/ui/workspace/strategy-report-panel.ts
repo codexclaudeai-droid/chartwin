@@ -664,70 +664,78 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   periodStartInput.classList.add('strategy-report-period-input');
   periodEndInput.classList.add('strategy-report-period-input');
 
-  let settingsCloseTimer: ReturnType<typeof setTimeout> | null = null;
-  const hideSettingsMenu = () => {
-    if (settingsCloseTimer != null) {
-      clearTimeout(settingsCloseTimer);
-      settingsCloseTimer = null;
-    }
-    const isMobileWidth = Math.max(320, panel.clientWidth) < 760;
-    if (isMobileWidth && settingsMenu.style.display === 'block') {
-      settingsMenu.style.transform = 'translateY(100%)';
-      settingsMenu.style.opacity = '0';
-      settingsCloseTimer = setTimeout(() => {
-        settingsMenu.style.display = 'none';
-        settingsCloseTimer = null;
-      }, 180);
+  const isMobileSlide = () => Math.max(320, panel.clientWidth) < 760;
+
+  const hideSlideMenu = (
+    menu: HTMLDivElement,
+    timerRef: { v: ReturnType<typeof setTimeout> | null },
+  ) => {
+    if (timerRef.v != null) { clearTimeout(timerRef.v); timerRef.v = null; }
+    if (isMobileSlide() && menu.style.display === 'block') {
+      menu.style.transform = 'translateY(100%)';
+      menu.style.opacity = '0';
+      timerRef.v = setTimeout(() => { menu.style.display = 'none'; timerRef.v = null; }, 180);
       return;
     }
-    settingsMenu.style.display = 'none';
+    menu.style.display = 'none';
   };
 
-  const closeMenus = () => {
-    periodMenu.style.display = 'none';
-    widgetMenu.style.display = 'none';
-    hideSettingsMenu();
-  };
-
-  const openSettingsMenu = () => {
-    const isMobileWidth = Math.max(320, panel.clientWidth) < 760;
-    if (isMobileWidth) {
-      settingsMenu.style.display = 'block';
-      settingsMenu.style.position = 'fixed';
-      settingsMenu.style.left = '10px';
-      settingsMenu.style.right = '10px';
-      settingsMenu.style.bottom = '8px';
-      settingsMenu.style.top = 'auto';
-      settingsMenu.style.zIndex = '3200';
-      settingsMenu.style.borderRadius = '12px';
-      settingsMenu.style.maxWidth = 'none';
-      settingsMenu.style.width = 'auto';
-      settingsMenu.style.maxHeight = '62vh';
-      settingsMenu.style.overflowY = 'auto';
-      settingsMenu.style.transform = 'translateY(100%)';
-      settingsMenu.style.opacity = '0';
-      settingsMenu.style.transition = 'transform 0.18s ease, opacity 0.18s ease';
+  const openSlideMenu = (menu: HTMLDivElement, btn: HTMLButtonElement) => {
+    if (isMobileSlide()) {
+      menu.style.display = 'block';
+      menu.style.position = 'fixed';
+      menu.style.left = '10px';
+      menu.style.right = '10px';
+      menu.style.bottom = '8px';
+      menu.style.top = 'auto';
+      menu.style.zIndex = '3200';
+      menu.style.borderRadius = '12px';
+      menu.style.maxWidth = 'none';
+      menu.style.width = 'auto';
+      menu.style.maxHeight = '62vh';
+      menu.style.overflowY = 'auto';
+      menu.style.transform = 'translateY(100%)';
+      menu.style.opacity = '0';
+      menu.style.transition = 'transform 0.18s ease, opacity 0.18s ease';
       requestAnimationFrame(() => {
-        settingsMenu.style.transform = 'translateY(0)';
-        settingsMenu.style.opacity = '1';
+        menu.style.transform = 'translateY(0)';
+        menu.style.opacity = '1';
       });
       return;
     }
-    settingsMenu.style.position = 'absolute';
-    settingsMenu.style.left = '0';
-    settingsMenu.style.right = '';
-    settingsMenu.style.bottom = '';
-    settingsMenu.style.top = '0';
-    settingsMenu.style.zIndex = '950';
-    settingsMenu.style.borderRadius = '8px';
-    settingsMenu.style.maxHeight = '';
-    settingsMenu.style.overflowY = '';
-    settingsMenu.style.transform = '';
-    settingsMenu.style.opacity = '';
-    settingsMenu.style.transition = '';
-    placeMenuAtButton(settingsMenu, settingsBtn);
-    settingsMenu.style.display = 'block';
+    menu.style.position = 'absolute';
+    menu.style.left = '0';
+    menu.style.right = '';
+    menu.style.bottom = '';
+    menu.style.top = '0';
+    menu.style.zIndex = '950';
+    menu.style.borderRadius = '8px';
+    menu.style.maxHeight = '';
+    menu.style.overflowY = '';
+    menu.style.transform = '';
+    menu.style.opacity = '';
+    menu.style.transition = '';
+    placeMenuAtButton(menu, btn);
+    menu.style.display = 'block';
   };
+
+  const _periodTimer  = { v: null as ReturnType<typeof setTimeout> | null };
+  const _widgetTimer  = { v: null as ReturnType<typeof setTimeout> | null };
+  const _settingsTimer = { v: null as ReturnType<typeof setTimeout> | null };
+
+  const hidePeriodMenu   = () => hideSlideMenu(periodMenu,   _periodTimer);
+  const hideWidgetMenu   = () => hideSlideMenu(widgetMenu,   _widgetTimer);
+  const hideSettingsMenu = () => hideSlideMenu(settingsMenu, _settingsTimer);
+
+  const closeMenus = () => {
+    hidePeriodMenu();
+    hideWidgetMenu();
+    hideSettingsMenu();
+  };
+
+  const openPeriodMenu   = () => openSlideMenu(periodMenu,   periodBtn);
+  const openWidgetMenu   = () => openSlideMenu(widgetMenu,   widgetBtn);
+  const openSettingsMenu = () => openSlideMenu(settingsMenu, settingsBtn);
 
   const placeMenuAtButton = (menu: HTMLDivElement, btn: HTMLButtonElement) => {
     const panelRect = panel.getBoundingClientRect();
@@ -1673,8 +1681,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     if (!open) {
       if (periodStartSec != null) periodStartInput.value = secToLocalInput(periodStartSec);
       if (periodEndSec != null) periodEndInput.value = secToLocalInput(periodEndSec);
-      placeMenuAtButton(periodMenu, periodBtn);
-      periodMenu.style.display = 'block';
+      openPeriodMenu();
     }
   });
   widgetBtn.addEventListener('click', (e) => {
@@ -1682,8 +1689,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const open = widgetMenu.style.display === 'block';
     closeMenus();
     if (!open) {
-      placeMenuAtButton(widgetMenu, widgetBtn);
-      widgetMenu.style.display = 'block';
+      openWidgetMenu();
     }
   });
   settingsBtn.addEventListener('click', (e) => {
