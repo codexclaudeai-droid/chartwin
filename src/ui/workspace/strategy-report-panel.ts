@@ -640,12 +640,17 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const slipInput = settingsMenu.querySelector('[data-k="slip"]') as HTMLInputElement;
 
   periodMenu.innerHTML = `
-    <div style="font-size:12px;color:#d6dff0;font-weight:700;margin-bottom:8px;">기간 설정</div>
-    <label style="display:block;font-size:11px;color:#9fb3d5;margin-bottom:4px;">시작</label>
-    <input data-k="start" type="datetime-local" style="width:100%;height:28px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;box-sizing:border-box;">
-    <label style="display:block;font-size:11px;color:#9fb3d5;margin:8px 0 4px;">종료</label>
-    <input data-k="end" type="datetime-local" style="width:100%;height:28px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;box-sizing:border-box;">
-    <div style="display:flex;gap:6px;margin-top:8px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div>
+        <label style="display:block;font-size:11px;color:#9fb3d5;margin-bottom:4px;">시작</label>
+        <input data-k="start" type="datetime-local" style="width:100%;height:28px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:#9fb3d5;margin-bottom:4px;">종료</label>
+        <input data-k="end" type="datetime-local" style="width:100%;height:28px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;box-sizing:border-box;">
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:4px;">
       <button data-k="apply" type="button" style="flex:1;height:28px;background:#2962ff;border:1px solid #2962ff;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;">적용</button>
       <button data-k="reset" type="button" style="flex:1;height:28px;background:#131d31;border:1px solid #2b3b58;color:#d6dff0;border-radius:6px;cursor:pointer;font-size:12px;">초기화</button>
     </div>
