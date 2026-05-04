@@ -881,18 +881,14 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     }
 
     const maxMenuWidth = Math.max(180, panel.clientWidth - 16);
-    periodMenu.style.maxWidth = `${maxMenuWidth}px`;
-    widgetMenu.style.maxWidth = `${maxMenuWidth}px`;
-    settingsMenu.style.maxWidth = `${maxMenuWidth}px`;
-    if (width < 520) {
-      periodMenu.style.width = `${maxMenuWidth}px`;
-      widgetMenu.style.width = `${Math.min(maxMenuWidth, 240)}px`;
-      settingsMenu.style.width = `${Math.min(maxMenuWidth, 240)}px`;
-    } else {
-      periodMenu.style.width = '';
-      widgetMenu.style.width = '';
-      settingsMenu.style.width = '';
-    }
+    const applyMenuSize = (menu: HTMLDivElement, w: number) => {
+      if (menu.parentElement === document.body) return; // mobile slide mode: don't override
+      menu.style.maxWidth = `${maxMenuWidth}px`;
+      menu.style.width = width < 520 ? `${w}px` : '';
+    };
+    applyMenuSize(periodMenu, maxMenuWidth);
+    applyMenuSize(widgetMenu, Math.min(maxMenuWidth, 240));
+    applyMenuSize(settingsMenu, Math.min(maxMenuWidth, 240));
   };
 
   const updateTabStyles = () => {
