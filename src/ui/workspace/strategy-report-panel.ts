@@ -367,9 +367,7 @@ function secToLocalInput(sec: number): string {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mi = String(d.getMinutes()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function localInputToSec(value: string): number | null {
@@ -525,8 +523,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const headerTitleText = document.createElement('span');
   headerTitleText.style.cssText = 'display:inline-block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
   headerTitleText.textContent = '전략 리포트';
+  const headerStrategyName = document.createElement('span');
+  headerStrategyName.style.cssText = 'font-size:10px;color:#6a84a8;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;';
   headerTitle.appendChild(headerTitleIcon);
   headerTitle.appendChild(headerTitleText);
+  headerTitle.appendChild(headerStrategyName);
   header.appendChild(headerTitle);
   const titleControls = document.createElement('div');
   titleControls.style.cssText = 'display:flex;align-items:center;gap:6px;position:absolute;right:8px;top:50%;transform:translateY(-50%);';
@@ -672,11 +673,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px 10px;">
         <div>
           <label style="display:block;font-size:11px;color:#9fb3d5;margin-bottom:5px;">시작</label>
-          <input data-k="start" type="datetime-local" style="width:100%;height:32px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;box-sizing:border-box;font-size:12px;">
+          <input data-k="start" type="date" style="width:100%;height:32px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;box-sizing:border-box;font-size:12px;">
         </div>
         <div>
           <label style="display:block;font-size:11px;color:#9fb3d5;margin-bottom:5px;">종료</label>
-          <input data-k="end" type="datetime-local" style="width:100%;height:32px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;box-sizing:border-box;font-size:12px;">
+          <input data-k="end" type="date" style="width:100%;height:32px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;box-sizing:border-box;font-size:12px;">
         </div>
       </div>
       <div style="display:flex;gap:8px;padding:4px 16px 16px;">
@@ -821,9 +822,18 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     menu.style.visibility = 'visible';
   };
 
+  const fmtShortDate = (sec: number): string => {
+    const d = new Date(sec * 1000);
+    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+  };
+
   const updatePeriodText = () => {
     if (periodLabel) {
-      periodText.textContent = periodLabel;
+      if (periodEndSec != null) {
+        periodText.textContent = `${periodLabel} ~ ${fmtShortDate(periodEndSec)}`;
+      } else {
+        periodText.textContent = periodLabel;
+      }
       return;
     }
     if (periodStartSec != null && periodEndSec != null) {
@@ -1220,16 +1230,6 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
   };
 
-  const formatTradeTsLines = (sec: number | null): { date: string; time: string } => {
-    if (!Number.isFinite(Number(sec))) return { date: '-', time: '-' };
-    const d = new Date(Number(sec) * 1000);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mi = String(d.getMinutes()).padStart(2, '0');
-    return { date: `${yyyy}.${mm}.${dd}`, time: `${hh}:${mi}` };
-  };
 
   const formatTradeTsCompact = (sec: number | null): string => {
     if (!Number.isFinite(Number(sec))) return '-';
@@ -1466,10 +1466,21 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
   const renderAll = () => {
     const isMobileWidth = Math.max(320, panel.clientWidth) < 760;
-    headerTitleText.textContent =
-      panelMode === 'expanded' && !isMobileWidth
-        ? `전략 리포트 | ${latestMeta.symbol} ${latestMeta.timeframe} | ${latestMeta.strategyName}`
-        : '전략 리포트';
+    if (panelMode === 'expanded' && !isMobileWidth) {
+      headerTitleText.textContent = `전략 리포트 | ${latestMeta.symbol} ${latestMeta.timeframe} | ${latestMeta.strategyName}`;
+      headerStrategyName.style.display = 'none';
+    } else {
+      headerTitleText.textContent = '전략 리포트';
+      const sName = latestMeta.strategyName && latestMeta.strategyName !== '전략 없음' ? latestMeta.strategyName : '';
+      headerStrategyName.textContent = sName;
+      headerStrategyName.style.display = sName ? '' : 'none';
+    }
+
+    // 모바일 normal/collapsed 모드에서 탭우측 일부 버튼 숨김
+    const hideMobileTabBtns = isMobileWidth && panelMode !== 'expanded';
+    exportCsvBtn.style.display = hideMobileTabBtns ? 'none' : '';
+    widgetBtn.style.display    = hideMobileTabBtns ? 'none' : '';
+    detailsBtn.style.display   = hideMobileTabBtns ? 'none' : '';
 
     applyResponsiveLayout();
     updatePeriodText();
