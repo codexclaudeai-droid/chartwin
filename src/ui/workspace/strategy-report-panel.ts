@@ -686,7 +686,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       menu.style.position = 'fixed';
       menu.style.left = '10px';
       menu.style.right = '10px';
-      menu.style.bottom = '8px';
+      menu.style.bottom = '52px'; // 44px mobile bottom bar + 8px gap
       menu.style.top = 'auto';
       menu.style.zIndex = '3200';
       menu.style.borderRadius = '12px';
