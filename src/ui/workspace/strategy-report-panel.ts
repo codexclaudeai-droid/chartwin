@@ -712,6 +712,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       menu.style.top = 'auto';
       menu.style.zIndex = '3200';
       menu.style.borderRadius = '16px 16px 0 0';
+      menu.style.boxSizing = 'border-box';
       menu.style.width = '100%';
       menu.style.maxWidth = 'none';
       menu.style.minWidth = '0';
@@ -736,6 +737,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     menu.style.top = '0';
     menu.style.zIndex = '950';
     menu.style.borderRadius = '8px';
+    menu.style.boxSizing = '';
+    menu.style.width = '';
+    menu.style.maxWidth = '';
+    menu.style.minWidth = '';
     menu.style.maxHeight = '';
     menu.style.overflowY = '';
     menu.style.transform = '';
