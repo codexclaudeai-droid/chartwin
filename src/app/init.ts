@@ -1425,7 +1425,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     const pane = getActivePane();
     const a = document.createElement('a');
     a.download = `${pane.chart.config.symbol}_${pane.chart.config.timeframe}.png`;
-    a.href = pane.chart.canvas.toDataURL();
+    a.href = pane.chart.getCompositeDataUrl();
     a.click();
   };
 

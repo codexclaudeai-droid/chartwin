@@ -2151,6 +2151,19 @@ export class SimpleChart {
     return this.strategySignals;
   }
 
+  public getCompositeDataUrl(): string {
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const off = document.createElement('canvas');
+    off.width = w;
+    off.height = h;
+    const offCtx = off.getContext('2d')!;
+    offCtx.drawImage(this.canvas, 0, 0);
+    offCtx.drawImage(this.signalCanvas, 0, 0);
+    offCtx.drawImage(this.overlayCanvas, 0, 0);
+    return off.toDataURL('image/png');
+  }
+
   public isStrategySignalVisible(): boolean {
     return this.strategySignalVisible;
   }

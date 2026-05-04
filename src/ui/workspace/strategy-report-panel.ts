@@ -382,7 +382,7 @@ const icon = {
   download: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"></path><polyline points="7 10 12 15 17 10"></polyline><rect x="4" y="17" width="16" height="4" rx="1.5"></rect></svg>`,
   menu: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>`,
   maximize: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="9 3 3 3 3 9"></polyline><polyline points="15 3 21 3 21 9"></polyline><polyline points="21 15 21 21 15 21"></polyline><polyline points="9 21 3 21 3 15"></polyline></svg>`,
-  restore: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>`,
+  restore: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="10 4 10 10 4 10"></polyline><polyline points="14 4 14 10 20 10"></polyline><polyline points="10 20 10 14 4 14"></polyline><polyline points="14 20 14 14 20 14"></polyline></svg>`,
   fold: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
   unfold: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 15 12 9 18 15"></polyline></svg>`,
   camera: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7h3l1.2-2h7.6L17 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`,
@@ -1786,11 +1786,96 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     }
   });
   shotBtn.addEventListener('click', () => {
-    if (activeTab === 'metrics') drawChart();
+    const prevMode = panelMode;
+    if (prevMode !== 'expanded') applyPanelMode('expanded');
+
     const a = document.createElement('a');
     a.download = `strategy_report_${latestMeta.symbol}_${latestMeta.timeframe}_${activeTab}.png`;
-    a.href = canvas.toDataURL('image/png');
-    a.click();
+
+    if (activeTab === 'metrics') {
+      drawChart();
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    } else {
+      const r = latestResult;
+      const trades = (r?.trades ?? []).slice().reverse().slice(0, 320);
+      const rowH = 30;
+      const titleH = 40;
+      const headerH = 32;
+      const padX = 14;
+      const canW = Math.max(720, panel.clientWidth || 720);
+      const canH = titleH + headerH + trades.length * rowH + 16;
+      const dpr = 2;
+      const off = document.createElement('canvas');
+      off.width = canW * dpr;
+      off.height = canH * dpr;
+      const offCtx = off.getContext('2d')!;
+      offCtx.scale(dpr, dpr);
+
+      offCtx.fillStyle = '#0f1524';
+      offCtx.fillRect(0, 0, canW, canH);
+
+      offCtx.fillStyle = '#d5deef';
+      offCtx.font = 'bold 13px "Segoe UI",Arial,sans-serif';
+      offCtx.textBaseline = 'middle';
+      offCtx.textAlign = 'left';
+      offCtx.fillText(`거래내역 | ${latestMeta.symbol} ${latestMeta.timeframe} | ${latestMeta.strategyName}`, padX, titleH / 2);
+
+      const xIdx = 30;
+      const xSide = 70;
+      const xPrice = 120;
+      const xTime = 320;
+      const xPnl = canW - padX;
+
+      let y = titleH;
+      offCtx.fillStyle = '#17243a';
+      offCtx.fillRect(0, y, canW, headerH);
+      offCtx.fillStyle = '#9fb3d5';
+      offCtx.font = 'bold 11px "Segoe UI",Arial,sans-serif';
+      offCtx.textAlign = 'center';
+      offCtx.fillText('#', xIdx, y + headerH / 2);
+      offCtx.fillText('타입', xSide, y + headerH / 2);
+      offCtx.textAlign = 'left';
+      offCtx.fillText('가격 (진입 → 청산)', xPrice, y + headerH / 2);
+      offCtx.fillText('일시 (진입 → 청산)', xTime, y + headerH / 2);
+      offCtx.textAlign = 'right';
+      offCtx.fillText('손익', xPnl, y + headerH / 2);
+      y += headerH;
+
+      trades.forEach((t, idx) => {
+        offCtx.fillStyle = idx % 2 === 0 ? '#0f1a2d' : '#111d30';
+        offCtx.fillRect(0, y, canW, rowH);
+        const midY = y + rowH / 2;
+        offCtx.font = '12px "Segoe UI",Arial,sans-serif';
+        offCtx.textBaseline = 'middle';
+
+        offCtx.fillStyle = '#8aa0c5';
+        offCtx.textAlign = 'center';
+        offCtx.fillText(String(idx + 1), xIdx, midY);
+
+        offCtx.fillStyle = t.side === 'LONG' ? '#39d98a' : '#ff7f7f';
+        offCtx.font = 'bold 12px "Segoe UI",Arial,sans-serif';
+        offCtx.fillText(t.side, xSide, midY);
+
+        offCtx.fillStyle = '#cdd8ee';
+        offCtx.font = '12px "Segoe UI",Arial,sans-serif';
+        offCtx.textAlign = 'left';
+        offCtx.fillText(`${formatAmount(t.entry)} → ${formatAmount(t.exit)}`, xPrice, midY);
+        offCtx.fillText(`${formatTradeTsCompact(t.entryTime)} → ${formatTradeTsCompact(t.exitTime)}`, xTime, midY);
+
+        offCtx.fillStyle = t.pnl >= 0 ? '#39d98a' : '#ff7f7f';
+        offCtx.font = 'bold 12px "Segoe UI",Arial,sans-serif';
+        offCtx.textAlign = 'right';
+        offCtx.fillText(formatAmount(t.pnl), xPnl, midY);
+
+        y += rowH;
+      });
+
+      a.href = off.toDataURL('image/png');
+      a.click();
+    }
+
+    if (prevMode !== 'expanded') applyPanelMode(prevMode);
   });
   expandBtn.addEventListener('click', () => {
     if (panelMode === 'collapsed') {
