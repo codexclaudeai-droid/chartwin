@@ -16,13 +16,17 @@ void fetch('/admin/strategies', { cache: 'no-store' })
   .then((r) => r.json())
   .then((json: unknown) => {
     const j = json as { ok?: boolean; hidden?: unknown };
-    if (j.ok && Array.isArray(j.hidden)) setAdminHiddenStrategyButtonIds(j.hidden as string[]);
+    if (j.ok) {
+    const jAny = j as Record<string, unknown>;
+    if (typeof jAny['mgmtVisible'] === 'boolean') setAdminMgmtButtonsVisible(jAny['mgmtVisible'] as boolean);
+    else if (Array.isArray(jAny['hidden'])) setAdminMgmtButtonsVisible((jAny['hidden'] as unknown[]).length === 0);
+  }
   })
   .catch(() => {});
 import {
   loadStrategies,
   saveStrategies,
-  setAdminHiddenStrategyButtonIds,
+  setAdminMgmtButtonsVisible,
   type StrategyDefinition,
   type StrategySignal,
 } from '../strategy/strategy-service';

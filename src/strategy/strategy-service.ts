@@ -17,12 +17,12 @@ export interface StrategyDefinition {
   updatedAt: number;
 }
 
-let _adminMgmtButtonHiddenIds = new Set<string>();
-export function setAdminHiddenStrategyButtonIds(ids: string[]): void {
-  _adminMgmtButtonHiddenIds = new Set(ids);
+let _adminMgmtButtonsVisible = true;
+export function setAdminMgmtButtonsVisible(visible: boolean): void {
+  _adminMgmtButtonsVisible = visible;
 }
-export function isStrategyManagementVisible(id: string): boolean {
-  return !_adminMgmtButtonHiddenIds.has(id);
+export function isAdminMgmtButtonsVisible(): boolean {
+  return _adminMgmtButtonsVisible;
 }
 
 const STRATEGY_STORAGE_KEY = 'my-chart-lib-strategies-v1';
