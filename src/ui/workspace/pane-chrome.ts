@@ -216,6 +216,13 @@ export function createPaneChrome<TKey extends string>({
 
   const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
   const applyResponsive = () => {
+    const w = window.innerWidth;
+    const isMobilePhone = w < 768 && (
+      /Mobi|Android|iPhone|iPod/i.test(navigator.userAgent) || isTouchDevice || w < 600
+    );
+    indBtn.style.display = isMobilePhone ? 'none' : '';
+    strategyBtn.style.display = isMobilePhone ? 'none' : '';
+    strategyReportBtn.style.display = isMobilePhone ? 'none' : '';
     const width = host.clientWidth;
     if (width < 560) {
       paneHeader.style.gap = '4px';
