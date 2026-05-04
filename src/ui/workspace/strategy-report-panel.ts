@@ -407,6 +407,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   setLeftInset: (left: number) => void;
   openTradesTab: () => void;
   openSettings: () => void;
+  collapse: () => void;
   setTradeViewAlertActive: (active: boolean) => void;
 } {
   ensurePeriodPickerStyle();
@@ -1515,7 +1516,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       panel.style.top = '';
       panel.style.bottom = '0';
       panel.style.height = `${mode === 'collapsed' ? headerHeight : normalHeight}px`;
-      panel.style.zIndex = '1010';
+      panel.style.zIndex = mode === 'collapsed' ? '1600' : '1010';
       resizeHandle.style.display = mode === 'normal' ? 'flex' : 'none';
       expandBtn.innerHTML = icon.maximize;
       collapseBtn.innerHTML = mode === 'collapsed' ? icon.unfold : icon.fold;
@@ -1874,6 +1875,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     openSettings: () => {
       openSettingsMenu();
     },
+    collapse: () => applyPanelMode('collapsed'),
     setTradeViewAlertActive: (active: boolean) => {
       tradeViewAlertActive = Boolean(active);
       if (activeTab === 'trades') renderTradesTable();

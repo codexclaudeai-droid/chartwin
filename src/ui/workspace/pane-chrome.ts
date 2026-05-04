@@ -32,7 +32,6 @@ export type PaneChrome = {
   symChangeMetaLabel: HTMLSpanElement;
   indBtn: HTMLButtonElement;
   strategyBtn: HTMLButtonElement;
-  strategyReportBtn: HTMLButtonElement;
   marketSessionBadge: HTMLSpanElement;
   headerTitle: HTMLDivElement;
   ohlcHeaderDisplay: HTMLDivElement;
@@ -156,30 +155,6 @@ export function createPaneChrome<TKey extends string>({
   strategyBtn.style.cssText = 'height:22px;background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;padding:0 8px;cursor:pointer;font-size:11px;white-space:nowrap;line-height:1;flex-shrink:0;';
   paneHeader.appendChild(strategyBtn);
 
-  const strategyReportBtn = document.createElement('button');
-  strategyReportBtn.type = 'button';
-  strategyReportBtn.className = 'strategy-report-open-btn';
-  strategyReportBtn.title = '전략 리포트 열기';
-  strategyReportBtn.style.cssText = 'width:20px;height:17px;border:1px solid #3a4158;border-radius:4px;background:#ffffff;color:#0f1218;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;transition:background 0.15s ease,border-color 0.15s ease,color 0.15s ease;flex-shrink:0;';
-  strategyReportBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-    <polyline class="sr-chart-line" points="4 16 9 11 13 13 19 7"></polyline>
-    <path class="sr-arrow-down" d="M5 4v4"></path>
-    <path class="sr-arrow-down" d="M3 7l2 2 2-2"></path>
-    <path class="sr-arrow-up" d="M19 17v-4"></path>
-    <path class="sr-arrow-up" d="M17 15l2-2 2 2"></path>
-  </svg>`;
-  strategyReportBtn.addEventListener('mouseenter', () => {
-    strategyReportBtn.style.background = '#ffffff';
-    strategyReportBtn.style.borderColor = '#9aa3b3';
-    strategyReportBtn.style.color = '#000000';
-  });
-  strategyReportBtn.addEventListener('mouseleave', () => {
-    strategyReportBtn.style.background = '#ffffff';
-    strategyReportBtn.style.borderColor = '#3a4158';
-    strategyReportBtn.style.color = '#0f1218';
-  });
-  paneHeader.appendChild(strategyReportBtn);
-
   const headerTitle = document.createElement('div');
   headerTitle.style.cssText = 'display:none;';
   paneHeader.appendChild(headerTitle);
@@ -222,7 +197,6 @@ export function createPaneChrome<TKey extends string>({
     );
     indBtn.style.display = isMobilePhone ? 'none' : '';
     strategyBtn.style.display = isMobilePhone ? 'none' : '';
-    strategyReportBtn.style.display = isMobilePhone ? 'none' : '';
     const width = host.clientWidth;
     if (width < 560) {
       paneHeader.style.gap = '4px';
@@ -241,8 +215,6 @@ export function createPaneChrome<TKey extends string>({
       strategyBtn.style.padding = '0 6px';
       indBtn.style.fontSize = '10px';
       strategyBtn.style.fontSize = '10px';
-      strategyReportBtn.style.width = '18px';
-      strategyReportBtn.style.height = '16px';
     } else if (width < 700) {
       paneHeader.style.gap = '5px';
       paneHeader.style.padding = '0 5px';
@@ -260,8 +232,6 @@ export function createPaneChrome<TKey extends string>({
       strategyBtn.style.padding = '0 7px';
       indBtn.style.fontSize = '10px';
       strategyBtn.style.fontSize = '10px';
-      strategyReportBtn.style.width = '19px';
-      strategyReportBtn.style.height = '16px';
     } else {
       paneHeader.style.gap = '6px';
       paneHeader.style.padding = '0 7px';
@@ -280,8 +250,6 @@ export function createPaneChrome<TKey extends string>({
       strategyBtn.style.padding = '0 8px';
       indBtn.style.fontSize = '11px';
       strategyBtn.style.fontSize = '11px';
-      strategyReportBtn.style.width = '20px';
-      strategyReportBtn.style.height = '17px';
     }
   };
 
@@ -304,7 +272,6 @@ export function createPaneChrome<TKey extends string>({
     symChangeMetaLabel,
     indBtn,
     strategyBtn,
-    strategyReportBtn,
     marketSessionBadge,
     headerTitle,
     ohlcHeaderDisplay,

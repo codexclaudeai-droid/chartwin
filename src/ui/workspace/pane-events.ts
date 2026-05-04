@@ -3,7 +3,6 @@ type BindPaneEventHandlersArgs<TTimeframe extends string> = {
   tfSelect: HTMLSelectElement;
   indBtn: HTMLButtonElement;
   strategyBtn: HTMLButtonElement;
-  strategyReportBtn: HTMLButtonElement;
   strategyDeleteBtn?: HTMLButtonElement;
   minBtn: HTMLButtonElement;
   maxBtn: HTMLButtonElement;
@@ -12,7 +11,6 @@ type BindPaneEventHandlersArgs<TTimeframe extends string> = {
   onTimeframeChange: (timeframe: TTimeframe) => void;
   onIndicatorClick: () => void;
   onStrategyClick: () => void;
-  onStrategyReportClick: () => void;
   onStrategyDeleteClick?: () => void;
   onMinimizeClick: () => void;
   onMaximizeClick: () => void;
@@ -24,7 +22,6 @@ export function bindPaneEventHandlers<TTimeframe extends string>({
   tfSelect,
   indBtn,
   strategyBtn,
-  strategyReportBtn,
   strategyDeleteBtn,
   minBtn,
   maxBtn,
@@ -33,7 +30,6 @@ export function bindPaneEventHandlers<TTimeframe extends string>({
   onTimeframeChange,
   onIndicatorClick,
   onStrategyClick,
-  onStrategyReportClick,
   onStrategyDeleteClick,
   onMinimizeClick,
   onMaximizeClick,
@@ -43,10 +39,6 @@ export function bindPaneEventHandlers<TTimeframe extends string>({
   tfSelect.addEventListener('change', () => onTimeframeChange(tfSelect.value as TTimeframe));
   indBtn.addEventListener('click', onIndicatorClick);
   strategyBtn.addEventListener('click', onStrategyClick);
-  strategyReportBtn.addEventListener('click', (event) => {
-    event.stopPropagation();
-    onStrategyReportClick();
-  });
   if (strategyDeleteBtn && onStrategyDeleteClick) {
     strategyDeleteBtn.addEventListener('click', (event) => {
       event.stopPropagation();

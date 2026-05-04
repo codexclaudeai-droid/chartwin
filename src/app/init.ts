@@ -664,7 +664,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       symChangeMetaLabel,
       indBtn,
       strategyBtn,
-      strategyReportBtn,
       marketSessionBadge,
       headerTitle,
       ohlcHeaderDisplay,
@@ -1236,7 +1235,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       tfSelect,
       indBtn,
       strategyBtn,
-      strategyReportBtn,
       minBtn,
       maxBtn,
       closeBtn,
@@ -1279,11 +1277,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       },
       onIndicatorClick: () => openIndicatorModal(chart, refreshChartUi),
       onStrategyClick: () => openStrategyModal(chart, refreshChartUi),
-      onStrategyReportClick: () => {
-        window.dispatchEvent(new CustomEvent('chart-open-strategy-report', {
-          detail: { chart },
-        }));
-      },
       onMinimizeClick: () => {
         togglePaneMinimize(paneId);
         refreshHeader();
@@ -1927,9 +1920,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         applyViewportOffsets();
       },
     });
-    // 모바일에서는 전략 리포트 패널 비활성화
-    if (isMobile) strategyReport.setVisible(false);
     const strategyReportOpenByPane = new Map<number, boolean>();
+    const prevStrategyActiveByPane = new Map<number, boolean>();
     const announcedSignalKeys = new Set<string>();
     const getSignalNoticeHost = (): HTMLDivElement => {
       const w = window as typeof window & { __signalNoticeHost__?: HTMLDivElement };
@@ -2213,10 +2205,18 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const hasActiveStrategy = Boolean(activePane.chart.getActiveStrategyName());
       if (!hasActiveStrategy) {
         strategyReportOpenByPane.set(activePaneId, false);
-      }
-      const shouldOpen = hasActiveStrategy && strategyReportOpenByPane.get(activePaneId) === true;
-      strategyReport.setVisible(shouldOpen);
-      if (shouldOpen) {
+        prevStrategyActiveByPane.set(activePaneId, false);
+        strategyReport.setVisible(false);
+      } else {
+        const wasActive = prevStrategyActiveByPane.get(activePaneId) === true;
+        if (!wasActive) {
+          // 전략 최초 활성 시 collapsed(타이틀만) 상태로 자동 표시
+          strategyReport.setVisible(true);
+          strategyReport.collapse();
+        } else {
+          strategyReport.setVisible(true);
+        }
+        prevStrategyActiveByPane.set(activePaneId, true);
         strategyReport.refresh();
       }
       refreshSignalNotification();
