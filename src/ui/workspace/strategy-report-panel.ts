@@ -685,20 +685,36 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     if (menu.parentElement === document.body) panel.appendChild(menu);
   };
 
-  const openSlideMenu = (menu: HTMLDivElement, btn: HTMLButtonElement) => {
+  const openSlideMenu = (menu: HTMLDivElement, btn: HTMLButtonElement, onClose?: () => void) => {
     if (isMobileSlide()) {
       // Move to document.body to escape panel's stacking context (panel z-index:1010 < bottom bar z-index:1500)
       if (menu.parentElement !== document.body) document.body.appendChild(menu);
+
+      // Ensure pill close-handle exists as first child
+      let handle = menu.querySelector<HTMLDivElement>(':scope > .slide-close-handle');
+      if (!handle) {
+        handle = document.createElement('div');
+        handle.className = 'slide-close-handle';
+        handle.style.cssText = 'display:flex;flex-direction:column;align-items:center;padding:10px 0 6px;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;flex-shrink:0;';
+        const pill = document.createElement('div');
+        pill.style.cssText = 'width:40px;height:4px;border-radius:2px;background:#3a4a5e;';
+        handle.appendChild(pill);
+        menu.insertBefore(handle, menu.firstChild);
+      }
+      handle.style.display = 'flex';
+      handle.onclick = onClose ?? null;
+
       menu.style.display = 'block';
       menu.style.position = 'fixed';
-      menu.style.left = '10px';
-      menu.style.right = '10px';
-      menu.style.bottom = '52px';
+      menu.style.left = '0';
+      menu.style.right = '0';
+      menu.style.bottom = '0';
       menu.style.top = 'auto';
       menu.style.zIndex = '3200';
-      menu.style.borderRadius = '12px';
+      menu.style.borderRadius = '16px 16px 0 0';
+      menu.style.width = '100%';
       menu.style.maxWidth = 'none';
-      menu.style.width = 'auto';
+      menu.style.minWidth = '0';
       menu.style.maxHeight = '62vh';
       menu.style.overflowY = 'auto';
       menu.style.transform = 'translateY(100%)';
@@ -711,6 +727,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       return;
     }
     if (menu.parentElement === document.body) panel.appendChild(menu);
+    const handle = menu.querySelector<HTMLDivElement>(':scope > .slide-close-handle');
+    if (handle) handle.style.display = 'none';
     menu.style.position = 'absolute';
     menu.style.left = '0';
     menu.style.right = '';
@@ -741,9 +759,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     hideSettingsMenu();
   };
 
-  const openPeriodMenu   = () => openSlideMenu(periodMenu,   periodBtn);
-  const openWidgetMenu   = () => openSlideMenu(widgetMenu,   widgetBtn);
-  const openSettingsMenu = () => openSlideMenu(settingsMenu, settingsBtn);
+  const openPeriodMenu   = () => openSlideMenu(periodMenu,   periodBtn,   hidePeriodMenu);
+  const openWidgetMenu   = () => openSlideMenu(widgetMenu,   widgetBtn,   hideWidgetMenu);
+  const openSettingsMenu = () => openSlideMenu(settingsMenu, settingsBtn, hideSettingsMenu);
 
   const placeMenuAtButton = (menu: HTMLDivElement, btn: HTMLButtonElement) => {
     const panelRect = panel.getBoundingClientRect();
