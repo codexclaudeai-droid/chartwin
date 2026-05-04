@@ -84,15 +84,136 @@ export function createPaneChrome<TKey extends string>({
   chartArea.style.cssText = 'position:absolute;left:0;right:0;top:30px;bottom:0;overflow:hidden;';
   paneRoot.appendChild(chartArea);
 
+  // Hidden native select — keeps API/event contract intact (init.ts, pane-events.ts unchanged)
   const tfSelect = document.createElement('select');
-  tfSelect.style.cssText = 'background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;font-size:11px;padding:1px 4px;flex-shrink:0;';
+  tfSelect.style.cssText = 'position:absolute;width:0;height:0;opacity:0;pointer-events:none;overflow:hidden;';
   timeframes.forEach(({ key, label }) => {
     const opt = document.createElement('option');
     opt.value = key;
     opt.textContent = label;
     tfSelect.appendChild(opt);
   });
-  tfSelect.value = chartConfig.timeframe;
+
+  // Track current key separately so we can intercept value get/set
+  let _tfKey: string = chartConfig.timeframe;
+  const _getTfLabel = (k: string) => timeframes.find((t) => t.key === k)?.label ?? k;
+  Object.defineProperty(tfSelect, 'value', {
+    get: () => _tfKey,
+    set: (v: string) => {
+      _tfKey = v;
+      tfBtn.textContent = _getTfLabel(v);
+      _syncTfSelection(v);
+    },
+    configurable: true,
+  });
+
+  // Visible button
+  const tfBtn = document.createElement('button');
+  tfBtn.type = 'button';
+  tfBtn.style.cssText = 'background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;font-size:11px;padding:0 8px;height:22px;flex-shrink:0;cursor:pointer;white-space:nowrap;line-height:1;min-width:32px;';
+  tfBtn.textContent = _getTfLabel(_tfKey);
+
+  // ── Dropdown panel ───────────────────────────────────────────────────
+  if (!document.getElementById('tf-dd-style')) {
+    const s = document.createElement('style');
+    s.id = 'tf-dd-style';
+    s.textContent = '.tf-dd::-webkit-scrollbar{width:3px}.tf-dd::-webkit-scrollbar-track{background:transparent}.tf-dd::-webkit-scrollbar-thumb{background:#2a3040;border-radius:2px}';
+    document.head.appendChild(s);
+  }
+
+  const tfDropdown = document.createElement('div');
+  tfDropdown.className = 'tf-dd';
+  tfDropdown.style.cssText = 'position:fixed;background:#13192a;border-radius:6px;overflow-y:auto;max-height:72vh;min-width:128px;display:none;z-index:9000;padding:4px 0;scrollbar-width:thin;scrollbar-color:#2a3040 transparent;';
+  document.body.appendChild(tfDropdown);
+
+  const _getCatName = (key: string): string => {
+    if (/tick/i.test(key)) return '틱';
+    if (key.endsWith('s')) return '초';
+    if (/\d+m$/.test(key)) return '분';
+    if (key.endsWith('h')) return '시간';
+    return '날';
+  };
+  const _catOrder = ['틱', '초', '분', '시간', '날'];
+  const _catMap = new Map<string, string[]>();
+  _catOrder.forEach((c) => _catMap.set(c, []));
+  timeframes.forEach(({ key }) => {
+    const cat = _getCatName(key);
+    if (!_catMap.has(cat)) _catMap.set(cat, []);
+    _catMap.get(cat)!.push(key);
+  });
+
+  const _collapseState = new Map<string, boolean>();
+  const _itemEls = new Map<string, HTMLElement>();
+
+  const _syncTfSelection = (key: string) => {
+    _itemEls.forEach((el, k) => {
+      const sel = k === key;
+      el.style.background = sel ? '#1e2d42' : 'transparent';
+      el.style.color = sel ? '#ffffff' : '#c8d4ec';
+      (el as HTMLElement & { dataset: DOMStringMap }).style.fontWeight = sel ? '600' : '400';
+    });
+  };
+
+  const _renderDropdown = () => {
+    tfDropdown.innerHTML = '';
+    _itemEls.clear();
+    _catMap.forEach((keys, catName) => {
+      if (!keys.length) return;
+      const collapsed = _collapseState.get(catName) ?? false;
+
+      const catHdr = document.createElement('div');
+      catHdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 10px 4px;color:#5a6a88;font-size:10px;font-weight:700;letter-spacing:0.06em;cursor:pointer;user-select:none;';
+      const cLabel = document.createElement('span');
+      cLabel.textContent = catName;
+      const cArrow = document.createElement('span');
+      cArrow.textContent = collapsed ? '∨' : '∧';
+      cArrow.style.cssText = 'font-size:9px;';
+      catHdr.appendChild(cLabel);
+      catHdr.appendChild(cArrow);
+      catHdr.addEventListener('click', () => { _collapseState.set(catName, !collapsed); _renderDropdown(); });
+      tfDropdown.appendChild(catHdr);
+
+      if (!collapsed) {
+        keys.forEach((key) => {
+          const tf = timeframes.find((t) => t.key === key);
+          if (!tf) return;
+          const sel = key === _tfKey;
+          const item = document.createElement('div');
+          item.style.cssText = `padding:9px 14px;font-size:13px;color:${sel ? '#ffffff' : '#c8d4ec'};background:${sel ? '#1e2d42' : 'transparent'};cursor:pointer;font-weight:${sel ? '600' : '400'};border-radius:4px;margin:0 4px;white-space:nowrap;line-height:1;`;
+          item.textContent = tf.label;
+          item.addEventListener('mouseenter', () => { if (key !== _tfKey) { item.style.background = '#19253a'; item.style.color = '#e0e8ff'; } });
+          item.addEventListener('mouseleave', () => { item.style.background = key === _tfKey ? '#1e2d42' : 'transparent'; item.style.color = key === _tfKey ? '#ffffff' : '#c8d4ec'; });
+          item.addEventListener('click', () => {
+            _tfKey = key;
+            tfBtn.textContent = _getTfLabel(key);
+            _syncTfSelection(key);
+            tfSelect.dispatchEvent(new Event('change'));
+            _closeDd();
+          });
+          _itemEls.set(key, item);
+          tfDropdown.appendChild(item);
+        });
+      }
+    });
+  };
+
+  const _openDd = () => {
+    _renderDropdown();
+    const r = tfBtn.getBoundingClientRect();
+    tfDropdown.style.display = 'block';
+    tfDropdown.style.left = `${r.left}px`;
+    tfDropdown.style.top = `${r.bottom + 2}px`;
+    requestAnimationFrame(() => {
+      const dr = tfDropdown.getBoundingClientRect();
+      if (dr.right > window.innerWidth - 4) tfDropdown.style.left = `${r.right - dr.width}px`;
+      if (dr.bottom > window.innerHeight - 4) tfDropdown.style.top = `${r.top - dr.height - 2}px`;
+    });
+  };
+  const _closeDd = () => { tfDropdown.style.display = 'none'; };
+
+  tfBtn.addEventListener('click', (e) => { e.stopPropagation(); tfDropdown.style.display === 'none' ? _openDd() : _closeDd(); });
+  document.addEventListener('click', _closeDd);
+  tfDropdown.addEventListener('click', (e) => e.stopPropagation());
 
   const symBtn = document.createElement('button');
   symBtn.type = 'button';
@@ -123,7 +244,8 @@ export function createPaneChrome<TKey extends string>({
   marketPriceWrap.appendChild(symChangeWrap);
   paneHeader.appendChild(marketPriceWrap);
 
-  paneHeader.appendChild(tfSelect);
+  paneHeader.appendChild(tfSelect);   // hidden reference node (kept for insertBefore compat)
+  paneHeader.appendChild(tfBtn);
 
   const currencySelect = document.createElement('select');
   currencySelect.style.cssText = 'background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;font-size:11px;padding:1px 4px;flex-shrink:0;width:58px;text-align:center;appearance:none;-webkit-appearance:none;cursor:pointer;';
@@ -209,8 +331,8 @@ export function createPaneChrome<TKey extends string>({
       symChangeWrap.style.display = '';
       symChangeMetaLabel.style.display = 'none';
       symChangeLabel.style.fontSize = '11px';
-      tfSelect.style.fontSize = '10px';
-      tfSelect.style.padding = '1px 3px';
+      tfBtn.style.fontSize = '10px';
+      tfBtn.style.padding = '0 5px';
       currencySelect.style.fontSize = '10px';
       currencySelect.style.padding = '1px 3px';
       currencySelect.style.width = '48px';
@@ -231,7 +353,8 @@ export function createPaneChrome<TKey extends string>({
       symChangeWrap.style.display = '';
       symChangeMetaLabel.style.display = '';
       symChangeLabel.style.fontSize = '';
-      tfSelect.style.fontSize = '10px';
+      tfBtn.style.fontSize = '10px';
+      tfBtn.style.padding = '0 6px';
       currencySelect.style.fontSize = '10px';
       currencySelect.style.width = '55px';
       indBtn.textContent = '보조지표';
@@ -251,8 +374,8 @@ export function createPaneChrome<TKey extends string>({
       symChangeWrap.style.display = '';
       symChangeMetaLabel.style.display = '';
       symChangeLabel.style.fontSize = '';
-      tfSelect.style.fontSize = '11px';
-      tfSelect.style.padding = '1px 4px';
+      tfBtn.style.fontSize = '11px';
+      tfBtn.style.padding = '0 8px';
       currencySelect.style.fontSize = '11px';
       currencySelect.style.width = '58px';
       indBtn.textContent = '보조지표';
