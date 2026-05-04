@@ -640,41 +640,47 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const feeInput = settingsMenu.querySelector('[data-k="fee"]') as HTMLInputElement;
   const slipInput = settingsMenu.querySelector('[data-k="slip"]') as HTMLInputElement;
 
-  const _listItemStyle = 'display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #1a2740;color:#c8d6ef;font-size:13px;padding:11px 6px;cursor:pointer;';
+  const _liStyle = 'display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #1a2740;color:#c8d6ef;font-size:13px;padding:13px 16px;cursor:pointer;';
   periodMenu.innerHTML = `
-    <div style="font-size:13px;color:#e0e9ff;font-weight:700;padding:0 2px 10px;border-bottom:1px solid #1a2740;margin-bottom:6px;">차트 범위 선택</div>
-    <div style="font-size:10px;color:#4a6280;font-weight:600;letter-spacing:0.05em;padding:2px 4px 4px;">기타 범위</div>
-    <button data-days="7"   type="button" style="${_listItemStyle}">최근 1주일</button>
-    <button data-days="10"  type="button" style="${_listItemStyle}">최근 10일</button>
-    <button data-days="30"  type="button" style="${_listItemStyle}">최근 30일</button>
-    <button data-days="90"  type="button" style="${_listItemStyle}">최근 3개월</button>
-    <button data-days="180" type="button" style="${_listItemStyle}">최근 6개월</button>
-    <button data-days="365" type="button" style="${_listItemStyle}">최근 1년</button>
-    <button data-days="0"   type="button" style="${_listItemStyle}">전체 이력</button>
-    <div style="height:1px;background:#1a2740;margin:4px 0;"></div>
-    <button data-k="custom-toggle" type="button" style="display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;color:#8aaed6;font-size:13px;padding:11px 6px;cursor:pointer;">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-        <line x1="16" y1="2" x2="16" y2="6"></line>
-        <line x1="8" y1="2" x2="8" y2="6"></line>
-        <line x1="3" y1="10" x2="21" y2="10"></line>
-      </svg>
-      사용자 범위 설정
-    </button>
-    <div data-k="custom-panel" style="display:none;padding:8px 4px 4px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+    <div data-k="list-panel">
+      <div style="font-size:13px;color:#e0e9ff;font-weight:700;padding:12px 16px 10px;border-bottom:1px solid #1a2740;">차트 범위 선택</div>
+      <div style="font-size:10px;color:#4a6280;font-weight:600;letter-spacing:0.05em;padding:10px 16px 4px;">기타 범위</div>
+      <button data-days="7"   type="button" style="${_liStyle}">최근 1주일</button>
+      <button data-days="10"  type="button" style="${_liStyle}">최근 10일</button>
+      <button data-days="30"  type="button" style="${_liStyle}">최근 30일</button>
+      <button data-days="90"  type="button" style="${_liStyle}">최근 3개월</button>
+      <button data-days="180" type="button" style="${_liStyle}">최근 6개월</button>
+      <button data-days="365" type="button" style="${_liStyle}">최근 1년</button>
+      <button data-days="0"   type="button" style="${_liStyle}">전체 이력</button>
+      <div style="height:1px;background:#1a2740;"></div>
+      <button data-k="custom-toggle" type="button" style="display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;color:#8aaed6;font-size:13px;padding:13px 16px;cursor:pointer;">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        사용자 범위 설정
+      </button>
+    </div>
+    <div data-k="input-panel" style="display:none;">
+      <div style="display:flex;align-items:center;gap:8px;padding:12px 16px 10px;border-bottom:1px solid #1a2740;">
+        <button data-k="back" type="button" style="background:none;border:none;color:#8aaed6;font-size:18px;line-height:1;cursor:pointer;padding:0 6px 0 0;display:flex;align-items:center;">&#8592;</button>
+        <span style="font-size:13px;color:#e0e9ff;font-weight:700;">날짜 범위 설정</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px 10px;">
         <div>
-          <label style="display:block;font-size:11px;color:#9fb3d5;margin-bottom:4px;">시작</label>
-          <input data-k="start" type="datetime-local" style="width:100%;height:28px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;box-sizing:border-box;">
+          <label style="display:block;font-size:11px;color:#9fb3d5;margin-bottom:5px;">시작</label>
+          <input data-k="start" type="datetime-local" style="width:100%;height:32px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;box-sizing:border-box;font-size:12px;">
         </div>
         <div>
-          <label style="display:block;font-size:11px;color:#9fb3d5;margin-bottom:4px;">종료</label>
-          <input data-k="end" type="datetime-local" style="width:100%;height:28px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;box-sizing:border-box;">
+          <label style="display:block;font-size:11px;color:#9fb3d5;margin-bottom:5px;">종료</label>
+          <input data-k="end" type="datetime-local" style="width:100%;height:32px;background:#121b2e;border:1px solid #30405e;color:#d7e0f1;border-radius:6px;padding:0 6px;box-sizing:border-box;font-size:12px;">
         </div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button data-k="apply" type="button" style="flex:1;height:28px;background:#2962ff;border:1px solid #2962ff;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;">적용</button>
-        <button data-k="reset" type="button" style="flex:1;height:28px;background:#131d31;border:1px solid #2b3b58;color:#d6dff0;border-radius:6px;cursor:pointer;font-size:12px;">초기화</button>
+      <div style="display:flex;gap:8px;padding:4px 16px 16px;">
+        <button data-k="apply" type="button" style="flex:1;height:36px;background:#2962ff;border:1px solid #2962ff;color:#fff;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">적용</button>
+        <button data-k="reset" type="button" style="flex:1;height:36px;background:#131d31;border:1px solid #2b3b58;color:#d6dff0;border-radius:8px;cursor:pointer;font-size:13px;">초기화</button>
       </div>
     </div>
   `;
@@ -1694,11 +1700,21 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     });
   });
 
+  const listPanel  = periodMenu.querySelector<HTMLDivElement>('[data-k="list-panel"]')!;
+  const inputPanel = periodMenu.querySelector<HTMLDivElement>('[data-k="input-panel"]')!;
+  const showListPanel  = () => { listPanel.style.display = '';      inputPanel.style.display = 'none'; };
+  const showInputPanel = () => { listPanel.style.display = 'none';  inputPanel.style.display = '';     };
+
   const customToggleBtn = periodMenu.querySelector<HTMLButtonElement>('[data-k="custom-toggle"]')!;
-  const customPanel = periodMenu.querySelector<HTMLDivElement>('[data-k="custom-panel"]')!;
-  customToggleBtn.addEventListener('click', () => {
-    customPanel.style.display = customPanel.style.display === 'none' ? 'block' : 'none';
-  });
+  customToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); showInputPanel(); });
+
+  const backBtn = periodMenu.querySelector<HTMLButtonElement>('[data-k="back"]')!;
+  backBtn.addEventListener('click', (e) => { e.stopPropagation(); showListPanel(); });
+
+  // Prevent internal taps from bubbling to document click → closeMenus
+  [periodMenu, widgetMenu, settingsMenu].forEach((m) =>
+    m.addEventListener('click', (e) => e.stopPropagation()),
+  );
 
   periodApplyBtn.addEventListener('click', () => {
     const startSec = localInputToSec(periodStartInput.value);
@@ -1748,6 +1764,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const open = periodMenu.style.display === 'block';
     closeMenus();
     if (!open) {
+      showListPanel();
       if (periodStartSec != null) periodStartInput.value = secToLocalInput(periodStartSec);
       if (periodEndSec != null) periodEndInput.value = secToLocalInput(periodEndSec);
       openPeriodMenu();
