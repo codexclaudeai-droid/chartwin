@@ -315,6 +315,7 @@ export class SimpleChart {
   private mouseY = 0;
   private isMouseOver = false;
   private focusedSignalCandleIndex: number | null = null;
+  private hoveredSignalCandleIndex: number | null = null;
   private focusedTradeRange: { startIndex: number; endIndex: number } | null = null;
   private focusVisualTimer: ReturnType<typeof setTimeout> | null = null;
   private focusVisualStartedAt = 0;
@@ -2915,7 +2916,7 @@ export class SimpleChart {
       const entryY = meta.getY(entryPrice);
       const isLatest = gi === latestSignalIndex;
       const detail = doubleBreakDetails.get(gi);
-      if (detail) {
+      if (detail && (gi === this.hoveredSignalCandleIndex || gi === this.focusedSignalCandleIndex)) {
         const fromX = x + meta.candleW * 0.55;
         drawExitLine(fromX, detail.tp1, 'TP1', detail.side === 'LONG' ? '#37d67a' : '#ff6b6b', [4, 3], isLatest ? 1 : 0.68);
         drawExitLine(fromX, detail.tp2, 'TP2', detail.side === 'LONG' ? '#21b86b' : '#ff5252', [8, 4], isLatest ? 1 : 0.64);
@@ -8176,6 +8177,8 @@ export class SimpleChart {
         hoverSignal = this.signalHitAreas.find((area) => area.candleIndex === axisCandleIndex) ?? null;
       }
     }
+
+    this.hoveredSignalCandleIndex = hoverSignal?.candleIndex ?? null;
 
     if (hoverSignal) {
       const sideText = hoverSignal.signal > 0 ? 'LONG' : 'SHORT';
