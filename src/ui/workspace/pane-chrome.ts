@@ -216,11 +216,6 @@ export function createPaneChrome<TKey extends string>({
 
   const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
   const applyResponsive = () => {
-    if (isTouchDevice) {
-      indBtn.style.display = 'none';
-      strategyBtn.style.display = 'none';
-      strategyReportBtn.style.display = 'none';
-    }
     const width = host.clientWidth;
     if (width < 560) {
       paneHeader.style.gap = '4px';
