@@ -674,19 +674,26 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     if (isMobileSlide() && menu.style.display === 'block') {
       menu.style.transform = 'translateY(100%)';
       menu.style.opacity = '0';
-      timerRef.v = setTimeout(() => { menu.style.display = 'none'; timerRef.v = null; }, 180);
+      timerRef.v = setTimeout(() => {
+        menu.style.display = 'none';
+        if (menu.parentElement === document.body) panel.appendChild(menu);
+        timerRef.v = null;
+      }, 180);
       return;
     }
     menu.style.display = 'none';
+    if (menu.parentElement === document.body) panel.appendChild(menu);
   };
 
   const openSlideMenu = (menu: HTMLDivElement, btn: HTMLButtonElement) => {
     if (isMobileSlide()) {
+      // Move to document.body to escape panel's stacking context (panel z-index:1010 < bottom bar z-index:1500)
+      if (menu.parentElement !== document.body) document.body.appendChild(menu);
       menu.style.display = 'block';
       menu.style.position = 'fixed';
       menu.style.left = '10px';
       menu.style.right = '10px';
-      menu.style.bottom = '52px'; // 44px mobile bottom bar + 8px gap
+      menu.style.bottom = '52px';
       menu.style.top = 'auto';
       menu.style.zIndex = '3200';
       menu.style.borderRadius = '12px';
@@ -703,6 +710,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       });
       return;
     }
+    if (menu.parentElement === document.body) panel.appendChild(menu);
     menu.style.position = 'absolute';
     menu.style.left = '0';
     menu.style.right = '';
