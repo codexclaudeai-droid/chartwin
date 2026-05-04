@@ -1,5 +1,4 @@
 ﻿const iconStroke = '#d5deef';
-const mobileBottomDrawingIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#ffffff"><path d="M9,16h1.59c1.07,0,2.07-.42,2.83-1.17L23.12,5.12c.57-.57,.88-1.32,.88-2.12s-.31-1.55-.88-2.12c-1.17-1.17-3.07-1.17-4.24,0L9.17,10.59c-.76,.76-1.17,1.76-1.17,2.83v1.59c0,.55,.45,1,1,1ZM21.71,2.29c.19,.19,.29,.44,.29,.71s-.1,.52-.29,.71l-1.29,1.29-1.41-1.41,1.29-1.29c.39-.39,1.02-.39,1.41,0ZM10,13.41c0-.53,.21-1.04,.59-1.41l7-7,1.41,1.41-7,7c-.38,.38-.88,.59-1.41,.59h-.59v-.59Zm14,9.59c0,.55-.45,1-1,1-1.54,0-2.29-1.12-2.83-1.95-.5-.75-.75-1.05-1.17-1.05-.51,0-.9,.44-1.51,1.15-.7,.83-1.57,1.85-3.03,1.85s-2.32-1.03-3-1.87c-.58-.7-.96-1.13-1.46-1.13-.39,0-.63,.25-1.16,.91-.72,.88-1.71,2.09-3.84,2.09-2.76,0-5-2.24-5-5s2.24-5,5-5c.55,0,1,.45,1,1s-.45,1-1,1c-1.65,0-3,1.35-3,3s1.35,3,3,3c1.18,0,1.67-.6,2.29-1.36,.6-.73,1.34-1.64,2.71-1.64,1.47,0,2.32,1.03,3,1.87,.58,.7,.96,1.13,1.46,1.13s.9-.44,1.51-1.15c.7-.83,1.57-1.85,3.03-1.85s2.29,1.12,2.83,1.95c.5,.75,.75,1.05,1.17,1.05,.55,0,1,.45,1,1Z"/></svg>`;
 const trendToolDefaultIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5.2" y1="16.8" x2="16.8" y2="5.2"></line><circle cx="4" cy="18" r="1.7" fill="none"></circle><circle cx="18" cy="4" r="1.7" fill="none"></circle></svg>`;
 const eyeHideIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.7"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`;
 const eyeShowIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.7"></circle></svg>`;
@@ -373,7 +372,6 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   let magnetMode: 'off' | 'soft' | 'strong' = 'soft';
   let trashCounts = { drawings: 0, indicators: 0 };
   let trashDeleteLocked = false;
-  let isMobileViewport = false;
   let pointerLongPressTooltip = true;
   const toolButtonMap = new Map<string, HTMLButtonElement>();
   const toolIconWrapMap = new Map<string, HTMLSpanElement>();
@@ -398,10 +396,6 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   const syncTrendToolIconForViewport = () => {
     const trendWrap = toolIconWrapMap.get('trend');
     if (!trendWrap) return;
-    if (isMobileViewport) {
-      trendWrap.innerHTML = mobileBottomDrawingIcon;
-      return;
-    }
     trendWrap.innerHTML = selectedToolIconMap.get('trend') ?? trendToolDefaultIcon;
   };
 
@@ -618,15 +612,9 @@ export function createLeftToolbox(workspace: HTMLElement): void {
             if (tool.id === 'trend' || tool.id === 'fibonacci' || tool.id === 'forecast' || tool.id === 'draw') {
               selectedMenuItemMap.set(tool.id, { id: item.id, label: resolvedLabel });
             }
-            if (tool.id === 'trend' && isMobileViewport) {
-              selectedToolIconMap.delete(tool.id);
-              const iconWrap = toolIconWrapMap.get(tool.id);
-              if (iconWrap) iconWrap.innerHTML = mobileBottomDrawingIcon;
-            } else {
-              selectedToolIconMap.set(tool.id, item.icon);
-              const iconWrap = toolIconWrapMap.get(tool.id);
-              if (iconWrap) iconWrap.innerHTML = item.icon;
-            }
+            selectedToolIconMap.set(tool.id, item.icon);
+            const iconWrap = toolIconWrapMap.get(tool.id);
+            if (iconWrap) iconWrap.innerHTML = item.icon;
           }
           window.dispatchEvent(new CustomEvent('chart-toolbox-select', {
             detail: {
@@ -1218,7 +1206,6 @@ export function createLeftToolbox(workspace: HTMLElement): void {
 
   const mq = window.matchMedia('(max-width: 900px)');
   const applyMobileLayout = () => {
-    isMobileViewport = mq.matches;
     if (mq.matches) {
       currentDockCollapsedWidth = MOBILE_COLLAPSED_WIDTH;
       rail.style.left = '0';

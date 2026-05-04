@@ -1017,7 +1017,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     };
 
     const updateOhlcHeader = (candle: { open: number; high: number; low: number; close: number } | null) => {
-      if (isMobile) return;
+      if (isMobile || window.matchMedia('(max-width: 900px)').matches) {
+        ohlcHeaderDisplay.innerHTML = '';
+        return;
+      }
       if (!candle) {
         const last = chart.getCandles().at(-1);
         if (!last) { ohlcHeaderDisplay.innerHTML = ''; return; }
