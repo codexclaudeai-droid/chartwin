@@ -10,8 +10,10 @@ function normalizeCatalogSymbolId(id: string): string {
 }
 
 const DEFAULT_SYMBOL_CATALOG: Record<string, { id: string; label: string; desc: string; iconUrl?: string }[]> = {
+  '지수선물': [
+    { id: NASDAQ_FUTURES_CANONICAL_SYMBOL, label: 'E-mini Nasdaq-100', desc: 'E-mini Nasdaq-100' },
+  ],
   index: [
-    { id: NASDAQ_FUTURES_CANONICAL_SYMBOL, label: 'E-mini Nasdaq-100 Futures', desc: 'E-mini Nasdaq-100 Futures' },
     { id: 'SPX500', label: 'SPX500', desc: 'S&P 500' },
     { id: 'HSI', label: 'HSI', desc: 'Hang Seng' },
     { id: 'KOSPI', label: 'KOSPI', desc: 'Korea Composite Stock Price Index' },
@@ -116,15 +118,29 @@ function restoreDefaultCatalog(): void {
 }
 
 function applyBuiltinLabelOverrides(): void {
-  for (const items of Object.values(SYMBOL_CATALOG)) {
+  const NQ_TARGET_CATEGORY = '지수선물';
+  let nqItem: { id: string; label: string; desc: string } | null = null;
+  let nqSourceCategory: string | null = null;
+  for (const [cat, items] of Object.entries(SYMBOL_CATALOG)) {
     for (const item of items) {
       const normalizedId = normalizeCatalogSymbolId(item.id);
       if (normalizedId !== item.id) item.id = normalizedId;
       if (normalizedId === NASDAQ_FUTURES_CANONICAL_SYMBOL) {
-        item.label = 'E-mini Nasdaq-100 Futures';
-        item.desc = 'E-mini Nasdaq-100 Futures';
+        item.label = 'E-mini Nasdaq-100';
+        item.desc = 'E-mini Nasdaq-100';
+        nqItem = item;
+        nqSourceCategory = cat;
       }
     }
+  }
+  // localStorage에 저장된 구 카테고리('index' 등)에서 '지수선물'로 이동
+  if (nqItem && nqSourceCategory && nqSourceCategory !== NQ_TARGET_CATEGORY) {
+    SYMBOL_CATALOG[nqSourceCategory] = SYMBOL_CATALOG[nqSourceCategory].filter(
+      (item) => normalizeCatalogSymbolId(item.id) !== NASDAQ_FUTURES_CANONICAL_SYMBOL,
+    );
+    if (!SYMBOL_CATALOG[nqSourceCategory].length) delete SYMBOL_CATALOG[nqSourceCategory];
+    if (!SYMBOL_CATALOG[NQ_TARGET_CATEGORY]) SYMBOL_CATALOG[NQ_TARGET_CATEGORY] = [];
+    SYMBOL_CATALOG[NQ_TARGET_CATEGORY].unshift(nqItem);
   }
 }
 
@@ -161,8 +177,8 @@ function ensureBuiltinSymbolsPresent(): void {
   if (!hasCanonicalNasdaq) {
     SYMBOL_CATALOG[indexCategory].unshift({
       id: NASDAQ_FUTURES_CANONICAL_SYMBOL,
-      label: 'E-mini Nasdaq-100 Futures',
-      desc: 'E-mini Nasdaq-100 Futures',
+      label: 'E-mini Nasdaq-100',
+      desc: 'E-mini Nasdaq-100',
     });
   }
 }
