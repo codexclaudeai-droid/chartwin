@@ -19,6 +19,7 @@ import {
   loadStrategies,
   saveStrategies,
   type StrategyDefinition,
+  type StrategyParamValue,
   type StrategySignal,
 } from '../strategy/strategy-service';
 import {
@@ -2198,6 +2199,29 @@ export class SimpleChart {
     return { ...this.bollingerRiskConfig };
   }
 
+  public getStrategyParams(strategyId: string | null = this.activeStrategyId): Record<string, StrategyParamValue> {
+    if (!strategyId) return {};
+    const strategy = this.strategies.find((item) => item.id === strategyId);
+    return { ...(strategy?.params ?? {}) };
+  }
+
+  public setStrategyParams(strategyId: string, patch: Record<string, StrategyParamValue>): void {
+    let changed = false;
+    this.strategies = this.strategies.map((strategy) => {
+      if (strategy.id !== strategyId) return strategy;
+      changed = true;
+      return {
+        ...strategy,
+        params: { ...(strategy.params ?? {}), ...patch },
+        updatedAt: Date.now(),
+      };
+    });
+    if (!changed) return;
+    saveStrategies(this.strategies);
+    if (strategyId === this.activeStrategyId) this.requestStrategyCompute(0);
+    this.draw();
+  }
+
   public setBollingerRiskConfig(patch: Partial<BollingerRiskConfig>): void {
     const next = { ...this.bollingerRiskConfig, ...patch };
     next.enabled = Boolean(next.enabled);
@@ -2288,7 +2312,16 @@ export class SimpleChart {
           const low = candles.map((c) => c.low);
           const volume = candles.map((c) => c.volume);
           const ta = buildTa();
-          const ctx = { open, high, low, close, volume, __doubleBreakConfig: payload.doubleBreakConfig };
+          const ctx = {
+            open,
+            high,
+            low,
+            close,
+            volume,
+            __doubleBreakConfig: payload.doubleBreakConfig,
+            __strategyParams: payload.strategyParams || {},
+            __symbol: payload.symbol || '',
+          };
           const previous = payload.previousSignals ?? [];
           let signals;
           if (previous.length === candles.length) {
@@ -2363,6 +2396,8 @@ export class SimpleChart {
       changedFrom,
       previousSignals: this.strategySignals,
       doubleBreakConfig: this.doubleBreakConfig,
+      strategyParams: strategy.params ?? {},
+      symbol: this.config.symbol,
     });
   }
 

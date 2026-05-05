@@ -3,7 +3,8 @@ import { INDICATOR_CATALOG } from '../catalog/indicators';
 import { CUSTOM_SYMBOLS, SYMBOL_CATALOG, createSymbolIconElement, getAllSymbolCatalog, getSymbolIconUrl, persistSymbolRegistry, type SymbolCatalogItem } from '../catalog/symbols';
 import { TIMEZONE_OPTIONS, UTC_OFFSET_OPTIONS, type TimezoneOption } from '../catalog/time';
 import { toRgba } from '../chart/color-utils';
-import { buildStrategyDefinition, isAdminMgmtButtonsVisible, setAdminMgmtButtonsVisible, type StrategyDefinition, type StrategyLang } from '../strategy/strategy-service';
+import { buildStrategyDefinition, isAdminMgmtButtonsVisible, type StrategyDefinition, type StrategyLang } from '../strategy/strategy-service';
+import { DEFAULT_GRID_ATR_BNF_SROUTER_PARAMS, GRID_ATR_BNF_SROUTER_PRESETS, inferGridAtrBnfSrouterPreset, type GridAtrBnfSrouterPresetMode } from '../strategy/strategies/grid-atr-bnf-srouter-v1';
 
 function createModal(title: string, options: { anchorTop?: boolean } = {}) {
   const overlay = document.createElement('div');
@@ -87,6 +88,12 @@ function createModal(title: string, options: { anchorTop?: boolean } = {}) {
 }
 
 export function openStrategyModal(chart: any, onApply: () => void, options?: { mode?: 'admin' | 'frontend' }) {
+  const GRID_ATR_BNF_SROUTER_ID = 'strategy_js_grid_atr_bnf_srouter_v1';
+  const resolveSrouterPresetForSymbol = () => inferGridAtrBnfSrouterPreset(String(chart.config?.symbol ?? ''));
+  const buildSrouterPresetPatch = (preset: keyof typeof GRID_ATR_BNF_SROUTER_PRESETS) => ({
+    presetSymbol: preset,
+    ...GRID_ATR_BNF_SROUTER_PRESETS[preset],
+  });
   const isAdmin = (options?.mode ?? 'admin') === 'admin';
   const { body, close } = createModal(isAdmin ? '전략시그널 관리' : '전략 선택', { anchorTop: true });
 
@@ -112,30 +119,6 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
   const listPanel = document.createElement('div');
   listPanel.style.cssText = 'display:block;';
   body.appendChild(listPanel);
-
-  if (isAdmin) {
-    const mgmtToggleRow = document.createElement('div');
-    mgmtToggleRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;';
-    const mgmtToggleLabel = document.createElement('span');
-    mgmtToggleLabel.style.cssText = 'font-size:12px;color:#9aa0ab;';
-    mgmtToggleLabel.textContent = 'JS보기·수정·삭제 버튼';
-    const mgmtToggleBtn = document.createElement('button');
-    const syncToggleBtn = () => {
-      const on = isAdminMgmtButtonsVisible();
-      mgmtToggleBtn.textContent = on ? 'ON' : 'OFF';
-      mgmtToggleBtn.style.cssText = `padding:3px 12px;border-radius:999px;border:none;font-size:11px;font-weight:700;cursor:pointer;
-        background:${on ? '#2962ff' : '#3a3e4e'};color:${on ? '#fff' : '#9aa0ab'};`;
-    };
-    syncToggleBtn();
-    mgmtToggleBtn.addEventListener('click', () => {
-      setAdminMgmtButtonsVisible(!isAdminMgmtButtonsVisible());
-      syncToggleBtn();
-      render();
-    });
-    mgmtToggleRow.appendChild(mgmtToggleLabel);
-    mgmtToggleRow.appendChild(mgmtToggleBtn);
-    listPanel.appendChild(mgmtToggleRow);
-  }
 
   const listWrap = document.createElement('div');
   listWrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto;padding-right:2px;margin-bottom:12px;';
@@ -322,6 +305,87 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     bbRiskBoolSel.style.opacity = enabled ? '1' : '0.55';
   };
 
+  const srouterBox = document.createElement('div');
+  srouterBox.style.cssText = 'display:none;margin-top:12px;padding:12px;border:1px solid #4c3d28;border-radius:8px;background:#22180f;';
+  const srouterTitle = document.createElement('div');
+  srouterTitle.textContent = 'Grid+ATR+BNF+SRouter v1 설정';
+  srouterTitle.style.cssText = 'font-size:13px;font-weight:700;color:#f6e6cf;margin-bottom:6px;';
+  srouterBox.appendChild(srouterTitle);
+  const srouterHint = document.createElement('div');
+  srouterHint.style.cssText = 'font-size:11px;color:#d7bf9b;line-height:1.5;margin-bottom:8px;';
+  srouterBox.appendChild(srouterHint);
+  const srouterGrid = document.createElement('div');
+  srouterGrid.style.cssText = 'display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:8px;';
+  srouterBox.appendChild(srouterGrid);
+  listPanel.appendChild(srouterBox);
+
+  const createSrouterField = (key: string, labelText: string, step = '1', min = '0') => {
+    const wrap = document.createElement('label');
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+    const label = document.createElement('span');
+    label.textContent = labelText;
+    label.style.cssText = 'font-size:11px;color:#d7bf9b;';
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = step;
+    input.min = min;
+    input.style.cssText = 'background:#181109;border:1px solid #6b5333;border-radius:6px;padding:7px;color:white;font-size:12px;';
+    input.addEventListener('change', () => {
+      const activeId = chart.getActiveStrategyId?.();
+      const value = Number(input.value);
+      if (activeId !== GRID_ATR_BNF_SROUTER_ID || !Number.isFinite(value)) return;
+      chart.setStrategyParams?.(activeId, { presetSymbol: 'CUSTOM', [key]: value });
+      onApply();
+      render();
+    });
+    wrap.appendChild(label);
+    wrap.appendChild(input);
+    srouterGrid.appendChild(wrap);
+    return input;
+  };
+
+  const srouterPresetWrap = document.createElement('label');
+  srouterPresetWrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+  const srouterPresetLabel = document.createElement('span');
+  srouterPresetLabel.textContent = '프리셋';
+  srouterPresetLabel.style.cssText = 'font-size:11px;color:#d7bf9b;';
+  const srouterPresetSel = document.createElement('select');
+  srouterPresetSel.style.cssText = 'background:#181109;border:1px solid #6b5333;border-radius:6px;padding:7px;color:white;font-size:12px;';
+  srouterPresetSel.innerHTML = '<option value="AUTO">Auto (현재 심볼 기준)</option><option value="GOLD">GOLD</option><option value="NASDAQ">NASDAQ</option><option value="BTC">BTC</option><option value="CUSTOM">사용자설정</option>';
+  srouterPresetSel.addEventListener('change', () => {
+    const activeId = chart.getActiveStrategyId?.();
+    if (activeId !== GRID_ATR_BNF_SROUTER_ID) return;
+    const presetKey = srouterPresetSel.value as GridAtrBnfSrouterPresetMode;
+    if (presetKey === 'AUTO') {
+      const inferred = resolveSrouterPresetForSymbol();
+      chart.setStrategyParams?.(activeId, {
+        presetSymbol: 'AUTO',
+        ...GRID_ATR_BNF_SROUTER_PRESETS[inferred],
+      });
+    } else if (presetKey === 'CUSTOM') {
+      chart.setStrategyParams?.(activeId, { presetSymbol: 'CUSTOM' });
+    } else {
+      chart.setStrategyParams?.(activeId, buildSrouterPresetPatch(presetKey));
+    }
+    onApply();
+    render();
+  });
+  srouterPresetWrap.appendChild(srouterPresetLabel);
+  srouterPresetWrap.appendChild(srouterPresetSel);
+  srouterGrid.appendChild(srouterPresetWrap);
+
+  const srouterInputs = {
+    gridStep: createSrouterField('gridStep', 'Grid Step'),
+    profitTarget: createSrouterField('profitTarget', 'Profit Target', '0.001', '1'),
+    breakoutLevel: createSrouterField('breakoutLevel', 'Breakout Level', '0.1'),
+    breakdownLevel: createSrouterField('breakdownLevel', 'Breakdown Level', '0.1'),
+    atrMultiplierEntry: createSrouterField('atrMultiplierEntry', 'ATR Entry x', '0.1', '0.1'),
+    atrMultiplierExit: createSrouterField('atrMultiplierExit', 'ATR Exit x', '0.1', '0.1'),
+    maFastPeriod: createSrouterField('maFastPeriod', 'MA Fast', '1', '2'),
+    maSlowPeriod: createSrouterField('maSlowPeriod', 'MA Slow', '1', '3'),
+    neutralThreshold: createSrouterField('neutralThreshold', 'Neutral Threshold', '0.001', '0.0001'),
+  };
+
   const err = document.createElement('div');
   err.style.cssText = 'color:#ef5350;font-size:11px;min-height:16px;margin-top:8px;';
   registerPanel.appendChild(err);
@@ -399,6 +463,7 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     const activeId = chart.getActiveStrategyId();
     const activeIsDoubleBreak = activeId === 'strategy_js_double_break';
     const activeIsBollinger = activeId === 'strategy_pine_bbands_directed';
+    const activeIsSrouter = activeId === GRID_ATR_BNF_SROUTER_ID;
 
     listWrap.innerHTML = '';
     strategies.forEach((s) => {
@@ -421,6 +486,13 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
         background:${isApplied ? '#1e315c' : '#2962ff'};color:white;font-size:11px;cursor:${isApplied ? 'default' : 'pointer'};`;
       applyBtn.addEventListener('click', () => {
         if (isApplied) return;
+        if (s.id === GRID_ATR_BNF_SROUTER_ID && chart.getStrategyParams && chart.setStrategyParams) {
+          const currentParams = chart.getStrategyParams(s.id);
+          const presetMode = String(currentParams.presetSymbol ?? DEFAULT_GRID_ATR_BNF_SROUTER_PARAMS.presetSymbol).toUpperCase();
+          if (presetMode !== 'CUSTOM') {
+            chart.setStrategyParams(s.id, buildSrouterPresetPatch(resolveSrouterPresetForSymbol()));
+          }
+        }
         chart.setActiveStrategy(s.id);
         onApply();
         render();
@@ -487,6 +559,23 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
       bbRiskBoolSel.value = cfg.moveSlToEntryOnTp1 ? '1' : '0';
       setBbRiskFieldsEnabled(Boolean(cfg.enabled));
     }
+
+    srouterBox.style.display = activeIsSrouter ? 'block' : 'none';
+    if (activeIsSrouter && chart.getStrategyParams) {
+      const cfg = {
+        ...DEFAULT_GRID_ATR_BNF_SROUTER_PARAMS,
+        ...chart.getStrategyParams(activeId),
+      };
+      const presetMode = String(cfg.presetSymbol ?? 'AUTO').toUpperCase() as GridAtrBnfSrouterPresetMode;
+      const resolvedPreset = resolveSrouterPresetForSymbol();
+      srouterPresetSel.value = presetMode;
+      Object.entries(srouterInputs).forEach(([key, input]) => {
+        input.value = String(cfg[key] ?? '');
+      });
+      srouterHint.textContent = presetMode === 'CUSTOM'
+        ? `현재 심볼: ${chart.config?.symbol ?? '-'} · 사용자설정은 종목이 바뀌어도 유지됩니다.`
+        : `현재 심볼: ${chart.config?.symbol ?? '-'} · 자동 매칭 프리셋: ${resolvedPreset}`;
+    }
     applyViewState();
   };
 
@@ -525,6 +614,7 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
         sourceCode,
         active: true,
         version: existing ? existing.version + 1 : 1,
+        params: existing?.params,
       });
       const next = existing
         ? list.map((s: StrategyDefinition) => (s.id === existing.id ? nextDefinition : s))

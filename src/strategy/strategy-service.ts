@@ -3,6 +3,7 @@ import { ALL_STRATEGIES } from './strategies';
 
 export type StrategyLang = 'javascript' | 'pine';
 export type StrategySignal = -1 | 0 | 1;
+export type StrategyParamValue = string | number | boolean;
 
 export interface StrategyDefinition {
   id: string;
@@ -15,6 +16,7 @@ export interface StrategyDefinition {
   version: number;
   active: boolean;
   updatedAt: number;
+  params?: Record<string, StrategyParamValue>;
 }
 
 let _adminMgmtButtonsVisible = true;
@@ -577,6 +579,7 @@ export function buildStrategyDefinition(input: {
   active?: boolean;
   id?: string;
   version?: number;
+  params?: Record<string, StrategyParamValue>;
 }): StrategyDefinition {
   const compiledJs = input.language === 'pine' ? compilePineToJs(input.sourceCode) : input.sourceCode;
   try {
@@ -595,6 +598,7 @@ export function buildStrategyDefinition(input: {
     version: input.version ?? 1,
     active: input.active ?? true,
     updatedAt: Date.now(),
+    params: input.params ? { ...input.params } : undefined,
   };
 }
 
@@ -610,16 +614,25 @@ export function loadStrategies(): StrategyDefinition[] {
     const upgraded = stored.map((saved) => {
       const def = defaultById.get(saved.id);
       if (!def) return saved;
+      const mergedSaved = {
+        ...saved,
+        params: def.params ? { ...def.params, ...(saved.params ?? {}) } : saved.params,
+      };
       if (
-        (saved.id === 'strategy_pine_bbands_directed' || saved.id === 'strategy_pine_sma_5_20')
+        (
+          saved.id === 'strategy_pine_bbands_directed'
+          || saved.id === 'strategy_pine_sma_5_20'
+          || saved.id === 'strategy_js_grid_atr_bnf_srouter_v1'
+        )
         && (saved.version ?? 0) < def.version
       ) {
         return {
           ...def,
           active: saved.active,
+          params: def.params ? { ...def.params, ...(saved.params ?? {}) } : saved.params,
         };
       }
-      return saved;
+      return mergedSaved;
     });
     const ids = new Set(upgraded.map((s) => s.id));
     const missing = defaults.filter((d) => !ids.has(d.id));
@@ -639,4 +652,3 @@ export function loadStrategies(): StrategyDefinition[] {
 export function saveStrategies(strategies: StrategyDefinition[]): void {
   localStorage.setItem(STRATEGY_STORAGE_KEY, JSON.stringify(strategies));
 }
-
