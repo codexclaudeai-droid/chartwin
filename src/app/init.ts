@@ -531,22 +531,25 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
 
   const TFS: Array<{ key: TimeframeKey; label: string }> = [
     { key: '1s',  label: '1초' },
-    { key: '5s',  label: '5초' },
-    { key: '10s', label: '10초' },
-    { key: '15s', label: '15초' },
-    { key: '30s', label: '30초' },
-    { key: '45s', label: '45초' },
+    // TODO: 1초 데이터 집계 방식 구현 후 활성화
+    // { key: '5s',  label: '5초' },
+    // { key: '10s', label: '10초' },
+    // { key: '15s', label: '15초' },
+    // { key: '30s', label: '30초' },
+    // { key: '45s', label: '45초' },
     { key: '1m',  label: '1분' },
-    { key: '2m',  label: '2분' },
+    // TODO: 1분 데이터 집계 방식 구현 후 활성화
+    // { key: '2m',  label: '2분' },
     { key: '3m',  label: '3분' },
     { key: '5m',  label: '5분' },
     { key: '10m', label: '10분' },
     { key: '15m', label: '15분' },
     { key: '30m', label: '30분' },
-    { key: '45m', label: '45분' },
+    // { key: '45m', label: '45분' },
     { key: '1h',  label: '1시간' },
     { key: '2h',  label: '2시간' },
-    { key: '3h',  label: '3시간' },
+    // TODO: 1시간 데이터 집계 방식 구현 후 활성화
+    // { key: '3h',  label: '3시간' },
     { key: '4h',  label: '4시간' },
     { key: '1d',  label: '1일' },
     { key: '1w',  label: '1주' },
