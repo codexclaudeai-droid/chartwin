@@ -1004,23 +1004,24 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         symChangeLabel.style.color = '#9aa7c1';
         symChangeLabel.textContent = '--';
       }
+      const shortLabel = isMobile || window.innerWidth < 768;
       if (liveStatus === 'live') {
-        headerTitle.textContent = 'L';
+        headerTitle.textContent = shortLabel ? 'L' : 'LIVE';
         headerTitle.style.background = '#1d3a30';
         headerTitle.style.borderColor = '#2a6c56';
         headerTitle.style.color = '#4ae3a5';
       } else if (liveStatus === 'connecting') {
-        headerTitle.textContent = 'C';
+        headerTitle.textContent = shortLabel ? 'C' : 'CONNECTING';
         headerTitle.style.background = '#3a3020';
         headerTitle.style.borderColor = '#7d5a2e';
         headerTitle.style.color = '#ffd27a';
       } else if (liveStatus === 'fallback') {
-        headerTitle.textContent = 'F';
+        headerTitle.textContent = shortLabel ? 'F' : 'FALLBACK';
         headerTitle.style.background = '#3a2323';
         headerTitle.style.borderColor = '#7b3a3a';
         headerTitle.style.color = '#ff9b9b';
       } else {
-        headerTitle.textContent = 'I';
+        headerTitle.textContent = shortLabel ? 'I' : 'IDLE';
         headerTitle.style.background = '#22293a';
         headerTitle.style.borderColor = '#3a4155';
         headerTitle.style.color = '#b5bece';
