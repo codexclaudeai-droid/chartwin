@@ -7,6 +7,18 @@ import { buildStrategyDefinition, isAdminMgmtButtonsVisible, type StrategyDefini
 import { DEFAULT_GRID_ATR_BNF_SROUTER_PARAMS, GRID_ATR_BNF_SROUTER_PRESETS, inferGridAtrBnfSrouterPreset, type GridAtrBnfSrouterPresetMode } from '../strategy/strategies/grid-atr-bnf-srouter-v1';
 
 function createModal(title: string, options: { anchorTop?: boolean } = {}) {
+  if (!document.getElementById('strategy-list-scrollbar-style')) {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'strategy-list-scrollbar-style';
+    styleEl.textContent = `
+      .strategy-list-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+      .strategy-list-scroll::-webkit-scrollbar-track { background: #1c2030; }
+      .strategy-list-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 999px; }
+      .strategy-list-scroll::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+      .strategy-list-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) #1c2030; }
+    `;
+    document.head.appendChild(styleEl);
+  }
   const overlay = document.createElement('div');
   overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.75);
     display:flex;align-items:center;justify-content:center;z-index:9000;backdrop-filter:blur(3px);`;
@@ -121,6 +133,7 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
   body.appendChild(listPanel);
 
   const listWrap = document.createElement('div');
+  listWrap.className = 'strategy-list-scroll';
   listWrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto;padding-right:2px;margin-bottom:12px;';
   listPanel.appendChild(listWrap);
 
