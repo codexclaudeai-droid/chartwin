@@ -1,4 +1,7 @@
-﻿type CandleLike = {
+﻿import { getCandleCountForPeriod } from '../../chart/axis-utils';
+import type { TimeframeKey } from '../../catalog/time';
+
+type CandleLike = {
   time?: number;
   close: number;
 };
@@ -1626,9 +1629,12 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const times = candles.map((c) => Number(c.time ?? NaN));
     const signals = chart.getStrategySignalSeries().map((s) => Number(s || 0));
 
-    const nAll = Math.min(closes.length, Math.max(signals.length, closes.length));
+    // signals 배열이 candles보다 짧을 수 있음(워커 응답 지연) — 짧은 쪽 기준으로 통일
+    const nAll = Math.min(closes.length, signals.length > 0 ? signals.length : closes.length);
     let start = 0;
     let end = nAll;
+
+    // 커스텀 날짜 범위: 시간 기반 필터
     if (periodStartSec != null || periodEndSec != null) {
       while (start < nAll) {
         const ts = times[start];
@@ -1647,16 +1653,24 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
         break;
       }
     }
+
+    // 프리셋 기간: 바 수 기반 필터 (타임프레임 × 기간일수로 계산된 periodBars)
     if (periodBars > 0 && periodBars < end - start) start = end - periodBars;
-    timelineTimes = times.slice(start, end).map((t) => (Number.isFinite(t) ? t : NaN));
+
+    // 슬라이스를 한 번만 계산 — timelineTimes와 worker 모두 동일한 윈도우 사용
+    const slicedCloses  = closes.slice(start, end);
+    const slicedTimes   = times.slice(start, end);
+    const slicedSignals = signals.slice(start, end);
+
+    timelineTimes = slicedTimes.map((t) => (Number.isFinite(t) ? t : NaN));
     netProfitPctBase = Number.isFinite(initialCapital) && initialCapital > 0 ? initialCapital : null;
 
     const override = chart.buildStrategyReport?.({
       feeBps,
       slippageBps,
-      periodBars,
-      rangeStartSec: periodStartSec,
-      rangeEndSec: periodEndSec,
+      periodBars: slicedCloses.length,
+      rangeStartSec: null,
+      rangeEndSec: null,
       sideFilter,
     });
     if (override) {
@@ -1667,17 +1681,18 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       return;
     }
 
+    // 이미 슬라이스된 배열을 전달 — worker 내부에서 재필터링 불필요
     nextRequestId += 1;
     worker.postMessage({
       requestId: nextRequestId,
-      closes,
-      times,
-      signals,
+      closes: slicedCloses,
+      times: slicedTimes,
+      signals: slicedSignals,
       feeBps,
       slippageBps,
-      periodBars,
-      rangeStartSec: periodStartSec,
-      rangeEndSec: periodEndSec,
+      periodBars: 0,
+      rangeStartSec: null,
+      rangeEndSec: null,
       sideFilter,
     });
 
@@ -1688,14 +1703,19 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     btn.addEventListener('click', () => {
       const days = Number(btn.dataset.days ?? 0);
       if (days === 0) {
+        // 전체 이력
+        periodBars = 0;
         periodStartSec = null;
         periodEndSec = null;
       } else {
+        // 타임프레임 × 기간일수 → 바 수로 변환 (시계열 갭에 영향받지 않는 기준)
+        const tf = getActiveChart().config.timeframe as TimeframeKey;
+        periodBars = getCandleCountForPeriod(days, tf);
+        // periodStartSec/End는 표시용으로만 유지
         const nowSec = Math.floor(Date.now() / 1000);
         periodStartSec = nowSec - days * 86400;
         periodEndSec = nowSec;
       }
-      periodBars = 0;
       closeMenus();
       refresh();
     });

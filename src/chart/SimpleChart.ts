@@ -2297,7 +2297,10 @@ export class SimpleChart {
           } else {
             signals = previous.slice(0, candles.length);
           }
-          const from = Math.max(0, Math.min(payload.changedFrom - 300, candles.length - 1));
+          // changedFrom을 유효 범위로 클램프한 뒤 룩백 버퍼 적용
+          const LOOKBACK = 300;
+          const effectiveChange = Math.min(payload.changedFrom, candles.length - 1);
+          const from = Math.max(0, effectiveChange - LOOKBACK);
           for (let i = from; i < candles.length; i += 1) {
             signals[i] = toSignal(strategyFn(ctx, i, ta));
           }

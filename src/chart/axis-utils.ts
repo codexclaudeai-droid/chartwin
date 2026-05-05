@@ -113,6 +113,15 @@ export function getMainAxisStepByRange(rawRange: number, plotHeightPx: number, q
   return step;
 }
 
+/**
+ * 기간(일) + 타임프레임으로 필요한 캔들 수를 반환.
+ * periodDays = 0 이면 0 반환 (전체 이력).
+ */
+export function getCandleCountForPeriod(periodDays: number, timeframe: TimeframeKey): number {
+  if (periodDays <= 0) return 0;
+  return Math.ceil((periodDays * 86400) / TIMEFRAME_SECONDS[timeframe]);
+}
+
 export function getDynamicMainPricePaddingRatio(minPrice: number, maxPrice: number): number {
   const range = Math.max(0, maxPrice - minPrice);
   const mid = Math.max(Math.abs((maxPrice + minPrice) * 0.5), 1e-12);
