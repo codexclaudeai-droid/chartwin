@@ -12,6 +12,10 @@ export function cloneDrawingShape(shape: DrawingShape): DrawingShape {
     width: shape.width,
     lineStyle: shape.lineStyle,
     channelOffset: shape.channelOffset ? { ...shape.channelOffset } : undefined,
+    avwap: shape.avwap ? {
+      ...shape.avwap,
+      bands: shape.avwap.bands.map((band) => ({ ...band })) as typeof shape.avwap.bands,
+    } : undefined,
     hidden: shape.hidden,
     locked: shape.locked,
     alert: shape.alert ? { ...shape.alert } : undefined,

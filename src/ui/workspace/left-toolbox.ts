@@ -141,6 +141,16 @@ const tools: ToolboxTool[] = [
             },
           ],
         },
+        {
+          title: '평균가',
+          items: [
+            {
+              id: 'anchored-vwap',
+              label: '앵커드 VWAP',
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.2" cy="16.8" r="1.7" fill="none"></circle><path d="M5.2 16.8c2.1-3.5 4.9-5.5 8.1-5.5 2.7 0 4.6 1.2 5.5 3.1 0 0 .7 1.2 1.2 3.1"></path></svg>`,
+            },
+          ],
+        },
       ],
     },
   },

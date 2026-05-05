@@ -4,6 +4,7 @@
   | 'channel'
   | 'fib-retracement'
   | 'fib-trend'
+  | 'anchored-vwap'
   | 'draw-pencil'
   | 'draw-highlighter'
   | 'draw-box'
@@ -17,6 +18,33 @@ export type DrawingAnchor = {
   price: number;
 };
 
+export type AnchoredVwapSource =
+  | 'close'
+  | 'open'
+  | 'high'
+  | 'low'
+  | 'hl2'
+  | 'hlc3'
+  | 'ohlc4';
+
+export type AnchoredVwapBandConfig = {
+  enabled: boolean;
+  multiplier: number;
+  color: string;
+  visible: boolean;
+};
+
+export type AnchoredVwapSettings = {
+  source: AnchoredVwapSource;
+  bandMode: 'standard-deviation';
+  showLine: boolean;
+  showPriceLabels: boolean;
+  showBackground: boolean;
+  backgroundColor: string;
+  backgroundOpacity: number;
+  bands: [AnchoredVwapBandConfig, AnchoredVwapBandConfig, AnchoredVwapBandConfig];
+};
+
 export type DrawingShape = {
   id: string;
   kind: DrawingToolId;
@@ -28,6 +56,7 @@ export type DrawingShape = {
   width?: number;
   lineStyle?: 'solid' | 'dash' | 'dot';
   channelOffset?: DrawingAnchor;
+  avwap?: AnchoredVwapSettings;
   hidden?: boolean;
   locked?: boolean;
   alert?: {

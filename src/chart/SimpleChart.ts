@@ -29,6 +29,8 @@ import {
   type DoubleBreakResult,
 } from '../strategy/double-break-strategy';
 import type {
+  AnchoredVwapSettings,
+  AnchoredVwapSource,
   DrawingAnchor,
   DrawingDraft,
   DrawingHitPart,
@@ -247,6 +249,8 @@ export class SimpleChart {
   private drawingToolbarBoundId: string | null = null;
   private drawingAlertPopupEl: HTMLDivElement | null = null;
   private positionSettingsPopupEl: HTMLDivElement | null = null;
+  private avwapSettingsModalEl: HTMLDivElement | null = null;
+  private avwapSettingsEditingShapeId: string | null = null;
   private trendlineTextEditorEl: HTMLInputElement | null = null;
   private trendlineTextEditorShapeId: string | null = null;
   private hoveredDrawingId: string | null = null;
@@ -894,6 +898,7 @@ export class SimpleChart {
       'channel',
       'fib-retracement',
       'fib-trend',
+      'anchored-vwap',
       'long-position',
       'short-position',
       'measure',
@@ -959,6 +964,7 @@ export class SimpleChart {
       'channel':         ['① 첫 번째 선의 시작점 탭', '② 끝점 탭', '③ 두 번째 선 위치 탭'],
       'fib-retracement': ['① 시작점을 탭하세요', '② 끝점을 탭해 피보나치를 완성하세요'],
       'fib-trend':       ['① 첫 번째 기준점 탭', '② 두 번째 기준점 탭', '③ 세 번째 기준점 탭'],
+      'anchored-vwap':   ['앵커가 될 캔들을 탭하면 해당 시점부터 VWAP가 그려집니다'],
       'measure':         ['① 측정 시작점 탭', '② 끝점 탭으로 가격·시간 범위 측정'],
       'text-note':       ['메모를 추가할 위치를 탭하세요'],
     };
@@ -1166,6 +1172,7 @@ export class SimpleChart {
 
   public deleteSelectedDrawing(): void {
     if (!this.selectedDrawingId) return;
+    this.closeAnchoredVwapSettingsModal(false);
     this.drawings = this.drawings.filter((shape) => shape.id !== this.selectedDrawingId);
     this.selectedDrawingId = null;
     this.selectedDrawingPart = 'line';
@@ -1210,6 +1217,7 @@ export class SimpleChart {
   }
 
   private clearDrawingSelection(): void {
+    this.closeAnchoredVwapSettingsModal(false);
     this.closeTrendlineTextEditor(false);
     this.closePositionSettingsPopup();
     this.selectedDrawingId = null;
@@ -3844,6 +3852,111 @@ export class SimpleChart {
     });
   }
 
+  private getAnchoredVwapSeries(anchorIndex: number): Array<{ index: number; price: number }> {
+    const start = Math.max(0, Math.min(this.data.length - 1, Math.round(anchorIndex)));
+    if (!this.data.length || start >= this.data.length) return [];
+    const points: Array<{ index: number; price: number }> = [];
+    let cumulativePriceVolume = 0;
+    let cumulativeVolume = 0;
+    for (let i = start; i < this.data.length; i += 1) {
+      const candle = this.data[i];
+      const volume = Number(candle?.volume ?? 0);
+      if (!Number.isFinite(volume) || volume < 0) continue;
+      cumulativePriceVolume += ((candle.high + candle.low + candle.close) / 3) * volume;
+      cumulativeVolume += volume;
+      if (cumulativeVolume <= 0) continue;
+      points.push({
+        index: i,
+        price: cumulativePriceVolume / cumulativeVolume,
+      });
+    }
+    return points;
+  }
+
+  private getDefaultAnchoredVwapSettings(): AnchoredVwapSettings {
+    return {
+      source: 'hlc3',
+      bandMode: 'standard-deviation',
+      showLine: true,
+      showPriceLabels: true,
+      showBackground: true,
+      backgroundColor: '#22ab94',
+      backgroundOpacity: 14,
+      bands: [
+        { enabled: true, multiplier: 1, color: '#4caf50', visible: true },
+        { enabled: false, multiplier: 2, color: '#9a9800', visible: true },
+        { enabled: false, multiplier: 3, color: '#0f9488', visible: true },
+      ],
+    };
+  }
+
+  private cloneAnchoredVwapSettings(settings?: AnchoredVwapSettings | null): AnchoredVwapSettings {
+    const base = settings ?? this.getDefaultAnchoredVwapSettings();
+    return {
+      ...base,
+      bands: base.bands.map((band) => ({ ...band })) as AnchoredVwapSettings['bands'],
+    };
+  }
+
+  private getAnchoredVwapSourceValue(candle: CandleData, source: AnchoredVwapSource): number {
+    switch (source) {
+      case 'open': return candle.open;
+      case 'high': return candle.high;
+      case 'low': return candle.low;
+      case 'hl2': return (candle.high + candle.low) / 2;
+      case 'ohlc4': return (candle.open + candle.high + candle.low + candle.close) / 4;
+      case 'hlc3':
+      default:
+        return (candle.high + candle.low + candle.close) / 3;
+      case 'close':
+        return candle.close;
+    }
+  }
+
+  private getAnchoredVwapPlot(shape: DrawingShape): Array<{
+    index: number;
+    vwap: number;
+    stdDev: number;
+  }> {
+    const start = Math.max(0, Math.min(this.data.length - 1, Math.round(shape.a.index)));
+    if (!this.data.length || start >= this.data.length) return [];
+    const source = shape.avwap?.source ?? 'hlc3';
+    let weightedSum = 0;
+    let weightedSquareSum = 0;
+    let weightedVolume = 0;
+    const points: Array<{ index: number; vwap: number; stdDev: number }> = [];
+    for (let i = start; i < this.data.length; i += 1) {
+      const candle = this.data[i];
+      const volume = Number(candle?.volume ?? 0);
+      if (!Number.isFinite(volume) || volume < 0) continue;
+      const sourceValue = this.getAnchoredVwapSourceValue(candle, source);
+      weightedSum += sourceValue * volume;
+      weightedSquareSum += sourceValue * sourceValue * volume;
+      weightedVolume += volume;
+      if (weightedVolume <= 0) continue;
+      const vwap = weightedSum / weightedVolume;
+      const variance = Math.max(0, (weightedSquareSum / weightedVolume) - (vwap * vwap));
+      points.push({
+        index: i,
+        vwap,
+        stdDev: Math.sqrt(variance),
+      });
+    }
+    return points;
+  }
+
+  private createAnchoredVwapDrawing(anchor: DrawingAnchor): DrawingShape {
+    return {
+      id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      kind: 'anchored-vwap',
+      a: { index: Math.round(anchor.index), price: anchor.price },
+      color: '#2f6cff',
+      width: 1,
+      lineStyle: 'solid',
+      avwap: this.getDefaultAnchoredVwapSettings(),
+    };
+  }
+
   private calcIchimoku(tenkan: number, kijun: number, senkou: number) {
     const source = this.getIndicatorSourceData();
     const mid = (i: number, p: number) => {
@@ -5799,7 +5912,7 @@ export class SimpleChart {
       this.drawingToolbarBoundId = null;
       return;
     }
-    if (selected.kind === 'measure') {
+    if (selected.kind === 'measure' || selected.kind === 'anchored-vwap') {
       bar.style.display = 'none';
       if (this.drawingAlertPopupEl) this.drawingAlertPopupEl.style.display = 'none';
       this.drawingToolbarBoundId = null;
@@ -5868,6 +5981,305 @@ export class SimpleChart {
       lockBtn.style.color = selected.locked ? '#2f6cff' : '#1f2533';
     }
     if (hideBtn) hideBtn.style.color = selected.hidden ? '#2f6cff' : '#1f2533';
+  }
+
+  private ensureAnchoredVwapSettingsModal(): HTMLDivElement | null {
+    if (this.avwapSettingsModalEl) return this.avwapSettingsModalEl;
+    const host = this.canvas.parentElement;
+    if (!host) return null;
+    const overlay = document.createElement('div');
+    overlay.style.cssText = [
+      'position:absolute',
+      'inset:0',
+      'display:none',
+      'align-items:center',
+      'justify-content:center',
+      'z-index:2400',
+      'background:rgba(15,23,42,0.42)',
+      'backdrop-filter:blur(2px)',
+    ].join(';');
+    overlay.innerHTML = `
+      <div data-k="card" style="width:min(476px,calc(100vw - 24px));max-height:min(92vh,820px);display:flex;flex-direction:column;background:#ffffff;border-radius:14px;border:1px solid #d9dce3;box-shadow:0 28px 80px rgba(15,23,42,0.28);overflow:hidden;font-family:Segoe UI,Arial,sans-serif;color:#111827;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 24px 12px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="font-size:24px;font-weight:700;">Anchored VWAP</div>
+            <button type="button" data-k="rename" style="border:none;background:transparent;color:#6b7280;cursor:pointer;font-size:18px;line-height:1;">✎</button>
+          </div>
+          <button type="button" data-k="close" style="border:none;background:transparent;color:#111827;cursor:pointer;font-size:24px;line-height:1;">×</button>
+        </div>
+        <div style="padding:0 24px;">
+          <div style="display:flex;gap:24px;border-bottom:1px solid #eceff5;">
+            <button type="button" data-k="tab-input" style="padding:10px 0 12px;border:none;background:transparent;font-size:17px;font-weight:700;cursor:pointer;">입력</button>
+            <button type="button" data-k="tab-style" style="padding:10px 0 12px;border:none;background:transparent;font-size:17px;font-weight:700;cursor:pointer;color:#6b7280;">모습</button>
+            <button type="button" data-k="tab-visibility" style="padding:10px 0 12px;border:none;background:transparent;font-size:17px;font-weight:700;cursor:pointer;color:#6b7280;">보임</button>
+          </div>
+        </div>
+        <div data-k="body" style="padding:20px 24px 22px;overflow:auto;">
+          <div data-k="panel-input"></div>
+          <div data-k="panel-style" style="display:none;"></div>
+          <div data-k="panel-visibility" style="display:none;"></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-top:1px solid #eceff5;background:#ffffff;">
+          <select data-k="template" style="height:42px;min-width:120px;border:1px solid #d1d5db;border-radius:10px;padding:0 12px;background:#fff;font-size:14px;">
+            <option>템플릿</option>
+          </select>
+          <div style="display:flex;gap:12px;">
+            <button type="button" data-k="cancel" style="height:42px;padding:0 22px;border:1px solid #111827;border-radius:10px;background:#fff;color:#111827;font-size:15px;font-weight:700;cursor:pointer;">취소</button>
+            <button type="button" data-k="confirm" style="height:42px;padding:0 22px;border:none;border-radius:10px;background:#111111;color:#ffffff;font-size:15px;font-weight:700;cursor:pointer;">확인</button>
+          </div>
+        </div>
+      </div>
+    `;
+    host.appendChild(overlay);
+    this.avwapSettingsModalEl = overlay;
+    return overlay;
+  }
+
+  private closeAnchoredVwapSettingsModal(applyChanges: boolean): void {
+    const overlay = this.avwapSettingsModalEl;
+    if (!overlay) return;
+    const draftInput = overlay.querySelector('input[data-k="draft"]') as HTMLInputElement | null;
+    const draftColorInput = overlay.querySelector('input[data-k="draft-shape-color"]') as HTMLInputElement | null;
+    const draftWidthInput = overlay.querySelector('input[data-k="draft-shape-width"]') as HTMLInputElement | null;
+    const draftHiddenInput = overlay.querySelector('input[data-k="draft-shape-hidden"]') as HTMLInputElement | null;
+    const draftLockedInput = overlay.querySelector('input[data-k="draft-shape-locked"]') as HTMLInputElement | null;
+    if (applyChanges && this.avwapSettingsEditingShapeId && draftInput) {
+      const shape = this.drawings.find((item) => item.id === this.avwapSettingsEditingShapeId && item.kind === 'anchored-vwap');
+      if (shape) {
+        try {
+          const parsed = JSON.parse(draftInput.value) as AnchoredVwapSettings;
+          shape.avwap = this.cloneAnchoredVwapSettings(parsed);
+          if (draftColorInput?.value) shape.color = draftColorInput.value;
+          if (draftWidthInput?.value) shape.width = Math.max(1, Math.min(6, Number(draftWidthInput.value)));
+          if (draftHiddenInput) shape.hidden = draftHiddenInput.value === 'true';
+          if (draftLockedInput) shape.locked = draftLockedInput.value === 'true';
+          this.upsertDrawing(shape);
+          this.requestOverlayDraw();
+        } catch {
+          // Ignore malformed draft state and keep the previous settings.
+        }
+      }
+    }
+    overlay.style.display = 'none';
+    this.avwapSettingsEditingShapeId = null;
+  }
+
+  private openAnchoredVwapSettingsModal(shape: DrawingShape): void {
+    if (shape.kind !== 'anchored-vwap') return;
+    const overlay = this.ensureAnchoredVwapSettingsModal();
+    if (!overlay) return;
+    const q = <T extends HTMLElement>(key: string) => overlay.querySelector<T>(`[data-k="${key}"]`);
+    const inputPanel = q<HTMLDivElement>('panel-input');
+    const stylePanel = q<HTMLDivElement>('panel-style');
+    const visibilityPanel = q<HTMLDivElement>('panel-visibility');
+    const tabButtons = {
+      input: q<HTMLButtonElement>('tab-input'),
+      style: q<HTMLButtonElement>('tab-style'),
+      visibility: q<HTMLButtonElement>('tab-visibility'),
+    };
+    if (!inputPanel || !stylePanel || !visibilityPanel || !tabButtons.input || !tabButtons.style || !tabButtons.visibility) return;
+    this.avwapSettingsEditingShapeId = shape.id;
+    const draftState = this.cloneAnchoredVwapSettings(shape.avwap);
+    let draftInput = q<HTMLInputElement>('draft');
+    if (!draftInput) {
+      draftInput = document.createElement('input');
+      draftInput.type = 'hidden';
+      draftInput.dataset.k = 'draft';
+      overlay.appendChild(draftInput);
+    }
+    const ensureHidden = (key: string, value: string) => {
+      let input = q<HTMLInputElement>(key);
+      if (!input) {
+        input = document.createElement('input');
+        input.type = 'hidden';
+        input.dataset.k = key;
+        overlay.appendChild(input);
+      }
+      input.value = value;
+      return input;
+    };
+    const draftShapeColor = ensureHidden('draft-shape-color', shape.color ?? '#2f6cff');
+    const draftShapeWidth = ensureHidden('draft-shape-width', String(Math.max(1, Math.min(6, Math.round(shape.width ?? 1)))));
+    const draftShapeHidden = ensureHidden('draft-shape-hidden', String(Boolean(shape.hidden)));
+    const draftShapeLocked = ensureHidden('draft-shape-locked', String(Boolean(shape.locked)));
+    const readDraft = (): AnchoredVwapSettings => {
+      try {
+        return this.cloneAnchoredVwapSettings(JSON.parse(draftInput!.value) as AnchoredVwapSettings);
+      } catch {
+        return this.cloneAnchoredVwapSettings(shape.avwap);
+      }
+    };
+    const writeDraft = (next: AnchoredVwapSettings) => {
+      draftInput!.value = JSON.stringify(next);
+    };
+    writeDraft(draftState);
+
+    const sourceOptions: Array<{ value: AnchoredVwapSource; label: string }> = [
+      { value: 'hlc3', label: '(고 + 저 + 종) / 3' },
+      { value: 'ohlc4', label: '(시 + 고 + 저 + 종) / 4' },
+      { value: 'hl2', label: '(고 + 저) / 2' },
+      { value: 'close', label: '종가' },
+      { value: 'open', label: '시가' },
+      { value: 'high', label: '고가' },
+      { value: 'low', label: '저가' },
+    ];
+    const rowStyle = 'display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;';
+    const sectionLabelStyle = 'font-size:13px;font-weight:700;color:#4b5563;margin:16px 0 14px;';
+    const fieldStyle = 'height:42px;border:1px solid #d1d5db;border-radius:10px;background:#fff;padding:0 12px;font-size:14px;color:#111827;';
+    const colorField = (value: string) => `<input type="color" value="${value}" style="width:44px;height:36px;border:none;background:transparent;cursor:pointer;padding:0;">`;
+    const toggleRow = (key: string, label: string, checked: boolean, right: string) => `
+      <label style="${rowStyle}">
+        <span style="display:flex;align-items:center;gap:12px;font-size:15px;color:#111827;">
+          <input data-k="${key}" type="checkbox" ${checked ? 'checked' : ''} style="width:20px;height:20px;">
+          <span>${label}</span>
+        </span>
+        ${right}
+      </label>
+    `;
+    const renderPanels = () => {
+      const draft = readDraft();
+      inputPanel.innerHTML = `
+        <div style="${sectionLabelStyle}">밴드 설정</div>
+        <div style="${rowStyle}">
+          <span style="font-size:15px;color:#111827;">밴드 계산 방식</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <select data-k="band-mode" style="${fieldStyle};width:158px;">
+              <option value="standard-deviation" selected>표준 편차</option>
+            </select>
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#e5e7eb;color:#6b7280;font-size:12px;">i</span>
+          </div>
+        </div>
+        ${draft.bands.map((band, index) => `
+          <div style="${rowStyle}">
+            <label style="display:flex;align-items:center;gap:12px;font-size:15px;color:#111827;">
+              <input data-k="band-enabled-${index}" type="checkbox" ${band.enabled ? 'checked' : ''} style="width:20px;height:20px;">
+              <span>밴드 배수 #${index + 1}</span>
+            </label>
+            <input data-k="band-multiplier-${index}" type="number" step="0.1" min="0" value="${band.multiplier}" style="${fieldStyle};width:128px;">
+          </div>
+        `).join('')}
+        <div style="${sectionLabelStyle};margin-top:26px;">소스</div>
+        <div style="${rowStyle}">
+          <span style="font-size:15px;color:#111827;">소스</span>
+          <select data-k="source" style="${fieldStyle};width:180px;">
+            ${sourceOptions.map((option) => `<option value="${option.value}" ${draft.source === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}
+          </select>
+        </div>
+      `;
+      stylePanel.innerHTML = `
+        ${toggleRow('show-line', '브이왑', draft.showLine, `<div style="display:flex;align-items:center;gap:8px;">${colorField(shape.color ?? '#2f6cff')}</div>`)}
+        ${draft.bands.map((band, index) => toggleRow(`band-visible-${index}`, index === 0 ? '로우어 밴드 / 어퍼 밴드' : index === 1 ? '밴드 #2' : '밴드 #3', band.visible, `<div style="display:flex;align-items:center;gap:8px;">${colorField(band.color)}</div>`)).join('')}
+        ${toggleRow('show-background', '백그라운드 채우기', draft.showBackground, `<div style="display:flex;align-items:center;gap:8px;">${colorField(draft.backgroundColor)}<input data-k="background-opacity" type="number" min="0" max="100" step="1" value="${draft.backgroundOpacity}" style="${fieldStyle};width:76px;"></div>`)}
+        ${toggleRow('show-price-labels', '가격라벨', draft.showPriceLabels, '<span></span>')}
+        <div style="${rowStyle}">
+          <span style="font-size:15px;color:#111827;">선 두께</span>
+          <input data-k="line-width" type="number" min="1" max="6" step="1" value="${draftShapeWidth.value}" style="${fieldStyle};width:90px;">
+        </div>
+      `;
+      visibilityPanel.innerHTML = `
+        ${toggleRow('shape-hidden', '도형 표시', draftShapeHidden.value !== 'true', '<span></span>')}
+        ${toggleRow('shape-lock', '앵커 잠금', draftShapeLocked.value === 'true', '<span></span>')}
+        <div style="padding-top:12px;color:#6b7280;font-size:13px;line-height:1.5;">
+          앵커를 더블 클릭하면 이 설정 창이 다시 열립니다.
+        </div>
+      `;
+
+      const sourceSelect = q<HTMLSelectElement>('source');
+      sourceSelect?.addEventListener('change', () => {
+        const next = readDraft();
+        next.source = (sourceSelect.value as AnchoredVwapSource) ?? 'hlc3';
+        writeDraft(next);
+      });
+      draft.bands.forEach((_, index) => {
+        const enabled = q<HTMLInputElement>(`band-enabled-${index}`);
+        const mult = q<HTMLInputElement>(`band-multiplier-${index}`);
+        const visible = q<HTMLInputElement>(`band-visible-${index}`);
+        const color = stylePanel.querySelectorAll('input[type="color"]')[index + 1] as HTMLInputElement | undefined;
+        enabled?.addEventListener('change', () => {
+          const next = readDraft();
+          next.bands[index].enabled = enabled.checked;
+          writeDraft(next);
+        });
+        mult?.addEventListener('input', () => {
+          const next = readDraft();
+          next.bands[index].multiplier = Math.max(0, Number(mult.value || next.bands[index].multiplier || 0));
+          writeDraft(next);
+        });
+        visible?.addEventListener('change', () => {
+          const next = readDraft();
+          next.bands[index].visible = visible.checked;
+          writeDraft(next);
+        });
+        color?.addEventListener('input', () => {
+          const next = readDraft();
+          next.bands[index].color = color.value;
+          writeDraft(next);
+        });
+      });
+      const lineColor = stylePanel.querySelector('input[type="color"]') as HTMLInputElement | null;
+      lineColor?.addEventListener('input', () => {
+        draftShapeColor.value = lineColor.value;
+      });
+      q<HTMLInputElement>('show-line')?.addEventListener('change', () => {
+        const next = readDraft();
+        next.showLine = q<HTMLInputElement>('show-line')?.checked !== false;
+        writeDraft(next);
+      });
+      q<HTMLInputElement>('show-background')?.addEventListener('change', () => {
+        const next = readDraft();
+        next.showBackground = q<HTMLInputElement>('show-background')?.checked !== false;
+        writeDraft(next);
+      });
+      q<HTMLInputElement>('show-price-labels')?.addEventListener('change', () => {
+        const next = readDraft();
+        next.showPriceLabels = q<HTMLInputElement>('show-price-labels')?.checked !== false;
+        writeDraft(next);
+      });
+      q<HTMLInputElement>('background-opacity')?.addEventListener('input', () => {
+        const next = readDraft();
+        next.backgroundOpacity = Math.max(0, Math.min(100, Number(q<HTMLInputElement>('background-opacity')?.value || next.backgroundOpacity)));
+        writeDraft(next);
+      });
+      const bgColorInputs = stylePanel.querySelectorAll('input[type="color"]');
+      const bgColorInput = bgColorInputs[bgColorInputs.length - 1] as HTMLInputElement | undefined;
+      bgColorInput?.addEventListener('input', () => {
+        const next = readDraft();
+        next.backgroundColor = bgColorInput.value;
+        writeDraft(next);
+      });
+      q<HTMLInputElement>('line-width')?.addEventListener('input', () => {
+        draftShapeWidth.value = String(Math.max(1, Math.min(6, Number(q<HTMLInputElement>('line-width')?.value || draftShapeWidth.value || 2))));
+      });
+      q<HTMLInputElement>('shape-hidden')?.addEventListener('change', () => {
+        draftShapeHidden.value = String(!(q<HTMLInputElement>('shape-hidden')?.checked ?? true));
+      });
+      q<HTMLInputElement>('shape-lock')?.addEventListener('change', () => {
+        draftShapeLocked.value = String(q<HTMLInputElement>('shape-lock')?.checked === true);
+      });
+    };
+    renderPanels();
+
+    const setActiveTab = (tab: 'input' | 'style' | 'visibility') => {
+      inputPanel.style.display = tab === 'input' ? 'block' : 'none';
+      stylePanel.style.display = tab === 'style' ? 'block' : 'none';
+      visibilityPanel.style.display = tab === 'visibility' ? 'block' : 'none';
+      (Object.entries(tabButtons) as Array<[typeof tab, HTMLButtonElement]>).forEach(([key, btn]) => {
+        btn.style.color = key === tab ? '#111827' : '#6b7280';
+        btn.style.borderBottom = key === tab ? '3px solid #111827' : '3px solid transparent';
+      });
+    };
+    setActiveTab('input');
+    tabButtons.input.onclick = () => setActiveTab('input');
+    tabButtons.style.onclick = () => setActiveTab('style');
+    tabButtons.visibility.onclick = () => setActiveTab('visibility');
+
+    q<HTMLButtonElement>('close')!.onclick = () => this.closeAnchoredVwapSettingsModal(false);
+    q<HTMLButtonElement>('cancel')!.onclick = () => this.closeAnchoredVwapSettingsModal(false);
+    q<HTMLButtonElement>('confirm')!.onclick = () => this.closeAnchoredVwapSettingsModal(true);
+    overlay.onclick = (event) => {
+      if (event.target === overlay) this.closeAnchoredVwapSettingsModal(false);
+    };
+    overlay.style.display = 'flex';
   }
 
   private getMainViewportMetrics() {
@@ -6211,6 +6623,30 @@ export class SimpleChart {
       if (Math.abs(my - ay) <= 9) return 'line';
       return Math.abs(my - ay) <= 16 ? 'body' : null;
     }
+    if (shape.kind === 'anchored-vwap') {
+      const avwapPlot = this.getAnchoredVwapPlot(shape);
+      if (!avwapPlot.length) return null;
+      const anchorPoint = avwapPlot[0] ?? null;
+      const anchorY = anchorPoint ? metrics.getY(anchorPoint.vwap) : ay;
+      if (Math.hypot(mx - ax, my - anchorY) <= anchorHitPad) return 'start';
+      const lineHitPad = isCoarsePointer ? 18 : 10;
+      for (let i = 0; i < avwapPlot.length - 1; i += 1) {
+        const p1 = avwapPlot[i];
+        const p2 = avwapPlot[i + 1];
+        const x1 = this.xForIndex(p1.index, metrics.totalSp, metrics.candleW);
+        const y1 = metrics.getY(p1.vwap);
+        const x2 = this.xForIndex(p2.index, metrics.totalSp, metrics.candleW);
+        const y2 = metrics.getY(p2.vwap);
+        if (this.pointToSegmentDistance(mx, my, x1, y1, x2, y2) <= lineHitPad) return 'line';
+      }
+      const xs = avwapPlot.map((point) => this.xForIndex(point.index, metrics.totalSp, metrics.candleW));
+      const ys = avwapPlot.map((point) => metrics.getY(point.vwap));
+      const left = Math.min(...xs) - pad;
+      const right = Math.max(...xs) + pad;
+      const top = Math.min(...ys) - pad;
+      const bottom = Math.max(...ys) + pad;
+      return (mx >= left && mx <= right && my >= top && my <= bottom) ? 'body' : null;
+    }
     if (shape.kind === 'draw-pencil' || shape.kind === 'draw-highlighter') {
       const points = shape.points ?? [shape.a, shape.b ?? shape.a];
       const pxy = points.map((p) => ({
@@ -6465,6 +6901,15 @@ export class SimpleChart {
         };
       }
     }
+    if (base.kind === 'anchored-vwap') {
+      if (part === 'start' || part === 'line' || part === 'body') {
+        return {
+          ...this.cloneShape(base),
+          a: moveAnchor(base.a),
+          b: undefined,
+        };
+      }
+    }
     if (base.kind === 'fib-retracement' || base.kind === 'fib-trend') {
       const next = this.cloneShape(base);
       if (part === 'start') {
@@ -6709,6 +7154,8 @@ export class SimpleChart {
       // position: 전용 앵커 핸들이 있으므로 노란 점선 박스 불필요
     } else if (shape.kind === 'fib-retracement' || shape.kind === 'fib-trend') {
       // 피보나치: 레벨선·수치값이 이미 표시되므로 노란 점선 박스 불필요
+    } else if (shape.kind === 'anchored-vwap') {
+      // anchored VWAP: 곡선과 시작 앵커만 사용
     } else if (shape.kind === 'draw-box') {
       // 박스: 전용 앵커 핸들 표시를 사용
     } else if (shape.kind === 'draw-pencil' || shape.kind === 'draw-highlighter') {
@@ -6720,6 +7167,7 @@ export class SimpleChart {
     if (shape.kind !== 'trendline' && shape.kind !== 'hline' && shape.kind !== 'measure'
         && shape.kind !== 'long-position' && shape.kind !== 'short-position'
         && shape.kind !== 'fib-retracement' && shape.kind !== 'fib-trend'
+        && shape.kind !== 'anchored-vwap'
         && shape.kind !== 'draw-box'
         && shape.kind !== 'draw-pencil' && shape.kind !== 'draw-highlighter') {
       ctx.fillStyle = '#ffe08a';
@@ -6759,8 +7207,135 @@ export class SimpleChart {
       ctx.setLineDash(dash);
       ctx.globalAlpha = alpha;
     };
+    const shouldClipToChart = shape.kind !== 'hline' && shape.kind !== 'anchored-vwap';
+    if (shouldClipToChart) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(
+        metrics.chartLeft,
+        metrics.top,
+        Math.max(1, metrics.chartRight - metrics.chartLeft),
+        Math.max(1, metrics.mainH - metrics.top),
+      );
+      ctx.clip();
+    }
 
     switch (shape.kind) {
+      case 'anchored-vwap': {
+        const avwapShape = shape as DrawingShape;
+        const avwapSettings = this.cloneAnchoredVwapSettings(avwapShape.avwap);
+        const avwapPlot = this.getAnchoredVwapPlot(avwapShape);
+        if (!avwapPlot.length) break;
+        const drawSeries = (series: Array<{ x: number; y: number }>, color: string, width: number, dash: number[]) => {
+          if (!series.length) return;
+          setStroke(color, width, dash);
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(series[0].x, series[0].y);
+          for (let i = 1; i < series.length; i += 1) {
+            ctx.lineTo(series[i].x, series[i].y);
+          }
+          ctx.stroke();
+        };
+        const xSeries = avwapPlot.map((point) => this.xForIndex(point.index, metrics.totalSp, metrics.candleW));
+        const centerSeries = avwapPlot.map((point, index) => ({
+          x: xSeries[index],
+          y: metrics.getY(point.vwap),
+        }));
+        const bandSeries = avwapSettings.bands.map((band) => avwapPlot.map((point, index) => ({
+          x: xSeries[index],
+          upperY: metrics.getY(point.vwap + (point.stdDev * band.multiplier)),
+          lowerY: metrics.getY(point.vwap - (point.stdDev * band.multiplier)),
+        })));
+
+        const firstEnabledBandIndex = avwapSettings.bands.findIndex((band) => band.enabled && band.visible);
+        if (avwapSettings.showBackground && firstEnabledBandIndex >= 0) {
+          const fillSeries = bandSeries[firstEnabledBandIndex];
+          if (fillSeries.length > 1) {
+            ctx.save();
+            ctx.globalAlpha = alpha * (avwapSettings.backgroundOpacity / 100);
+            ctx.fillStyle = avwapSettings.backgroundColor;
+            ctx.beginPath();
+            ctx.moveTo(fillSeries[0].x, fillSeries[0].upperY);
+            for (let i = 1; i < fillSeries.length; i += 1) {
+              ctx.lineTo(fillSeries[i].x, fillSeries[i].upperY);
+            }
+            for (let i = fillSeries.length - 1; i >= 0; i -= 1) {
+              ctx.lineTo(fillSeries[i].x, fillSeries[i].lowerY);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        avwapSettings.bands.forEach((band, bandIndex) => {
+          if (!band.enabled || !band.visible) return;
+          const series = bandSeries[bandIndex];
+          drawSeries(series.map((point) => ({ x: point.x, y: point.lowerY })), band.color, Math.max(1, strokeWidth * 0.9), dashByStyle[lineStyle]);
+          drawSeries(series.map((point) => ({ x: point.x, y: point.upperY })), band.color, Math.max(1, strokeWidth * 0.9), dashByStyle[lineStyle]);
+        });
+
+        if (avwapSettings.showLine) {
+          drawSeries(centerSeries, strokeColor, strokeWidth, dashByStyle[lineStyle]);
+        }
+
+        if (avwapSettings.showPriceLabels) {
+          const lastCenter = avwapPlot[avwapPlot.length - 1];
+          const labelItems: Array<{ y: number; color: string; value: number }> = [];
+          if (avwapSettings.showLine && lastCenter) {
+            labelItems.push({ y: metrics.getY(lastCenter.vwap), color: strokeColor, value: lastCenter.vwap });
+          }
+          avwapSettings.bands.forEach((band, bandIndex) => {
+            if (!band.enabled || !band.visible || !lastCenter) return;
+            const delta = lastCenter.stdDev * band.multiplier;
+            labelItems.push({ y: metrics.getY(lastCenter.vwap - delta), color: band.color, value: lastCenter.vwap - delta });
+            labelItems.push({ y: metrics.getY(lastCenter.vwap + delta), color: band.color, value: lastCenter.vwap + delta });
+          });
+          labelItems.forEach((item) => {
+            const boxW = Math.max(20, metrics.axisPad - 2);
+            const boxX = metrics.axisSide === 'left' ? 2 : metrics.chartRight;
+            const boxH = 18;
+            ctx.save();
+            ctx.setLineDash([]);
+            ctx.fillStyle = item.color;
+            drawPriceArrowBox(ctx, boxX, item.y, boxW, boxH, metrics.axisSide, 5);
+            ctx.fill();
+            ctx.fillStyle = getContrastTextColor(item.color);
+            ctx.font = `700 11px ${CHART_FONT_STACK}`;
+            const anchorPos = getPriceArrowTextAnchor(boxX, boxW, metrics.axisSide, 5);
+            ctx.textAlign = anchorPos.align;
+            ctx.textBaseline = 'middle';
+            ctx.fillText(
+              formatWithComma(item.value, getSymbolPricePrecision(this.config.symbol, this.config.quoteCurrency)),
+              anchorPos.x,
+              item.y,
+            );
+            ctx.restore();
+          });
+        }
+
+        if (!isDraft) {
+          const shapeId = ('id' in shape) ? shape.id : null;
+          const showHandles = shapeId != null && (shapeId === this.selectedDrawingId || shapeId === this.hoveredDrawingId);
+          if (showHandles) {
+            const anchorPoint = avwapPlot[0] ?? null;
+            const anchorY = anchorPoint ? metrics.getY(anchorPoint.vwap) : ay;
+            ctx.save();
+            ctx.setLineDash([]);
+            ctx.strokeStyle = strokeColor;
+            ctx.fillStyle = '#0f172a';
+            ctx.lineWidth = Math.max(1.2, strokeWidth);
+            ctx.beginPath();
+            ctx.arc(ax, anchorY, 7.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+        break;
+      }
       case 'trendline':
       case 'draw-pencil':
       case 'draw-highlighter': {
@@ -7555,6 +8130,9 @@ export class SimpleChart {
       default:
         break;
     }
+    if (shouldClipToChart) {
+      ctx.restore();
+    }
     ctx.setLineDash([]);
     ctx.globalAlpha = 1;
   }
@@ -7632,7 +8210,21 @@ export class SimpleChart {
       this.drawings.forEach((shape) => {
         this.drawDrawingShape(ctx, shape, false, drawingMetrics);
         if (shape.id === this.selectedDrawingId) {
-          this.drawSelectionOverlay(ctx, shape, drawingMetrics);
+          if (shape.kind === 'hline' || shape.kind === 'anchored-vwap') {
+            this.drawSelectionOverlay(ctx, shape, drawingMetrics);
+          } else {
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(
+              drawingMetrics.chartLeft,
+              drawingMetrics.top,
+              Math.max(1, drawingMetrics.chartRight - drawingMetrics.chartLeft),
+              Math.max(1, drawingMetrics.mainH - drawingMetrics.top),
+            );
+            ctx.clip();
+            this.drawSelectionOverlay(ctx, shape, drawingMetrics);
+            ctx.restore();
+          }
         }
       });
       if (this.drawingDraft) {
@@ -8686,6 +9278,21 @@ export class SimpleChart {
     const hitDrawing = this.findDrawingAt(this.mouseX, this.mouseY);
     if (
       hitDrawing
+      && hitDrawing.shape.kind === 'anchored-vwap'
+      && hitDrawing.part === 'start'
+      && e.detail >= 2
+    ) {
+      this.selectedDrawingId = hitDrawing.shape.id;
+      this.selectedDrawingPart = 'start';
+      this.drawingMoveState = null;
+      this.syncDrawingToolbar();
+      this.openAnchoredVwapSettingsModal(hitDrawing.shape);
+      this.requestOverlayDraw();
+      this.updateChartCursor();
+      return;
+    }
+    if (
+      hitDrawing
       && (hitDrawing.shape.kind === 'long-position' || hitDrawing.shape.kind === 'short-position')
       && hitDrawing.part === 'position-entry-info'
       && e.detail >= 2
@@ -9017,6 +9624,16 @@ export class SimpleChart {
         this.upsertDrawing(created);
         this.selectedDrawingId = created.id;
         this.selectedDrawingPart = 'line';
+        this.syncDrawingToolbar();
+        this.requestOverlayDraw();
+        if (this.shouldAutoDisarmAfterCreate(created.kind)) this.setDrawingTool(null);
+        return;
+      }
+      if (this.drawingTool === 'anchored-vwap') {
+        const created = this.createAnchoredVwapDrawing(anchor);
+        this.upsertDrawing(created);
+        this.selectedDrawingId = created.id;
+        this.selectedDrawingPart = 'start';
         this.syncDrawingToolbar();
         this.requestOverlayDraw();
         if (this.shouldAutoDisarmAfterCreate(created.kind)) this.setDrawingTool(null);
@@ -9520,6 +10137,11 @@ export class SimpleChart {
           return;
         }
 
+        if (this.drawingTool === 'anchored-vwap') {
+          this.requestOverlayDraw();
+          return;
+        }
+
         // ── fib-trend: 십자선 이동만, 앵커 확정은 touchEnd ─────────────────
         if (this.drawingTool === 'fib-trend') {
           this.requestOverlayDraw();
@@ -9837,6 +10459,23 @@ export class SimpleChart {
         this.isCrosshairMode = false;
         this.setDrawingTool(null);
         this.showPositionGuide(1, isLong ? 'long-position' : 'short-position');
+        this.requestOverlayDraw();
+        return;
+      }
+
+      if (this.drawingTool === 'anchored-vwap') {
+        const useX = this.touchDrawingCrosshairX || tx;
+        const useY = this.touchDrawingCrosshairY || ty;
+        const anchor = this.getMouseAnchor(useX, useY);
+        if (!anchor) { this.requestOverlayDraw(); return; }
+        const created = this.createAnchoredVwapDrawing(anchor);
+        this.upsertDrawing(created);
+        this.selectedDrawingId = created.id;
+        this.selectedDrawingPart = 'start';
+        this.syncDrawingToolbar();
+        this.drawingDraft = null;
+        this.isCrosshairMode = false;
+        this.setDrawingTool(null);
         this.requestOverlayDraw();
         return;
       }
