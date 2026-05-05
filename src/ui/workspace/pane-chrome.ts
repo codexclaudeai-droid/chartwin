@@ -230,15 +230,15 @@ export function createPaneChrome<TKey extends string>({
   const marketPriceWrap = document.createElement('div');
   marketPriceWrap.style.cssText = 'display:flex;align-items:center;gap:0;min-width:0;flex-shrink:0;width:146px;justify-content:flex-start;';
   const symPriceLabel = document.createElement('span');
-  symPriceLabel.style.cssText = 'font-size:15px;font-weight:800;color:#9aa7c1;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;flex-shrink:0;margin-right:4px;';
+  symPriceLabel.style.cssText = "font-size:15px;font-weight:600;color:#9aa7c1;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;font-family:-apple-system,BlinkMacSystemFont,'Trebuchet MS',Roboto,Ubuntu,sans-serif;flex-shrink:0;margin-right:4px;";
   symPriceLabel.textContent = '--';
   const symChangeWrap = document.createElement('span');
   symChangeWrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1;gap:1px;width:58px;flex-shrink:0;';
   const symChangeMetaLabel = document.createElement('span');
-  symChangeMetaLabel.style.cssText = 'font-size:9px;color:#7f889a;font-weight:600;line-height:1;';
+  symChangeMetaLabel.style.cssText = "font-size:9px;color:#7f889a;font-weight:500;line-height:1;font-family:-apple-system,BlinkMacSystemFont,'Trebuchet MS',Roboto,Ubuntu,sans-serif;";
   symChangeMetaLabel.textContent = '24h';
   const symChangeLabel = document.createElement('span');
-  symChangeLabel.style.cssText = 'font-size:13px;font-weight:800;color:#9aa7c1;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;';
+  symChangeLabel.style.cssText = "font-size:12px;font-weight:500;color:#9aa7c1;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;font-family:-apple-system,BlinkMacSystemFont,'Trebuchet MS',Roboto,Ubuntu,sans-serif;";
   symChangeLabel.textContent = '--';
   symChangeWrap.appendChild(symChangeMetaLabel);
   symChangeWrap.appendChild(symChangeLabel);

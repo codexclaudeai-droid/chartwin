@@ -76,7 +76,7 @@ type DrawingMagnetMode = 'off' | 'soft' | 'strong';
 
 export const X_AXIS_HEIGHT = 22;
 const MAX_CANVAS_PIXEL_RATIO = 3;
-const CHART_FONT_STACK = `'Segoe UI Variable Text','Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif`;
+const CHART_FONT_STACK = `-apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif`;
 const CHART_TEXT_PRIMARY = '#e3e8f2';
 const CHART_TEXT_SECONDARY = '#c2ccdf';
 const CHART_TEXT_MUTED = '#b3bfd4';
@@ -4199,7 +4199,7 @@ export class SimpleChart {
       let quickMax = -Infinity;
       quickVis.forEach(d => { quickMax = Math.max(quickMax, d.high); });
       if (isFinite(quickMax)) {
-        ctx.font = `600 13px ${CHART_FONT_STACK}`;
+        ctx.font = `400 11px ${CHART_FONT_STACK}`;
         const measured = ctx.measureText(formatWithComma(quickMax, symbolPriceDigits)).width;
         const minRef = ctx.measureText(formatWithComma(99.99, 2)).width;
         dynamicAxisPad = Math.max(44, Math.ceil(Math.max(measured, minRef) + 16));
@@ -4586,7 +4586,7 @@ export class SimpleChart {
     // 1) 메인 가로 격자/가격축
     ctx.save();
     ctx.strokeStyle = '#1e2230'; ctx.fillStyle = CHART_TEXT_SECONDARY;
-    ctx.font = `600 13px ${CHART_FONT_STACK}`;
+    ctx.font = `400 11px ${CHART_FONT_STACK}`;
     ctx.textAlign = 'center';
     const axisDigits = Math.max(0, Math.ceil(-Math.log10(mainAxisStep)) + 2);
     const tickCount = Math.max(1, Math.floor((maxP - minP) / mainAxisStep) + 1);
@@ -5157,7 +5157,7 @@ export class SimpleChart {
       ctx.lineTo(geometry.axisPad - 0.5, mainH);
       ctx.stroke();
       ctx.fillStyle = CHART_TEXT_SECONDARY;
-      ctx.font = `600 13px ${CHART_FONT_STACK}`;
+      ctx.font = `400 11px ${CHART_FONT_STACK}`;
       ctx.textAlign = 'right';
       const axisDigits = Math.max(0, Math.ceil(-Math.log10(mainAxisStep)) + 2);
       const tickCount = Math.max(1, Math.floor((maxP - minP) / mainAxisStep) + 1);
@@ -5184,7 +5184,7 @@ export class SimpleChart {
 
     // X축 시간 + 세로 격자 (동적 간격)
     ctx.save();
-    ctx.fillStyle = CHART_TEXT_MUTED; ctx.font = `12px ${CHART_FONT_STACK}`; ctx.textAlign = 'center';
+    ctx.fillStyle = CHART_TEXT_MUTED; ctx.font = `11px ${CHART_FONT_STACK}`; ctx.textAlign = 'center';
     let nextRightBoundary = Number.POSITIVE_INFINITY;
     const labelGap = 10;
     for (let ti = tickIndices.length - 1; ti >= 0; ti -= 1) {
@@ -7585,7 +7585,7 @@ export class SimpleChart {
           ctx.fill();
           ctx.fillStyle = getContrastTextColor(boxColor);
           const priceTextAnchor = getPriceArrowTextAnchor(priceBoxX, priceBoxW, geometry.side, 5);
-          ctx.font = `600 13px ${CHART_FONT_STACK}`; ctx.textAlign = priceTextAnchor.align;
+          ctx.font = `500 11px ${CHART_FONT_STACK}`; ctx.textAlign = priceTextAnchor.align;
           ctx.fillText(formatWithComma(last, symbolPriceDigits), priceTextAnchor.x, py + 4);
         }
       }
@@ -7870,7 +7870,7 @@ export class SimpleChart {
       const c = this.data[snappedCandleIndex];
       const label = formatCrosshairTimelineLabel(c.time, this.config.timezone);
       ctx.save();
-      ctx.font = `12px ${CHART_FONT_STACK}`;
+      ctx.font = `11px ${CHART_FONT_STACK}`;
       const boxW = Math.ceil(ctx.measureText(label).width) + 16;
       const boxH = X_AXIS_HEIGHT;
       const boxX = Math.min(Math.max(chartLeft + 2, solidX - boxW / 2), chartRight - boxW - 2);
@@ -7968,7 +7968,7 @@ export class SimpleChart {
       ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
       ctx.stroke();
       const crossTextAnchor = getPriceArrowTextAnchor(priceBoxX, priceBoxW, geometry.side, 5);
-      ctx.fillStyle = CHART_TEXT_PRIMARY; ctx.font = `600 13px ${CHART_FONT_STACK}`; ctx.textAlign = crossTextAnchor.align;
+      ctx.fillStyle = CHART_TEXT_PRIMARY; ctx.font = `500 11px ${CHART_FONT_STACK}`; ctx.textAlign = crossTextAnchor.align;
       ctx.fillText(formatWithComma(price, symbolPriceDigits), crossTextAnchor.x, this.mouseY + 4);
 
       // 가격박스 왼쪽 원형 + 아이콘 (클릭 시 수평선 생성)
