@@ -30,6 +30,7 @@ import {
   type StrategyDefinition,
   type StrategySignal,
 } from '../strategy/strategy-service';
+import { GRID_ATR_BNF_SROUTER_PRESETS, inferGridAtrBnfSrouterPreset } from '../strategy/strategies/grid-atr-bnf-srouter-v1';
 import {
   openChartSettingsModal,
   openIndicatorModal,
@@ -454,6 +455,22 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     } catch {
       // ignore
     }
+  };
+  const syncSrouterPresetForSymbol = (chart: {
+    getActiveStrategyId?: () => string | null;
+    getStrategyParams?: (strategyId?: string | null) => Record<string, string | number | boolean>;
+    setStrategyParams?: (strategyId: string, patch: Record<string, string | number | boolean>) => void;
+  }, symbol: string): void => {
+    const strategyId = chart.getActiveStrategyId?.();
+    if (strategyId !== 'strategy_js_grid_atr_bnf_srouter_v1') return;
+    const currentParams = chart.getStrategyParams?.(strategyId) ?? {};
+    const presetMode = String(currentParams.presetSymbol ?? 'AUTO').toUpperCase();
+    if (presetMode === 'CUSTOM') return;
+    const inferredPreset = inferGridAtrBnfSrouterPreset(symbol);
+    chart.setStrategyParams?.(strategyId, {
+      presetSymbol: 'AUTO',
+      ...GRID_ATR_BNF_SROUTER_PRESETS[inferredPreset],
+    });
   };
   const loadQuoteCurrencyStore = (): PersistedQuoteCurrencyStore => {
     try {
@@ -1263,6 +1280,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           // ? config.symbol 먼저 갱신 → binanceFeed.reload()가 올바른 심볼로 연결
           const canonical = canonicalizeUiSymbol(selectedSymbol);
           chart.config.symbol = canonical;
+          syncSrouterPresetForSymbol(chart, canonical);
           saveSymbol(canonical);
           await applyDefaultQuoteCurrencyForSymbol(canonical);
           ohlcHeaderDisplay.innerHTML = '';
@@ -1356,6 +1374,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (symbol) {
         const canonical = canonicalizeUiSymbol(symbol);
         pane.chart.config.symbol = canonical;
+        syncSrouterPresetForSymbol(pane.chart, canonical);
         saveSymbol(canonical);
         void pane.applyDefaultQuoteCurrencyForSymbol(canonical);
       }
@@ -1927,6 +1946,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           const pane = getActivePane();
           const canonical = canonicalizeUiSymbol(symbolId);
           pane.chart.config.symbol = canonical;
+          syncSrouterPresetForSymbol(pane.chart, canonical);
           saveSymbol(canonical);
           void pane.applyDefaultQuoteCurrencyForSymbol(canonical).then(() => {
             void pane.reloadLiveData();
