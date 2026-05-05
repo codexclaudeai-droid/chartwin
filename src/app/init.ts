@@ -2247,9 +2247,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       refreshSignalNotification();
     };
     startManagedInterval(() => {
-      refreshStrategyReport();
       notifyLiveSignals();
     }, 1000);
+    startManagedInterval(() => {
+      refreshStrategyReport();
+    }, 60_000);
     refreshStrategyReport();
     applyViewportOffsets();
   }
