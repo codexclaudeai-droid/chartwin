@@ -1065,6 +1065,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             low: convertPrice(candle.low),
             close: convertPrice(candle.close),
           });
+          refreshStrategyReport();
         },
         updateLastCandle: (patch) => {
           chart.updateLastCandle({
@@ -1092,6 +1093,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           rawCandles.push(candle);
           if (gapMode === 'smooth') {
             applyDisplayCurrencyToChart();
+            refreshStrategyReport();
             return;
           }
           chart.addNewCandle({
@@ -1101,6 +1103,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             low: convertPrice(candle.low),
             close: convertPrice(candle.close),
           });
+          refreshStrategyReport();
         },
         updateLastCandle: (patch) => {
           const last = rawCandles[rawCandles.length - 1];
@@ -1148,6 +1151,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           rawCandles.push(candle);
           if (gapMode === 'smooth') {
             applyDisplayCurrencyToChart();
+            refreshStrategyReport();
             return;
           }
           chart.addNewCandle({
@@ -1157,6 +1161,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             low: convertPrice(candle.low),
             close: convertPrice(candle.close),
           });
+          refreshStrategyReport();
         },
         updateLastCandle: (patch) => {
           const last = rawCandles[rawCandles.length - 1];
