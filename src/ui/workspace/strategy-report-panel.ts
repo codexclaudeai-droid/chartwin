@@ -1503,6 +1503,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const applyPanelMode = (mode: 'normal' | 'expanded' | 'collapsed') => {
+    const wasCollapsed = panelMode === 'collapsed';
     panelMode = mode;
 
     if (mode === 'expanded') {
@@ -1529,7 +1530,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
     body.style.display = mode === 'collapsed' ? 'none' : 'flex';
     tabRow.style.display = mode === 'collapsed' ? 'none' : 'flex';
-    renderAll();
+    if (wasCollapsed && mode !== 'collapsed') {
+      refresh();
+    } else {
+      renderAll();
+    }
   };
 
   let dragging = false;
