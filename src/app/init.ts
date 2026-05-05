@@ -1125,7 +1125,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           });
         },
       },
-      limit: 100000,
+      limit: 3000,
       onDataApplied: (candles) => {
         rawCandles = candles.slice();
         applyDisplayCurrencyToChart();
@@ -1183,7 +1183,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           });
         },
       },
-      limit: 100000,
+      limit: 3000,
       onDataApplied: (candles) => {
         rawCandles = candles.slice();
         applyDisplayCurrencyToChart();

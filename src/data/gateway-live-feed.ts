@@ -187,7 +187,7 @@ async function fetchGatewayCandles(
     market,
     symbol: normalizeSymbol(symbol),
     timeframe,
-    limit: String(Math.max(1, Math.min(100000, limit))),
+    limit: String(Math.max(1, Math.min(3000, limit))),
   });
 
   const response = await fetch(`${baseUrl}/candles?${query.toString()}`, {

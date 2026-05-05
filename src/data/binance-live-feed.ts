@@ -212,7 +212,7 @@ async function fetchBinanceKlinesHistory(
   totalLimit: number,
   signal: AbortSignal,
 ): Promise<CandleDataLike[]> {
-  const target = Math.max(100, Math.min(100000, totalLimit));
+  const target = Math.max(100, Math.min(3000, totalLimit));
   let remaining = target;
   let endTimeMs: number | undefined = undefined;
   const out: CandleDataLike[] = [];
