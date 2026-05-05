@@ -542,7 +542,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     // { key: '2m',  label: '2분' },
     { key: '3m',  label: '3분' },
     { key: '5m',  label: '5분' },
-    { key: '10m', label: '10분' },
+    // { key: '10m', label: '10분' }, // TODO: 바이낸스 미지원 타임프레임
     { key: '15m', label: '15분' },
     { key: '30m', label: '30분' },
     // { key: '45m', label: '45분' },
@@ -2248,10 +2248,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     };
     startManagedInterval(() => {
       notifyLiveSignals();
-    }, 1000);
-    startManagedInterval(() => {
       refreshStrategyReport();
-    }, 60_000);
+    }, 1000);
     refreshStrategyReport();
     applyViewportOffsets();
   }
