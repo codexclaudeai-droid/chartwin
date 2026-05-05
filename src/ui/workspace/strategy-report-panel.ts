@@ -280,7 +280,7 @@ self.onmessage = function (event) {
       grossProfit: grossProfit,
       grossLoss: grossLoss,
       averagePnl: averagePnl,
-      trades: trades.slice(-350)
+      trades: trades
     }
   });
 };
@@ -1325,7 +1325,6 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const rows = r.trades
       .slice()
       .reverse()
-      .slice(0, panelMode === 'expanded' ? 320 : 120)
       .map((t, idx) => {
         const pnlColor = t.pnl >= 0 ? '#39d98a' : '#ff7f7f';
         const sideColor = t.side === 'LONG' ? '#39d98a' : '#ff7f7f';
@@ -1355,8 +1354,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     tradesView.innerHTML = `<div style="border:1px solid #2a3b58;border-radius:8px;overflow:hidden;background:#111a2d;">${headerRow}${rows}</div>`;
     const displayedTrades = r.trades
       .slice()
-      .reverse()
-      .slice(0, panelMode === 'expanded' ? 320 : 120);
+      .reverse();
     const table = tradesView.firstElementChild as HTMLDivElement | null;
     if (!table) return;
     const rowEls = Array.from(table.children) as HTMLDivElement[];
