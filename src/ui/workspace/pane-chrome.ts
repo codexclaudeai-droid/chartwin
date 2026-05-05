@@ -110,20 +110,20 @@ export function createPaneChrome<TKey extends string>({
   // Visible button
   const tfBtn = document.createElement('button');
   tfBtn.type = 'button';
-  tfBtn.style.cssText = 'background:#ffffff;color:#1a1f2e;border:none;border-radius:4px;font-size:11px;font-weight:600;padding:0 8px;height:22px;flex-shrink:0;cursor:pointer;white-space:nowrap;line-height:1;min-width:32px;';
+  tfBtn.style.cssText = 'background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;font-size:11px;padding:0 8px;height:22px;flex-shrink:0;cursor:pointer;white-space:nowrap;line-height:1;min-width:32px;';
   tfBtn.textContent = _getTfLabel(_tfKey);
 
   // ── Dropdown panel ───────────────────────────────────────────────────
   if (!document.getElementById('tf-dd-style')) {
     const s = document.createElement('style');
     s.id = 'tf-dd-style';
-    s.textContent = '.tf-dd::-webkit-scrollbar{width:3px}.tf-dd::-webkit-scrollbar-track{background:transparent}.tf-dd::-webkit-scrollbar-thumb{background:#2a3040;border-radius:2px}';
+    s.textContent = '.tf-dd::-webkit-scrollbar{width:3px}.tf-dd::-webkit-scrollbar-track{background:transparent}.tf-dd::-webkit-scrollbar-thumb{background:#c5ccd8;border-radius:2px}';
     document.head.appendChild(s);
   }
 
   const tfDropdown = document.createElement('div');
   tfDropdown.className = 'tf-dd';
-  tfDropdown.style.cssText = 'position:fixed;background:#13192a;border-radius:6px;overflow-y:auto;max-height:72vh;min-width:128px;display:none;z-index:9000;padding:4px 0;scrollbar-width:thin;scrollbar-color:#2a3040 transparent;';
+  tfDropdown.style.cssText = 'position:fixed;background:#ffffff;border-radius:6px;overflow-y:auto;max-height:72vh;min-width:128px;display:none;z-index:9000;padding:4px 0;scrollbar-width:thin;scrollbar-color:#c5ccd8 transparent;box-shadow:0 4px 16px rgba(0,0,0,0.18);';
   document.body.appendChild(tfDropdown);
 
   const _getCatName = (key: string): string => {
@@ -149,8 +149,8 @@ export function createPaneChrome<TKey extends string>({
     _itemEls.forEach((el, k) => {
       const sel = k === key;
       el.style.background = sel ? '#1e2d42' : 'transparent';
-      el.style.color = sel ? '#ffffff' : '#c8d4ec';
-      (el as HTMLElement & { dataset: DOMStringMap }).style.fontWeight = sel ? '600' : '400';
+      el.style.color = sel ? '#ffffff' : '#1e2a3c';
+      el.style.fontWeight = sel ? '600' : '400';
     });
   };
 
@@ -162,7 +162,7 @@ export function createPaneChrome<TKey extends string>({
       const collapsed = _collapseState.get(catName) ?? false;
 
       const catHdr = document.createElement('div');
-      catHdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 10px 4px;color:#5a6a88;font-size:10px;font-weight:700;letter-spacing:0.06em;cursor:pointer;user-select:none;';
+      catHdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 10px 4px;color:#8a96a8;font-size:10px;font-weight:700;letter-spacing:0.06em;cursor:pointer;user-select:none;';
       const cLabel = document.createElement('span');
       cLabel.textContent = catName;
       const cArrow = document.createElement('span');
@@ -181,10 +181,10 @@ export function createPaneChrome<TKey extends string>({
           if (!tf) return;
           const sel = key === _tfKey;
           const item = document.createElement('div');
-          item.style.cssText = `padding:9px 14px;font-size:13px;color:${sel ? '#ffffff' : '#c8d4ec'};background:${sel ? '#1e2d42' : 'transparent'};cursor:pointer;font-weight:${sel ? '600' : '400'};border-radius:4px;margin:0 4px;white-space:nowrap;line-height:1;`;
+          item.style.cssText = `padding:9px 14px;font-size:13px;color:${sel ? '#ffffff' : '#1e2a3c'};background:${sel ? '#1e2d42' : 'transparent'};cursor:pointer;font-weight:${sel ? '600' : '400'};border-radius:4px;margin:0 4px;white-space:nowrap;line-height:1;`;
           item.textContent = tf.label;
-          item.addEventListener('mouseenter', () => { if (key !== _tfKey) { item.style.background = '#19253a'; item.style.color = '#e0e8ff'; } });
-          item.addEventListener('mouseleave', () => { item.style.background = key === _tfKey ? '#1e2d42' : 'transparent'; item.style.color = key === _tfKey ? '#ffffff' : '#c8d4ec'; });
+          item.addEventListener('mouseenter', () => { if (key !== _tfKey) { item.style.background = '#eef1f7'; item.style.color = '#1a2438'; } });
+          item.addEventListener('mouseleave', () => { item.style.background = key === _tfKey ? '#1e2d42' : 'transparent'; item.style.color = key === _tfKey ? '#ffffff' : '#1e2a3c'; });
           item.addEventListener('click', () => {
             _tfKey = key;
             tfBtn.textContent = _getTfLabel(key);
