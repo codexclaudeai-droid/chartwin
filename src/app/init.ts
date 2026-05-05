@@ -706,6 +706,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         });
       }
     };
+    chart.onStrategyComputed = () => refreshStrategyReport();
     if (persistedSymbol) {
       chart.config.symbol = persistedSymbol;
     }

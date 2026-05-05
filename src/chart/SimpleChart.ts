@@ -218,6 +218,7 @@ export class SimpleChart {
     entryPrice: number;
     candleIndex: number;
   }> = [];
+  public onStrategyComputed: (() => void) | null = null;
   private strategyWorker: Worker | null = null;
   private signalAnimationFrame = 0;
   private strategyRequestId = 0;
@@ -2330,6 +2331,7 @@ export class SimpleChart {
       this.pendingStrategyRequestId = message.requestId;
       this.strategySignals = message.signals;
       this.drawSignalLayer(this.lastDrawMeta);
+      this.onStrategyComputed?.();
     });
   }
 
