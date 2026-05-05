@@ -110,7 +110,7 @@ export function createPaneChrome<TKey extends string>({
   // Visible button
   const tfBtn = document.createElement('button');
   tfBtn.type = 'button';
-  tfBtn.style.cssText = 'background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;font-size:11px;padding:0 8px;height:22px;flex-shrink:0;cursor:pointer;white-space:nowrap;line-height:1;min-width:32px;';
+  tfBtn.style.cssText = 'background:#ffffff;color:#1a1f2e;border:none;border-radius:4px;font-size:11px;font-weight:600;padding:0 8px;height:22px;flex-shrink:0;cursor:pointer;white-space:nowrap;line-height:1;min-width:32px;';
   tfBtn.textContent = _getTfLabel(_tfKey);
 
   // ── Dropdown panel ───────────────────────────────────────────────────
@@ -166,8 +166,10 @@ export function createPaneChrome<TKey extends string>({
       const cLabel = document.createElement('span');
       cLabel.textContent = catName;
       const cArrow = document.createElement('span');
-      cArrow.textContent = collapsed ? '∨' : '∧';
-      cArrow.style.cssText = 'font-size:9px;';
+      cArrow.style.cssText = 'display:inline-flex;align-items:center;flex-shrink:0;opacity:0.6;transition:transform 0.15s;';
+      cArrow.innerHTML = collapsed
+        ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 5,7 8,4"></polyline></svg>'
+        : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,3 8,6"></polyline></svg>';
       catHdr.appendChild(cLabel);
       catHdr.appendChild(cArrow);
       catHdr.addEventListener('click', () => { _collapseState.set(catName, !collapsed); _renderDropdown(); });
