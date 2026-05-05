@@ -327,7 +327,7 @@ export function createPaneChrome<TKey extends string>({
       paneHeader.style.padding = '0 4px';
       symBtn.style.maxWidth = '38%';
       marketPriceWrap.style.width = '110px';
-      symPriceLabel.style.width = '62px';
+      symPriceLabel.style.width = '';
       symPriceLabel.style.fontSize = '12px';
       symPriceLabel.style.display = '';
       symChangeWrap.style.display = '';
@@ -349,7 +349,7 @@ export function createPaneChrome<TKey extends string>({
       paneHeader.style.padding = '0 5px';
       symBtn.style.maxWidth = '50%';
       marketPriceWrap.style.width = '142px';
-      symPriceLabel.style.width = '82px';
+      symPriceLabel.style.width = '';
       symPriceLabel.style.fontSize = '';
       symPriceLabel.style.display = '';
       symChangeWrap.style.display = '';
@@ -370,7 +370,7 @@ export function createPaneChrome<TKey extends string>({
       paneHeader.style.padding = '0 7px';
       symBtn.style.maxWidth = '44%';
       marketPriceWrap.style.width = '146px';
-      symPriceLabel.style.width = '84px';
+      symPriceLabel.style.width = '';
       symPriceLabel.style.fontSize = '';
       symPriceLabel.style.display = '';
       symChangeWrap.style.display = '';
