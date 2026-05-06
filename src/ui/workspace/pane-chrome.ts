@@ -96,12 +96,31 @@ export function createPaneChrome<TKey extends string>({
 
   // Track current key separately so we can intercept value get/set
   let _tfKey: string = chartConfig.timeframe;
+  const TF_DROPDOWN_LABEL_KR: Record<string, string> = {
+    '1s': '1초',
+    '3m': '3분',
+    '5m': '5분',
+    '15m': '15분',
+    '30m': '30분',
+    '1m': '1분',
+    '1h': '1시간',
+    '2h': '2시간',
+    '4h': '4시간',
+    '1d': '1일',
+    '1w': '1주',
+    '1M': '1달',
+  };
   const _getTfLabel = (k: string) => timeframes.find((t) => t.key === k)?.label ?? k;
+  const _getTfDropdownLabel = (k: string) => TF_DROPDOWN_LABEL_KR[k] ?? _getTfLabel(k);
+  const _getTfSelectedLabelLower = (k: string) => {
+    if (k === '1M') return '1mo';
+    return k.toLowerCase();
+  };
   Object.defineProperty(tfSelect, 'value', {
     get: () => _tfKey,
     set: (v: string) => {
       _tfKey = v;
-      tfBtn.textContent = _getTfLabel(v);
+      tfBtn.textContent = _getTfSelectedLabelLower(v);
       _syncTfSelection(v);
     },
     configurable: true,
@@ -111,7 +130,7 @@ export function createPaneChrome<TKey extends string>({
   const tfBtn = document.createElement('button');
   tfBtn.type = 'button';
   tfBtn.style.cssText = 'background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;font-size:11px;padding:0 8px;height:22px;flex-shrink:0;cursor:pointer;white-space:nowrap;line-height:1;min-width:32px;';
-  tfBtn.textContent = _getTfLabel(_tfKey);
+  tfBtn.textContent = _getTfSelectedLabelLower(_tfKey);
 
   // ── Dropdown panel ───────────────────────────────────────────────────
   if (!document.getElementById('tf-dd-style')) {
@@ -182,12 +201,12 @@ export function createPaneChrome<TKey extends string>({
           const sel = key === _tfKey;
           const item = document.createElement('div');
           item.style.cssText = `padding:9px 14px;font-size:13px;color:${sel ? '#ffffff' : '#1e2a3c'};background:${sel ? '#1e2d42' : 'transparent'};cursor:pointer;font-weight:${sel ? '600' : '400'};border-radius:4px;margin:0 4px;white-space:nowrap;line-height:1;`;
-          item.textContent = tf.label;
+          item.textContent = _getTfDropdownLabel(key);
           item.addEventListener('mouseenter', () => { if (key !== _tfKey) { item.style.background = '#eef1f7'; item.style.color = '#1a2438'; } });
           item.addEventListener('mouseleave', () => { item.style.background = key === _tfKey ? '#1e2d42' : 'transparent'; item.style.color = key === _tfKey ? '#ffffff' : '#1e2a3c'; });
           item.addEventListener('click', () => {
             _tfKey = key;
-            tfBtn.textContent = _getTfLabel(key);
+            tfBtn.textContent = _getTfSelectedLabelLower(key);
             _syncTfSelection(key);
             tfSelect.dispatchEvent(new Event('change'));
             _closeDd();

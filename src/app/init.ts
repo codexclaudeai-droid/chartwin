@@ -548,30 +548,30 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   };
 
   const TFS: Array<{ key: TimeframeKey; label: string }> = [
-    { key: '1s',  label: '1초' },
+    { key: '1s',  label: '1S' },
     // TODO: 1초 데이터 집계 방식 구현 후 활성화
     // { key: '5s',  label: '5초' },
     // { key: '10s', label: '10초' },
     // { key: '15s', label: '15초' },
     // { key: '30s', label: '30초' },
     // { key: '45s', label: '45초' },
-    { key: '1m',  label: '1분' },
+    { key: '1m',  label: '1M' },
     // TODO: 1분 데이터 집계 방식 구현 후 활성화
     // { key: '2m',  label: '2분' },
-    { key: '3m',  label: '3분' },
-    { key: '5m',  label: '5분' },
+    { key: '3m',  label: '3M' },
+    { key: '5m',  label: '5M' },
     // { key: '10m', label: '10분' }, // TODO: 바이낸스 미지원 타임프레임
-    { key: '15m', label: '15분' },
-    { key: '30m', label: '30분' },
+    { key: '15m', label: '15M' },
+    { key: '30m', label: '30M' },
     // { key: '45m', label: '45분' },
-    { key: '1h',  label: '1시간' },
-    { key: '2h',  label: '2시간' },
+    { key: '1h',  label: '1H' },
+    { key: '2h',  label: '2H' },
     // TODO: 1시간 데이터 집계 방식 구현 후 활성화
     // { key: '3h',  label: '3시간' },
-    { key: '4h',  label: '4시간' },
-    { key: '1d',  label: '1일' },
-    { key: '1w',  label: '1주' },
-    { key: '1M',  label: '1달' },
+    { key: '4h',  label: '4H' },
+    { key: '1d',  label: '1D' },
+    { key: '1w',  label: '1W' },
+    { key: '1M',  label: '1MO' },
   ];
   const RANGE_BTNS = ['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', '5Y', '전체', '??'];
   const RANGE_TO_TIMEFRAME: Partial<Record<string, TimeframeKey>> = {
@@ -1714,10 +1714,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       // 공통 버튼 스타일
       const MOBILE_BAR_BTN = [
         'display:inline-flex', 'align-items:center', 'justify-content:center',
-        'height:32px', 'padding:0 12px',
+        'height:26px', 'padding:0 10px',
         'background:#1c2840', 'color:#c2ccdf',
-        'border:1px solid #2e3f5c', 'border-radius:7px',
-        'font-size:13px', 'font-family:inherit', 'font-weight:700',
+        'border:1px solid #2e3f5c', 'border-radius:6px',
+        'font-size:11px', 'font-family:inherit', 'font-weight:700',
         'white-space:nowrap', 'flex-shrink:0', 'cursor:pointer',
         'touch-action:manipulation', '-webkit-tap-highlight-color:transparent',
         'transition:background 0.12s,border-color 0.12s',
