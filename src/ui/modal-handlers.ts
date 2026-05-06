@@ -107,7 +107,11 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     ...GRID_ATR_BNF_SROUTER_PRESETS[preset],
   });
   const isAdmin = (options?.mode ?? 'admin') === 'admin';
-  const { body, close } = createModal(isAdmin ? '전략시그널 관리' : '전략 선택', { anchorTop: true });
+  const modalControls = createModal(isAdmin ? '전략시그널 관리' : '전략 선택', { anchorTop: true });
+  const { body } = modalControls;
+  body.style.display = 'flex';
+  body.style.flexDirection = 'column';
+  body.style.minHeight = '0';
 
   if (isAdmin) {
     const info = document.createElement('div');
@@ -129,17 +133,43 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
   body.appendChild(topMenu);
 
   const listPanel = document.createElement('div');
-  listPanel.style.cssText = 'display:block;';
+  listPanel.style.cssText = 'display:block;min-height:0;';
   body.appendChild(listPanel);
 
   const listWrap = document.createElement('div');
   listWrap.className = 'strategy-list-scroll';
-  listWrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto;padding-right:2px;margin-bottom:12px;';
+  listWrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;padding-right:2px;margin-bottom:12px;min-height:0;';
   listPanel.appendChild(listWrap);
 
   const registerPanel = document.createElement('div');
   registerPanel.style.cssText = 'display:none;';
   body.appendChild(registerPanel);
+
+  const syncStrategyListWrapHeight = () => {
+    if (!listPanel.isConnected || listPanel.style.display === 'none') return;
+    const bodyHeight = body.clientHeight;
+    if (!bodyHeight) return;
+    const bodyRect = body.getBoundingClientRect();
+    const listRect = listWrap.getBoundingClientRect();
+    const listTop = Math.max(0, listRect.top - bodyRect.top);
+    const footerGap = 8;
+    const available = Math.floor(bodyHeight - listTop - footerGap);
+    listWrap.style.maxHeight = `${Math.max(160, available)}px`;
+  };
+  const scheduleStrategyListWrapHeightSync = () => {
+    requestAnimationFrame(syncStrategyListWrapHeight);
+  };
+  const resizeObserver = typeof ResizeObserver !== 'undefined'
+    ? new ResizeObserver(() => scheduleStrategyListWrapHeightSync())
+    : null;
+  resizeObserver?.observe(body);
+  const handleWindowResize = () => scheduleStrategyListWrapHeightSync();
+  window.addEventListener('resize', handleWindowResize);
+  const close = () => {
+    resizeObserver?.disconnect();
+    window.removeEventListener('resize', handleWindowResize);
+    modalControls.close();
+  };
 
   const form = document.createElement('div');
   form.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;';
@@ -469,6 +499,7 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     listMenuBtn.style.color = listMode ? '#ffffff' : '#3b4252';
     registerMenuBtn.style.backgroundColor = listMode ? '#ffffff' : '#2a2e3e';
     registerMenuBtn.style.color = listMode ? '#3b4252' : '#ffffff';
+    scheduleStrategyListWrapHeightSync();
   };
 
   const render = () => {
@@ -590,6 +621,7 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
         : `현재 심볼: ${chart.config?.symbol ?? '-'} · 자동 매칭 프리셋: ${resolvedPreset}`;
     }
     applyViewState();
+    scheduleStrategyListWrapHeightSync();
   };
 
   listMenuBtn.addEventListener('click', () => {
