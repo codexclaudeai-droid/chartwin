@@ -8447,13 +8447,14 @@ export class SimpleChart {
     const isFreeDrawEditMode = !this.drawingTool && (
       selectedShape?.kind === 'draw-pencil' || selectedShape?.kind === 'draw-highlighter' || selectedShape?.kind === 'draw-box'
     );
+    const isHorizontalLineEditMode = !this.drawingTool && selectedShape?.kind === 'hline';
     const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
     const isDrawingEditMode = Boolean(this.drawingTool && this.drawingTool !== 'eraser');
     const onYAxis = this.isOnMainYAxis(this.mouseX, this.mouseY);
-    const shouldDrawCrosshairGuides = !onYAxis && (noDrawingInteraction || isTrendlineEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isDrawingEditMode || Boolean(this.drawingMoveState));
+    const shouldDrawCrosshairGuides = !onYAxis && (noDrawingInteraction || isTrendlineEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isHorizontalLineEditMode || isDrawingEditMode || Boolean(this.drawingMoveState));
 
     if (shouldDrawCrosshairGuides) {
-      const useBlueEditGuide = isDrawingEditMode || isChannelEditMode;
+      const useBlueEditGuide = isDrawingEditMode || isChannelEditMode || isHorizontalLineEditMode;
       const guideLineColor = useBlueEditGuide ? 'rgba(47,108,255,0.90)' : 'rgba(214,219,233,0.65)';
       const guideCenterColor = useBlueEditGuide ? 'rgba(47,108,255,0.98)' : 'rgba(255,255,255,0.92)';
       ctx.save();
