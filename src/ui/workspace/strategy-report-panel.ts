@@ -833,9 +833,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
   const updatePeriodText = () => {
     const finiteTimes = timelineTimes.filter((t) => Number.isFinite(t));
-    if (finiteTimes.length >= 2) {
+    if (finiteTimes.length >= 1) {
       const startSec = finiteTimes[0];
-      const endSec = finiteTimes[finiteTimes.length - 1];
+      const endSec = finiteTimes[finiteTimes.length - 1] ?? startSec;
       periodText.textContent = `${fmtShortDate(startSec)} ~ ${fmtShortDate(endSec)}`;
       return;
     }
@@ -843,7 +843,14 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       periodText.textContent = `${fmtShortDate(periodStartSec)} ~ ${fmtShortDate(periodEndSec)}`;
       return;
     }
-    periodText.textContent = '기간 정보 없음';
+    const candles = getActiveChart().getCandles();
+    const firstSec = Number(candles[0]?.time);
+    const lastSec = Number(candles[candles.length - 1]?.time);
+    if (Number.isFinite(firstSec) && Number.isFinite(lastSec)) {
+      periodText.textContent = `${fmtShortDate(firstSec)} ~ ${fmtShortDate(lastSec)}`;
+      return;
+    }
+    periodText.textContent = '-';
   };
 
   const applyResponsiveLayout = () => {
