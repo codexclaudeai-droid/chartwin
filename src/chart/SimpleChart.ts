@@ -5743,7 +5743,8 @@ export class SimpleChart {
         selected.color = colorInput.value || '#2f6cff';
         colorBtn.style.color = selected.color;
       }
-      selected.width = Number(widthSelect.value || '2');
+      const maxWidth = selected.kind === 'draw-highlighter' ? 50 : selected.kind === 'anchored-vwap' ? 6 : 4;
+      selected.width = Math.max(1, Math.min(maxWidth, Number(widthSelect.value || '2')));
       selected.lineStyle = (styleSelect.value as DrawingShape['lineStyle']) ?? 'solid';
       this.upsertDrawing(selected);
       this.requestOverlayDraw();
@@ -5912,7 +5913,7 @@ export class SimpleChart {
       this.drawingToolbarBoundId = null;
       return;
     }
-    if (selected.kind === 'measure' || selected.kind === 'anchored-vwap') {
+    if (selected.kind === 'measure') {
       bar.style.display = 'none';
       if (this.drawingAlertPopupEl) this.drawingAlertPopupEl.style.display = 'none';
       this.drawingToolbarBoundId = null;
@@ -5929,6 +5930,7 @@ export class SimpleChart {
     const shapeOpacityLabel = q<HTMLSpanElement>('shape-opacity-label');
     const widthSelect = q<HTMLSelectElement>('width');
     const styleSelect = q<HTMLSelectElement>('style');
+    const alertBtn = q<HTMLButtonElement>('alert-open');
     const lockBtn = q<HTMLButtonElement>('lock');
     const hideBtn = q<HTMLButtonElement>('hide');
     if (selected.kind === 'draw-highlighter' || selected.kind === 'draw-box') {
@@ -5956,8 +5958,13 @@ export class SimpleChart {
       if (colorInput) colorInput.value = selected.color ?? '#2f6cff';
       if (colorBtn) colorBtn.style.color = selected.color ?? '#2f6cff';
     }
+    if (alertBtn) {
+      const supportsAlert = selected.kind !== 'anchored-vwap';
+      alertBtn.style.display = supportsAlert ? 'flex' : 'none';
+      if (!supportsAlert && this.drawingAlertPopupEl) this.drawingAlertPopupEl.style.display = 'none';
+    }
     if (widthSelect) {
-      const maxWidth = selected.kind === 'draw-highlighter' ? 50 : 4;
+      const maxWidth = selected.kind === 'draw-highlighter' ? 50 : selected.kind === 'anchored-vwap' ? 6 : 4;
       const nextWidth = String(Math.max(1, Math.min(maxWidth, Math.round(selected.width ?? 2))));
       widthSelect.value = nextWidth;
       const widthBtn = q<HTMLButtonElement>('width-btn');
