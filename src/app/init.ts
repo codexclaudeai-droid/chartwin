@@ -92,7 +92,7 @@ type AdminStrategyUiConfig = {
 };
 const adminStrategyUiConfig: AdminStrategyUiConfig = {
   hidden: [],
-  mgmtVisible: true,
+  mgmtVisible: false,
   selectedStrategyId: DEFAULT_BETA_STRATEGY_ID,
 };
 
@@ -106,7 +106,7 @@ const applyAdminStrategyUiConfig = (json: unknown): void => {
     adminStrategyUiConfig.mgmtVisible = record.mgmtVisible;
     setAdminMgmtButtonsVisible(record.mgmtVisible);
   } else {
-    setAdminMgmtButtonsVisible(adminStrategyUiConfig.hidden.length === 0);
+    setAdminMgmtButtonsVisible(adminStrategyUiConfig.mgmtVisible);
   }
   if (typeof record.selectedStrategyId === 'string' && record.selectedStrategyId.trim()) {
     adminStrategyUiConfig.selectedStrategyId = record.selectedStrategyId.trim();
@@ -877,6 +877,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       };
       // 최초 + refreshChartUi 마다 적용 (아래에서 refreshChartUi 재정의 시 호출)
       (chart as any)._mobileRatioFn = indicator_apply_mobile_ratios;
+      (chart as any)._suspendMobilePanelAutoRatio = false;
     }
 
     let rawCandles = generateDummyData(300, chart.config.timeframe);
@@ -944,7 +945,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       refreshOverlay();
     };
     refreshChartUi = () => {
-      if (isMobile) (chart as any)._mobileRatioFn?.();
+      if (isMobile && !(chart as any)._suspendMobilePanelAutoRatio) (chart as any)._mobileRatioFn?.();
       refreshOverlay();
       dividerManager.syncDividers();
       refreshHeader();
@@ -2051,6 +2052,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         chart.config.panelState.panelRatios[panelId] = collapsedRatio;
       });
       (chart.config.panelState as any).hiddenPanels = activePanels;
+      (chart as any)._suspendMobilePanelAutoRatio = true;
       pane.refreshChartUi();
     };
     const restoreIndicatorsFromStrategyReport = (paneId: number) => {
@@ -2068,6 +2070,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       } else {
         delete (chart.config.panelState as any).hiddenPanels;
       }
+      (chart as any)._suspendMobilePanelAutoRatio = false;
       strategyReportIndicatorSnapshotByPane.delete(paneId);
       pane.refreshChartUi();
     };
