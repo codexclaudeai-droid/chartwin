@@ -50,9 +50,30 @@ export async function onRequestPost({ request, env }) {
   const hidden   = toUpperList(body.hidden);
   const disabled = toUpperList(body.disabled);
 
-  await Promise.all([
-    env.CANDLES_KV.put(KV_HIDDEN,   JSON.stringify(hidden)),
-    env.CANDLES_KV.put(KV_DISABLED, JSON.stringify(disabled)),
-  ]);
-  return Response.json({ ok: true, hidden, disabled }, { headers: CORS });
+  try {
+    const nextHiddenRaw = JSON.stringify(hidden);
+    const nextDisabledRaw = JSON.stringify(disabled);
+    const [currentHiddenRaw, currentDisabledRaw] = await Promise.all([
+      env.CANDLES_KV.get(KV_HIDDEN),
+      env.CANDLES_KV.get(KV_DISABLED),
+    ]);
+
+    const writes = [];
+    if (currentHiddenRaw !== nextHiddenRaw) {
+      writes.push(env.CANDLES_KV.put(KV_HIDDEN, nextHiddenRaw));
+    }
+    if (currentDisabledRaw !== nextDisabledRaw) {
+      writes.push(env.CANDLES_KV.put(KV_DISABLED, nextDisabledRaw));
+    }
+    if (writes.length) await Promise.all(writes);
+    return Response.json({ ok: true, hidden, disabled, skippedWrite: writes.length === 0 }, { headers: CORS });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'save failed';
+    return Response.json({
+      ok: false,
+      message: message.includes('limit exceeded for the day')
+        ? 'Cloudflare KV daily write limit exceeded. Please wait until the quota resets or upgrade the KV plan.'
+        : message,
+    }, { status: 500, headers: CORS });
+  }
 }

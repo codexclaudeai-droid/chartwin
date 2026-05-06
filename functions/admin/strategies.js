@@ -22,7 +22,7 @@ export async function onRequestOptions() {
 
 export async function onRequestGet({ env }) {
   let hidden = [];
-  let mgmtVisible = true;
+  let mgmtVisible = false;
   let selectedStrategyId = DEFAULT_SELECTED_STRATEGY_ID;
   try {
     const stored = await env.CANDLES_KV.get(KV_HIDDEN, { type: 'json' });
@@ -52,21 +52,30 @@ export async function onRequestPost({ request, env }) {
   const hidden = Array.isArray(body.hidden)
     ? body.hidden.filter(s => typeof s === 'string' && s.length > 0)
     : [];
-  const mgmtVisible = typeof body.mgmtVisible === 'boolean' ? body.mgmtVisible : true;
+  const mgmtVisible = typeof body.mgmtVisible === 'boolean' ? body.mgmtVisible : false;
   const selectedStrategyId = typeof body.selectedStrategyId === 'string' && body.selectedStrategyId.trim()
     ? body.selectedStrategyId.trim()
     : DEFAULT_SELECTED_STRATEGY_ID;
   try {
-    await env.CANDLES_KV.put(KV_HIDDEN, JSON.stringify({
+    const nextPayload = {
       hidden,
       mgmtVisible,
       selectedStrategyId,
-    }));
+    };
+    const currentRaw = await env.CANDLES_KV.get(KV_HIDDEN);
+    const nextRaw = JSON.stringify(nextPayload);
+    if (currentRaw === nextRaw) {
+      return Response.json({ ok: true, hidden, mgmtVisible, selectedStrategyId, skippedWrite: true }, { headers: CORS });
+    }
+    await env.CANDLES_KV.put(KV_HIDDEN, nextRaw);
     return Response.json({ ok: true, hidden, mgmtVisible, selectedStrategyId }, { headers: CORS });
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'save failed';
     return Response.json({
       ok: false,
-      message: error instanceof Error ? error.message : 'save failed',
+      message: message.includes('limit exceeded for the day')
+        ? 'Cloudflare KV daily write limit exceeded. Please wait until the quota resets or upgrade the KV plan.'
+        : message,
     }, { status: 500, headers: CORS });
   }
 }

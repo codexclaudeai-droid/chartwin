@@ -19,7 +19,7 @@ export interface StrategyDefinition {
   params?: Record<string, StrategyParamValue>;
 }
 
-let _adminMgmtButtonsVisible = true;
+let _adminMgmtButtonsVisible = false;
 export function setAdminMgmtButtonsVisible(visible: boolean): void {
   _adminMgmtButtonsVisible = visible;
 }
