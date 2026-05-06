@@ -462,38 +462,15 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const style = document.createElement('style');
     style.id = 'strategy-report-trade-view-alert-style';
     style.textContent = `
-      @keyframes strategyTradeViewAlertSpin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      @keyframes strategyTradeViewInnerSweep {
-        0% { transform: translateX(-130%); opacity: 0; }
-        20% { opacity: 0.9; }
-        55% { opacity: 0.7; }
-        100% { transform: translateX(130%); opacity: 0; }
-      }
-      @keyframes strategyTradeViewInnerPulse {
-        0% { background-color: #1b2a43; box-shadow: inset 0 0 0 1px rgba(79,121,201,0.35); }
-        50% { background-color: #233a5d; box-shadow: inset 0 0 0 1px rgba(128,186,255,0.55), 0 0 8px rgba(79,140,255,0.28); }
-        100% { background-color: #1b2a43; box-shadow: inset 0 0 0 1px rgba(79,121,201,0.35); }
-      }
       .strategy-trade-view-alert {
         position: relative;
         overflow: hidden;
         border-color: #4f79c9 !important;
-        animation: strategyTradeViewInnerPulse 1.6s ease-in-out infinite;
+        background-color: #1b2a43;
+        box-shadow: inset 0 0 0 1px rgba(79,121,201,0.35);
       }
       .strategy-trade-view-alert::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        width: 42%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, rgba(255,255,255,0), rgba(170,225,255,0.95), rgba(255,255,255,0));
-        animation: strategyTradeViewInnerSweep 1.25s ease-out infinite;
-        pointer-events: none;
+        content: none;
       }
     `;
     document.head.appendChild(style);
@@ -562,9 +539,12 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   tabTrades.style.cssText = 'height:22px;border:1px solid #2b3b58;background:#131d31;color:#9fb1d3;border-radius:999px;padding:0 10px;font-size:11px;cursor:pointer;';
   tabLeft.appendChild(tabMetrics);
   tabLeft.appendChild(tabTrades);
+  const timeframeLabel = document.createElement('span');
+  timeframeLabel.style.cssText = 'font-size:11px;color:#8ea4c9;white-space:nowrap;margin-left:auto;';
   const tabRight = document.createElement('div');
   tabRight.style.cssText = 'display:flex;align-items:center;gap:6px;';
   tabRow.appendChild(tabRight);
+  tabRight.appendChild(timeframeLabel);
 
   const periodBtn = mkIconBtn('기간 설정', icon.calendar);
   const periodText = document.createElement('span');
@@ -833,6 +813,31 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const fmtShortDate = (sec: number): string => {
     const d = new Date(sec * 1000);
     return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+  };
+  const formatTimeframeLabel = (rawTf: string): string => {
+    const tf = String(rawTf || '').trim().toLowerCase();
+    const map: Record<string, string> = {
+      '1s': '1초',
+      '1m': '1분',
+      '3m': '3분',
+      '5m': '5분',
+      '15m': '15분',
+      '30m': '30분',
+      '45m': '45분',
+      '1h': '1시간',
+      '2h': '2시간',
+      '4h': '4시간',
+      '6h': '6시간',
+      '8h': '8시간',
+      '12h': '12시간',
+      '1d': '1일',
+      '1w': '1주',
+      '1mo': '1개월',
+      '1mon': '1개월',
+      '1month': '1개월',
+      '1mth': '1개월',
+    };
+    return map[tf] ?? rawTf;
   };
 
   const updatePeriodText = () => {
@@ -1323,8 +1328,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       <div>#</div>
       <div>타입</div>
       <div>진입 -> 청산</div>
-      <div>일시</div>
-      <div style="text-align:right;">손익</div>
+      <div style="text-align:center;">일시</div>
+      <div style="text-align:center;">손익</div>
     </div>`;
 
     const rows = r.trades
@@ -1338,21 +1343,21 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
         return `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid #1f2b44;">
           <div style="color:#8aa0c5;text-align:center;">${idx + 1}</div>
           <div style="color:${sideColor};font-weight:700;text-align:center;font-size:${isPhoneWidth ? '10px' : '12px'};white-space:nowrap;letter-spacing:${isPhoneWidth ? '-0.1px' : '0'};">${t.side}</div>
-          <div style="color:#cdd8ee;font-size:${isPhoneWidth ? '15px' : '12px'};line-height:1.12;font-weight:${isPhoneWidth ? '700' : '500'};">
+          <div style="color:#cdd8ee;font-size:12px;line-height:1.12;font-weight:${isPhoneWidth ? '700' : '500'};text-align:center;">
             ${isPhoneWidth
               ? `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)}</div>
                  <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${formatAmount(t.exit)}</div>`
               : `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)} ${rowArrowSvg} ${formatAmount(t.exit)}</div>`
             }
           </div>
-          <div style="color:#aab9d6;font-size:${isPhoneWidth ? '11px' : '13px'};line-height:1.22;">
+          <div style="color:#aab9d6;font-size:${isPhoneWidth ? '11px' : '13px'};line-height:1.22;text-align:center;">
             ${isPhoneWidth
               ? `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${entryTs}</div>
                  <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${exitTs}</div>`
               : `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${entryTs} ${rowArrowSvg} ${exitTs}</div>`
             }
           </div>
-          <div style="color:${pnlColor};font-weight:700;text-align:right;font-size:${isPhoneWidth ? '15px' : '12px'};line-height:1.12;">${formatAmount(t.pnl)}</div>
+          <div style="color:${pnlColor};font-weight:700;text-align:center;font-size:12px;line-height:1.12;">${formatAmount(t.pnl)}</div>
         </div>`;
       })
       .join('');
@@ -1484,6 +1489,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
     applyResponsiveLayout();
     updatePeriodText();
+    timeframeLabel.textContent = `타임프레임: ${formatTimeframeLabel(latestMeta.timeframe)}`;
     setChartLayoutByMode();
     updateTabStyles();
     renderKpi();

@@ -2029,12 +2029,15 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       panelRatios: Record<string, number>;
       hiddenPanels: string[] | null;
       expandedExtraHeightPx: number;
+      indicatorsVisible: boolean;
     }>();
     const collapseIndicatorsForStrategyReport = (paneId: number) => {
       const pane = ensurePane(paneId);
       const chart = pane.chart as SimpleChart & {
         config: { panelState: { panelRatios: Record<string, number>; hiddenPanels?: string[] } };
         activePanels: string[];
+        isIndicatorsVisible: () => boolean;
+        setIndicatorsVisible: (visible: boolean) => void;
       };
       const activePanels = Array.isArray(chart.activePanels) ? chart.activePanels.slice() : [];
       if (!activePanels.length) {
@@ -2054,13 +2057,19 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         const hiddenPanels = Array.isArray((chart.config.panelState as any).hiddenPanels)
           ? [...((chart.config.panelState as any).hiddenPanels as string[])]
           : null;
-        strategyReportIndicatorSnapshotByPane.set(paneId, { panelRatios, hiddenPanels, expandedExtraHeightPx });
+        strategyReportIndicatorSnapshotByPane.set(paneId, {
+          panelRatios,
+          hiddenPanels,
+          expandedExtraHeightPx,
+          indicatorsVisible: chart.isIndicatorsVisible(),
+        });
       }
       const collapsedRatio = 0.01;
       activePanels.forEach((panelId) => {
         chart.config.panelState.panelRatios[panelId] = collapsedRatio;
       });
       (chart.config.panelState as any).hiddenPanels = activePanels;
+      chart.setIndicatorsVisible(false);
       const snapshot = strategyReportIndicatorSnapshotByPane.get(paneId);
       strategyReport.setAutoExpandedHeight(snapshot?.expandedExtraHeightPx ?? 0);
       (chart as any)._suspendMobilePanelAutoRatio = true;
@@ -2081,6 +2090,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       } else {
         delete (chart.config.panelState as any).hiddenPanels;
       }
+      chart.setIndicatorsVisible(snapshot.indicatorsVisible);
       strategyReport.setAutoExpandedHeight(0);
       (chart as any)._suspendMobilePanelAutoRatio = false;
       strategyReportIndicatorSnapshotByPane.delete(paneId);
