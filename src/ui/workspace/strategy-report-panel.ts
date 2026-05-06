@@ -1,5 +1,6 @@
 ﻿import { getCandleCountForPeriod } from '../../chart/axis-utils';
 import type { TimeframeKey } from '../../catalog/time';
+import { isBetaAppVariant } from '../../app/runtime';
 
 type CandleLike = {
   time?: number;
@@ -413,6 +414,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   collapse: () => void;
   setTradeViewAlertActive: (active: boolean) => void;
 } {
+  const betaVariant = isBetaAppVariant();
   ensurePeriodPickerStyle();
   const headerHeight = 34;
   const getMinNormalHeight = () => (window.matchMedia('(max-width: 760px)').matches ? 204 : 430);
@@ -1459,7 +1461,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
   const renderAll = () => {
     const isMobileWidth = Math.max(320, panel.clientWidth) < 760;
-    if (panelMode === 'expanded' && !isMobileWidth) {
+    if (betaVariant) {
+      headerTitleText.textContent = '전략 리포트';
+      headerStrategyName.style.display = 'none';
+    } else if (panelMode === 'expanded' && !isMobileWidth) {
       headerTitleText.textContent = `전략 리포트 | ${latestMeta.symbol} ${latestMeta.timeframe} | ${latestMeta.strategyName}`;
       headerStrategyName.style.display = 'none';
     } else {

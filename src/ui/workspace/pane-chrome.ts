@@ -15,6 +15,7 @@ type CreatePaneChromeArgs<TKey extends string> = {
   createSymbolIconElement: (symbol: string, iconUrl?: string) => HTMLElement;
   getSymbolIconUrl: (symbol: string) => string | undefined;
   getSymbolDisplayLabel?: (symbol: string) => string;
+  showStrategyButton?: boolean;
 };
 
 export type PaneChrome = {
@@ -66,6 +67,7 @@ export function createPaneChrome<TKey extends string>({
   createSymbolIconElement,
   getSymbolIconUrl,
   getSymbolDisplayLabel,
+  showStrategyButton = true,
 }: CreatePaneChromeArgs<TKey>): PaneChrome {
   host.innerHTML = '';
   host.style.border = '1px solid #2a2e3e';
@@ -339,7 +341,7 @@ export function createPaneChrome<TKey extends string>({
       /Mobi|Android|iPhone|iPod/i.test(navigator.userAgent) || isTouchDevice || w < 600
     );
     indBtn.style.display = isMobilePhone ? 'none' : '';
-    strategyBtn.style.display = isMobilePhone ? 'none' : '';
+    strategyBtn.style.display = (isMobilePhone || !showStrategyButton) ? 'none' : '';
     const width = host.clientWidth;
     if (width < 560) {
       paneHeader.style.gap = '3px';

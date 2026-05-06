@@ -3,11 +3,13 @@ import { INDICATOR_CATALOG } from '../catalog/indicators';
 import { INDICATOR_STYLE_TARGETS } from '../indicator-panel-module';
 import { openSettingsPopup } from './modal-handlers';
 import type { StrategyDefinition } from '../strategy/strategy-service';
+import { isBetaAppVariant } from '../app/runtime';
 
 const X_AXIS_HEIGHT = 22;
 const CHART_FONT_STACK = `'Inter','Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif`;
 
 export function createIndicatorOverlay(container: HTMLElement, chart: any, onOverlayChange?: () => void): () => void {
+  const betaVariant = isBetaAppVariant();
   if (!document.getElementById('indicator-panel-control-motion-style')) {
     const style = document.createElement('style');
     style.id = 'indicator-panel-control-motion-style';
@@ -789,7 +791,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     allKeys.forEach(key => {
       if (Boolean((ind as any)[key]?.show) && !collapsedPanels.has(key)) hasAnyIndicators = true;
     });
-    if (activeStrategy) hasAnyIndicators = true;
+    if (activeStrategy && !betaVariant) hasAnyIndicators = true;
 
     if (!allTagsCollapsed) {
       allKeys.forEach(key => {
@@ -807,7 +809,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         }
       });
 
-      if (activeStrategy) {
+      if (activeStrategy && !betaVariant) {
         const strategyLabel = `전략: ${activeStrategy.name}${activeStrategy.version ? ` (v${activeStrategy.version})` : ''}`;
         strategyRow.appendChild(makeStrategyTag(strategyLabel));
       }

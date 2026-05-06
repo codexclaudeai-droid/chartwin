@@ -11,18 +11,8 @@ import {
   getSymbolIconUrl,
   loadAdminConfig,
 } from '../catalog/symbols';
+import { isBetaAppVariant, isDevAppVariant } from './runtime';
 void loadAdminConfig();
-void fetch('/admin/strategies', { cache: 'no-store' })
-  .then((r) => r.json())
-  .then((json: unknown) => {
-    const j = json as { ok?: boolean; hidden?: unknown };
-    if (j.ok) {
-    const jAny = j as Record<string, unknown>;
-    if (typeof jAny['mgmtVisible'] === 'boolean') setAdminMgmtButtonsVisible(jAny['mgmtVisible'] as boolean);
-    else if (Array.isArray(jAny['hidden'])) setAdminMgmtButtonsVisible((jAny['hidden'] as unknown[]).length === 0);
-  }
-  })
-  .catch(() => {});
 import {
   loadStrategies,
   saveStrategies,
@@ -91,6 +81,45 @@ import {
   isCmeEquityFuturesOpen,
 } from '../utils/market-session';
 import { type GapMode, loadGapMode, loadPatternAnalysisScope, loadPatternAlertEnabled } from '../utils/gap-smoothing';
+
+const isDevApp = isDevAppVariant();
+const isBetaApp = isBetaAppVariant();
+const DEFAULT_BETA_STRATEGY_ID = 'strategy_js_grid_martingale';
+type AdminStrategyUiConfig = {
+  hidden: string[];
+  mgmtVisible: boolean;
+  selectedStrategyId: string;
+};
+const adminStrategyUiConfig: AdminStrategyUiConfig = {
+  hidden: [],
+  mgmtVisible: true,
+  selectedStrategyId: DEFAULT_BETA_STRATEGY_ID,
+};
+
+const applyAdminStrategyUiConfig = (json: unknown): void => {
+  const record = (typeof json === 'object' && json !== null) ? json as Record<string, unknown> : null;
+  if (!record || record.ok !== true) return;
+  if (Array.isArray(record.hidden)) {
+    adminStrategyUiConfig.hidden = record.hidden.filter((item): item is string => typeof item === 'string');
+  }
+  if (typeof record.mgmtVisible === 'boolean') {
+    adminStrategyUiConfig.mgmtVisible = record.mgmtVisible;
+    setAdminMgmtButtonsVisible(record.mgmtVisible);
+  } else {
+    setAdminMgmtButtonsVisible(adminStrategyUiConfig.hidden.length === 0);
+  }
+  if (typeof record.selectedStrategyId === 'string' && record.selectedStrategyId.trim()) {
+    adminStrategyUiConfig.selectedStrategyId = record.selectedStrategyId.trim();
+  }
+};
+
+void fetch('/admin/strategies', { cache: 'no-store' })
+  .then((response) => response.json())
+  .then((json: unknown) => {
+    applyAdminStrategyUiConfig(json);
+    window.dispatchEvent(new CustomEvent('admin-strategy-ui-config-updated'));
+  })
+  .catch(() => {});
 // 앱 시작 시 API 키 로드
 loadSavedApiKeys();
 
@@ -666,6 +695,42 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   const paneControllers = new Map<number, PaneController>();
   paneState.allPaneIds = Array.from({ length: 8 }, (_, index) => index);
 
+  const resolveBetaStrategyId = (chart: { getStrategies: () => StrategyDefinition[] }): string | null => {
+    const strategies = chart.getStrategies();
+    if (!strategies.length) return null;
+    const requestedId = adminStrategyUiConfig.selectedStrategyId || DEFAULT_BETA_STRATEGY_ID;
+    const requested = strategies.find((strategy) => strategy.id === requestedId && strategy.active);
+    if (requested) return requested.id;
+    const fallback = strategies.find((strategy) => strategy.id === DEFAULT_BETA_STRATEGY_ID && strategy.active);
+    if (fallback) return fallback.id;
+    return strategies.find((strategy) => strategy.active)?.id ?? null;
+  };
+
+  const applyUserFacingStrategy = (chart: {
+    getActiveStrategyId?: () => string | null;
+    getStrategies: () => StrategyDefinition[];
+    setActiveStrategy: (strategyId: string | null) => void;
+  }): boolean => {
+    if (!isBetaApp) return false;
+    const nextStrategyId = resolveBetaStrategyId(chart);
+    if (!nextStrategyId) return false;
+    if (chart.getActiveStrategyId?.() === nextStrategyId) return false;
+    chart.setActiveStrategy(nextStrategyId);
+    return true;
+  };
+
+  const applyUserFacingStrategyToAllPanes = (): void => {
+    if (!isBetaApp) return;
+    paneControllers.forEach((pane) => {
+      const changed = applyUserFacingStrategy(pane.chart);
+      if (changed) pane.refreshChartUi();
+    });
+    refreshStrategyReport();
+  };
+  window.addEventListener('admin-strategy-ui-config-updated', () => {
+    applyUserFacingStrategyToAllPanes();
+  });
+
   const updateGridByCount = (count: number, orientation?: 'cols' | 'rows') => {
     updateGridTemplateByCount(grid, count, orientation);
   };
@@ -678,6 +743,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       createSymbolIconElement,
       getSymbolIconUrl,
       getSymbolDisplayLabel: (symbol: string) => findSymbolItem(symbol)?.label ?? symbol,
+      showStrategyButton: isDevApp,
     });
     const {
       paneRoot,
@@ -706,6 +772,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     headerTitle.style.cssText = 'display:block;margin-left:6px;padding:1px 6px;border-radius:999px;border:1px solid #3a4155;background:#22293a;color:#b5bece;font-size:10px;font-weight:700;line-height:1.4;white-space:nowrap;flex-shrink:0;';
 
     const chart = new SimpleChart(chartArea);
+    applyUserFacingStrategy(chart);
     let lastCurrencySelectWidth = '';
     chart.onAfterDraw = () => {
       const axisPad = chart.currentAxisPad;
@@ -1791,30 +1858,31 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       });
       mobileBarEl.appendChild(indMobileBtn);
 
-      // 전략시그널 버튼
-      const STRAT_ICON_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
-      const stratMobileBtn = document.createElement('button');
-      stratMobileBtn.type = 'button';
-      stratMobileBtn.title = '전략시그널';
-      stratMobileBtn.innerHTML = STRAT_ICON_SVG;
-      stratMobileBtn.style.cssText = MOBILE_BAR_BTN;
-      stratMobileBtn.addEventListener('touchstart', () => {
-        stratMobileBtn.style.background  = '#2962ff';
-        stratMobileBtn.style.borderColor = '#2962ff';
-        stratMobileBtn.style.color       = '#fff';
-      }, { passive: true });
-      stratMobileBtn.addEventListener('touchend', () => {
-        setTimeout(() => {
-          stratMobileBtn.style.background  = '#1c2840';
-          stratMobileBtn.style.borderColor = '#2e3f5c';
-          stratMobileBtn.style.color       = '#c2ccdf';
-        }, 200);
-      }, { passive: true });
-      stratMobileBtn.addEventListener('click', () => {
-        const pane = getActivePane();
-        openStrategyModal(pane.chart, pane.refreshChartUi);
-      });
-      mobileBarEl.appendChild(stratMobileBtn);
+      if (isDevApp) {
+        const STRAT_ICON_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
+        const stratMobileBtn = document.createElement('button');
+        stratMobileBtn.type = 'button';
+        stratMobileBtn.title = '전략시그널';
+        stratMobileBtn.innerHTML = STRAT_ICON_SVG;
+        stratMobileBtn.style.cssText = MOBILE_BAR_BTN;
+        stratMobileBtn.addEventListener('touchstart', () => {
+          stratMobileBtn.style.background  = '#2962ff';
+          stratMobileBtn.style.borderColor = '#2962ff';
+          stratMobileBtn.style.color       = '#fff';
+        }, { passive: true });
+        stratMobileBtn.addEventListener('touchend', () => {
+          setTimeout(() => {
+            stratMobileBtn.style.background  = '#1c2840';
+            stratMobileBtn.style.borderColor = '#2e3f5c';
+            stratMobileBtn.style.color       = '#c2ccdf';
+          }, 200);
+        }, { passive: true });
+        stratMobileBtn.addEventListener('click', () => {
+          const pane = getActivePane();
+          openStrategyModal(pane.chart, pane.refreshChartUi);
+        });
+        mobileBarEl.appendChild(stratMobileBtn);
+      }
 
       // ── 우측: 시계 + 타임존 (bottom-bar.ts 와 동일) ──────────────────────
       const tzWrap = document.createElement('div');
@@ -2014,11 +2082,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       },
       onModeChange: (mode, prevMode) => {
         const paneId = paneState.activePaneId;
-        if (mode === 'expanded' && prevMode !== 'expanded') {
+        if (prevMode === 'collapsed' && mode !== 'collapsed') {
           collapseIndicatorsForStrategyReport(paneId);
           return;
         }
-        if (prevMode === 'expanded' && mode !== 'expanded') {
+        if (mode === 'collapsed' && prevMode !== 'collapsed') {
           restoreIndicatorsFromStrategyReport(paneId);
         }
       },

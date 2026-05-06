@@ -4,7 +4,10 @@ const CORS = {
   'Access-Control-Allow-Headers': 'content-type',
 };
 const KV_HIDDEN = 'admin:hidden-strategy-ids';
+const KV_MGMT_VISIBLE = 'admin:strategy-mgmt-visible';
+const KV_SELECTED = 'admin:selected-strategy-id';
 const KV_PASS_KEY = 'admin:passphrase';
+const DEFAULT_SELECTED_STRATEGY_ID = 'strategy_js_grid_martingale';
 
 async function resolveAdminPass(env) {
   try {
@@ -21,11 +24,19 @@ export async function onRequestOptions() {
 
 export async function onRequestGet({ env }) {
   let hidden = [];
+  let mgmtVisible = true;
+  let selectedStrategyId = DEFAULT_SELECTED_STRATEGY_ID;
   try {
-    const h = await env.CANDLES_KV.get(KV_HIDDEN, { type: 'json' });
+    const [h, mv, selected] = await Promise.all([
+      env.CANDLES_KV.get(KV_HIDDEN, { type: 'json' }),
+      env.CANDLES_KV.get(KV_MGMT_VISIBLE, { type: 'json' }),
+      env.CANDLES_KV.get(KV_SELECTED),
+    ]);
     if (Array.isArray(h)) hidden = h;
+    if (typeof mv === 'boolean') mgmtVisible = mv;
+    if (typeof selected === 'string' && selected.trim()) selectedStrategyId = selected.trim();
   } catch {}
-  return Response.json({ ok: true, hidden }, { headers: CORS });
+  return Response.json({ ok: true, hidden, mgmtVisible, selectedStrategyId }, { headers: CORS });
 }
 
 export async function onRequestPost({ request, env }) {
@@ -41,6 +52,14 @@ export async function onRequestPost({ request, env }) {
   const hidden = Array.isArray(body.hidden)
     ? body.hidden.filter(s => typeof s === 'string' && s.length > 0)
     : [];
-  await env.CANDLES_KV.put(KV_HIDDEN, JSON.stringify(hidden));
-  return Response.json({ ok: true, hidden }, { headers: CORS });
+  const mgmtVisible = typeof body.mgmtVisible === 'boolean' ? body.mgmtVisible : true;
+  const selectedStrategyId = typeof body.selectedStrategyId === 'string' && body.selectedStrategyId.trim()
+    ? body.selectedStrategyId.trim()
+    : DEFAULT_SELECTED_STRATEGY_ID;
+  await Promise.all([
+    env.CANDLES_KV.put(KV_HIDDEN, JSON.stringify(hidden)),
+    env.CANDLES_KV.put(KV_MGMT_VISIBLE, JSON.stringify(mgmtVisible)),
+    env.CANDLES_KV.put(KV_SELECTED, selectedStrategyId),
+  ]);
+  return Response.json({ ok: true, hidden, mgmtVisible, selectedStrategyId }, { headers: CORS });
 }
