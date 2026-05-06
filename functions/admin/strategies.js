@@ -4,8 +4,6 @@ const CORS = {
   'Access-Control-Allow-Headers': 'content-type',
 };
 const KV_HIDDEN = 'admin:hidden-strategy-ids';
-const KV_MGMT_VISIBLE = 'admin:strategy-mgmt-visible';
-const KV_SELECTED = 'admin:selected-strategy-id';
 const KV_PASS_KEY = 'admin:passphrase';
 const DEFAULT_SELECTED_STRATEGY_ID = 'strategy_js_grid_martingale';
 
@@ -27,14 +25,16 @@ export async function onRequestGet({ env }) {
   let mgmtVisible = true;
   let selectedStrategyId = DEFAULT_SELECTED_STRATEGY_ID;
   try {
-    const [h, mv, selected] = await Promise.all([
-      env.CANDLES_KV.get(KV_HIDDEN, { type: 'json' }),
-      env.CANDLES_KV.get(KV_MGMT_VISIBLE, { type: 'json' }),
-      env.CANDLES_KV.get(KV_SELECTED),
-    ]);
-    if (Array.isArray(h)) hidden = h;
-    if (typeof mv === 'boolean') mgmtVisible = mv;
-    if (typeof selected === 'string' && selected.trim()) selectedStrategyId = selected.trim();
+    const stored = await env.CANDLES_KV.get(KV_HIDDEN, { type: 'json' });
+    if (Array.isArray(stored)) {
+      hidden = stored;
+    } else if (stored && typeof stored === 'object') {
+      if (Array.isArray(stored.hidden)) hidden = stored.hidden.filter((s) => typeof s === 'string');
+      if (typeof stored.mgmtVisible === 'boolean') mgmtVisible = stored.mgmtVisible;
+      if (typeof stored.selectedStrategyId === 'string' && stored.selectedStrategyId.trim()) {
+        selectedStrategyId = stored.selectedStrategyId.trim();
+      }
+    }
   } catch {}
   return Response.json({ ok: true, hidden, mgmtVisible, selectedStrategyId }, { headers: CORS });
 }
@@ -56,10 +56,17 @@ export async function onRequestPost({ request, env }) {
   const selectedStrategyId = typeof body.selectedStrategyId === 'string' && body.selectedStrategyId.trim()
     ? body.selectedStrategyId.trim()
     : DEFAULT_SELECTED_STRATEGY_ID;
-  await Promise.all([
-    env.CANDLES_KV.put(KV_HIDDEN, JSON.stringify(hidden)),
-    env.CANDLES_KV.put(KV_MGMT_VISIBLE, JSON.stringify(mgmtVisible)),
-    env.CANDLES_KV.put(KV_SELECTED, selectedStrategyId),
-  ]);
-  return Response.json({ ok: true, hidden, mgmtVisible, selectedStrategyId }, { headers: CORS });
+  try {
+    await env.CANDLES_KV.put(KV_HIDDEN, JSON.stringify({
+      hidden,
+      mgmtVisible,
+      selectedStrategyId,
+    }));
+    return Response.json({ ok: true, hidden, mgmtVisible, selectedStrategyId }, { headers: CORS });
+  } catch (error) {
+    return Response.json({
+      ok: false,
+      message: error instanceof Error ? error.message : 'save failed',
+    }, { status: 500, headers: CORS });
+  }
 }
