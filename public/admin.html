@@ -443,6 +443,14 @@ async function loadSettings() {
   }
   document.getElementById('load-btn').disabled = true;
   try {
+    const validateRes = await fetch('/admin/validate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ passphrase: pass }),
+    });
+    const validateJson = await validateRes.json();
+    if (!validateJson.ok) throw new Error(validateJson.message || 'unauthorized');
+
     const res = await fetch('/admin/symbols', { cache: 'no-store' });
     const json = await res.json();
     if (!json.ok) throw new Error(json.message || 'failed');
