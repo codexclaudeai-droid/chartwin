@@ -329,6 +329,35 @@ function ensurePeriodPickerStyle(): void {
   document.head.appendChild(style);
 }
 
+function ensureStrategyReportScrollbarStyle(): void {
+  if (document.getElementById('strategy-report-scrollbar-style')) return;
+  const style = document.createElement('style');
+  style.id = 'strategy-report-scrollbar-style';
+  style.textContent = `
+    .strategy-report-scroll-mobile {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(122, 145, 186, 0.75) rgba(20, 29, 46, 0.45);
+    }
+    .strategy-report-scroll-mobile::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    .strategy-report-scroll-mobile::-webkit-scrollbar-track {
+      background: rgba(20, 29, 46, 0.45);
+      border-radius: 999px;
+    }
+    .strategy-report-scroll-mobile::-webkit-scrollbar-thumb {
+      background: rgba(122, 145, 186, 0.78);
+      border-radius: 999px;
+      border: 1px solid rgba(14, 22, 36, 0.72);
+    }
+    .strategy-report-scroll-mobile::-webkit-scrollbar-thumb:hover {
+      background: rgba(150, 176, 222, 0.9);
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 function formatAmount(value: number): string {
   return value.toLocaleString('ko-KR', {
     minimumFractionDigits: 1,
@@ -417,6 +446,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 } {
   const betaVariant = isBetaAppVariant();
   ensurePeriodPickerStyle();
+  ensureStrategyReportScrollbarStyle();
   const headerHeight = 34;
   const getMinNormalHeight = () => (window.matchMedia('(max-width: 760px)').matches ? 204 : 430);
   const maxNormalHeightRatio = 0.85;
@@ -580,6 +610,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
   const metricsView = document.createElement('div');
   metricsView.style.cssText = 'display:flex;flex-direction:column;min-height:0;flex:1;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;';
+  metricsView.className = 'strategy-report-scroll-mobile';
   body.appendChild(metricsView);
 
   const kpiRow = document.createElement('div');
@@ -601,10 +632,12 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
   const expandedSections = document.createElement('div');
   expandedSections.style.cssText = 'display:none;overflow:auto;flex:1;min-height:0;padding:8px 10px;background:#0f1728;';
+  expandedSections.className = 'strategy-report-scroll-mobile';
   metricsView.appendChild(expandedSections);
 
   const tradesView = document.createElement('div');
   tradesView.style.cssText = 'display:none;flex:1;overflow:auto;padding:8px;background:#0f1524;';
+  tradesView.className = 'strategy-report-scroll-mobile';
   body.appendChild(tradesView);
 
   const settingsGrid = document.createElement('div');
