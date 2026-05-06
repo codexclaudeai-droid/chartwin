@@ -1956,6 +1956,55 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       });
     }
 
+    const strategyReportIndicatorSnapshotByPane = new Map<number, {
+      panelRatios: Record<string, number>;
+      hiddenPanels: string[] | null;
+    }>();
+    const collapseIndicatorsForStrategyReport = (paneId: number) => {
+      const pane = ensurePane(paneId);
+      const chart = pane.chart as SimpleChart & {
+        config: { panelState: { panelRatios: Record<string, number>; hiddenPanels?: string[] } };
+        activePanels: string[];
+      };
+      const activePanels = Array.isArray(chart.activePanels) ? chart.activePanels.slice() : [];
+      if (!activePanels.length) return;
+      if (!strategyReportIndicatorSnapshotByPane.has(paneId)) {
+        const panelRatios: Record<string, number> = {};
+        activePanels.forEach((panelId) => {
+          panelRatios[panelId] = chart.getPanelRatio(panelId);
+        });
+        const hiddenPanels = Array.isArray((chart.config.panelState as any).hiddenPanels)
+          ? [...((chart.config.panelState as any).hiddenPanels as string[])]
+          : null;
+        strategyReportIndicatorSnapshotByPane.set(paneId, { panelRatios, hiddenPanels });
+      }
+      const collapsedRatio = 0.01;
+      activePanels.forEach((panelId) => {
+        chart.config.panelState.panelRatios[panelId] = collapsedRatio;
+      });
+      (chart.config.panelState as any).hiddenPanels = activePanels;
+      pane.refreshChartUi();
+      chart.renderAll();
+    };
+    const restoreIndicatorsFromStrategyReport = (paneId: number) => {
+      const snapshot = strategyReportIndicatorSnapshotByPane.get(paneId);
+      if (!snapshot) return;
+      const pane = ensurePane(paneId);
+      const chart = pane.chart as SimpleChart & {
+        config: { panelState: { panelRatios: Record<string, number>; hiddenPanels?: string[] } };
+      };
+      Object.entries(snapshot.panelRatios).forEach(([panelId, ratio]) => {
+        chart.config.panelState.panelRatios[panelId] = ratio;
+      });
+      if (snapshot.hiddenPanels) {
+        (chart.config.panelState as any).hiddenPanels = [...snapshot.hiddenPanels];
+      } else {
+        delete (chart.config.panelState as any).hiddenPanels;
+      }
+      strategyReportIndicatorSnapshotByPane.delete(paneId);
+      pane.refreshChartUi();
+      chart.renderAll();
+    };
     const strategyReport = createStrategyReportPanel({
       app,
       height: reportPanelHeight,
@@ -1964,6 +2013,16 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       onHeightChange: (nextHeight) => {
         reportPanelHeight = nextHeight;
         applyViewportOffsets();
+      },
+      onModeChange: (mode, prevMode) => {
+        const paneId = paneState.activePaneId;
+        if (mode === 'expanded' && prevMode !== 'expanded') {
+          collapseIndicatorsForStrategyReport(paneId);
+          return;
+        }
+        if (prevMode === 'expanded' && mode !== 'expanded') {
+          restoreIndicatorsFromStrategyReport(paneId);
+        }
       },
     });
     const strategyReportOpenByPane = new Map<number, boolean>();
@@ -2250,6 +2309,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const activePaneId = paneState.activePaneId;
       const hasActiveStrategy = Boolean(activePane.chart.getActiveStrategyName());
       if (!hasActiveStrategy) {
+        restoreIndicatorsFromStrategyReport(activePaneId);
         strategyReportOpenByPane.set(activePaneId, false);
         prevStrategyActiveByPane.set(activePaneId, false);
         strategyReport.setVisible(false);

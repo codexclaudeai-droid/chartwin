@@ -36,6 +36,7 @@ type CreateStrategyReportPanelArgs<TChart extends StrategyReportChartLike> = {
   leftInset?: number;
   getActiveChart: () => TChart;
   onHeightChange?: (height: number) => void;
+  onModeChange?: (mode: 'normal' | 'expanded' | 'collapsed', prevMode: 'normal' | 'expanded' | 'collapsed') => void;
 };
 
 type SideFilter = 'all' | 'long' | 'short';
@@ -401,6 +402,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   leftInset = 0,
   getActiveChart,
   onHeightChange,
+  onModeChange,
 }: CreateStrategyReportPanelArgs<TChart>): {
   refresh: () => void;
   setVisible: (visible: boolean) => void;
@@ -830,15 +832,18 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const updatePeriodText = () => {
+    const finiteTimes = timelineTimes.filter((t) => Number.isFinite(t));
+    if (finiteTimes.length >= 2) {
+      const startSec = finiteTimes[0];
+      const endSec = finiteTimes[finiteTimes.length - 1];
+      periodText.textContent = `${fmtShortDate(startSec)} ~ ${fmtShortDate(endSec)}`;
+      return;
+    }
     if (periodStartSec != null && periodEndSec != null) {
-      periodText.textContent = `${fmtShortDate(periodStartSec)}~${fmtShortDate(periodEndSec)}`;
+      periodText.textContent = `${fmtShortDate(periodStartSec)} ~ ${fmtShortDate(periodEndSec)}`;
       return;
     }
-    if (periodBars > 0) {
-      periodText.textContent = `최근 ${periodBars}봉`;
-      return;
-    }
-    periodText.textContent = '전체';
+    periodText.textContent = '기간 정보 없음';
   };
 
   const applyResponsiveLayout = () => {
@@ -901,25 +906,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     }
 
     periodText.style.display = 'inline';
-    if (width < 520) {
-      periodText.style.maxWidth = '72px';
-      periodText.style.whiteSpace = 'nowrap';
-      periodText.style.overflow = 'hidden';
-      periodText.style.textOverflow = 'ellipsis';
-      periodText.style.fontSize = '10px';
-    } else if (width < 860) {
-      periodText.style.maxWidth = '140px';
-      periodText.style.whiteSpace = 'nowrap';
-      periodText.style.overflow = 'hidden';
-      periodText.style.textOverflow = 'ellipsis';
-      periodText.style.fontSize = '11px';
-    } else {
-      periodText.style.maxWidth = '';
-      periodText.style.whiteSpace = '';
-      periodText.style.overflow = '';
-      periodText.style.textOverflow = '';
-      periodText.style.fontSize = '11px';
-    }
+    periodText.style.maxWidth = 'none';
+    periodText.style.whiteSpace = 'nowrap';
+    periodText.style.overflow = 'visible';
+    periodText.style.textOverflow = 'clip';
+    periodText.style.fontSize = width < 520 ? '10px' : '11px';
 
     const maxMenuWidth = Math.max(180, panel.clientWidth - 16);
     const applyMenuSize = (menu: HTMLDivElement, w: number) => {
@@ -957,8 +948,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     return `${amountText} (${formatPercent2(pct)})`;
   };
 
-  const formatWinRateValue = (r: ReportResult): string => {
+  const formatWinRateValue = (r: ReportResult, isMobile = false): string => {
     const winCount = Math.min(r.tradeCount, Math.max(0, Math.round((r.winRate * r.tradeCount) / 100)));
+    if (isMobile) {
+      return `<span style="display:block;">${r.winRate.toFixed(2)}%</span><span style="display:block;margin-top:2px;font-size:11px;">${winCount}/${r.tradeCount}</span>`;
+    }
     return `<span>${r.winRate.toFixed(2)}%</span><span style="margin-left:10pt;">${winCount}/${r.tradeCount}</span>`;
   };
 
@@ -1011,7 +1005,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
           </div>
           <div>
             <div style="font-size:${kpiLabelFs};color:#95a8cb;">승률</div>
-            <div style="font-size:${kpiValueFs};font-weight:700;color:#8ab4ff;margin-top:2px;">${formatWinRateValue(r)}</div>
+            <div style="font-size:${kpiValueFs};font-weight:700;color:#8ab4ff;margin-top:2px;">${formatWinRateValue(r, isMobileKpi)}</div>
           </div>
           <div>
             <div style="font-size:${kpiLabelFs};color:#95a8cb;">${isMobileKpi ? '최대감소' : '최대 자본 감소'}</div>
@@ -1503,6 +1497,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const applyPanelMode = (mode: 'normal' | 'expanded' | 'collapsed') => {
+    const prevMode = panelMode;
     const wasCollapsed = panelMode === 'collapsed';
     panelMode = mode;
 
@@ -1535,6 +1530,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     } else {
       renderAll();
     }
+    onModeChange?.(mode, prevMode);
   };
 
   let dragging = false;
