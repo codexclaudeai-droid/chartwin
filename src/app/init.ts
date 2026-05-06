@@ -1984,7 +1984,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       });
       (chart.config.panelState as any).hiddenPanels = activePanels;
       pane.refreshChartUi();
-      chart.renderAll();
     };
     const restoreIndicatorsFromStrategyReport = (paneId: number) => {
       const snapshot = strategyReportIndicatorSnapshotByPane.get(paneId);
@@ -2003,7 +2002,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       }
       strategyReportIndicatorSnapshotByPane.delete(paneId);
       pane.refreshChartUi();
-      chart.renderAll();
     };
     const strategyReport = createStrategyReportPanel({
       app,
