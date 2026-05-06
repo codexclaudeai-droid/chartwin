@@ -409,6 +409,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   setVisible: (visible: boolean) => void;
   isVisible: () => boolean;
   setLeftInset: (left: number) => void;
+  setAutoExpandedHeight: (extraHeight: number) => void;
   openTradesTab: () => void;
   openSettings: () => void;
   collapse: () => void;
@@ -424,6 +425,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let panelMode: 'normal' | 'expanded' | 'collapsed' = 'normal';
   let panelVisible = true;
   let normalHeight = Math.max(defaultHeight, getMinNormalHeight());
+  let autoExpandedHeight = 0;
   let activeWidget: WidgetKey = 'equity';
   let activeTab: MainTab = 'metrics';
   let periodBars = 0;
@@ -1502,8 +1504,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const maxAllowed = Math.max(minNormalHeight, Math.floor(app.clientHeight * maxNormalHeightRatio));
     normalHeight = Math.max(minNormalHeight, Math.min(maxAllowed, Math.floor(nextHeight)));
     if (panelMode === 'normal') {
-      panel.style.height = `${normalHeight}px`;
-      onHeightChange?.(normalHeight);
+      const effectiveHeight = Math.max(minNormalHeight, Math.min(maxAllowed, Math.floor(normalHeight + autoExpandedHeight)));
+      panel.style.height = `${effectiveHeight}px`;
+      onHeightChange?.(effectiveHeight);
       renderAll();
     }
   };
@@ -1524,15 +1527,18 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       collapseBtn.title = '접기';
       onHeightChange?.(app.clientHeight);
     } else {
+      const minNormalHeight = getMinNormalHeight();
+      const maxAllowed = Math.max(minNormalHeight, Math.floor(app.clientHeight * maxNormalHeightRatio));
+      const effectiveNormalHeight = Math.max(minNormalHeight, Math.min(maxAllowed, Math.floor(normalHeight + autoExpandedHeight)));
       panel.style.top = '';
       panel.style.bottom = '0';
-      panel.style.height = `${mode === 'collapsed' ? headerHeight : normalHeight}px`;
+      panel.style.height = `${mode === 'collapsed' ? headerHeight : effectiveNormalHeight}px`;
       panel.style.zIndex = mode === 'collapsed' ? '1600' : '1010';
       resizeHandle.style.display = mode === 'normal' ? 'flex' : 'none';
       expandBtn.innerHTML = icon.maximize;
       collapseBtn.innerHTML = mode === 'collapsed' ? icon.unfold : icon.fold;
       collapseBtn.title = mode === 'collapsed' ? '펼치기' : '접기';
-      onHeightChange?.(mode === 'collapsed' ? headerHeight : normalHeight);
+      onHeightChange?.(mode === 'collapsed' ? headerHeight : effectiveNormalHeight);
     }
 
     body.style.display = mode === 'collapsed' ? 'none' : 'flex';
@@ -1981,6 +1987,22 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     isVisible: () => panelVisible,
     setLeftInset: (left: number) => {
       panel.style.left = `${Math.max(0, Math.round(left))}px`;
+    },
+    setAutoExpandedHeight: (extraHeight: number) => {
+      autoExpandedHeight = Math.max(0, Math.floor(extraHeight));
+      if (!panelVisible) return;
+      if (panelMode === 'normal') {
+        const minNormalHeight = getMinNormalHeight();
+        const maxAllowed = Math.max(minNormalHeight, Math.floor(app.clientHeight * maxNormalHeightRatio));
+        const effectiveHeight = Math.max(minNormalHeight, Math.min(maxAllowed, Math.floor(normalHeight + autoExpandedHeight)));
+        panel.style.height = `${effectiveHeight}px`;
+        onHeightChange?.(effectiveHeight);
+      } else if (panelMode === 'collapsed') {
+        onHeightChange?.(headerHeight);
+      } else {
+        onHeightChange?.(app.clientHeight);
+      }
+      renderAll();
     },
     openTradesTab: () => {
       activeTab = 'trades';

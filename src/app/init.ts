@@ -2028,6 +2028,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     const strategyReportIndicatorSnapshotByPane = new Map<number, {
       panelRatios: Record<string, number>;
       hiddenPanels: string[] | null;
+      expandedExtraHeightPx: number;
     }>();
     const collapseIndicatorsForStrategyReport = (paneId: number) => {
       const pane = ensurePane(paneId);
@@ -2036,22 +2037,32 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         activePanels: string[];
       };
       const activePanels = Array.isArray(chart.activePanels) ? chart.activePanels.slice() : [];
-      if (!activePanels.length) return;
+      if (!activePanels.length) {
+        strategyReport.setAutoExpandedHeight(0);
+        return;
+      }
       if (!strategyReportIndicatorSnapshotByPane.has(paneId)) {
         const panelRatios: Record<string, number> = {};
         activePanels.forEach((panelId) => {
           panelRatios[panelId] = chart.getPanelRatio(panelId);
         });
+        const plotHeight = Math.max(40, pane.chartArea.clientHeight - X_AXIS_HEIGHT);
+        const previousRatioSum = activePanels.reduce((sum, panelId) => sum + (panelRatios[panelId] ?? 0), 0);
+        const collapsedRatio = 0.01;
+        const collapsedRatioSum = activePanels.length * collapsedRatio;
+        const expandedExtraHeightPx = Math.max(0, Math.round(plotHeight * Math.max(0, previousRatioSum - collapsedRatioSum)));
         const hiddenPanels = Array.isArray((chart.config.panelState as any).hiddenPanels)
           ? [...((chart.config.panelState as any).hiddenPanels as string[])]
           : null;
-        strategyReportIndicatorSnapshotByPane.set(paneId, { panelRatios, hiddenPanels });
+        strategyReportIndicatorSnapshotByPane.set(paneId, { panelRatios, hiddenPanels, expandedExtraHeightPx });
       }
       const collapsedRatio = 0.01;
       activePanels.forEach((panelId) => {
         chart.config.panelState.panelRatios[panelId] = collapsedRatio;
       });
       (chart.config.panelState as any).hiddenPanels = activePanels;
+      const snapshot = strategyReportIndicatorSnapshotByPane.get(paneId);
+      strategyReport.setAutoExpandedHeight(snapshot?.expandedExtraHeightPx ?? 0);
       (chart as any)._suspendMobilePanelAutoRatio = true;
       pane.refreshChartUi();
     };
@@ -2070,6 +2081,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       } else {
         delete (chart.config.panelState as any).hiddenPanels;
       }
+      strategyReport.setAutoExpandedHeight(0);
       (chart as any)._suspendMobilePanelAutoRatio = false;
       strategyReportIndicatorSnapshotByPane.delete(paneId);
       pane.refreshChartUi();
