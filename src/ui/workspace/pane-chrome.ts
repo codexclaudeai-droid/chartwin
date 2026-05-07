@@ -63,6 +63,7 @@ const makeHeaderCtrlBtn = (label: string, title: string): HTMLButtonElement => {
 const signalIconFilter = 'brightness(0) invert(1)';
 const headerActionBg = '#1f2533';
 const headerActionHoverBg = '#2b3448';
+const LIVE_STATUS_STYLE_ID = 'tc-live-status-style';
 
 const bindHeaderActionHover = (btn: HTMLButtonElement) => {
   btn.addEventListener('mouseenter', () => {
@@ -71,6 +72,33 @@ const bindHeaderActionHover = (btn: HTMLButtonElement) => {
   btn.addEventListener('mouseleave', () => {
     btn.style.background = headerActionBg;
   });
+};
+
+const ensureLiveStatusStyle = () => {
+  if (document.getElementById(LIVE_STATUS_STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = LIVE_STATUS_STYLE_ID;
+  style.textContent = `
+    .tc-live-status-badge.tc-live-status-on {
+      border-color:#34d399 !important;
+      color:#8fffd2 !important;
+      background:radial-gradient(circle at 50% 45%, #245f49 0%, #14382d 70%) !important;
+      box-shadow:0 0 0 1px rgba(52,211,153,0.28), 0 0 12px rgba(52,211,153,0.62), inset 0 0 8px rgba(52,211,153,0.22);
+      text-shadow:0 0 8px rgba(143,255,210,0.95);
+      animation:tcLiveStatusGlow 1.45s ease-in-out infinite;
+    }
+    @keyframes tcLiveStatusGlow {
+      0%, 100% {
+        box-shadow:0 0 0 1px rgba(52,211,153,0.24), 0 0 9px rgba(52,211,153,0.45), inset 0 0 7px rgba(52,211,153,0.18);
+        filter:brightness(1);
+      }
+      50% {
+        box-shadow:0 0 0 1px rgba(52,211,153,0.42), 0 0 16px rgba(52,211,153,0.82), inset 0 0 10px rgba(52,211,153,0.34);
+        filter:brightness(1.16);
+      }
+    }
+  `;
+  document.head.appendChild(style);
 };
 
 export function createPaneChrome<TKey extends string>({
@@ -82,6 +110,7 @@ export function createPaneChrome<TKey extends string>({
   getSymbolDisplayLabel,
   showStrategyButton = true,
 }: CreatePaneChromeArgs<TKey>): PaneChrome {
+  ensureLiveStatusStyle();
   host.innerHTML = '';
   host.style.border = '1px solid #2a2e3e';
 
@@ -322,6 +351,7 @@ export function createPaneChrome<TKey extends string>({
   paneHeader.appendChild(strategyBtn);
 
   const headerTitle = document.createElement('div');
+  headerTitle.className = 'tc-live-status-badge';
   headerTitle.style.cssText = 'display:none;';
   paneHeader.appendChild(headerTitle);
 

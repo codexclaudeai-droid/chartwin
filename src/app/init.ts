@@ -677,14 +677,17 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     actions.append(openExternal, closeBtn);
     header.append(title, actions);
 
+    const iframeWrap = document.createElement('div');
+    iframeWrap.style.cssText = 'position:relative;height:min(620px,calc(88vh - 42px));max-height:calc(88vh - 42px);overflow:hidden;background:#fff;';
     const iframe = document.createElement('iframe');
     iframe.src = 'https://www.xm.com/kr/economic-calendar';
     iframe.title = 'XM 경제 캘린더';
     iframe.referrerPolicy = 'no-referrer';
     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
-    iframe.style.cssText = 'border:none;width:100%;height:100%;background:#fff;display:block;';
+    iframe.style.cssText = 'position:absolute;left:0;top:-146px;border:none;width:100%;height:760px;background:#fff;display:block;';
+    iframeWrap.appendChild(iframe);
 
-    modal.append(header, iframe);
+    modal.append(header, iframeWrap);
     overlay.appendChild(modal);
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) close();
@@ -1148,6 +1151,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         symChangeLabel.textContent = '--';
       }
       const shortLabel = isMobile || window.innerWidth < 768;
+      headerTitle.classList.toggle('tc-live-status-on', liveStatus === 'live');
       if (liveStatus === 'live') {
         headerTitle.textContent = shortLabel ? 'L' : 'LIVE';
         headerTitle.style.background = '#1d3a30';
