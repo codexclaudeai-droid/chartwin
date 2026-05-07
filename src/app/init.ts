@@ -641,6 +641,63 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   let setTopBarSignalNotification = (_count: number) => {};
   let onSignalNotificationClick = () => {};
   const acknowledgedSignalCountByPane = new Map<number, number>();
+  const openEconomicCalendarModal = () => {
+    const existing = document.querySelector('[data-economic-calendar-modal="true"]');
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    const overlay = document.createElement('div');
+    overlay.dataset.economicCalendarModal = 'true';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(5,8,14,0.68);display:flex;align-items:center;justify-content:center;padding:28px;box-sizing:border-box;backdrop-filter:blur(3px);';
+
+    const modal = document.createElement('div');
+    modal.style.cssText = 'width:min(1180px,96vw);height:min(760px,88vh);background:#111827;border:1px solid #293247;border-radius:10px;box-shadow:0 24px 80px rgba(0,0,0,0.55);display:flex;flex-direction:column;overflow:hidden;color:#e5edf9;font-family:Segoe UI,Arial,sans-serif;';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;border-bottom:1px solid #293247;background:#151c2b;flex-shrink:0;';
+    const title = document.createElement('div');
+    title.textContent = '경제 캘린더';
+    title.style.cssText = 'font-size:13px;font-weight:800;color:#f6f8ff;';
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;align-items:center;gap:6px;';
+    const openExternal = document.createElement('button');
+    openExternal.type = 'button';
+    openExternal.textContent = '새 창';
+    openExternal.style.cssText = 'height:26px;border:none;border-radius:5px;background:#243149;color:#d9e4f5;padding:0 9px;font-size:12px;cursor:pointer;';
+    openExternal.addEventListener('click', () => {
+      window.open('https://www.xm.com/kr/economic-calendar', '_blank', 'noopener,noreferrer');
+    });
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.textContent = '×';
+    closeBtn.style.cssText = 'width:28px;height:28px;border:none;border-radius:5px;background:transparent;color:#aeb8ca;font-size:20px;line-height:1;cursor:pointer;';
+    const close = () => overlay.remove();
+    closeBtn.addEventListener('click', close);
+    actions.append(openExternal, closeBtn);
+    header.append(title, actions);
+
+    const iframe = document.createElement('iframe');
+    iframe.src = 'https://www.xm.com/kr/economic-calendar';
+    iframe.title = 'XM 경제 캘린더';
+    iframe.referrerPolicy = 'no-referrer';
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+    iframe.style.cssText = 'border:none;width:100%;height:100%;background:#fff;display:block;';
+
+    modal.append(header, iframe);
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) close();
+    });
+    document.addEventListener('keydown', function onKeydown(event) {
+      if (!overlay.isConnected) {
+        document.removeEventListener('keydown', onKeydown);
+        return;
+      }
+      if (event.key === 'Escape') close();
+    });
+    document.body.appendChild(overlay);
+  };
 
   const topBarHeight = isPopout ? 0 : 40;
   // 모바일: 좌측 툴바 숨김 (width=0), 하단바도 숨김
@@ -1571,6 +1628,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       },
       isPaneMaximized: () => paneState.maximizedPaneId !== null,
       onExitMaximize: exitMaximize,
+      onOpenEconomicCalendar: openEconomicCalendarModal,
       onClickSignalNotification: () => onSignalNotificationClick(),
     });
     refreshTopControlIcons = topBarControls.refreshTopControlIcons;

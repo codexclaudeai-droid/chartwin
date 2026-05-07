@@ -61,6 +61,17 @@ const makeHeaderCtrlBtn = (label: string, title: string): HTMLButtonElement => {
 };
 
 const signalIconFilter = 'brightness(0) invert(1)';
+const headerActionBg = '#1f2533';
+const headerActionHoverBg = '#2b3448';
+
+const bindHeaderActionHover = (btn: HTMLButtonElement) => {
+  btn.addEventListener('mouseenter', () => {
+    btn.style.background = headerActionHoverBg;
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.background = headerActionBg;
+  });
+};
 
 export function createPaneChrome<TKey extends string>({
   host,
@@ -133,8 +144,9 @@ export function createPaneChrome<TKey extends string>({
   // Visible button
   const tfBtn = document.createElement('button');
   tfBtn.type = 'button';
-  tfBtn.style.cssText = 'background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;font-size:11px;padding:0 8px;height:22px;flex-shrink:0;cursor:pointer;white-space:nowrap;line-height:1;min-width:32px;';
+  tfBtn.style.cssText = `background:${headerActionBg};color:#d1d4dc;border:none;border-radius:4px;font-size:11px;padding:0 8px;height:22px;flex-shrink:0;cursor:pointer;white-space:nowrap;line-height:1;min-width:32px;transition:background 0.15s;`;
   tfBtn.textContent = _getTfSelectedLabelLower(_tfKey);
+  bindHeaderActionHover(tfBtn);
 
   // ── Dropdown panel ───────────────────────────────────────────────────
   if (!document.getElementById('tf-dd-style')) {
@@ -293,14 +305,16 @@ export function createPaneChrome<TKey extends string>({
   const indBtn = document.createElement('button');
   indBtn.type = 'button';
   indBtn.textContent = '보조지표';
-  indBtn.style.cssText = 'height:22px;background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;padding:0 8px;cursor:pointer;font-size:11px;white-space:nowrap;line-height:1;flex-shrink:0;';
+  indBtn.style.cssText = `height:22px;background:${headerActionBg};color:#d1d4dc;border:none;border-radius:4px;padding:0 8px;cursor:pointer;font-size:11px;white-space:nowrap;line-height:1;flex-shrink:0;transition:background 0.15s;`;
+  bindHeaderActionHover(indBtn);
   paneHeader.appendChild(indBtn);
 
   const strategyBtn = document.createElement('button');
   strategyBtn.type = 'button';
   strategyBtn.title = '전략시그널';
   strategyBtn.setAttribute('aria-label', '전략시그널');
-  strategyBtn.style.cssText = 'height:22px;background:#1f2533;color:#fff;border:none;border-radius:4px;padding:0 7px;cursor:pointer;font-size:11px;white-space:nowrap;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;';
+  strategyBtn.style.cssText = `height:22px;background:${headerActionBg};color:#fff;border:none;border-radius:4px;padding:0 7px;cursor:pointer;font-size:11px;white-space:nowrap;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;transition:background 0.15s;`;
+  bindHeaderActionHover(strategyBtn);
   const setStrategyButtonIcon = (size: number) => {
     strategyBtn.innerHTML = `<img src="/icon-signal.svg" alt="" aria-hidden="true" style="width:${size}px;height:${size}px;display:block;filter:${signalIconFilter};">`;
   };
