@@ -256,13 +256,13 @@ const ensureTopBrandFlareStyle = () => {
     }
     @keyframes tcBrandTradingSweep{
       0%{ opacity:0; transform:translateX(-120%); }
-      30%{ opacity:0.95; }
+      30%{ opacity:0.72; }
       100%{ opacity:0; transform:translateX(95%); }
     }
     @keyframes tcBrandTradingLetterWhite{
       0%{ color:#9ba5b7; }
-      55%{ color:#d6dde9; }
-      100%{ color:#d6dde9; }
+      55%{ color:#cfd6e3; }
+      100%{ color:#cfd6e3; }
     }
     @keyframes tcBrandCoreLetterBlue{
       0%{ color:#9ba5b7; }
