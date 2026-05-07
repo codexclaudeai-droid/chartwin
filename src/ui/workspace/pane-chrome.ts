@@ -83,18 +83,18 @@ const ensureLiveStatusStyle = () => {
       border-color:#34d399 !important;
       color:#8fffd2 !important;
       background:radial-gradient(circle at 50% 45%, #245f49 0%, #14382d 70%) !important;
-      box-shadow:0 0 0 1px rgba(52,211,153,0.28), 0 0 12px rgba(52,211,153,0.62), inset 0 0 8px rgba(52,211,153,0.22);
-      text-shadow:0 0 8px rgba(143,255,210,0.95);
+      box-shadow:0 0 0 1px rgba(52,211,153,0.2), 0 0 8px rgba(52,211,153,0.44), inset 0 0 6px rgba(52,211,153,0.16);
+      text-shadow:0 0 6px rgba(143,255,210,0.66);
       animation:tcLiveStatusGlow 1.45s ease-in-out infinite;
     }
     @keyframes tcLiveStatusGlow {
       0%, 100% {
-        box-shadow:0 0 0 1px rgba(52,211,153,0.24), 0 0 9px rgba(52,211,153,0.45), inset 0 0 7px rgba(52,211,153,0.18);
+        box-shadow:0 0 0 1px rgba(52,211,153,0.17), 0 0 6px rgba(52,211,153,0.32), inset 0 0 5px rgba(52,211,153,0.13);
         filter:brightness(1);
       }
       50% {
-        box-shadow:0 0 0 1px rgba(52,211,153,0.42), 0 0 16px rgba(52,211,153,0.82), inset 0 0 10px rgba(52,211,153,0.34);
-        filter:brightness(1.16);
+        box-shadow:0 0 0 1px rgba(52,211,153,0.29), 0 0 11px rgba(52,211,153,0.57), inset 0 0 7px rgba(52,211,153,0.24);
+        filter:brightness(1.11);
       }
     }
   `;
