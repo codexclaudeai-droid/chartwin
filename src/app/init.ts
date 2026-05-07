@@ -77,6 +77,8 @@ import { getUsdtToDisplayRate } from '../utils/currency';
 import {
   canonicalizeUiSymbol,
   getDefaultQuoteCurrencyForSymbol,
+  isKrxEquityMarketOpen,
+  isKrxIndexLikeSymbol,
   isNasdaqFuturesLikeSymbol,
   isCmeEquityFuturesOpen,
 } from '../utils/market-session';
@@ -1121,11 +1123,14 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const staleThresholdSec = Math.max(180, tfSec * 3);
       const alwaysOpenMarket = shouldUseBinanceDirect(chart.config.symbol);
       const cmeSessionSymbol = isNasdaqFuturesLikeSymbol(chart.config.symbol);
+      const krxSessionSymbol = isKrxIndexLikeSymbol(chart.config.symbol);
       const sessionOpen = alwaysOpenMarket
         ? true
         : cmeSessionSymbol
           ? isCmeEquityFuturesOpen(new Date())
-          : (Number.isFinite(lastTs) && nowSec - lastTs <= staleThresholdSec);
+          : krxSessionSymbol
+            ? isKrxEquityMarketOpen(new Date())
+            : (Number.isFinite(lastTs) && nowSec - lastTs <= staleThresholdSec);
       marketSessionBadge.style.background = sessionOpen ? '#1fbf75' : '#e24a4a';
       marketSessionBadge.style.borderColor = sessionOpen ? '#2f8f66' : '#9d3c3c';
       marketSessionBadge.title = sessionOpen ? '장오픈' : '장마감';
@@ -2000,7 +2005,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         `width:${JUMP_BTN_SIZE}px`, `height:${JUMP_BTN_SIZE}px`,
         'z-index:1600',
         'display:flex', 'align-items:center', 'justify-content:center',
-        'background:#1e2740', 'color:#c2ccdf',
+        'background:transparent', 'color:#c2ccdf',
         'border:1px solid #3a4a66', 'border-radius:50%',
         'cursor:pointer', 'padding:0',
         'box-shadow:0 3px 12px rgba(0,0,0,0.55)',
@@ -2048,13 +2053,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       };
 
       jumpBtn.addEventListener('touchstart', () => {
-        jumpBtn.style.background  = '#2962ff';
+        jumpBtn.style.background  = 'transparent';
         jumpBtn.style.borderColor = '#2962ff';
         jumpBtn.style.opacity     = '1';
       }, { passive: true });
       jumpBtn.addEventListener('touchend', () => {
         setTimeout(() => {
-          jumpBtn.style.background  = '#1e2740';
+          jumpBtn.style.background  = 'transparent';
           jumpBtn.style.borderColor = '#3a4a66';
           jumpBtn.style.opacity     = '0.88';
         }, 250);

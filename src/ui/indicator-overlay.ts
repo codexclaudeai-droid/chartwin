@@ -234,9 +234,11 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     const tagPadX = touchLarge ? '1px 3px' : (compactOverlay ? '1px 3px' : '2px 5px');
     const tagGap = touchLarge ? 3 : (compactOverlay ? 2 : 3);
     const tagLineH = touchLarge ? 1.3 : (compactOverlay ? 1.2 : 1.35);
-    const isMobileOverlay = /Mobi|Android|iPhone|iPad|iPod|Touch/i.test(navigator.userAgent)
+    const isMobileOverlay = window.innerWidth < 768 && (
+      /Mobi|Android|iPhone|iPod|Touch/i.test(navigator.userAgent)
       || isTouchDevice
-      || window.innerWidth < 600;
+      || window.innerWidth < 600
+    );
     activeMobileMainTag = null;
     const axisPad = Math.max(
       0,
@@ -291,7 +293,12 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       onOverlayChange?.();
     };
 
-    const actionIconSz = touchLarge ? 18 : 12;
+    const desktopActionButtonSize = 20;
+    const desktopActionIconSize = 18;
+    const mobileActionGapBase = 4;
+    const mobileActionGapExpanded = Math.round(mobileActionGapBase * 1.5);
+    const desktopActionGap = 4;
+    const actionIconSz = isMobileOverlay ? 18 : (compactOverlay ? 12 : desktopActionIconSize);
     const eyeIconSvg = (visible: boolean): string => (
       visible
         ? `<svg viewBox="0 0 24 24" width="${actionIconSz}" height="${actionIconSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12"></path><circle cx="12" cy="12" r="2.8"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`
@@ -303,10 +310,10 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       btn.type = 'button';
       btn.title = title;
       btn.innerHTML = svg;
-      const actionBtnSz = touchLarge ? 19 : (compactOverlay ? 15 : 16);
+      const actionBtnSz = isMobileOverlay ? 19 : (compactOverlay ? 15 : desktopActionButtonSize);
       btn.style.cssText = `width:${actionBtnSz}px;height:${actionBtnSz}px;
         display:inline-flex;align-items:center;justify-content:center;
-        border:1px solid rgba(121,136,166,0.45);border-radius:4px;background:rgba(15,21,33,0.9);
+        border:none;border-radius:4px;background:transparent;
         color:#d3def4;cursor:pointer;padding:0;`;
       btn.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -324,7 +331,8 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     ) => {
       const actions = document.createElement('span');
       actions.className = 'indicator-overlay-tag-actions';
-      actions.style.cssText = `display:none;align-items:center;gap:${touchLarge ? 5 : 3}px;`;
+      const defaultGap = isMobileOverlay ? mobileActionGapBase : (compactOverlay ? 3 : desktopActionGap);
+      actions.style.cssText = `display:none;align-items:center;gap:${defaultGap}px;`;
       const currentlyVisible = isIndicatorLineVisible(key);
       const hideBtn = makeTagActionButton(
         currentlyVisible ? '감추기' : '표시',
@@ -336,14 +344,14 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         `<svg viewBox="0 0 24 24" width="${actionIconSz}" height="${actionIconSz}" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"></line><circle cx="9" cy="7" r="2"></circle><line x1="4" y1="12" x2="20" y2="12"></line><circle cx="15" cy="12" r="2"></circle><line x1="4" y1="17" x2="20" y2="17"></line><circle cx="11" cy="17" r="2"></circle></svg>`,
         openSettings,
       );
-      const actionBtnSz = touchLarge ? 19 : (compactOverlay ? 15 : 16);
+      const actionBtnSz = isMobileOverlay ? 19 : (compactOverlay ? 15 : desktopActionButtonSize);
       const trashBtn = document.createElement('button');
       trashBtn.type = 'button';
       trashBtn.title = '지표 삭제';
       trashBtn.className = 'ind-tag-trash-btn';
       trashBtn.style.cssText = `width:${actionBtnSz}px;height:${actionBtnSz}px;
         display:inline-flex;align-items:center;justify-content:center;
-        border:1px solid rgba(121,136,166,0.45);border-radius:4px;background:rgba(15,21,33,0.9);
+        border:none;border-radius:4px;background:transparent;
         color:#d3def4;cursor:pointer;padding:0;transition:color 0.15s,border-color 0.15s;`;
       trashBtn.innerHTML = `<svg viewBox="0 0 24 24" width="${actionIconSz}" height="${actionIconSz}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline class="trash-lid" points="3 6 5 6 21 6"></polyline><path class="trash-body" d="M19 6l-1 14H6L5 6m3 0V4h8v2"></path><circle class="trash-dot-1" cx="9" cy="10.4" r="0.9" fill="currentColor" stroke="none" opacity="0"></circle><circle class="trash-dot-2" cx="12" cy="10.4" r="0.9" fill="currentColor" stroke="none" opacity="0"></circle><circle class="trash-dot-3" cx="15" cy="10.4" r="0.9" fill="currentColor" stroke="none" opacity="0"></circle></svg>`;
       trashBtn.addEventListener('mouseenter', () => { trashBtn.style.color = '#ff7875'; trashBtn.style.borderColor = 'rgba(255,80,80,0.5)'; });
@@ -369,7 +377,14 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       const valueEls = Array.from(tag.querySelectorAll<HTMLElement>('.indicator-overlay-tag-value'));
       const setMobileActiveState = (active: boolean) => {
         tag.classList.toggle('indicator-overlay-main-tag-mobile-active', active);
+        tag.style.background = active ? 'rgba(15,21,33,0.72)' : 'transparent';
+        tag.style.borderColor = active ? 'rgba(84,106,147,0.9)' : 'transparent';
+        tag.style.borderRadius = active ? '6px' : '3px';
+        tag.style.padding = active ? '2px 6px' : tagPadX;
         valueEls.forEach((el) => { el.style.display = active ? 'none' : ''; });
+        if (isMobileOverlay) {
+          actions.style.gap = `${active ? mobileActionGapExpanded : mobileActionGapBase}px`;
+        }
         actions.style.display = active ? 'inline-flex' : 'none';
       };
       tag.addEventListener('mouseenter', () => {
@@ -390,6 +405,10 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
           const nextActive = activeMobileMainTag !== tag;
           if (activeMobileMainTag && activeMobileMainTag !== tag) {
             activeMobileMainTag.classList.remove('indicator-overlay-main-tag-mobile-active');
+            activeMobileMainTag.style.background = 'transparent';
+            activeMobileMainTag.style.borderColor = 'transparent';
+            activeMobileMainTag.style.borderRadius = '3px';
+            activeMobileMainTag.style.padding = tagPadX;
             Array.from(activeMobileMainTag.querySelectorAll<HTMLElement>('.indicator-overlay-tag-value'))
               .forEach((el) => { el.style.display = ''; });
             const prevActions = activeMobileMainTag.querySelector<HTMLElement>('.indicator-overlay-tag-actions');
@@ -436,7 +455,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
 
     const makeStrategyTag = (label: string) => {
       const tag = document.createElement('div');
-      tag.style.cssText = `display:inline-flex;align-items:center;gap:3px;max-width:none;
+      tag.style.cssText = `display:inline-flex;align-items:center;gap:${isMobileOverlay ? 3 : 6}px;max-width:none;
         background:transparent;border:1px solid transparent;border-radius:3px;
         padding:${tagPadX};font-size:${tagFontSize}px;font-family:${CHART_FONT_STACK};color:#f5f7fb;
         pointer-events:auto;cursor:default;box-sizing:border-box;overflow:visible;white-space:nowrap;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);transition:border-color 0.15s;`;
@@ -445,14 +464,15 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       textEl.style.cssText = 'white-space:nowrap;';
       const isVisible = chart.isStrategySignalVisible?.() !== false;
       const eyeSvgSz = actionIconSz;
-      const eyeBtnSz = touchLarge ? 22 : (compactOverlay ? 16 : 18);
+      const eyeBtnSz = isMobileOverlay ? 22 : (compactOverlay ? 16 : desktopActionButtonSize);
       const reportSvgSz = touchLarge ? 14 : (compactOverlay ? 10 : 10);
       const reportBtnSz = touchLarge ? 18 : (compactOverlay ? 14 : 16);
 
       // 눈 + 설정 버튼을 묶은 액션 컨테이너 (호버/탭시에만 표시)
       const strategyActions = document.createElement('span');
       strategyActions.className = 'strategy-tag-actions';
-      strategyActions.style.cssText = `display:none;align-items:center;gap:${touchLarge ? 5 : 3}px;`;
+      const strategyDefaultGap = isMobileOverlay ? mobileActionGapBase : (compactOverlay ? 3 : desktopActionGap);
+      strategyActions.style.cssText = `display:none;align-items:center;gap:${strategyDefaultGap}px;`;
 
       const visibilityBtn = document.createElement('button');
       visibilityBtn.type = 'button';
@@ -552,11 +572,20 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
             const prevActions = activeMobileMainTag.querySelector<HTMLElement>('.strategy-tag-actions,.indicator-overlay-tag-actions');
             if (prevActions) prevActions.style.display = 'none';
             activeMobileMainTag.classList.remove('indicator-overlay-main-tag-mobile-active');
+            activeMobileMainTag.style.background = 'transparent';
+            activeMobileMainTag.style.borderColor = 'transparent';
+            activeMobileMainTag.style.borderRadius = '3px';
+            activeMobileMainTag.style.padding = tagPadX;
             Array.from(activeMobileMainTag.querySelectorAll<HTMLElement>('.indicator-overlay-tag-value'))
               .forEach((el) => { el.style.display = ''; });
           }
           activeMobileMainTag = nextActive ? (tag as HTMLDivElement) : null;
           strategyActions.style.display = nextActive ? 'inline-flex' : 'none';
+          strategyActions.style.gap = `${nextActive ? mobileActionGapExpanded : mobileActionGapBase}px`;
+          (tag as HTMLDivElement).style.background = nextActive ? 'rgba(15,21,33,0.72)' : 'transparent';
+          (tag as HTMLDivElement).style.borderColor = nextActive ? 'rgba(84,106,147,0.9)' : 'transparent';
+          (tag as HTMLDivElement).style.borderRadius = nextActive ? '6px' : '3px';
+          (tag as HTMLDivElement).style.padding = nextActive ? '2px 6px' : tagPadX;
         });
       }
       return tag;
@@ -568,13 +597,13 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       fallbackColor = '#dbe3f4',
     ) => {
       const tag = document.createElement('div');
-      tag.style.cssText = `position:relative;display:inline-flex;align-items:center;gap:${touchLarge ? 6 : (compactOverlay ? 3 : 5)}px;max-width:fit-content;
+      tag.style.cssText = `position:relative;display:inline-flex;align-items:center;gap:${touchLarge ? 6 : (compactOverlay ? 3 : 10)}px;max-width:fit-content;
         background:transparent;border:1px solid transparent;border-radius:3px;
         padding:${tagPadX};font-size:${tagFontSize}px;font-family:${CHART_FONT_STACK};color:${fallbackColor};
         pointer-events:auto;cursor:pointer;transition:border-color 0.15s;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);`;
       const textWrap = document.createElement('span');
       textWrap.className = 'indicator-overlay-tag-name';
-      textWrap.style.cssText = `display:inline-flex;align-items:center;gap:${compactOverlay ? 3 : 5}px;`;
+      textWrap.style.cssText = `display:inline-flex;align-items:center;gap:${compactOverlay ? 3 : (isMobileOverlay ? 5 : 10)}px;`;
       parts.forEach((part, index) => {
         const partEl = document.createElement('span');
         partEl.textContent = part.text;
@@ -822,7 +851,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
 
     // 펼치기/감추기 쉐브론 토글 버튼 (전략태그 아래)
     if (hasAnyIndicators) {
-      const btnSz = touchLarge ? 28 : 24;
+    const btnSz = touchLarge ? 22 : 19;
       const chevSz = touchLarge ? 26 : 21;
       const toggleBtn = document.createElement('button');
       toggleBtn.type = 'button';
@@ -1068,20 +1097,22 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         if (motion !== 'none') btn.dataset.motion = motion;
         if (danger) btn.dataset.noMotion = '1';
         btn.style.cssText = `width:${buttonSize}px;height:${buttonSize}px;border-radius:5px;
-          border:1px solid ${danger ? '#8f3542' : '#5f7090'};
-          background:${danger ? 'rgba(126,26,42,0.35)' : 'rgba(15,21,33,0.92)'};
+          border:${isMobileOverlay ? `1px solid ${danger ? '#8f3542' : '#5f7090'}` : 'none'};
+          background:${isMobileOverlay ? (danger ? 'rgba(126,26,42,0.35)' : 'rgba(15,21,33,0.92)') : 'transparent'};
           color:${danger ? '#ffd2d7' : '#edf3ff'};cursor:pointer;display:flex;align-items:center;justify-content:center;
           transition:background 0.1s ease,color 0.1s ease,border-color 0.1s ease;pointer-events:auto;`;
         btn.addEventListener('mouseenter', () => {
-          btn.style.background = danger ? 'rgba(186,40,63,0.62)' : 'rgba(58,126,246,0.48)';
+          btn.style.background = danger ? 'rgba(186,40,63,0.62)' : 'rgba(58,126,246,0.34)';
           btn.style.color = '#ffffff';
-          btn.style.borderColor = danger ? '#cf586a' : '#86acff';
+          if (isMobileOverlay) btn.style.borderColor = danger ? '#cf586a' : '#86acff';
           showTip(btn, title);
         });
         btn.addEventListener('mouseleave', () => {
-          btn.style.background = danger ? 'rgba(126,26,42,0.35)' : 'rgba(15,21,33,0.92)';
+          btn.style.background = isMobileOverlay
+            ? (danger ? 'rgba(126,26,42,0.35)' : 'rgba(15,21,33,0.92)')
+            : 'transparent';
           btn.style.color = danger ? '#ffd2d7' : '#edf3ff';
-          btn.style.borderColor = danger ? '#8f3542' : '#5f7090';
+          if (isMobileOverlay) btn.style.borderColor = danger ? '#8f3542' : '#5f7090';
           hideTip();
         });
         btn.addEventListener('click', (event) => {
