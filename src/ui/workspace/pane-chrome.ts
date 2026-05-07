@@ -294,7 +294,7 @@ export function createPaneChrome<TKey extends string>({
   const marketPriceWrap = document.createElement('div');
   marketPriceWrap.style.cssText = 'display:flex;align-items:center;gap:0;min-width:0;flex-shrink:0;width:146px;justify-content:flex-start;';
   const symPriceLabel = document.createElement('span');
-  symPriceLabel.style.cssText = "font-size:15px;font-weight:600;color:#9aa7c1;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;font-family:-apple-system,BlinkMacSystemFont,'Trebuchet MS',Roboto,Ubuntu,sans-serif;flex-shrink:0;margin-right:4px;";
+  symPriceLabel.style.cssText = "font-size:16px;font-weight:600;color:#9aa7c1;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums;font-family:-apple-system,BlinkMacSystemFont,'Trebuchet MS',Roboto,Ubuntu,sans-serif;flex-shrink:0;margin-right:4px;";
   symPriceLabel.textContent = '--';
   const symChangeWrap = document.createElement('span');
   symChangeWrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1;gap:1px;width:58px;flex-shrink:0;';
@@ -400,7 +400,7 @@ export function createPaneChrome<TKey extends string>({
       symBtn.style.maxWidth = '38%';
       marketPriceWrap.style.width = '110px';
       symPriceLabel.style.width = '';
-      symPriceLabel.style.fontSize = '12px';
+      symPriceLabel.style.fontSize = '13px';
       symPriceLabel.style.display = '';
       symChangeWrap.style.display = '';
       symChangeMetaLabel.style.display = 'none';
