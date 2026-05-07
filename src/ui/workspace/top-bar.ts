@@ -262,7 +262,7 @@ const ensureTopBrandFlareStyle = () => {
     @keyframes tcBrandTradingLetterWhite{
       0%{ color:#9ba5b7; }
       55%{ color:#d6dde9; }
-      100%{ color:#ffffff; }
+      100%{ color:#d6dde9; }
     }
     @keyframes tcBrandCoreLetterBlue{
       0%{ color:#9ba5b7; }
