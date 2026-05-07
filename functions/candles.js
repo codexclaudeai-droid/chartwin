@@ -17,10 +17,6 @@ function canonicalize(market, symbol) {
   return s;
 }
 
-/**
- * 1m 캔들 배열을 더 큰 타임프레임으로 집계합니다.
- * targetTfSec: 집계할 타임프레임의 초 단위 크기
- */
 function aggregateFrom1m(candles1m, targetTfSec) {
   const map = new Map();
   for (const c of candles1m) {
@@ -63,26 +59,30 @@ export async function onRequestGet({ request, env }) {
 
   const key = `${market}:${symbol}:${timeframe}`;
   let candles = [];
+  let source = 'stored';
   try {
-    const raw = await env.CANDLES_KV.get(key, { type: 'json' });
-    if (Array.isArray(raw) && raw.length > 0) {
-      // 해당 타임프레임 데이터가 직접 존재하면 그대로 반환
-      candles = raw;
-    } else if (timeframe !== '1m') {
-      // 없으면 1m 데이터를 집계해서 생성
+    if (timeframe !== '1m') {
       const tfSec = TF_SECONDS[timeframe];
       if (tfSec && tfSec > 60) {
         const key1m = `${market}:${symbol}:1m`;
         const raw1m = await env.CANDLES_KV.get(key1m, { type: 'json' });
         if (Array.isArray(raw1m) && raw1m.length > 0) {
           candles = aggregateFrom1m(raw1m, tfSec);
+          source = 'aggregated_from_1m';
         }
+      }
+    }
+    if (!candles.length) {
+      const raw = await env.CANDLES_KV.get(key, { type: 'json' });
+      if (Array.isArray(raw) && raw.length > 0) {
+        candles = raw;
+        source = 'stored';
       }
     }
   } catch {}
 
   return Response.json(
-    { ok: true, market, symbol, timeframe, candles: candles.slice(-limit) },
+    { ok: true, market, symbol, timeframe, source, candles: candles.slice(-limit) },
     { headers: CORS },
   );
 }

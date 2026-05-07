@@ -121,7 +121,7 @@ export function shouldUseBinanceDirect(symbol: string): boolean {
 export function inferGatewayMarket(symbol: string): 'futures' | 'index' | 'commodity' | 'fx' {
   if (isCommodityLikeSymbol(symbol)) return 'commodity';
   if (isFxLikeSymbol(symbol)) return 'fx';
-  if (/^([A-Z]{2,5}\d{2,4}|SPX500|NAS100|NQ1!|NDX|HSI|DAX|NIKKEI|KOSPI|KOSDAQ)$/.test(normalizeSymbol(symbol))) {
+  if (/^([A-Z]{2,5}\d{2,4}|SPX500|NAS100|NQ1!|NDX|HSI|DAX|NIKKEI|KOSPI|KOSDAQ|KOSPI200)$/.test(normalizeSymbol(symbol))) {
     return 'index';
   }
   return 'futures';

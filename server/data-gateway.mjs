@@ -463,7 +463,9 @@ async function handleWebhookIngest(req, res) {
     return;
   }
 
-  const market = normalizeMarket(body.market) || inferMarketFromSymbol(body.symbol);
+  const requestedMarket = normalizeMarket(body.market);
+  const inferredMarket = inferMarketFromSymbol(body.symbol);
+  const market = inferredMarket === 'futures' && requestedMarket ? requestedMarket : inferredMarket;
   const symbol = canonicalizeSymbolByMarket(market, body.symbol);
   const timeframe = normalizeTimeframe(body.timeframe || body.interval || '1m');
   const candles = sanitizeCandles(body.candles, timeframe);
