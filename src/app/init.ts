@@ -663,20 +663,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     title.style.cssText = 'font-size:13px;font-weight:800;color:#f6f8ff;';
     const actions = document.createElement('div');
     actions.style.cssText = 'display:flex;align-items:center;gap:6px;';
-    const openExternal = document.createElement('button');
-    openExternal.type = 'button';
-    openExternal.textContent = '새 창';
-    openExternal.style.cssText = 'height:26px;border:none;border-radius:5px;background:#243149;color:#d9e4f5;padding:0 9px;font-size:12px;cursor:pointer;';
-    openExternal.addEventListener('click', () => {
-      window.open('https://kr.tradingview.com/economic-calendar/', '_blank', 'noopener,noreferrer');
-    });
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
     closeBtn.textContent = '×';
     closeBtn.style.cssText = 'width:28px;height:28px;border:none;border-radius:5px;background:transparent;color:#aeb8ca;font-size:20px;line-height:1;cursor:pointer;';
     const close = () => overlay.remove();
     closeBtn.addEventListener('click', close);
-    actions.append(openExternal, closeBtn);
+    actions.append(closeBtn);
     header.append(title, actions);
 
     const widgetWrap = document.createElement('div');
