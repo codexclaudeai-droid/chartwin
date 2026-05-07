@@ -666,7 +666,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     openExternal.textContent = '새 창';
     openExternal.style.cssText = 'height:26px;border:none;border-radius:5px;background:#243149;color:#d9e4f5;padding:0 9px;font-size:12px;cursor:pointer;';
     openExternal.addEventListener('click', () => {
-      window.open('https://www.xm.com/kr/economic-calendar', '_blank', 'noopener,noreferrer');
+      window.open('https://kr.tradingview.com/economic-calendar/', '_blank', 'noopener,noreferrer');
     });
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
@@ -677,17 +677,30 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     actions.append(openExternal, closeBtn);
     header.append(title, actions);
 
-    const iframeWrap = document.createElement('div');
-    iframeWrap.style.cssText = 'position:relative;height:min(620px,calc(88vh - 42px));max-height:calc(88vh - 42px);overflow:hidden;background:#fff;';
-    const iframe = document.createElement('iframe');
-    iframe.src = 'https://www.xm.com/kr/economic-calendar';
-    iframe.title = 'XM 경제 캘린더';
-    iframe.referrerPolicy = 'no-referrer';
-    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
-    iframe.style.cssText = 'position:absolute;left:0;top:-146px;border:none;width:100%;height:760px;background:#fff;display:block;';
-    iframeWrap.appendChild(iframe);
+    const widgetWrap = document.createElement('div');
+    widgetWrap.className = 'tradingview-widget-container';
+    widgetWrap.style.cssText = 'position:relative;flex:1;min-height:0;background:#131722;';
+    const widget = document.createElement('div');
+    widget.className = 'tradingview-widget-container__widget';
+    widget.style.cssText = 'width:100%;height:100%;';
+    widgetWrap.appendChild(widget);
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js';
+    script.type = 'text/javascript';
+    script.async = true;
+    script.innerHTML = `
+      {
+        "colorTheme": "dark",
+        "isTransparent": false,
+        "locale": "kr",
+        "countryFilter": "ar,au,br,ca,cn,fr,de,in,id,it,jp,kr,mx,ru,sa,za,tr,gb,us,eu",
+        "importanceFilter": "-1,0,1",
+        "width": "100%",
+        "height": "100%"
+      }`;
+    widgetWrap.appendChild(script);
 
-    modal.append(header, iframeWrap);
+    modal.append(header, widgetWrap);
     overlay.appendChild(modal);
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) close();
