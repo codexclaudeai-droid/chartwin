@@ -299,7 +299,7 @@ function mkIconBtn(title: string, svg: string): HTMLButtonElement {
   btn.type = 'button';
   btn.title = title;
   btn.innerHTML = svg;
-  btn.style.cssText = 'height:24px;min-width:24px;padding:0 6px;border:1px solid #34435f;background:#1b2438;color:#dce4f5;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+  btn.style.cssText = 'height:24px;min-width:24px;padding:0 6px;border:1px solid #34435f;background:#1b2438;color:#dce4f5;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap;';
   btn.addEventListener('mouseenter', () => {
     btn.style.background = '#263655';
     btn.style.color = '#ffffff';
@@ -559,7 +559,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   tabRow.style.cssText = 'height:30px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 8px;border-bottom:1px solid #23314a;background:#10192c;';
   panel.appendChild(tabRow);
   const tabLeft = document.createElement('div');
-  tabLeft.style.cssText = 'display:flex;align-items:center;gap:6px;';
+  tabLeft.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0;';
   tabRow.appendChild(tabLeft);
   const tabMetrics = document.createElement('button');
   tabMetrics.textContent = '지표';
@@ -570,19 +570,21 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   tabLeft.appendChild(tabMetrics);
   tabLeft.appendChild(tabTrades);
   const timeframeLabel = document.createElement('span');
-  timeframeLabel.style.cssText = 'font-size:11px;color:#8ea4c9;white-space:nowrap;margin-left:auto;';
+  timeframeLabel.style.cssText = 'font-size:11px;color:#8ea4c9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto;';
   const tabRight = document.createElement('div');
-  tabRight.style.cssText = 'display:flex;align-items:center;gap:6px;';
+  tabRight.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0;flex:1;justify-content:flex-end;';
   tabRow.appendChild(tabRight);
   tabRight.appendChild(timeframeLabel);
 
   const periodBtn = mkIconBtn('기간 설정', icon.calendar);
   const periodText = document.createElement('span');
   periodText.textContent = '전체';
-  periodText.style.cssText = 'font-size:11px;color:#aab8d2;margin-right:4px;';
+  periodText.style.cssText = 'font-size:11px;color:#aab8d2;margin-right:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
   periodBtn.prepend(periodText);
   periodBtn.style.gap = '4px';
   periodBtn.style.paddingRight = '8px';
+  periodBtn.style.minWidth = '0';
+  periodBtn.style.flex = '0 1 auto';
   tabRight.appendChild(periodBtn);
 
   const detailsBtn = mkIconBtn('거래내역 전환', icon.details);
@@ -908,7 +910,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       tabRight.style.flex = '1';
       tabRight.style.minWidth = '0';
       tabRight.style.flexWrap = 'nowrap';
-      tabRight.style.overflowX = 'auto';
+      tabRight.style.overflowX = 'hidden';
       tabRight.style.justifyContent = 'flex-end';
       tabRight.style.gap = '4px';
     } else {
@@ -918,11 +920,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       tabLeft.style.width = '';
       tabLeft.style.flexShrink = '';
       tabRight.style.width = '';
-      tabRight.style.flex = '';
-      tabRight.style.minWidth = '';
+      tabRight.style.flex = '1';
+      tabRight.style.minWidth = '0';
       tabRight.style.flexWrap = '';
-      tabRight.style.overflowX = '';
-      tabRight.style.justifyContent = '';
+      tabRight.style.overflowX = 'hidden';
+      tabRight.style.justifyContent = 'flex-end';
       tabRight.style.gap = '6px';
     }
 
@@ -954,11 +956,18 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       legendRow.style.flexWrap = 'nowrap';
     }
 
-    periodText.style.display = 'inline';
-    periodText.style.maxWidth = 'none';
+    const compactControls = width < 640;
+    const tighterControls = width < 560;
+
+    timeframeLabel.style.display = compactControls ? 'none' : 'inline';
+    timeframeLabel.style.maxWidth = width < 760 ? '84px' : '120px';
+
+    periodBtn.style.maxWidth = tighterControls ? '150px' : (compactControls ? '190px' : '240px');
+    periodText.style.display = 'inline-block';
+    periodText.style.maxWidth = tighterControls ? '96px' : (compactControls ? '136px' : '180px');
     periodText.style.whiteSpace = 'nowrap';
-    periodText.style.overflow = 'visible';
-    periodText.style.textOverflow = 'clip';
+    periodText.style.overflow = 'hidden';
+    periodText.style.textOverflow = 'ellipsis';
     periodText.style.fontSize = width < 520 ? '10px' : '11px';
 
     const maxMenuWidth = Math.max(180, panel.clientWidth - 16);

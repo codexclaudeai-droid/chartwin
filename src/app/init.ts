@@ -843,6 +843,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     } = chrome;
     headerTitle.style.cssText = 'display:block;margin-left:6px;padding:1px 6px;border-radius:999px;border:1px solid #3a4155;background:#22293a;color:#b5bece;font-size:10px;font-weight:700;line-height:1.4;white-space:nowrap;flex-shrink:0;';
 
+    const currencyDock = document.createElement('div');
+    currencyDock.style.cssText = `position:absolute;right:4px;bottom:0;height:${X_AXIS_HEIGHT}px;display:none;align-items:center;justify-content:flex-end;z-index:80;pointer-events:auto;`;
+    paneRoot.appendChild(currencyDock);
+    const isCurrencyDocked = () => currencySelect.parentElement === currencyDock;
+
     const chart = new SimpleChart(chartArea);
     applyUserFacingStrategy(chart);
     let lastCurrencySelectWidth = '';
@@ -851,7 +856,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (axisPad > 0) {
         const headerPadRight = parseInt(getComputedStyle(paneHeader).paddingRight) || 0;
         const nextWidth = `${Math.max(30, axisPad - headerPadRight)}px`;
-        if (document.activeElement !== currencySelect && currencySelect.style.width !== nextWidth) {
+        if (isCurrencyDocked()) {
+          currencySelect.style.width = '58px';
+        } else if (document.activeElement !== currencySelect && currencySelect.style.width !== nextWidth) {
           currencySelect.style.width = nextWidth;
           lastCurrencySelectWidth = nextWidth;
         } else if (!currencySelect.style.width) {
@@ -904,29 +911,44 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     let lastMarketInfoSide: 'left' | 'right' | null = null;
     const applyMarketInfoLayout = () => {
       const side = chart.config.layout.marketInfoSide === 'left' ? 'left' : 'right';
+      const maximizedVisible = paneState.maximizedPaneId !== null
+        && paneState.currentVisiblePaneIds.includes(paneState.maximizedPaneId);
+      const visiblePaneCount = maximizedVisible ? 1 : paneState.currentVisiblePaneIds.length;
+      const dockCurrency = isMobile && visiblePaneCount > 1;
       if (
         lastMarketInfoSide === side
         && symBtn.parentElement === paneHeader
         && marketPriceWrap.parentElement === paneHeader
-        && currencySelect.parentElement === paneHeader
+        && currencySelect.parentElement === (dockCurrency ? currencyDock : paneHeader)
       ) {
         return;
       }
       lastMarketInfoSide = side;
       if (!paneHeader.contains(symBtn)) paneHeader.insertBefore(symBtn, paneHeader.firstChild);
       if (!paneHeader.contains(winCtrlWrap)) paneHeader.appendChild(winCtrlWrap);
-      if (side === 'left') {
-        paneHeader.insertBefore(currencySelect, symBtn);
-        paneHeader.insertBefore(marketPriceWrap, tfSelect);
+      currencyDock.style.display = dockCurrency ? 'flex' : 'none';
+      if (dockCurrency) {
+        currencyDock.appendChild(currencySelect);
+        currencySelect.style.width = '58px';
+        currencySelect.style.height = '20px';
+        currencySelect.style.fontSize = '10px';
+        currencySelect.style.padding = '1px 4px';
         currencySelect.style.marginLeft = '0';
+      }
+      if (side === 'left') {
+        if (!dockCurrency) paneHeader.insertBefore(currencySelect, symBtn);
+        paneHeader.insertBefore(marketPriceWrap, tfSelect);
         ohlcHeaderDisplay.style.marginLeft = '0';
         winCtrlWrap.style.marginLeft = 'auto';
       } else {
         paneHeader.insertBefore(marketPriceWrap, tfSelect);
-        paneHeader.insertBefore(currencySelect, winCtrlWrap);
+        if (!dockCurrency) paneHeader.insertBefore(currencySelect, winCtrlWrap);
         ohlcHeaderDisplay.style.marginLeft = 'auto';
-        currencySelect.style.marginLeft = '0';
         winCtrlWrap.style.marginLeft = '6px';
+      }
+      if (!dockCurrency) {
+        currencySelect.style.height = '';
+        currencySelect.style.marginLeft = '0';
       }
     };
     applyMarketInfoLayout();
@@ -1109,6 +1131,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     const refreshHeader = () => {
       applyMarketInfoLayout();
       const visibleCount = paneState.currentVisiblePaneIds.filter((id) => paneSlots[id].style.display !== 'none').length;
+      const hideMarketPriceOnDenseMobileSplit = isMobile && visibleCount >= 4;
+      marketPriceWrap.style.display = hideMarketPriceOnDenseMobileSplit ? 'none' : 'flex';
       refreshSymbolVisual(chart.config.symbol);
       tfSelect.value = chart.config.timeframe;
       void refreshExchange24hPercent();
@@ -1188,9 +1212,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         headerTitle.style.borderColor = '#3a4155';
         headerTitle.style.color = '#b5bece';
       }
-      minBtn.textContent = paneState.minimizedPaneIds.has(paneId) ? '+' : '?';
+      minBtn.textContent = paneState.minimizedPaneIds.has(paneId) ? '+' : '−';
       minBtn.title = paneState.minimizedPaneIds.has(paneId) ? '최소화 해제' : '최소화';
-      maxBtn.textContent = paneState.maximizedPaneId === paneId ? '?' : '□';
+      maxBtn.textContent = paneState.maximizedPaneId === paneId ? '❐' : '□';
       maxBtn.title = paneState.maximizedPaneId === paneId ? '최대화 해제' : '최대화';
       winCtrlWrap.style.display = (visibleCount <= 1 && paneState.maximizedPaneId === null) ? 'none' : 'flex';
     };
@@ -1484,6 +1508,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       fallbackTicker.stopLive();
     };
 
+    paneRoot.addEventListener('pointerdown', () => setActivePane(paneId), { capture: true });
     paneRoot.addEventListener('mousedown', () => setActivePane(paneId));
     startManagedInterval(() => {
       persistCurrentChartDrawings();
