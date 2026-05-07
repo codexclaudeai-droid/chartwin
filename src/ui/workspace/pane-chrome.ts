@@ -60,7 +60,7 @@ const makeHeaderCtrlBtn = (label: string, title: string): HTMLButtonElement => {
   return btn;
 };
 
-const signalIconFilter = 'invert(67%) sepia(10%) saturate(414%) hue-rotate(179deg) brightness(94%) contrast(88%)';
+const signalIconFilter = 'brightness(0) invert(1)';
 
 export function createPaneChrome<TKey extends string>({
   host,
@@ -300,11 +300,11 @@ export function createPaneChrome<TKey extends string>({
   strategyBtn.type = 'button';
   strategyBtn.title = '전략시그널';
   strategyBtn.setAttribute('aria-label', '전략시그널');
-  strategyBtn.style.cssText = 'height:22px;background:#1f2533;color:#d1d4dc;border:1px solid #2f3648;border-radius:4px;padding:0 8px;cursor:pointer;font-size:11px;white-space:nowrap;line-height:1;flex-shrink:0;';
+  strategyBtn.style.cssText = 'height:22px;background:#1f2533;color:#fff;border:none;border-radius:4px;padding:0 7px;cursor:pointer;font-size:11px;white-space:nowrap;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;';
   const setStrategyButtonIcon = (size: number) => {
     strategyBtn.innerHTML = `<img src="/icon-signal.svg" alt="" aria-hidden="true" style="width:${size}px;height:${size}px;display:block;filter:${signalIconFilter};">`;
   };
-  setStrategyButtonIcon(15);
+  setStrategyButtonIcon(18);
   paneHeader.appendChild(strategyBtn);
 
   const headerTitle = document.createElement('div');
@@ -367,7 +367,7 @@ export function createPaneChrome<TKey extends string>({
       currencySelect.style.padding = '1px 3px';
       currencySelect.style.width = '48px';
       indBtn.textContent = '보조지표';
-      setStrategyButtonIcon(14);
+      setStrategyButtonIcon(17);
       indBtn.style.padding = '0 6px';
       strategyBtn.style.padding = '0 5px';
       indBtn.style.fontSize = '10px';
@@ -388,7 +388,7 @@ export function createPaneChrome<TKey extends string>({
       currencySelect.style.fontSize = '10px';
       currencySelect.style.width = '55px';
       indBtn.textContent = '보조지표';
-      setStrategyButtonIcon(15);
+      setStrategyButtonIcon(18);
       indBtn.style.padding = '0 7px';
       strategyBtn.style.padding = '0 6px';
       indBtn.style.fontSize = '10px';
@@ -409,7 +409,7 @@ export function createPaneChrome<TKey extends string>({
       currencySelect.style.fontSize = '11px';
       currencySelect.style.width = '58px';
       indBtn.textContent = '보조지표';
-      setStrategyButtonIcon(16);
+      setStrategyButtonIcon(19);
       indBtn.style.padding = '0 8px';
       strategyBtn.style.padding = '0 7px';
       indBtn.style.fontSize = '11px';
