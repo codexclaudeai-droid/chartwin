@@ -1,7 +1,7 @@
 import type { DisplayCurrency } from '../types/market';
 
 const KRW_INDEX_SYMBOLS = new Set(['KOSPI', 'KOSPI200', 'KOSDAQ']);
-const USD_INDEX_SYMBOLS = new Set(['NQ1!', 'NAS100', 'SPX500', 'HKG33', 'HSI', '^GSPC', '^IXIC', '^DJI', '^FTSE']);
+const USD_INDEX_SYMBOLS = new Set(['NQ1!', 'NAS100', 'NDX', 'NASDAQ', 'IXIC', 'SPX500', 'HKG33', 'HSI', '^GSPC', '^IXIC', '^DJI', '^FTSE']);
 const USD_COMMODITY_SYMBOLS = new Set(['XAUUSD', 'XAGUSD']);
 
 export function getChicagoWeekdayHourMinute(now: Date): { weekday: string; hour: number; minute: number } {
@@ -32,6 +32,33 @@ export function isCmeEquityFuturesOpen(now: Date): boolean {
   return !isMaintenance;
 }
 
+export function getSeoulWeekdayHourMinute(now: Date): { weekday: string; hour: number; minute: number } {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(now);
+  const weekday = parts.find((p) => p.type === 'weekday')?.value ?? 'Mon';
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? '0');
+  return { weekday, hour, minute };
+}
+
+export function isKrxEquityMarketOpen(now: Date): boolean {
+  const { weekday, hour, minute } = getSeoulWeekdayHourMinute(now);
+  if (weekday === 'Sat' || weekday === 'Sun') return false;
+  const minuteOfDay = hour * 60 + minute;
+  return minuteOfDay >= 9 * 60 && minuteOfDay < 15 * 60 + 30;
+}
+
+export function isKrxIndexLikeSymbol(symbol: string): boolean {
+  const normalized = canonicalizeUiSymbol(symbol).replace(/\.P$/, '');
+  return KRW_INDEX_SYMBOLS.has(normalized);
+}
+
 export function isNasdaqFuturesLikeSymbol(symbol: string): boolean {
   const upper = symbol.trim().toUpperCase();
   return upper === 'NAS100' || upper === 'NQ1!' || upper === 'NQ';
@@ -40,6 +67,7 @@ export function isNasdaqFuturesLikeSymbol(symbol: string): boolean {
 export function canonicalizeUiSymbol(symbol: string): string {
   const upper = symbol.trim().toUpperCase();
   if (upper === 'NAS100' || upper === 'NQ') return 'NQ1!';
+  if (upper === '^IXIC') return 'NASDAQ';
   return upper;
 }
 
