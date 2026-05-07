@@ -1935,7 +1935,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       mobileBarEl.appendChild(indMobileBtn);
 
       if (isDevApp) {
-        const STRAT_ICON_IMG = `<img src="/icon-signal.svg" alt="" aria-hidden="true" style="width:17px;height:17px;display:block;filter:brightness(0) invert(1);">`;
+        const STRAT_ICON_IMG = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#ffffff" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3.5H7.8C6.11984 3.5 5.27976 3.5 4.63803 3.82698C4.07354 4.1146 3.6146 4.57354 3.32698 5.13803C3 5.77976 3 6.61984 3 8.3V16.7C3 18.3802 3 19.2202 3.32698 19.862C3.6146 20.4265 4.07354 20.8854 4.63803 21.173C5.27976 21.5 6.11984 21.5 7.8 21.5H16.2C17.8802 21.5 18.7202 21.5 19.362 21.173C19.9265 20.8854 20.3854 20.4265 20.673 19.862C21 19.2202 21 18.3802 21 16.7V13.5M12 8.5H16V12.5M15.5 4V2.5M19.4393 5.06066L20.5 4M20.5103 9H22.0103M3 13.8471C3.65194 13.9478 4.31987 14 5 14C9.38636 14 13.2653 11.8276 15.6197 8.5"></path></svg>`;
         const stratMobileBtn = document.createElement('button');
         stratMobileBtn.type = 'button';
         stratMobileBtn.title = '전략시그널';
