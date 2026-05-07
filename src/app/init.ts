@@ -1935,11 +1935,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       mobileBarEl.appendChild(indMobileBtn);
 
       if (isDevApp) {
-        const STRAT_ICON_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
+        const STRAT_ICON_IMG = `<img src="/icon-signal.svg" alt="" aria-hidden="true" style="width:18px;height:18px;display:block;filter:brightness(0) invert(1);">`;
         const stratMobileBtn = document.createElement('button');
         stratMobileBtn.type = 'button';
         stratMobileBtn.title = '전략시그널';
-        stratMobileBtn.innerHTML = STRAT_ICON_SVG;
+        stratMobileBtn.innerHTML = STRAT_ICON_IMG;
         stratMobileBtn.style.cssText = MOBILE_BAR_BTN;
         stratMobileBtn.addEventListener('touchstart', () => {
           stratMobileBtn.style.background  = '#2962ff';
