@@ -346,11 +346,13 @@ export function createTopBar({
   signalBtn.style.cssText = 'position:relative;width:34px;height:34px;min-width:34px;margin-right:2px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px;';
   signalBtn.innerHTML = `
     <span style="position:relative;display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;">
-      <img data-signal-icon src="/icon-signal.svg" alt="" aria-hidden="true" style="width:22px;height:22px;display:block;filter:invert(67%) sepia(10%) saturate(414%) hue-rotate(179deg) brightness(94%) contrast(88%);">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 0 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"></path>
+        <path d="M9.5 17a2.5 2.5 0 0 0 5 0"></path>
+      </svg>
       <span data-signal-badge style="position:absolute;top:-3px;right:-8px;height:16px;min-width:16px;padding:0 4px;background:#d91f3a;color:#fff;border:2px solid #fff;border-radius:999px;font:700 8px/1 Segoe UI,Arial,sans-serif;display:none;align-items:center;justify-content:center;box-sizing:border-box;">0</span>
     </span>
   `;
-  const signalIcon = signalBtn.querySelector('[data-signal-icon]') as HTMLImageElement;
   const signalBadge = signalBtn.querySelector('[data-signal-badge]') as HTMLSpanElement;
   let signalCount = 0;
   const renderSignalBadge = () => {
@@ -364,12 +366,10 @@ export function createTopBar({
   signalBtn.addEventListener('mouseenter', () => {
     signalBtn.style.background = '#252a3a';
     signalBtn.style.color = '#f3f6ff';
-    signalIcon.style.filter = 'invert(96%) sepia(5%) saturate(766%) hue-rotate(188deg) brightness(102%) contrast(101%)';
   });
   signalBtn.addEventListener('mouseleave', () => {
     signalBtn.style.background = 'transparent';
     signalBtn.style.color = '#9ba5b7';
-    signalIcon.style.filter = 'invert(67%) sepia(10%) saturate(414%) hue-rotate(179deg) brightness(94%) contrast(88%)';
   });
   signalBtn.addEventListener('click', () => {
     onClickSignalNotification();
