@@ -1910,7 +1910,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       mobileBarEl.appendChild(toolTriggerBtn);
 
       // 보조지표 버튼
-      const IND_ICON_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>`;
+      const IND_ICON_SVG = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#ffffff" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>`;
       const indMobileBtn = document.createElement('button');
       indMobileBtn.type = 'button';
       indMobileBtn.title = '보조지표';
@@ -1935,7 +1935,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       mobileBarEl.appendChild(indMobileBtn);
 
       if (isDevApp) {
-        const STRAT_ICON_IMG = `<img src="/icon-signal.svg" alt="" aria-hidden="true" style="width:18px;height:18px;display:block;filter:brightness(0) invert(1);">`;
+        const STRAT_ICON_IMG = `<img src="/icon-signal.svg" alt="" aria-hidden="true" style="width:17px;height:17px;display:block;filter:brightness(0) invert(1);">`;
         const stratMobileBtn = document.createElement('button');
         stratMobileBtn.type = 'button';
         stratMobileBtn.title = '전략시그널';
