@@ -380,7 +380,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         tag.style.background = active ? 'rgba(15,21,33,0.72)' : 'transparent';
         tag.style.borderColor = active ? 'rgba(84,106,147,0.9)' : 'transparent';
         tag.style.borderRadius = active ? '6px' : '3px';
-        tag.style.padding = active ? '2px 6px' : tagPadX;
+        tag.style.padding = tagPadX;
         valueEls.forEach((el) => { el.style.display = active ? 'none' : ''; });
         if (isMobileOverlay) {
           actions.style.gap = `${active ? mobileActionGapExpanded : mobileActionGapBase}px`;
@@ -585,7 +585,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
           (tag as HTMLDivElement).style.background = nextActive ? 'rgba(15,21,33,0.72)' : 'transparent';
           (tag as HTMLDivElement).style.borderColor = nextActive ? 'rgba(84,106,147,0.9)' : 'transparent';
           (tag as HTMLDivElement).style.borderRadius = nextActive ? '6px' : '3px';
-          (tag as HTMLDivElement).style.padding = nextActive ? '2px 6px' : tagPadX;
+          (tag as HTMLDivElement).style.padding = tagPadX;
         });
       }
       return tag;
@@ -966,7 +966,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     const rightOffset = Math.max(10, axisPad + 6);
     panelHoverControllers = [];
     const headerBoxHeight = 24;
-    const titleHeaderBoxHeight = 30;
+    const titleHeaderBoxHeight = headerBoxHeight;
     const controlButtonSize = headerBoxHeight;
 
     panels.forEach((panelId: string, index: number) => {
