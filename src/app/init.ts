@@ -810,7 +810,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       timeframes: TFS,
       createSymbolIconElement,
       getSymbolIconUrl,
-      getSymbolDisplayLabel: (symbol: string) => findSymbolItem(symbol)?.label ?? symbol,
+      getSymbolDisplayLabel: (symbol: string) => {
+        const label = findSymbolItem(symbol)?.label ?? symbol;
+        if (isMobile && /^E-mini Nasdaq-100$/i.test(label)) return 'E-mini NAS100';
+        return label;
+      },
       showStrategyButton: isDevApp,
     });
     const {
