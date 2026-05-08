@@ -6569,6 +6569,15 @@ export class SimpleChart {
     this.openTrendlineTextEditor(shape);
   }
 
+  private getDrawingAnchorScreenPoint(shape: DrawingShape): { x: number; y: number } | null {
+    const metrics = this.getMainViewportMetrics();
+    if (!metrics) return null;
+    return {
+      x: this.xForIndex(shape.a.index, metrics.totalSp, metrics.candleW),
+      y: metrics.getY(shape.a.price),
+    };
+  }
+
   private getTextNoteEditorPosition(shape: DrawingShape): { x: number; y: number; width: number; height: number } {
     const metrics = this.getMainViewportMetrics();
     if (!metrics) {
@@ -8384,12 +8393,23 @@ export class SimpleChart {
     const isSelectedPositionShape = Boolean(
       selectedShapeForDrawingCrosshair && (selectedShapeForDrawingCrosshair.kind === 'long-position' || selectedShapeForDrawingCrosshair.kind === 'short-position'),
     );
-    const shouldShowDrawingCrosshair = Boolean(this.drawingTool || this.drawingMoveState || isSelectedPositionShape);
+    const isTextNoteTouchInteraction = Boolean(
+      selectedShapeForDrawingCrosshair?.kind === 'text-note'
+      || this.drawingMoveState?.baseShape.kind === 'text-note'
+      || this.textNoteEditorEl,
+    );
+    const shouldShowDrawingCrosshair = Boolean(
+      (isTextNoteTouchInteraction && !this.textNoteEditorEl)
+      || (!isTextNoteTouchInteraction && (this.drawingTool || this.drawingMoveState || isSelectedPositionShape)),
+    );
     if (isCoarsePointerDevice && shouldShowDrawingCrosshair && (this.isMouseOver || hasTouchCrosshair)) {
       ctx.save();
       // PC는 마우스 좌표, 터치는 마지막 드로잉 십자 좌표를 사용
-      const x = this.isMouseOver ? this.mouseX : this.touchDrawingCrosshairX;
-      const y = this.isMouseOver ? this.mouseY : this.touchDrawingCrosshairY;
+      const textNoteAnchorPoint = isTextNoteTouchInteraction && selectedShapeForDrawingCrosshair?.kind === 'text-note'
+        ? this.getDrawingAnchorScreenPoint(selectedShapeForDrawingCrosshair)
+        : null;
+      const x = textNoteAnchorPoint?.x ?? (this.isMouseOver ? this.mouseX : this.touchDrawingCrosshairX);
+      const y = textNoteAnchorPoint?.y ?? (this.isMouseOver ? this.mouseY : this.touchDrawingCrosshairY);
 
       // 얇은 파란 점선 (전체 축)
       ctx.strokeStyle = 'rgba(64, 180, 255, 0.5)';
@@ -8587,7 +8607,7 @@ export class SimpleChart {
     const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
     const isDrawingEditMode = Boolean(this.drawingTool && this.drawingTool !== 'eraser');
     const onYAxis = this.isOnMainYAxis(this.mouseX, this.mouseY);
-    const shouldDrawCrosshairGuides = !onYAxis && (noDrawingInteraction || isTrendlineEditMode || isTextNoteEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isHorizontalLineEditMode || isDrawingEditMode || Boolean(this.drawingMoveState));
+    const shouldDrawCrosshairGuides = !_isTouchDevice && !onYAxis && (noDrawingInteraction || isTrendlineEditMode || isTextNoteEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isHorizontalLineEditMode || isDrawingEditMode || Boolean(this.drawingMoveState));
 
     if (shouldDrawCrosshairGuides) {
       const useBlueEditGuide = isDrawingEditMode || isChannelEditMode || isHorizontalLineEditMode;
@@ -10179,6 +10199,7 @@ export class SimpleChart {
     if (e.touches.length === 1) {
       const touch = e.touches[0];
       const pos = this.touchPos(touch);
+      const isCoarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
       this.touchStartX = pos.x;
       this.touchStartY = pos.y;
 
@@ -10186,6 +10207,15 @@ export class SimpleChart {
       // ? 기존 드로잉 선택: 드래그해서 편집 가능
       // ??????????????????????????????????????????????????????????????????
       const hitDrawing = this.findDrawingAt(pos.x, pos.y);
+      if (isCoarsePointer && this.textNoteEditorEl) {
+        const editingShapeId = this.textNoteEditorShapeId;
+        if (!hitDrawing || hitDrawing.shape.id !== editingShapeId) {
+          this.closeTextNoteEditor(true);
+          this.clearDrawingSelection();
+          this.updateChartCursor();
+          return;
+        }
+      }
       if (
         hitDrawing
         && (hitDrawing.shape.kind === 'long-position' || hitDrawing.shape.kind === 'short-position')
@@ -10210,6 +10240,42 @@ export class SimpleChart {
         return;
       }
       if (!this.drawingTool && hitDrawing && hitDrawing.shape.kind === 'text-note') {
+        if (isCoarsePointer) {
+          if (this.textNoteEditorEl) {
+            this.closeTextNoteEditor(true);
+            this.clearDrawingSelection();
+            this.updateChartCursor();
+            return;
+          }
+          const alreadySelected = this.selectedDrawingId === hitDrawing.shape.id;
+          const anchorPoint = this.getDrawingAnchorScreenPoint(hitDrawing.shape);
+          const hitEditCrosshair = Boolean(
+            alreadySelected
+            && anchorPoint
+            && Math.hypot(pos.x - anchorPoint.x, pos.y - anchorPoint.y) <= 28,
+          );
+          this.selectedDrawingId = hitDrawing.shape.id;
+          this.selectedDrawingPart = 'body';
+          this.drawingMoveDistance = 0;
+          if (anchorPoint) {
+            this.touchDrawingCrosshairX = anchorPoint.x;
+            this.touchDrawingCrosshairY = anchorPoint.y;
+            this.mouseX = anchorPoint.x;
+            this.mouseY = anchorPoint.y;
+            this.isMouseOver = true;
+          }
+          this.drawingMoveState = hitEditCrosshair && !hitDrawing.shape.locked
+            ? {
+                startX: pos.x,
+                startY: pos.y,
+                baseShape: this.cloneShape(hitDrawing.shape),
+              }
+            : null;
+          this.syncDrawingToolbar();
+          this.requestOverlayDraw();
+          this.updateChartCursor();
+          return;
+        }
         this.selectedDrawingId = hitDrawing.shape.id;
         this.selectedDrawingPart = 'body';
         this.drawingMoveState = null;
@@ -10265,6 +10331,7 @@ export class SimpleChart {
 
       // ── 드로잉을 찾지 못함 → 이전 선택 해제 + 편집 종료 ─────────────
       if (!hitDrawing && this.selectedDrawingId) {
+        if (this.textNoteEditorEl) this.closeTextNoteEditor(true);
         this.clearDrawingSelection();
         // Mobile UX: tapping outside while editing should finish editing
         // instead of immediately falling through to a new drawing flow.
@@ -10446,11 +10513,22 @@ export class SimpleChart {
       if (this.drawingMoveState && this.selectedDrawingId) {
         const dx = pos.x - this.drawingMoveState.startX;
         const dy = pos.y - this.drawingMoveState.startY;
+        this.drawingMoveDistance = Math.max(this.drawingMoveDistance, Math.hypot(dx, dy));
         if (Math.sqrt(dx * dx + dy * dy) > SimpleChart.LONG_PRESS_MOVE_THRESHOLD) {
           this.cancelLongPress();
         }
         const moved = this.moveShapeByDelta(this.drawingMoveState.baseShape, dx, dy, this.selectedDrawingPart);
         this.upsertDrawing(moved);
+        if (moved.kind === 'text-note') {
+          const anchorPoint = this.getDrawingAnchorScreenPoint(moved);
+          if (anchorPoint) {
+            this.touchDrawingCrosshairX = anchorPoint.x;
+            this.touchDrawingCrosshairY = anchorPoint.y;
+            this.mouseX = anchorPoint.x;
+            this.mouseY = anchorPoint.y;
+            this.isMouseOver = true;
+          }
+        }
         this.requestOverlayDraw();
         return;
       }
@@ -10583,10 +10661,17 @@ export class SimpleChart {
     // ????????????????????????????????????????????????????????????????????????????
     if (this.drawingMoveState && e.changedTouches.length > 0 && e.touches.length === 0) {
       // 드래그 상태만 종료, 선택은 유지
+      const baseShape = this.drawingMoveState.baseShape;
+      const wasClickOnly = this.drawingMoveDistance < 4;
       this.drawingMoveState = null;
+      this.drawingMoveDistance = 0;
       this.syncDrawingToolbar();
       this.requestOverlayDraw();
       this.updateChartCursor();
+      if (baseShape.kind === 'text-note' && wasClickOnly) {
+        const current = this.drawings.find((shape) => shape.id === baseShape.id && shape.kind === 'text-note');
+        if (current) this.openTextNoteEditor(current);
+      }
       return;
     }
 
