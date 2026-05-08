@@ -364,7 +364,8 @@ export class SimpleChart {
 
   // ── 롱프레스 십자선 상태 ──────────────────────
   private static readonly LONG_PRESS_MS = 400;
-  private static readonly LONG_PRESS_MOVE_THRESHOLD = 8;
+  private static readonly LONG_PRESS_MOVE_THRESHOLD = 18;
+  private static readonly TEXT_NOTE_TOUCH_TAP_MOVE_THRESHOLD = 16;
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private isCrosshairMode = false;
   private pointerMode: 'auto' | 'cross' | 'dot' | 'arrow' | 'demo' = 'auto';
@@ -9999,7 +10000,9 @@ export class SimpleChart {
     }
     if (this.drawingMoveState) {
       const baseShape = this.drawingMoveState.baseShape;
-      const wasClickOnly = this.drawingMoveDistance < 4;
+      const wasClickOnly = baseShape.kind === 'text-note'
+        ? this.drawingMoveDistance < SimpleChart.TEXT_NOTE_TOUCH_TAP_MOVE_THRESHOLD
+        : this.drawingMoveDistance < 4;
       if (this.pendingChannelId && this.selectedDrawingId === this.pendingChannelId && this.selectedDrawingPart === 'channel-offset') {
         this.pendingChannelId = null;
         this.setDrawingTool(null);
@@ -10714,7 +10717,9 @@ export class SimpleChart {
     if (this.drawingMoveState && e.changedTouches.length > 0 && e.touches.length === 0) {
       // 드래그 상태만 종료, 선택은 유지
       const baseShape = this.drawingMoveState.baseShape;
-      const wasClickOnly = this.drawingMoveDistance < 4;
+      const wasClickOnly = baseShape.kind === 'text-note'
+        ? this.drawingMoveDistance < SimpleChart.TEXT_NOTE_TOUCH_TAP_MOVE_THRESHOLD
+        : this.drawingMoveDistance < 4;
       this.drawingMoveState = null;
       this.drawingMoveDistance = 0;
       this.syncDrawingToolbar();
