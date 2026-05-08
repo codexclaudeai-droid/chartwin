@@ -245,6 +245,7 @@ export class SimpleChart {
     startY: number;
     baseShape: DrawingShape;
   } | null = null;
+  private drawingMoveDistance = 0;
   private drawingToolbarEl: HTMLDivElement | null = null;
   private drawingToolbarBoundId: string | null = null;
   private drawingAlertPopupEl: HTMLDivElement | null = null;
@@ -6664,8 +6665,13 @@ export class SimpleChart {
         this.closeTextNoteEditor(true);
       }
     });
-    input.addEventListener('blur', commit, { once: true });
+    setTimeout(() => {
+      if (this.textNoteEditorEl !== input) return;
+      input.addEventListener('blur', commit, { once: true });
+    }, 0);
+    input.addEventListener('pointerdown', (event) => event.stopPropagation());
     input.addEventListener('mousedown', (event) => event.stopPropagation());
+    input.addEventListener('click', (event) => event.stopPropagation());
     input.addEventListener('touchstart', (event) => event.stopPropagation(), { passive: true });
     input.focus({ preventScroll: true });
     input.select();
@@ -7282,10 +7288,7 @@ export class SimpleChart {
     } else if (shape.kind === 'channel') {
       // channel selection overlay is handled by custom handles in drawDrawingShape.
     } else if (shape.kind === 'text-note') {
-      const txt = shape.text ?? '텍스트';
-      const tw = Math.max(40, txt.length * 7 + 12);
-      const th = 22;
-      ctx.strokeRect(ax - 2, ay - th - 2, tw + 4, th + 4);
+      // Text notes open an inline editor; no yellow selection box or anchor.
     } else if (shape.kind === 'long-position' || shape.kind === 'short-position') {
       // position: 전용 앵커 핸들이 있으므로 노란 점선 박스 불필요
     } else if (shape.kind === 'fib-retracement' || shape.kind === 'fib-trend') {
@@ -7305,7 +7308,8 @@ export class SimpleChart {
         && shape.kind !== 'fib-retracement' && shape.kind !== 'fib-trend'
         && shape.kind !== 'anchored-vwap'
         && shape.kind !== 'draw-box'
-        && shape.kind !== 'draw-pencil' && shape.kind !== 'draw-highlighter') {
+        && shape.kind !== 'draw-pencil' && shape.kind !== 'draw-highlighter'
+        && shape.kind !== 'text-note') {
       ctx.fillStyle = '#ffe08a';
       ctx.beginPath();
       ctx.arc(ax, ay, 4.5, 0, Math.PI * 2);
@@ -8566,6 +8570,9 @@ export class SimpleChart {
     const isTrendlineEditMode = !this.drawingTool && (
       (selectedShape?.kind === 'trendline') || this.trendlineTextEditorEl != null
     );
+    const isTextNoteEditMode = !this.drawingTool && (
+      selectedShape?.kind === 'text-note' || this.textNoteEditorEl != null
+    );
     const isChannelEditMode = !this.drawingTool && selectedShape?.kind === 'channel';
     const isPositionEditMode = !this.drawingTool && (
       selectedShape?.kind === 'long-position' || selectedShape?.kind === 'short-position'
@@ -8580,7 +8587,7 @@ export class SimpleChart {
     const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
     const isDrawingEditMode = Boolean(this.drawingTool && this.drawingTool !== 'eraser');
     const onYAxis = this.isOnMainYAxis(this.mouseX, this.mouseY);
-    const shouldDrawCrosshairGuides = !onYAxis && (noDrawingInteraction || isTrendlineEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isHorizontalLineEditMode || isDrawingEditMode || Boolean(this.drawingMoveState));
+    const shouldDrawCrosshairGuides = !onYAxis && (noDrawingInteraction || isTrendlineEditMode || isTextNoteEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isHorizontalLineEditMode || isDrawingEditMode || Boolean(this.drawingMoveState));
 
     if (shouldDrawCrosshairGuides) {
       const useBlueEditGuide = isDrawingEditMode || isChannelEditMode || isHorizontalLineEditMode;
@@ -9599,6 +9606,7 @@ export class SimpleChart {
 
       this.selectedDrawingId = hitDrawing.shape.id;
       this.selectedDrawingPart = normalizedPart;
+      this.drawingMoveDistance = 0;
       this.drawingMoveState = hitDrawing.shape.locked
         ? null
         : {
@@ -9882,6 +9890,7 @@ export class SimpleChart {
     if (this.drawingMoveState && this.selectedDrawingId) {
       const dx = this.mouseX - this.drawingMoveState.startX;
       const dy = this.mouseY - this.drawingMoveState.startY;
+      this.drawingMoveDistance = Math.max(this.drawingMoveDistance, Math.hypot(dx, dy));
       const moved = this.moveShapeByDelta(this.drawingMoveState.baseShape, dx, dy, this.selectedDrawingPart);
       this.upsertDrawing(moved);
       this.syncDrawingToolbar();
@@ -9955,14 +9964,21 @@ export class SimpleChart {
       return;
     }
     if (this.drawingMoveState) {
+      const baseShape = this.drawingMoveState.baseShape;
+      const wasClickOnly = this.drawingMoveDistance < 4;
       if (this.pendingChannelId && this.selectedDrawingId === this.pendingChannelId && this.selectedDrawingPart === 'channel-offset') {
         this.pendingChannelId = null;
         this.setDrawingTool(null);
       }
       this.drawingMoveState = null;
+      this.drawingMoveDistance = 0;
       this.syncDrawingToolbar();
       this.requestOverlayDraw();
       this.updateChartCursor();
+      if (baseShape.kind === 'text-note' && wasClickOnly) {
+        const current = this.drawings.find((shape) => shape.id === baseShape.id && shape.kind === 'text-note');
+        if (current) this.openTextNoteEditor(current);
+      }
       return;
     }
     if (this.drawingDragActive && this.drawingDraft) {
@@ -10190,6 +10206,15 @@ export class SimpleChart {
         this.drawingMoveState = null;
         this.syncDrawingToolbar();
         this.openTrendlineTextEditor(hitDrawing.shape);
+        this.updateChartCursor();
+        return;
+      }
+      if (!this.drawingTool && hitDrawing && hitDrawing.shape.kind === 'text-note') {
+        this.selectedDrawingId = hitDrawing.shape.id;
+        this.selectedDrawingPart = 'body';
+        this.drawingMoveState = null;
+        this.syncDrawingToolbar();
+        this.openTextNoteEditor(hitDrawing.shape);
         this.updateChartCursor();
         return;
       }
