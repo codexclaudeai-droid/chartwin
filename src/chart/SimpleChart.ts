@@ -10217,6 +10217,32 @@ export class SimpleChart {
       // ? 기존 드로잉 선택: 드래그해서 편집 가능
       // ??????????????????????????????????????????????????????????????????
       const hitDrawing = this.findDrawingAt(pos.x, pos.y);
+      const selectedTextNote = !this.drawingTool && isCoarsePointer && !this.textNoteEditorEl && this.selectedDrawingId
+        ? this.drawings.find((shape) => shape.id === this.selectedDrawingId && shape.kind === 'text-note') ?? null
+        : null;
+      const selectedTextNoteAnchor = selectedTextNote ? this.getDrawingAnchorScreenPoint(selectedTextNote) : null;
+      if (!hitDrawing && selectedTextNote && selectedTextNoteAnchor
+          && Math.hypot(pos.x - selectedTextNoteAnchor.x, pos.y - selectedTextNoteAnchor.y) <= 28) {
+        this.selectedDrawingPart = 'body';
+        this.drawingMoveDistance = 0;
+        this.touchDrawingCrosshairX = selectedTextNoteAnchor.x;
+        this.touchDrawingCrosshairY = selectedTextNoteAnchor.y;
+        this.mouseX = selectedTextNoteAnchor.x;
+        this.mouseY = selectedTextNoteAnchor.y;
+        this.isMouseOver = true;
+        this.drawingMoveState = selectedTextNote.locked
+          ? null
+          : {
+              startX: pos.x,
+              startY: pos.y,
+              baseShape: this.cloneShape(selectedTextNote),
+            };
+        if (selectedTextNote.locked) this.openTextNoteEditor(selectedTextNote);
+        this.syncDrawingToolbar();
+        this.requestOverlayDraw();
+        this.updateChartCursor();
+        return;
+      }
       if (isCoarsePointer && this.textNoteEditorEl) {
         const editingShapeId = this.textNoteEditorShapeId;
         if (!hitDrawing || hitDrawing.shape.id !== editingShapeId) {
