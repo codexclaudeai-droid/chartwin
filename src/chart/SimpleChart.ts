@@ -253,6 +253,8 @@ export class SimpleChart {
   private avwapSettingsEditingShapeId: string | null = null;
   private trendlineTextEditorEl: HTMLInputElement | null = null;
   private trendlineTextEditorShapeId: string | null = null;
+  private textNoteEditorEl: HTMLInputElement | null = null;
+  private textNoteEditorShapeId: string | null = null;
   private hoveredDrawingId: string | null = null;
   private hoveredDrawingPart: DrawingHitPart | null = null;
   private copiedDrawingTemplate: DrawingShape | null = null;
@@ -6566,6 +6568,133 @@ export class SimpleChart {
     this.openTrendlineTextEditor(shape);
   }
 
+  private getTextNoteEditorPosition(shape: DrawingShape): { x: number; y: number; width: number; height: number } {
+    const metrics = this.getMainViewportMetrics();
+    if (!metrics) {
+      const fallbackX = Number.isFinite(this.mouseX) ? this.mouseX : this.canvas.clientWidth / 2;
+      const fallbackY = Number.isFinite(this.mouseY) ? this.mouseY : this.canvas.clientHeight / 2;
+      return { x: fallbackX, y: fallbackY - 22, width: 160, height: 24 };
+    }
+    const x = this.xForIndex(shape.a.index, metrics.totalSp, metrics.candleW);
+    const y = metrics.getY(shape.a.price) - 22;
+    const text = (shape.text ?? '').trim() || '텍스트 입력';
+    this.overlayCtx.save();
+    this.overlayCtx.font = `12px ${CHART_FONT_STACK}`;
+    const width = Math.max(140, Math.min(280, Math.ceil(this.overlayCtx.measureText(text).width) + 18));
+    this.overlayCtx.restore();
+    return { x, y, width, height: 24 };
+  }
+
+  private applyTextNoteEdit(shapeId: string, rawValue: string): void {
+    const shape = this.drawings.find((s) => s.id === shapeId && s.kind === 'text-note');
+    if (!shape) return;
+    const trimmed = rawValue.trim();
+    if (!trimmed) {
+      this.drawings = this.drawings.filter((s) => s.id !== shapeId);
+      if (this.selectedDrawingId === shapeId) {
+        this.selectedDrawingId = null;
+        this.selectedDrawingPart = 'line';
+      }
+      this.syncDrawingToolbar();
+      this.requestOverlayDraw();
+      return;
+    }
+    shape.text = trimmed;
+    this.upsertDrawing(shape);
+    this.selectedDrawingId = shape.id;
+    this.selectedDrawingPart = 'body';
+    this.syncDrawingToolbar();
+    this.requestOverlayDraw();
+  }
+
+  private closeTextNoteEditor(apply: boolean): void {
+    const input = this.textNoteEditorEl;
+    const shapeId = this.textNoteEditorShapeId;
+    if (!input) return;
+    this.textNoteEditorEl = null;
+    this.textNoteEditorShapeId = null;
+    const value = input.value;
+    input.remove();
+    if (apply && shapeId) {
+      this.applyTextNoteEdit(shapeId, value);
+    } else {
+      this.requestOverlayDraw();
+    }
+  }
+
+  private openTextNoteEditor(shape: DrawingShape): void {
+    if (shape.kind !== 'text-note') return;
+    this.closeTextNoteEditor(true);
+    const rect = this.canvas.getBoundingClientRect();
+    const layout = this.getTextNoteEditorPosition(shape);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = (shape.text ?? '').trim();
+    input.placeholder = '텍스트 입력';
+    input.style.cssText = [
+      'position:fixed',
+      `left:${Math.round(rect.left + layout.x)}px`,
+      `top:${Math.round(rect.top + layout.y)}px`,
+      `width:${Math.round(layout.width)}px`,
+      `height:${Math.round(layout.height)}px`,
+      'z-index:2400',
+      'box-sizing:border-box',
+      'padding:0 7px',
+      'border:1px solid #5672a3',
+      'border-radius:0',
+      'background:rgba(20,26,38,0.94)',
+      'color:#e6edf9',
+      `font:12px ${CHART_FONT_STACK}`,
+      'outline:none',
+      'box-shadow:0 0 0 1px rgba(47,108,255,0.22)',
+      'caret-color:#e6edf9',
+    ].join(';');
+    document.body.appendChild(input);
+    this.textNoteEditorEl = input;
+    this.textNoteEditorShapeId = shape.id;
+    this.selectedDrawingId = shape.id;
+    this.selectedDrawingPart = 'body';
+    const commit = () => this.closeTextNoteEditor(true);
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commit();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        this.closeTextNoteEditor(true);
+      }
+    });
+    input.addEventListener('blur', commit, { once: true });
+    input.addEventListener('mousedown', (event) => event.stopPropagation());
+    input.addEventListener('touchstart', (event) => event.stopPropagation(), { passive: true });
+    input.focus({ preventScroll: true });
+    input.select();
+    setTimeout(() => {
+      if (this.textNoteEditorEl !== input) return;
+      input.focus({ preventScroll: true });
+      input.select();
+    }, 0);
+    this.requestOverlayDraw();
+  }
+
+  private createTextNoteAt(anchor: DrawingAnchor): DrawingShape {
+    const created: DrawingShape = {
+      id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      kind: 'text-note',
+      a: anchor,
+      text: '',
+      color: '#2f6cff',
+      width: 2,
+      lineStyle: 'solid',
+    };
+    this.upsertDrawing(created);
+    this.selectedDrawingId = created.id;
+    this.selectedDrawingPart = 'body';
+    this.syncDrawingToolbar();
+    this.requestOverlayDraw();
+    return created;
+  }
+
   private hitTestDrawing(shape: DrawingShape, mx: number, my: number, metrics: NonNullable<ReturnType<SimpleChart['getMainViewportMetrics']>>): DrawingHitPart | null {
     if (shape.hidden) return null;
     const ax = this.xForIndex(shape.a.index, metrics.totalSp, metrics.candleW);
@@ -9648,24 +9777,9 @@ export class SimpleChart {
         return;
       }
       if (this.drawingTool === 'text-note') {
-        const text = window.prompt('텍스트를 입력하세요', '메모');
-        if (text && text.trim()) {
-          const created: DrawingShape = {
-            id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            kind: 'text-note',
-            a: anchor,
-            text: text.trim(),
-            color: '#2f6cff',
-            width: 2,
-            lineStyle: 'solid',
-          };
-          this.upsertDrawing(created);
-          this.selectedDrawingId = created.id;
-          this.selectedDrawingPart = 'body';
-          this.syncDrawingToolbar();
-          this.requestOverlayDraw();
-          if (this.shouldAutoDisarmAfterCreate(created.kind)) this.setDrawingTool(null);
-        }
+        const created = this.createTextNoteAt(anchor);
+        if (this.shouldAutoDisarmAfterCreate(created.kind)) this.setDrawingTool(null);
+        this.openTextNoteEditor(created);
         return;
       }
       this.drawingDraft = {
@@ -9705,6 +9819,17 @@ export class SimpleChart {
       this.drawingMoveState = null;
       this.syncDrawingToolbar();
       this.openTrendlineTextEditor(hitDrawing.shape);
+      this.updateChartCursor();
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    if (hitDrawing && hitDrawing.shape.kind === 'text-note') {
+      this.selectedDrawingId = hitDrawing.shape.id;
+      this.selectedDrawingPart = 'body';
+      this.drawingMoveState = null;
+      this.syncDrawingToolbar();
+      this.openTextNoteEditor(hitDrawing.shape);
       this.updateChartCursor();
       e.preventDefault();
       e.stopPropagation();
@@ -10153,6 +10278,15 @@ export class SimpleChart {
         // ── fib-trend: 십자선 이동만, 앵커 확정은 touchEnd ─────────────────
         if (this.drawingTool === 'fib-trend') {
           this.requestOverlayDraw();
+          return;
+        }
+        if (this.drawingTool === 'text-note') {
+          const anchor = this.getMouseAnchor(snapped.x, snapped.y);
+          if (!anchor) { this.requestOverlayDraw(); return; }
+          const created = this.createTextNoteAt(anchor);
+          this.isCrosshairMode = false;
+          if (this.shouldAutoDisarmAfterCreate(created.kind)) this.setDrawingTool(null);
+          this.openTextNoteEditor(created);
           return;
         }
         if (this.drawingTool === 'draw-pencil' || this.drawingTool === 'draw-highlighter') {
