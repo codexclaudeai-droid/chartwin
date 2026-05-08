@@ -339,6 +339,7 @@ export class SimpleChart {
   // 기본 십자선 자동 숨김 타이머 (5초)
   private static readonly CROSSHAIR_AUTO_HIDE_MS = 5000;
   private static readonly MOUSE_TOOLTIP_LONGPRESS_MS = 350;
+  private static readonly TEXT_NOTE_TOUCH_HIT_RADIUS = 52;
   private crosshairAutoHideTimer: ReturnType<typeof setTimeout> | null = null;
   // 십자선 활성 직후 터치-업 무시 플래그 (롱프레스 해제와 구분)
   private crosshairJustActivated = false;
@@ -6592,14 +6593,14 @@ export class SimpleChart {
     if (!metrics) {
       const fallbackX = Number.isFinite(this.mouseX) ? this.mouseX : this.canvas.clientWidth / 2;
       const fallbackY = Number.isFinite(this.mouseY) ? this.mouseY : this.canvas.clientHeight / 2;
-      return { x: fallbackX, y: fallbackY - 22, width: 160, height: 24 };
+      return { x: fallbackX, y: fallbackY - 22, width: 78, height: 24 };
     }
     const x = this.xForIndex(shape.a.index, metrics.totalSp, metrics.candleW);
     const y = metrics.getY(shape.a.price) - 22;
     const text = (shape.text ?? '').trim() || '텍스트 입력';
     this.overlayCtx.save();
     this.overlayCtx.font = `12px ${CHART_FONT_STACK}`;
-    const width = Math.max(140, Math.min(280, Math.ceil(this.overlayCtx.measureText(text).width) + 18));
+    const width = Math.min(280, Math.ceil(this.overlayCtx.measureText(text).width) + 18);
     this.overlayCtx.restore();
     return { x, y, width, height: 24 };
   }
@@ -10222,7 +10223,7 @@ export class SimpleChart {
         : null;
       const selectedTextNoteAnchor = selectedTextNote ? this.getDrawingAnchorScreenPoint(selectedTextNote) : null;
       if (!hitDrawing && selectedTextNote && selectedTextNoteAnchor
-          && Math.hypot(pos.x - selectedTextNoteAnchor.x, pos.y - selectedTextNoteAnchor.y) <= 28) {
+          && Math.hypot(pos.x - selectedTextNoteAnchor.x, pos.y - selectedTextNoteAnchor.y) <= SimpleChart.TEXT_NOTE_TOUCH_HIT_RADIUS) {
         this.selectedDrawingPart = 'body';
         this.drawingMoveDistance = 0;
         this.touchDrawingCrosshairX = selectedTextNoteAnchor.x;
@@ -10287,7 +10288,7 @@ export class SimpleChart {
           const hitEditCrosshair = Boolean(
             alreadySelected
             && anchorPoint
-            && Math.hypot(pos.x - anchorPoint.x, pos.y - anchorPoint.y) <= 28,
+            && Math.hypot(pos.x - anchorPoint.x, pos.y - anchorPoint.y) <= SimpleChart.TEXT_NOTE_TOUCH_HIT_RADIUS,
           );
           this.selectedDrawingId = hitDrawing.shape.id;
           this.selectedDrawingPart = 'body';
@@ -10407,7 +10408,7 @@ export class SimpleChart {
         if (this.drawingTool === 'text-note') {
           if (isCoarsePointer) {
             const distToCrosshair = Math.hypot(pos.x - this.touchDrawingCrosshairX, pos.y - this.touchDrawingCrosshairY);
-            this.textNotePlacementTapPending = this.textNotePlacementReady && distToCrosshair <= 28;
+            this.textNotePlacementTapPending = this.textNotePlacementReady && distToCrosshair <= SimpleChart.TEXT_NOTE_TOUCH_HIT_RADIUS;
             this.textNotePlacementMoved = false;
             this.textNotePlacementReady = true;
             this.requestOverlayDraw();
