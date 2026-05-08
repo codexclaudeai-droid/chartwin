@@ -8617,7 +8617,10 @@ export class SimpleChart {
     const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
     const isDrawingEditMode = Boolean(this.drawingTool && this.drawingTool !== 'eraser');
     const onYAxis = this.isOnMainYAxis(this.mouseX, this.mouseY);
-    const shouldDrawCrosshairGuides = !_isTouchDevice && !onYAxis && (noDrawingInteraction || isTrendlineEditMode || isTextNoteEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isHorizontalLineEditMode || isDrawingEditMode || Boolean(this.drawingMoveState));
+    const shouldDrawCrosshairGuides = !onYAxis && (
+      (!_isTouchDevice && (noDrawingInteraction || isTrendlineEditMode || isTextNoteEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isHorizontalLineEditMode || isDrawingEditMode || Boolean(this.drawingMoveState)))
+      || (_isTouchDevice && this.isCrosshairMode && noDrawingInteraction)
+    );
 
     if (shouldDrawCrosshairGuides) {
       const useBlueEditGuide = isDrawingEditMode || isChannelEditMode || isHorizontalLineEditMode;
@@ -10300,13 +10303,14 @@ export class SimpleChart {
             this.mouseY = anchorPoint.y;
             this.isMouseOver = true;
           }
-          this.drawingMoveState = hitEditCrosshair && !hitDrawing.shape.locked
+          this.drawingMoveState = (hitEditCrosshair || alreadySelected) && !hitDrawing.shape.locked
             ? {
                 startX: pos.x,
                 startY: pos.y,
                 baseShape: this.cloneShape(hitDrawing.shape),
               }
             : null;
+          if ((hitEditCrosshair || alreadySelected) && hitDrawing.shape.locked) this.openTextNoteEditor(hitDrawing.shape);
           this.syncDrawingToolbar();
           this.requestOverlayDraw();
           this.updateChartCursor();
