@@ -378,6 +378,9 @@ export class SimpleChart {
   private touchDrawingTapCount = 0;            // 탭 카운트 (1st, 2nd, 3rd...)
   private touchDrawingCrosshairX = 0;          // 십자선 X
   private touchDrawingCrosshairY = 0;          // 십자선 Y
+  private textNotePlacementReady = false;
+  private textNotePlacementTapPending = false;
+  private textNotePlacementMoved = false;
 
   public dividers: Record<string, HTMLElement> = {};
 
@@ -922,6 +925,9 @@ export class SimpleChart {
       this.pendingChannelId = null;
       this.fibTrendPointStage = 0;
       this.touchDrawingTapCount = 0;
+      this.textNotePlacementReady = false;
+      this.textNotePlacementTapPending = false;
+      this.textNotePlacementMoved = false;
       this._lastCrosshairOHLCIdx = -2;
       this.updateChartCursor();
       this.syncDrawingToolbar();
@@ -936,6 +942,9 @@ export class SimpleChart {
     this.drawingDragActive = false;
     this.drawingMoveState = null;
     this.touchDrawingTapCount = 0;
+    this.textNotePlacementReady = false;
+    this.textNotePlacementTapPending = false;
+    this.textNotePlacementMoved = false;
     if (this.drawingTool !== 'channel') this.pendingChannelId = null;
     if (this.drawingTool !== 'fib-trend') this.fibTrendPointStage = 0;
     // 자유 드로잉은 기본 열십자 라인을 유지
@@ -969,7 +978,7 @@ export class SimpleChart {
       'fib-trend':       ['① 첫 번째 기준점 탭', '② 두 번째 기준점 탭', '③ 세 번째 기준점 탭'],
       'anchored-vwap':   ['앵커가 될 캔들을 탭하면 해당 시점부터 VWAP가 그려집니다'],
       'measure':         ['① 측정 시작점 탭', '② 끝점 탭으로 가격·시간 범위 측정'],
-      'text-note':       ['메모를 추가할 위치를 탭하세요'],
+      'text-note':       ['텍스트를 입력할 지점으로 열십자라인을 이동후 탭하세요'],
     };
     // position 툴은 전용 가이드 사용
     if (tool === 'long-position' || tool === 'short-position') {
@@ -8675,7 +8684,7 @@ export class SimpleChart {
       ctx.restore();
 
       // OHLCV 툴팁: 모바일=canvas floating, PC=헤더 콜백
-      if (noDrawingInteraction && this.isMobileCrosshairTooltipEnabled() && (_isTouchDevice || this.mouseLongPressTooltipActive)) {
+      if (noDrawingInteraction && this.isMobileCrosshairTooltipEnabled() && (this.isCrosshairMode || this.mouseLongPressTooltipActive)) {
         const isUp = c.close >= c.open;
         const closeColor = isUp ? '#ef5350' : '#26a69a';
         const tradingValue = c.close * c.volume;
@@ -9716,7 +9725,8 @@ export class SimpleChart {
         this.syncDrawingToolbar();
         this.drawingDraft = null;
         this.setDrawingTool(null);
-        this.showPositionGuide(1, isLong ? 'long-position' : 'short-position');
+        const isCoarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+        if (!isCoarsePointer) this.showPositionGuide(1, isLong ? 'long-position' : 'short-position');
         this.requestOverlayDraw();
         return;
       }
@@ -10213,7 +10223,6 @@ export class SimpleChart {
           this.closeTextNoteEditor(true);
           this.clearDrawingSelection();
           this.updateChartCursor();
-          return;
         }
       }
       if (
@@ -10333,11 +10342,8 @@ export class SimpleChart {
       if (!hitDrawing && this.selectedDrawingId) {
         if (this.textNoteEditorEl) this.closeTextNoteEditor(true);
         this.clearDrawingSelection();
-        // Mobile UX: tapping outside while editing should finish editing
-        // instead of immediately falling through to a new drawing flow.
         this.setDrawingTool(null);
         this.updateChartCursor();
-        return;
       }
 
       // ??????????????????????????????????????????????????????????????????
@@ -10373,6 +10379,14 @@ export class SimpleChart {
           return;
         }
         if (this.drawingTool === 'text-note') {
+          if (isCoarsePointer) {
+            const distToCrosshair = Math.hypot(pos.x - this.touchDrawingCrosshairX, pos.y - this.touchDrawingCrosshairY);
+            this.textNotePlacementTapPending = this.textNotePlacementReady && distToCrosshair <= 28;
+            this.textNotePlacementMoved = false;
+            this.textNotePlacementReady = true;
+            this.requestOverlayDraw();
+            return;
+          }
           const anchor = this.getMouseAnchor(snapped.x, snapped.y);
           if (!anchor) { this.requestOverlayDraw(); return; }
           const created = this.createTextNoteAt(anchor);
@@ -10544,6 +10558,13 @@ export class SimpleChart {
         this.mouseX = snapped.x;
         this.mouseY = snapped.y;
         this.isMouseOver = true;
+        if (this.drawingTool === 'text-note') {
+          this.textNotePlacementReady = true;
+          this.textNotePlacementMoved = true;
+          this.textNotePlacementTapPending = false;
+          this.requestOverlayDraw();
+          return;
+        }
 
         // fib-trend / position: 드래그 = 십자선 이동 + 미리보기
         if (this.drawingTool === 'long-position' || this.drawingTool === 'short-position'
@@ -10683,6 +10704,28 @@ export class SimpleChart {
       const tx    = e.changedTouches[0].clientX - rect.left;
       const ty    = e.changedTouches[0].clientY - rect.top;
 
+      if (this.drawingTool === 'text-note') {
+        const moved = this.textNotePlacementMoved
+          || Math.hypot(tx - this.touchStartX, ty - this.touchStartY) > 4;
+        if (this.textNotePlacementTapPending && !moved) {
+          const anchor = this.getMouseAnchor(this.touchDrawingCrosshairX || tx, this.touchDrawingCrosshairY || ty);
+          if (!anchor) { this.requestOverlayDraw(); return; }
+          const created = this.createTextNoteAt(anchor);
+          this.textNotePlacementReady = false;
+          this.textNotePlacementTapPending = false;
+          this.textNotePlacementMoved = false;
+          this.isCrosshairMode = false;
+          if (this.shouldAutoDisarmAfterCreate(created.kind)) this.setDrawingTool(null);
+          this.openTextNoteEditor(created);
+          return;
+        }
+        this.textNotePlacementTapPending = false;
+        this.textNotePlacementMoved = false;
+        this.textNotePlacementReady = true;
+        this.requestOverlayDraw();
+        return;
+      }
+
       // ── Position 드로잉: 손 뗄 때 십자선 최종 위치로 박스 생성 ──────────
       if (this.drawingTool === 'long-position' || this.drawingTool === 'short-position') {
         // 십자선이 이동되었으면 십자선 위치 우선, 아니면 touchEnd 위치
@@ -10710,7 +10753,8 @@ export class SimpleChart {
         this.drawingDraft = null;
         this.isCrosshairMode = false;
         this.setDrawingTool(null);
-        this.showPositionGuide(1, isLong ? 'long-position' : 'short-position');
+        const isCoarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+        if (!isCoarsePointer) this.showPositionGuide(1, isLong ? 'long-position' : 'short-position');
         this.requestOverlayDraw();
         return;
       }
