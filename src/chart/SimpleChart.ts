@@ -383,6 +383,7 @@ export class SimpleChart {
   private textNotePlacementReady = false;
   private textNotePlacementTapPending = false;
   private textNotePlacementMoved = false;
+  private textNoteEditTapAnywhereId: string | null = null;
 
   public dividers: Record<string, HTMLElement> = {};
 
@@ -930,6 +931,7 @@ export class SimpleChart {
       this.textNotePlacementReady = false;
       this.textNotePlacementTapPending = false;
       this.textNotePlacementMoved = false;
+      this.textNoteEditTapAnywhereId = null;
       this._lastCrosshairOHLCIdx = -2;
       this.updateChartCursor();
       this.syncDrawingToolbar();
@@ -947,6 +949,7 @@ export class SimpleChart {
     this.textNotePlacementReady = false;
     this.textNotePlacementTapPending = false;
     this.textNotePlacementMoved = false;
+    this.textNoteEditTapAnywhereId = null;
     if (this.drawingTool !== 'channel') this.pendingChannelId = null;
     if (this.drawingTool !== 'fib-trend') this.fibTrendPointStage = 0;
     // 자유 드로잉은 기본 열십자 라인을 유지
@@ -1121,6 +1124,7 @@ export class SimpleChart {
     this.drawingMoveState = null;
     this.drawingDraft = null;
     this.drawingDragActive = false;
+    this.textNoteEditTapAnywhereId = null;
     this.pendingChannelId = null;
     this.fibTrendPointStage = 0;
     this.syncDrawingToolbar();
@@ -6645,6 +6649,7 @@ export class SimpleChart {
 
   private openTextNoteEditor(shape: DrawingShape): void {
     if (shape.kind !== 'text-note') return;
+    this.textNoteEditTapAnywhereId = null;
     this.closeTextNoteEditor(true);
     const rect = this.canvas.getBoundingClientRect();
     const layout = this.getTextNoteEditorPosition(shape);
@@ -10015,6 +10020,8 @@ export class SimpleChart {
       if (baseShape.kind === 'text-note' && wasClickOnly) {
         const current = this.drawings.find((shape) => shape.id === baseShape.id && shape.kind === 'text-note');
         if (current) this.openTextNoteEditor(current);
+      } else if (baseShape.kind === 'text-note') {
+        this.textNoteEditTapAnywhereId = baseShape.id;
       }
       return;
     }
@@ -10227,6 +10234,12 @@ export class SimpleChart {
       const selectedTextNote = !this.drawingTool && isCoarsePointer && !this.textNoteEditorEl && this.selectedDrawingId
         ? this.drawings.find((shape) => shape.id === this.selectedDrawingId && shape.kind === 'text-note') ?? null
         : null;
+      if (selectedTextNote && this.textNoteEditTapAnywhereId === selectedTextNote.id) {
+        this.openTextNoteEditor(selectedTextNote);
+        this.requestOverlayDraw();
+        this.updateChartCursor();
+        return;
+      }
       const selectedTextNoteAnchor = selectedTextNote ? this.getDrawingAnchorScreenPoint(selectedTextNote) : null;
       if (!hitDrawing && selectedTextNote && selectedTextNoteAnchor
           && Math.hypot(pos.x - selectedTextNoteAnchor.x, pos.y - selectedTextNoteAnchor.y) <= SimpleChart.TEXT_NOTE_TOUCH_HIT_RADIUS) {
@@ -10414,8 +10427,7 @@ export class SimpleChart {
         }
         if (this.drawingTool === 'text-note') {
           if (isCoarsePointer) {
-            const distToCrosshair = Math.hypot(pos.x - this.touchDrawingCrosshairX, pos.y - this.touchDrawingCrosshairY);
-            this.textNotePlacementTapPending = this.textNotePlacementReady && distToCrosshair <= SimpleChart.TEXT_NOTE_TOUCH_HIT_RADIUS;
+            this.textNotePlacementTapPending = this.textNotePlacementReady;
             this.textNotePlacementMoved = false;
             this.textNotePlacementReady = true;
             this.requestOverlayDraw();
@@ -10742,7 +10754,7 @@ export class SimpleChart {
 
       if (this.drawingTool === 'text-note') {
         const moved = this.textNotePlacementMoved
-          || Math.hypot(tx - this.touchStartX, ty - this.touchStartY) > 4;
+          || Math.hypot(tx - this.touchStartX, ty - this.touchStartY) > SimpleChart.TEXT_NOTE_TOUCH_TAP_MOVE_THRESHOLD;
         if (this.textNotePlacementTapPending && !moved) {
           const anchor = this.getMouseAnchor(this.touchDrawingCrosshairX || tx, this.touchDrawingCrosshairY || ty);
           if (!anchor) { this.requestOverlayDraw(); return; }
