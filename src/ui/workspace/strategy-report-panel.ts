@@ -989,7 +989,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     tabMetrics.style.cssText = activeTab === 'metrics' ? activeStyle : normalStyle;
     tabTrades.style.cssText = activeTab === 'trades' ? activeStyle : normalStyle;
     metricsView.style.display = activeTab === 'metrics' ? 'flex' : 'none';
-    tradesView.style.display = activeTab === 'trades' ? 'flex' : 'none';
+    tradesView.style.display = activeTab === 'trades' ? 'block' : 'none';
   };
 
   const metricCard = (label: string, value: string, color = '#d7e0f3') =>
@@ -1405,7 +1405,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
         </div>`;
       })
       .join('');
-    tradesView.innerHTML = `<div style="border:1px solid #2a3b58;border-radius:8px;overflow:hidden;background:#111a2d;">${headerRow}${rows}</div>`;
+    tradesView.innerHTML = `<div style="width:100%;box-sizing:border-box;border:1px solid #2a3b58;border-radius:8px;overflow:hidden;background:#111a2d;">${headerRow}${rows}</div>`;
     const displayedTrades = r.trades
       .slice()
       .reverse();
