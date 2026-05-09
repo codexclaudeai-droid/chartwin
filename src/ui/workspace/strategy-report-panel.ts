@@ -455,6 +455,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let panelMode: 'normal' | 'expanded' | 'collapsed' = 'normal';
   let panelVisible = true;
   let normalHeight = Math.max(defaultHeight, getMinNormalHeight());
+  let expandedHeight = Math.max(220, Math.floor(app.clientHeight * 0.5));
   let autoExpandedHeight = 0;
   let mobileSummarySnapLocked = false;
   let activeWidget: WidgetKey = 'equity';
@@ -1562,21 +1563,36 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     }
   };
 
+  const applyExpandedHeight = (nextHeight: number) => {
+    const minExpandedHeight = Math.max(220, Math.floor(app.clientHeight * 0.28));
+    const maxExpandedHeight = Math.max(minExpandedHeight, Math.floor(app.clientHeight * 0.72));
+    expandedHeight = Math.max(minExpandedHeight, Math.min(maxExpandedHeight, Math.floor(nextHeight)));
+    if (panelMode === 'expanded') {
+      panel.style.height = `${expandedHeight}px`;
+      onHeightChange?.(expandedHeight);
+      renderAll();
+    }
+  };
+
   const applyPanelMode = (mode: 'normal' | 'expanded' | 'collapsed') => {
     const prevMode = panelMode;
     const wasCollapsed = panelMode === 'collapsed';
     panelMode = mode;
 
     if (mode === 'expanded') {
-      panel.style.top = '0';
+      const minExpandedHeight = Math.max(220, Math.floor(app.clientHeight * 0.28));
+      const maxExpandedHeight = Math.max(minExpandedHeight, Math.floor(app.clientHeight * 0.72));
+      // Expanded mode uses a 50:50 split baseline between main chart area and strategy report.
+      expandedHeight = Math.max(minExpandedHeight, Math.min(maxExpandedHeight, Math.floor(app.clientHeight * 0.5)));
+      panel.style.top = '';
       panel.style.bottom = '0';
-      panel.style.height = 'auto';
-      panel.style.zIndex = '2400';
-      resizeHandle.style.display = 'none';
+      panel.style.height = `${expandedHeight}px`;
+      panel.style.zIndex = '1010';
+      resizeHandle.style.display = 'flex';
       expandBtn.innerHTML = icon.restore;
       collapseBtn.innerHTML = icon.fold;
       collapseBtn.title = '접기';
-      onHeightChange?.(app.clientHeight);
+      onHeightChange?.(expandedHeight);
     } else {
       const minNormalHeight = getMinNormalHeight();
       const maxAllowed = Math.max(minNormalHeight, Math.floor(app.clientHeight * maxNormalHeightRatio));
@@ -1585,7 +1601,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       panel.style.bottom = '0';
       panel.style.height = `${mode === 'collapsed' ? headerHeight : effectiveNormalHeight}px`;
       panel.style.zIndex = mode === 'collapsed' ? '1600' : '1010';
-      resizeHandle.style.display = mode === 'normal' ? 'flex' : 'none';
+      resizeHandle.style.display = mode === 'collapsed' ? 'none' : 'flex';
       expandBtn.innerHTML = icon.maximize;
       collapseBtn.innerHTML = mode === 'collapsed' ? icon.unfold : icon.fold;
       collapseBtn.title = mode === 'collapsed' ? '펼치기' : '접기';
@@ -1615,9 +1631,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const handleDragMove = (event: MouseEvent) => {
-    if (!dragging || panelMode !== 'normal') return;
+    if (!dragging || (panelMode !== 'normal' && panelMode !== 'expanded')) return;
     const delta = startClientY - event.clientY;
-    applyNormalHeight(startHeight + delta);
+    if (panelMode === 'expanded') applyExpandedHeight(startHeight + delta);
+    else applyNormalHeight(startHeight + delta);
   };
 
   const stopDrag = () => {
@@ -1629,25 +1646,26 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   resizeHandle.addEventListener('mousedown', (event) => {
-    if (panelMode !== 'normal') return;
+    if (panelMode === 'collapsed') return;
     event.preventDefault();
     dragging = true;
     startClientY = event.clientY;
-    startHeight = normalHeight;
+    startHeight = panelMode === 'expanded' ? expandedHeight : normalHeight;
     setResizeHandleVisual(true);
     window.addEventListener('mousemove', handleDragMove);
     window.addEventListener('mouseup', stopDrag);
   });
 
   const handleTouchDragMove = (event: TouchEvent) => {
-    if (!dragging || panelMode !== 'normal') return;
+    if (!dragging || (panelMode !== 'normal' && panelMode !== 'expanded')) return;
     const touch = dragTouchId == null
       ? event.touches[0]
       : Array.from(event.touches).find((t) => t.identifier === dragTouchId);
     if (!touch) return;
     event.preventDefault();
     const delta = startClientY - touch.clientY;
-    applyNormalHeight(startHeight + delta);
+    if (panelMode === 'expanded') applyExpandedHeight(startHeight + delta);
+    else applyNormalHeight(startHeight + delta);
   };
 
   const stopTouchDrag = () => {
@@ -1661,14 +1679,14 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   resizeHandle.addEventListener('touchstart', (event) => {
-    if (panelMode !== 'normal') return;
+    if (panelMode === 'collapsed') return;
     event.preventDefault();
     const touch = event.touches[0];
     if (!touch) return;
     dragging = true;
     dragTouchId = touch.identifier;
     startClientY = touch.clientY;
-    startHeight = normalHeight;
+    startHeight = panelMode === 'expanded' ? expandedHeight : normalHeight;
     setResizeHandleVisual(true);
     window.addEventListener('touchmove', handleTouchDragMove, { passive: false });
     window.addEventListener('touchend', stopTouchDrag);
@@ -2023,7 +2041,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   window.addEventListener('resize', () => {
     if (!panelVisible) return;
     if (panelMode === 'expanded') {
-      applyPanelMode('expanded');
+      applyExpandedHeight(expandedHeight);
       return;
     }
     applyNormalHeight(normalHeight);
@@ -2052,7 +2070,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       } else if (panelMode === 'collapsed') {
         onHeightChange?.(headerHeight);
       } else {
-        onHeightChange?.(app.clientHeight);
+        // Expanded mode is controlled by its own 50:50 baseline + drag height.
+        panel.style.height = `${expandedHeight}px`;
+        onHeightChange?.(expandedHeight);
       }
       renderAll();
     },
