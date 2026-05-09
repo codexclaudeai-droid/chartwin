@@ -333,8 +333,19 @@ export function createPaneChrome<TKey extends string>({
 
   const indBtn = document.createElement('button');
   indBtn.type = 'button';
-  indBtn.textContent = '보조지표';
-  indBtn.style.cssText = `height:22px;background:${headerActionBg};color:#d1d4dc;border:none;border-radius:4px;padding:0 8px;cursor:pointer;font-size:11px;white-space:nowrap;line-height:1;flex-shrink:0;transition:background 0.15s;`;
+  indBtn.title = '보조지표';
+  indBtn.setAttribute('aria-label', '보조지표');
+  indBtn.style.cssText = `height:22px;background:${headerActionBg};color:#d1d4dc;border:none;border-radius:4px;padding:0 8px;cursor:pointer;font-size:11px;white-space:nowrap;line-height:1;flex-shrink:0;transition:background 0.15s;display:inline-flex;align-items:center;justify-content:center;`;
+  const setIndicatorButtonIcon = (size: number) => {
+    indBtn.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" aria-hidden="true">
+      <path d="M3 21V16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+      <path d="M9 21V17" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+      <path d="M15 21V12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+      <path d="M21 21V10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+      <path d="M2.2 8.2C4.8 11.4 7.2 11.4 9.8 8.2C12.4 5 14.8 1.8 17.4 1.8C18.8 1.8 20 2.5 21.2 3.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+    </svg>`;
+  };
+  setIndicatorButtonIcon(17);
   bindHeaderActionHover(indBtn);
   paneHeader.appendChild(indBtn);
 
@@ -410,7 +421,7 @@ export function createPaneChrome<TKey extends string>({
       currencySelect.style.fontSize = '10px';
       currencySelect.style.padding = '1px 3px';
       currencySelect.style.width = '48px';
-      indBtn.textContent = '보조지표';
+      setIndicatorButtonIcon(16);
       setStrategyButtonIcon(17);
       indBtn.style.padding = '0 6px';
       strategyBtn.style.padding = '0 5px';
@@ -431,7 +442,7 @@ export function createPaneChrome<TKey extends string>({
       tfBtn.style.padding = '0 6px';
       currencySelect.style.fontSize = '10px';
       currencySelect.style.width = '55px';
-      indBtn.textContent = '보조지표';
+      setIndicatorButtonIcon(17);
       setStrategyButtonIcon(18);
       indBtn.style.padding = '0 7px';
       strategyBtn.style.padding = '0 6px';
@@ -452,7 +463,7 @@ export function createPaneChrome<TKey extends string>({
       tfBtn.style.padding = '0 8px';
       currencySelect.style.fontSize = '11px';
       currencySelect.style.width = '58px';
-      indBtn.textContent = '보조지표';
+      setIndicatorButtonIcon(18);
       setStrategyButtonIcon(19);
       indBtn.style.padding = '0 8px';
       strategyBtn.style.padding = '0 7px';

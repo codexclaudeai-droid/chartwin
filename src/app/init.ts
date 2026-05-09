@@ -1937,7 +1937,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       mobileBarEl.appendChild(toolTriggerBtn);
 
       // 보조지표 버튼
-      const IND_ICON_SVG = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#ffffff" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>`;
+      const IND_ICON_SVG = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+        <path d="M3 21V16" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"></path>
+        <path d="M9 21V17" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"></path>
+        <path d="M15 21V12" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"></path>
+        <path d="M21 21V10" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"></path>
+        <path d="M2.2 8.2C4.8 11.4 7.2 11.4 9.8 8.2C12.4 5 14.8 1.8 17.4 1.8C18.8 1.8 20 2.5 21.2 3.8" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>`;
       const indMobileBtn = document.createElement('button');
       indMobileBtn.type = 'button';
       indMobileBtn.title = '보조지표';
