@@ -570,7 +570,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   tabLeft.appendChild(tabMetrics);
   tabLeft.appendChild(tabTrades);
   const timeframeLabel = document.createElement('span');
-  timeframeLabel.style.cssText = 'font-size:11px;color:#8ea4c9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto;';
+  timeframeLabel.style.cssText = 'font-size:11px;color:#8ea4c9;white-space:nowrap;min-width:0;flex:0 1 auto;';
   const tabRight = document.createElement('div');
   tabRight.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0;flex:1;justify-content:flex-end;';
   tabRow.appendChild(tabRight);
@@ -579,7 +579,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const periodBtn = mkIconBtn('기간 설정', icon.calendar);
   const periodText = document.createElement('span');
   periodText.textContent = '전체';
-  periodText.style.cssText = 'font-size:11px;color:#aab8d2;margin-right:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
+  periodText.style.cssText = 'font-size:11px;color:#aab8d2;margin-right:4px;white-space:nowrap;overflow:visible;text-overflow:clip;';
   periodBtn.prepend(periodText);
   periodBtn.style.gap = '4px';
   periodBtn.style.paddingRight = '8px';
@@ -638,7 +638,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   metricsView.appendChild(expandedSections);
 
   const tradesView = document.createElement('div');
-  tradesView.style.cssText = 'display:none;flex:1;overflow:auto;padding:8px;background:#0f1524;';
+  tradesView.style.cssText = 'display:none;flex:1;min-height:0;overflow:auto;padding:8px;background:#0f1524;';
   tradesView.className = 'strategy-report-scroll-mobile';
   body.appendChild(tradesView);
 
@@ -959,15 +959,15 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const compactControls = width < 640;
     const tighterControls = width < 560;
 
-    timeframeLabel.style.display = compactControls ? 'none' : 'inline';
-    timeframeLabel.style.maxWidth = width < 760 ? '84px' : '120px';
+    timeframeLabel.style.display = 'inline';
+    timeframeLabel.style.maxWidth = width < 760 ? '110px' : 'none';
 
-    periodBtn.style.maxWidth = tighterControls ? '150px' : (compactControls ? '190px' : '240px');
+    periodBtn.style.maxWidth = 'none';
     periodText.style.display = 'inline-block';
-    periodText.style.maxWidth = tighterControls ? '96px' : (compactControls ? '136px' : '180px');
+    periodText.style.maxWidth = 'none';
     periodText.style.whiteSpace = 'nowrap';
-    periodText.style.overflow = 'hidden';
-    periodText.style.textOverflow = 'ellipsis';
+    periodText.style.overflow = 'visible';
+    periodText.style.textOverflow = 'clip';
     periodText.style.fontSize = width < 520 ? '10px' : '11px';
 
     const maxMenuWidth = Math.max(180, panel.clientWidth - 16);
@@ -987,7 +987,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     tabMetrics.style.cssText = activeTab === 'metrics' ? activeStyle : normalStyle;
     tabTrades.style.cssText = activeTab === 'trades' ? activeStyle : normalStyle;
     metricsView.style.display = activeTab === 'metrics' ? 'flex' : 'none';
-    tradesView.style.display = activeTab === 'trades' ? 'block' : 'none';
+    tradesView.style.display = activeTab === 'trades' ? 'flex' : 'none';
   };
 
   const metricCard = (label: string, value: string, color = '#d7e0f3') =>
@@ -1531,7 +1531,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
     applyResponsiveLayout();
     updatePeriodText();
-    timeframeLabel.textContent = `타임프레임: ${formatTimeframeLabel(latestMeta.timeframe)}`;
+    timeframeLabel.textContent = `캔들: ${formatTimeframeLabel(latestMeta.timeframe)}`;
     setChartLayoutByMode();
     updateTabStyles();
     renderKpi();

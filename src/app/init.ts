@@ -2215,7 +2215,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       },
       onModeChange: (mode, prevMode) => {
         const paneId = paneState.activePaneId;
-        if (prevMode === 'collapsed' && mode !== 'collapsed') {
+        const shouldCollapseIndicators = (prevMode === 'collapsed' && mode !== 'collapsed')
+          || (mode === 'expanded' && prevMode !== 'expanded');
+        if (shouldCollapseIndicators) {
           collapseIndicatorsForStrategyReport(paneId);
           return;
         }
