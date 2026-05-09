@@ -456,6 +456,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let panelVisible = true;
   let normalHeight = Math.max(defaultHeight, getMinNormalHeight());
   let autoExpandedHeight = 0;
+  let mobileSummarySnapLocked = false;
   let activeWidget: WidgetKey = 'equity';
   let activeTab: MainTab = 'metrics';
   let periodBars = 0;
@@ -1488,6 +1489,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const applyMobileSummarySnapHeight = () => {
     if (panelMode !== 'normal') return;
     if (activeTab !== 'metrics') return;
+    if (mobileSummarySnapLocked) return;
     const width = Math.max(320, panel.clientWidth);
     if (width >= 760) return;
 
@@ -1506,6 +1508,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     normalHeight = nextHeight;
     panel.style.height = `${normalHeight}px`;
     onHeightChange?.(normalHeight);
+    mobileSummarySnapLocked = true;
   };
 
   const renderAll = () => {
@@ -2009,6 +2012,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       closeMenus();
       return;
     }
+    mobileSummarySnapLocked = false;
     if (panelMode === 'normal') {
       applyNormalHeight(normalHeight);
     }
