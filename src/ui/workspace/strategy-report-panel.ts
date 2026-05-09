@@ -2023,6 +2023,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   panel.addEventListener('click', (e) => e.stopPropagation());
 
   const setVisible = (visible: boolean) => {
+    if (panelVisible === visible) {
+      return;
+    }
     panelVisible = visible;
     panel.style.display = visible ? 'flex' : 'none';
     if (!visible) {
