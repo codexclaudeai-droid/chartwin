@@ -152,6 +152,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       stochS: ['Stoch Slow %K 현재값', 'Stoch Slow %D 현재값'],
       cci: ['CCI 현재값'],
       obv: ['OBV 현재값'],
+      cvd: ['CVD 현재값'],
       volume: ['현재 거래량', '거래대금(볼륨×가격)'],
     };
     return map[panelId]?.[valueIndex] ?? '현재 수치';
@@ -298,6 +299,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     const mobileActionGapBase = 4;
     const mobileActionGapExpanded = Math.round(mobileActionGapBase * 1.5);
     const desktopActionGap = 4;
+    const mobileTagFixedHeight = touchLarge ? 24 : 22;
     const actionIconSz = isMobileOverlay ? 18 : (compactOverlay ? 12 : desktopActionIconSize);
     const eyeIconSvg = (visible: boolean): string => (
       visible
@@ -429,7 +431,8 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       tag.style.cssText = `position:relative;display:inline-flex;align-items:center;gap:${tagGap}px;max-width:fit-content;
         background:transparent;border:1px solid transparent;border-radius:3px;
         padding:${tagPadX};font-size:${tagFontSize}px;font-family:${CHART_FONT_STACK};color:${color};
-        pointer-events:auto;cursor:pointer;transition:border-color 0.15s;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);`;
+        pointer-events:auto;cursor:pointer;transition:border-color 0.15s;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);
+        box-sizing:border-box;min-height:${isMobileOverlay ? `${mobileTagFixedHeight}px` : 'auto'};`;
       const textEl = document.createElement('span');
       textEl.className = 'indicator-overlay-tag-name';
       textEl.textContent = label;
@@ -458,7 +461,8 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       tag.style.cssText = `display:inline-flex;align-items:center;gap:${isMobileOverlay ? 3 : 6}px;max-width:none;
         background:transparent;border:1px solid transparent;border-radius:3px;
         padding:${tagPadX};font-size:${tagFontSize}px;font-family:${CHART_FONT_STACK};color:#f5f7fb;
-        pointer-events:auto;cursor:default;box-sizing:border-box;overflow:visible;white-space:nowrap;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);transition:border-color 0.15s;`;
+        pointer-events:auto;cursor:default;box-sizing:border-box;overflow:visible;white-space:nowrap;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);transition:border-color 0.15s;
+        min-height:${isMobileOverlay ? `${mobileTagFixedHeight}px` : 'auto'};`;
       const textEl = document.createElement('span');
       textEl.textContent = label;
       textEl.style.cssText = 'white-space:nowrap;';
@@ -600,7 +604,8 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       tag.style.cssText = `position:relative;display:inline-flex;align-items:center;gap:${touchLarge ? 6 : (compactOverlay ? 3 : 10)}px;max-width:fit-content;
         background:transparent;border:1px solid transparent;border-radius:3px;
         padding:${tagPadX};font-size:${tagFontSize}px;font-family:${CHART_FONT_STACK};color:${fallbackColor};
-        pointer-events:auto;cursor:pointer;transition:border-color 0.15s;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);`;
+        pointer-events:auto;cursor:pointer;transition:border-color 0.15s;line-height:${tagLineH};text-shadow:0 1px 2px rgba(0,0,0,0.72);
+        box-sizing:border-box;min-height:${isMobileOverlay ? `${mobileTagFixedHeight}px` : 'auto'};`;
       const textWrap = document.createElement('span');
       textWrap.className = 'indicator-overlay-tag-name';
       textWrap.style.cssText = `display:inline-flex;align-items:center;gap:${compactOverlay ? 3 : (isMobileOverlay ? 5 : 10)}px;`;
@@ -658,6 +663,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         stochS:   () => `Stoch Slow(${i.stochS.kPeriod},${i.stochS.dPeriod})`,
         cci:      () => `CCI(${i.cci.period})`,
         obv:      () => 'OBV',
+        cvd:      () => 'CVD',
         vwap:     () => 'VWAP',
         ichimoku: () => `Ichimoku(${i.ichimoku.tenkan},${i.ichimoku.kijun})`,
         envelope: () => `Envelope(${i.envelope.period}, ${i.envelope.pct}%)`,
@@ -788,6 +794,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
           case 'stochS': return [{ text: 'StS',  color: '#dbe3f4' }, { text: String(i.stochS?.kPeriod ?? ''), color: c }, { text: String(i.stochS?.dPeriod ?? ''), color: c }];
           case 'cci':    return [{ text: 'CCI',  color: '#dbe3f4' }, { text: String(i.cci?.period ?? ''),  color: c }];
           case 'obv':    return [{ text: 'OBV',  color: c }];
+          case 'cvd':    return [{ text: 'CVD',  color: c }];
           case 'volume': return [{ text: 'Vol',  color: c }];
           default:       return [{ text: key.toUpperCase(), color: c }];
         }
@@ -814,7 +821,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     const allKeys = [
       'ma','ema','maShort','maLong','ma60','ma120','ma200','bb','vwap','volumeProfile','vpvr','ichimoku','envelope',
       'supertrend','statisticalTrailingStop','zeroLagMaTrendLevels',
-      'rsi','dmi','macd','stochF','stochS','cci','obv','volume',
+      'rsi','dmi','macd','stochF','stochS','cci','obv','cvd','volume',
     ];
     // 표시할 지표가 있는지 미리 파악
     let hasAnyIndicators = false;

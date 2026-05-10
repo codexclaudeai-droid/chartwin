@@ -31,6 +31,8 @@ export function renderIndicatorBlocks(this: any, params: any): void {
     cciD,
     obvD,
     obvSignal9,
+    cvdD,
+    cvdSignal9,
     line,
     showLine,
     chartLeft,
@@ -845,6 +847,34 @@ export function renderIndicatorBlocks(this: any, params: any): void {
         drawSubAlertLines('obv', top, pH, lo, hi);
         const lastObv = obvD[obvD.length - 1] ?? 0;
         if (showLine('obv')) drawSubAxisValue(lastObv, top, pH, lo, hi, s.color, lastObv.toFixed(2));
+      }
+      if (id === 'cvd') {
+        const rangeValues = [
+          ...cvdD.slice(this.startIndex, this.endIndex).filter(v => v != null) as number[],
+          ...cvdSignal9.slice(this.startIndex, this.endIndex).filter(v => v != null) as number[],
+        ];
+        let lo = Math.min(...rangeValues, 0);
+        let hi = Math.max(...rangeValues, 1);
+        if (lo === hi) { hi = lo + 1; }
+        const pad = Math.max((hi - lo) * 0.18, 1);
+        lo -= pad; hi += pad;
+        drawPanelLegend('CVD', top, [
+          { text: 'CVD', color: this.resolveStyle('cvd', '#7b68ee').color, enabled: showLine('cvd') },
+          { text: 'Signal 9', color: this.resolveStyle('cvdSignal9', '#ffa726').color, enabled: showLine('cvdSignal9') },
+        ]);
+        const s = this.resolveStyle('cvd', '#7b68ee');
+        if (showLine('cvd')) subLine(cvdD, s.color, s.width, top, pH, lo, hi, s.dash);
+        if (showLine('cvdSignal9')) {
+          const sig = this.resolveStyle('cvdSignal9', '#ffa726', 1.5, [4, 2]);
+          subLine(cvdSignal9, sig.color, sig.width, top, pH, lo, hi, sig.dash);
+        }
+        if (showLine('cvdBaseline') && lo <= 0 && hi >= 0) {
+          const b = this.resolveStyle('cvdBaseline', '#999999', 1, [4, 4]);
+          subHorizontalLine(0, b.color, b.width, top, pH, lo, hi, b.dash);
+        }
+        drawSubAlertLines('cvd', top, pH, lo, hi);
+        const lastCvd = cvdD[cvdD.length - 1] ?? 0;
+        if (showLine('cvd')) drawSubAxisValue(lastCvd, top, pH, lo, hi, s.color, lastCvd.toFixed(2));
       }
       ctx.restore();
       ctx.save();

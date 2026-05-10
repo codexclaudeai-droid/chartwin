@@ -1,4 +1,4 @@
-﻿export type SubPanelId = 'volume' | 'rsi' | 'dmi' | 'macd' | 'stochF' | 'stochS' | 'cci' | 'obv';
+﻿export type SubPanelId = 'volume' | 'rsi' | 'dmi' | 'macd' | 'stochF' | 'stochS' | 'cci' | 'obv' | 'cvd';
 
 export interface LineStyle {
   color: string;
@@ -13,7 +13,7 @@ export interface IndicatorPanelState {
   lineVisibility: Record<string, boolean>;
 }
 
-export const SUB_PANEL_IDS: SubPanelId[] = ['volume', 'rsi', 'dmi', 'macd', 'stochF', 'stochS', 'cci', 'obv'];
+export const SUB_PANEL_IDS: SubPanelId[] = ['volume', 'rsi', 'dmi', 'macd', 'stochF', 'stochS', 'cci', 'obv', 'cvd'];
 
 const MIN_PANEL_RATIO = 0.035;
 const MIN_COLLAPSED_PANEL_RATIO = 0.008;
@@ -78,6 +78,9 @@ const DEFAULT_LINE_STYLES: Record<string, LineStyle> = {
   obv: { color: '#26a69a', width: 1.5, dash: [] },
   obvSignal9: { color: '#ffc107', width: 1.5, dash: [4, 2] },
   obvBaseline: { color: '#999999', width: 1, dash: [4, 4] },
+  cvd: { color: '#7b68ee', width: 1.5, dash: [] },
+  cvdSignal9: { color: '#ffa726', width: 1.5, dash: [4, 2] },
+  cvdBaseline: { color: '#999999', width: 1, dash: [4, 4] },
 };
 
 export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: string }[]> = {
@@ -157,6 +160,11 @@ export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: strin
     { key: 'obvSignal9', label: 'Signal 9' },
     { key: 'obvBaseline', label: 'Baseline' },
   ],
+  cvd: [
+    { key: 'cvd', label: 'Line' },
+    { key: 'cvdSignal9', label: 'Signal 9' },
+    { key: 'cvdBaseline', label: 'Baseline' },
+  ],
 };
 
 export function createDefaultPanelState(): IndicatorPanelState {
@@ -176,6 +184,7 @@ export function createDefaultPanelState(): IndicatorPanelState {
       stochS: 0.12,
       cci: 0.12,
       obv: 0.12,
+      cvd: 0.12,
     },
     lineStyles,
     lineVisibility,

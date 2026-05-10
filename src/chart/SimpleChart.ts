@@ -186,6 +186,9 @@ type StrategyReportResult = {
   grossProfit: number;
   grossLoss: number;
   averagePnl: number;
+  signalCount: number;
+  closedTradeCount: number;
+  openPositionCount: number;
   trades: StrategyReportTrade[];
 };
 
@@ -424,6 +427,7 @@ export class SimpleChart {
       stochS:   { show: false, kPeriod: 14, dPeriod: 3 },
       cci:      { show: false, period: 20 },
       obv:      { show: false },
+      cvd:      { show: false },
       vwap:     { show: false },
       volumeProfile: { show: false, rows: 24, widthPct: 22, upOpacity: 45, downOpacity: 45, pocOpacity: 95 },
       vpvr: {
@@ -875,6 +879,15 @@ export class SimpleChart {
         title: 'OBV',
         settings: [],
         values: [{ text: fmt(obv, 0), color: s.color }],
+      };
+    }
+    if (panelId === 'cvd') {
+      const s = this.resolveStyle('cvd', '#7b68ee');
+      const cvd = lastFinite(this.calcCVD().map((v) => v as number | null));
+      return {
+        title: 'CVD',
+        settings: [],
+        values: [{ text: fmt(cvd, 0), color: s.color }],
       };
     }
     if (panelId === 'volume') {
@@ -2201,7 +2214,25 @@ export class SimpleChart {
   }
 
   public setDoubleBreakConfig(patch: Partial<DoubleBreakConfig>): void {
-    this.doubleBreakConfig = { ...this.doubleBreakConfig, ...patch };
+    const next = { ...this.doubleBreakConfig, ...patch };
+    next.bbPeriod = Math.max(1, Math.round(next.bbPeriod));
+    next.bbStd = Math.max(0.1, next.bbStd);
+    next.envPeriod = Math.max(1, Math.round(next.envPeriod));
+    next.envPct = Math.max(0.1, next.envPct);
+    next.atrPeriod = Math.max(1, Math.round(next.atrPeriod));
+    next.tp1Multi = Math.max(0.05, next.tp1Multi);
+    next.tp2Multi = Math.max(next.tp1Multi + 0.05, next.tp2Multi);
+    next.slMulti = Math.max(0.05, next.slMulti);
+    next.crossTol = Math.max(0.0001, next.crossTol);
+    next.minBarGap = Math.max(0, Math.round(next.minBarGap));
+    next.useAdxFilter = Boolean(next.useAdxFilter);
+    next.adxPeriod = Math.max(1, Math.round(next.adxPeriod));
+    next.adxMin = Math.max(1, next.adxMin);
+    next.sameBarMode = next.sameBarMode === 'optimistic' || next.sameBarMode === 'candle'
+      ? next.sameBarMode
+      : 'conservative';
+    next.runnerExitMode = next.runnerExitMode === 'opposite' ? 'opposite' : 'tp2';
+    this.doubleBreakConfig = next;
     const indicators = this.config.indicators as any;
     if (indicators.bb) {
       indicators.bb.period = this.doubleBreakConfig.bbPeriod;
@@ -2211,6 +2242,9 @@ export class SimpleChart {
       indicators.envelope.period = this.doubleBreakConfig.envPeriod;
       indicators.envelope.pct = this.doubleBreakConfig.envPct;
       indicators.envelope.show = true;
+    }
+    if (indicators.dmi) {
+      indicators.dmi.period = this.doubleBreakConfig.adxPeriod;
     }
     this.requestStrategyCompute(0);
     this.draw();
@@ -2681,6 +2715,9 @@ export class SimpleChart {
       grossProfit,
       grossLoss,
       averagePnl: tradeCount > 0 ? cum / tradeCount : 0,
+      signalCount: sortedTrades.length,
+      closedTradeCount: sortedTrades.length,
+      openPositionCount: 0,
       trades: sortedTrades.slice(-350),
     };
   }
@@ -2716,93 +2753,240 @@ export class SimpleChart {
     }
     if (args.periodBars > 0 && args.periodBars < end - start) start = end - args.periodBars;
 
-    const signals = [
-      ...doubleBreak.longSignals.map((signal) => ({ ...signal, side: 'LONG' as const })),
-      ...doubleBreak.shortSignals.map((signal) => ({ ...signal, side: 'SHORT' as const })),
+    type DoubleBreakReportSignal = {
+      side: 'LONG' | 'SHORT';
+      index: number;
+      price: number;
+      tp1: number;
+      tp2: number;
+      sl: number;
+    };
+    const allSignals: DoubleBreakReportSignal[] = [
+      ...doubleBreak.longSignals.map((signal) => ({
+        side: 'LONG' as const,
+        index: signal.index,
+        price: signal.price,
+        tp1: signal.tp1,
+        tp2: signal.tp2,
+        sl: signal.sl,
+      })),
+      ...doubleBreak.shortSignals.map((signal) => ({
+        side: 'SHORT' as const,
+        index: signal.index,
+        price: signal.price,
+        tp1: signal.tp1,
+        tp2: signal.tp2,
+        sl: signal.sl,
+      })),
     ]
       .filter((signal) => signal.index >= start && signal.index < end)
-      .filter((signal) => args.sideFilter === 'all' || args.sideFilter === signal.side.toLowerCase())
       .sort((a, b) => a.index - b.index);
 
+    const includeTrade = (side: 'LONG' | 'SHORT') => (
+      args.sideFilter === 'all' || args.sideFilter === side.toLowerCase()
+    );
+    const sameBarPriority = (candle: CandleData): 'target' | 'stop' => {
+      if (this.doubleBreakConfig.sameBarMode === 'optimistic') return 'target';
+      if (this.doubleBreakConfig.sameBarMode === 'candle') {
+        if (candle.close > candle.open) return 'target';
+        if (candle.close < candle.open) return 'stop';
+      }
+      return 'stop';
+    };
     const feeRate = (args.feeBps + args.slippageBps) / 10000;
+    const tp1Portion = 0.3;
+    const runnerPortion = 0.7;
     const trades: StrategyReportTrade[] = [];
+    const signalByIndex = new Map<number, DoubleBreakReportSignal[]>();
+    allSignals.forEach((signal) => {
+      const bucket = signalByIndex.get(signal.index);
+      if (bucket) bucket.push(signal);
+      else signalByIndex.set(signal.index, [signal]);
+    });
 
-    for (const signal of signals) {
-      const entry = signal.price;
-      let tp1Hit = false;
-      let exit = this.data[end - 1]?.close ?? entry;
-      let exitIndex = Math.max(signal.index, end - 1);
-      let pnl = 0;
-      const from = Math.min(signal.index + 1, end - 1);
+    let side: 'LONG' | 'SHORT' | null = null;
+    let activeSignal: DoubleBreakReportSignal | null = null;
+    let entryIndex = -1;
+    let entryTime: number | null = null;
+    let tp1Hit = false;
+    let realizedGross = 0;
+    let realizedCost = 0;
+    let signalCount = 0;
+    let openPositionCount = 0;
 
-      for (let i = from; i < end; i += 1) {
-        const candle = this.data[i];
-        if (!candle) continue;
+    const finalizeTrade = (exitPrice: number, exitIndex: number) => {
+      if (!side || !activeSignal || entryIndex < 0) return;
+      const net = realizedGross - realizedCost;
+      if (includeTrade(side)) {
+        trades.push({
+          side,
+          entry: activeSignal.price,
+          exit: exitPrice,
+          pnl: net,
+          entryIndex,
+          exitIndex,
+          entryTime,
+          exitTime: Number.isFinite(Number(this.data[exitIndex]?.time)) ? Number(this.data[exitIndex]?.time) : null,
+        });
+      }
+      side = null;
+      activeSignal = null;
+      entryIndex = -1;
+      entryTime = null;
+      tp1Hit = false;
+      realizedGross = 0;
+      realizedCost = 0;
+    };
 
-        if (signal.side === 'LONG') {
-          const slHit = candle.low <= signal.sl;
-          const tp1Now = candle.high >= signal.tp1;
-          const tp2Now = candle.high >= signal.tp2;
-          if (slHit && !tp1Hit) {
-            exit = signal.sl;
-            exitIndex = i;
-            pnl = exit - entry;
-            break;
-          }
-          if (tp1Now) tp1Hit = true;
-          if (tp2Now) {
-            exit = signal.tp2;
-            exitIndex = i;
-            pnl = (signal.tp1 - entry) * 0.3 + (signal.tp2 - entry) * 0.7;
-            break;
-          }
-          if (slHit && tp1Hit) {
-            exit = signal.sl;
-            exitIndex = i;
-            pnl = (signal.tp1 - entry) * 0.3 + (signal.sl - entry) * 0.7;
-            break;
+    const realizePiece = (piece: number, exitPrice: number) => {
+      if (!side || !activeSignal) return;
+      if (side === 'LONG') realizedGross += (exitPrice - activeSignal.price) * piece;
+      else realizedGross += (activeSignal.price - exitPrice) * piece;
+      realizedCost += (activeSignal.price + exitPrice) * piece * feeRate;
+    };
+
+    const openPosition = (signal: DoubleBreakReportSignal) => {
+      side = signal.side;
+      activeSignal = signal;
+      entryIndex = signal.index;
+      entryTime = Number.isFinite(Number(this.data[signal.index]?.time)) ? Number(this.data[signal.index]?.time) : null;
+      tp1Hit = false;
+      realizedGross = 0;
+      realizedCost = 0;
+      if (includeTrade(signal.side)) signalCount += 1;
+    };
+
+    for (let i = start; i < end; i += 1) {
+      const candle = this.data[i];
+      if (!candle) continue;
+
+      if (side && activeSignal && i > entryIndex) {
+        const active: DoubleBreakReportSignal = activeSignal;
+        if (side === 'LONG') {
+          const stopHit = candle.low <= active.sl;
+          const tp1Now = candle.high >= active.tp1;
+          const tp2Now = candle.high >= active.tp2;
+          const targetFirst = sameBarPriority(candle) === 'target';
+
+          if (!tp1Hit) {
+            if (stopHit && tp1Now) {
+              if (targetFirst) {
+                realizePiece(tp1Portion, active.tp1);
+                tp1Hit = true;
+                if (this.doubleBreakConfig.runnerExitMode === 'tp2' && tp2Now) {
+                  realizePiece(runnerPortion, active.tp2);
+                  finalizeTrade(active.tp2, i);
+                } else {
+                  realizePiece(runnerPortion, active.sl);
+                  finalizeTrade(active.sl, i);
+                }
+              } else {
+                realizePiece(1, active.sl);
+                finalizeTrade(active.sl, i);
+              }
+            } else if (stopHit) {
+              realizePiece(1, active.sl);
+              finalizeTrade(active.sl, i);
+            } else if (tp1Now) {
+              realizePiece(tp1Portion, active.tp1);
+              tp1Hit = true;
+              if (this.doubleBreakConfig.runnerExitMode === 'tp2' && tp2Now) {
+                realizePiece(runnerPortion, active.tp2);
+                finalizeTrade(active.tp2, i);
+              }
+            }
+          } else if (side && activeSignal) {
+            const stopAfterTp1 = candle.low <= active.sl;
+            if (this.doubleBreakConfig.runnerExitMode === 'tp2') {
+              const tp2AfterTp1 = candle.high >= active.tp2;
+              if (stopAfterTp1 && tp2AfterTp1) {
+                const targetWins = sameBarPriority(candle) === 'target';
+                realizePiece(runnerPortion, targetWins ? active.tp2 : active.sl);
+                finalizeTrade(targetWins ? active.tp2 : active.sl, i);
+              } else if (tp2AfterTp1) {
+                realizePiece(runnerPortion, active.tp2);
+                finalizeTrade(active.tp2, i);
+              } else if (stopAfterTp1) {
+                realizePiece(runnerPortion, active.sl);
+                finalizeTrade(active.sl, i);
+              }
+            } else if (stopAfterTp1) {
+              realizePiece(runnerPortion, active.sl);
+              finalizeTrade(active.sl, i);
+            }
           }
         } else {
-          const slHit = candle.high >= signal.sl;
-          const tp1Now = candle.low <= signal.tp1;
-          const tp2Now = candle.low <= signal.tp2;
-          if (slHit && !tp1Hit) {
-            exit = signal.sl;
-            exitIndex = i;
-            pnl = entry - exit;
-            break;
-          }
-          if (tp1Now) tp1Hit = true;
-          if (tp2Now) {
-            exit = signal.tp2;
-            exitIndex = i;
-            pnl = (entry - signal.tp1) * 0.3 + (entry - signal.tp2) * 0.7;
-            break;
-          }
-          if (slHit && tp1Hit) {
-            exit = signal.sl;
-            exitIndex = i;
-            pnl = (entry - signal.tp1) * 0.3 + (entry - signal.sl) * 0.7;
-            break;
+          const stopHit = candle.high >= active.sl;
+          const tp1Now = candle.low <= active.tp1;
+          const tp2Now = candle.low <= active.tp2;
+          const targetFirst = sameBarPriority(candle) === 'target';
+
+          if (!tp1Hit) {
+            if (stopHit && tp1Now) {
+              if (targetFirst) {
+                realizePiece(tp1Portion, active.tp1);
+                tp1Hit = true;
+                if (this.doubleBreakConfig.runnerExitMode === 'tp2' && tp2Now) {
+                  realizePiece(runnerPortion, active.tp2);
+                  finalizeTrade(active.tp2, i);
+                } else {
+                  realizePiece(runnerPortion, active.sl);
+                  finalizeTrade(active.sl, i);
+                }
+              } else {
+                realizePiece(1, active.sl);
+                finalizeTrade(active.sl, i);
+              }
+            } else if (stopHit) {
+              realizePiece(1, active.sl);
+              finalizeTrade(active.sl, i);
+            } else if (tp1Now) {
+              realizePiece(tp1Portion, active.tp1);
+              tp1Hit = true;
+              if (this.doubleBreakConfig.runnerExitMode === 'tp2' && tp2Now) {
+                realizePiece(runnerPortion, active.tp2);
+                finalizeTrade(active.tp2, i);
+              }
+            }
+          } else if (side && activeSignal) {
+            const stopAfterTp1 = candle.high >= active.sl;
+            if (this.doubleBreakConfig.runnerExitMode === 'tp2') {
+              const tp2AfterTp1 = candle.low <= active.tp2;
+              if (stopAfterTp1 && tp2AfterTp1) {
+                const targetWins = sameBarPriority(candle) === 'target';
+                realizePiece(runnerPortion, targetWins ? active.tp2 : active.sl);
+                finalizeTrade(targetWins ? active.tp2 : active.sl, i);
+              } else if (tp2AfterTp1) {
+                realizePiece(runnerPortion, active.tp2);
+                finalizeTrade(active.tp2, i);
+              } else if (stopAfterTp1) {
+                realizePiece(runnerPortion, active.sl);
+                finalizeTrade(active.sl, i);
+              }
+            } else if (stopAfterTp1) {
+              realizePiece(runnerPortion, active.sl);
+              finalizeTrade(active.sl, i);
+            }
           }
         }
       }
 
-      if (pnl === 0) {
-        pnl = signal.side === 'LONG' ? exit - entry : entry - exit;
-      }
-      pnl -= (entry + exit) * feeRate;
+      const signalsNow = signalByIndex.get(i) ?? [];
+      for (const signal of signalsNow) {
+        if (side && activeSignal && signal.side !== side && tp1Hit && this.doubleBreakConfig.runnerExitMode === 'opposite') {
+          const active: DoubleBreakReportSignal = activeSignal;
+          realizePiece(runnerPortion, this.data[i]?.close ?? active.price);
+          finalizeTrade(this.data[i]?.close ?? active.price, i);
+        }
 
-      trades.push({
-        side: signal.side,
-        entry,
-        exit,
-        pnl,
-        entryIndex: signal.index,
-        exitIndex,
-        entryTime: Number.isFinite(Number(this.data[signal.index]?.time)) ? Number(this.data[signal.index].time) : null,
-        exitTime: Number.isFinite(Number(this.data[exitIndex]?.time)) ? Number(this.data[exitIndex].time) : null,
-      });
+        if (!side) {
+          openPosition(signal);
+        }
+      }
+    }
+
+    if (side && activeSignal && includeTrade(side)) {
+      openPositionCount = 1;
     }
 
     const equity: number[] = [];
@@ -2866,6 +3050,9 @@ export class SimpleChart {
       grossProfit,
       grossLoss,
       averagePnl: tradeCount > 0 ? cum / tradeCount : 0,
+      signalCount,
+      closedTradeCount: tradeCount,
+      openPositionCount,
       trades: sortedTrades.slice(-350),
     };
   }
@@ -3844,6 +4031,17 @@ export class SimpleChart {
     });
   }
 
+  private calcCVD(): number[] {
+    const source = this.getIndicatorSourceData();
+    const cvd = [0];
+    for (let i = 1; i < source.length; i++) {
+      const d = source[i].close > source[i].open ? source[i].volume
+              : source[i].close < source[i].open ? -source[i].volume : 0;
+      cvd.push(cvd[i - 1] + d);
+    }
+    return cvd;
+  }
+
   private calcOBV(): number[] {
     const source = this.getIndicatorSourceData();
     const obv = [0];
@@ -4465,6 +4663,8 @@ export class SimpleChart {
     const cciD   = indicatorLayerOn && ind.cci.show    ? this.calcCCI(ind.cci.period)   : [];
     const obvD   = indicatorLayerOn && ind.obv.show    ? this.calcOBV()                  : [];
     const obvSignal9 = indicatorLayerOn && ind.obv.show ? this.sma(obvD.map(v => v as number | null), 9) : [];
+    const cvdD   = indicatorLayerOn && ind.cvd.show    ? this.calcCVD()                  : [];
+    const cvdSignal9 = indicatorLayerOn && ind.cvd.show ? this.sma(cvdD.map(v => v as number | null), 9) : [];
     const vwapD  = indicatorLayerOn && ind.vwap.show   ? this.calcVWAP()                 : [];
     if (!ind.zeroLagMaTrendLevels) {
       ind.zeroLagMaTrendLevels = {
@@ -5271,6 +5471,8 @@ export class SimpleChart {
       cciD,
       obvD,
       obvSignal9,
+      cvdD,
+      cvdSignal9,
       line,
       showLine,
       chartLeft,
@@ -5389,6 +5591,7 @@ export class SimpleChart {
       stochS: stSD?.k ?? [],
       cci: cciD,
       obv: obvD.map((v) => v as number | null),
+      cvd: cvdD.map((v) => v as number | null),
     });
     this.evaluateTrendlineAlerts();
     this.evaluatePatternAlerts();
@@ -5755,6 +5958,10 @@ export class SimpleChart {
       } else {
         selected.color = colorInput.value || '#2f6cff';
         colorBtn.style.color = selected.color;
+      }
+      if (selected.kind === 'text-note' && this.textNoteEditorEl && this.textNoteEditorShapeId === selected.id) {
+        this.textNoteEditorEl.style.color = selected.color ?? '#e6edf9';
+        this.textNoteEditorEl.style.caretColor = selected.color ?? '#e6edf9';
       }
       const maxWidth = selected.kind === 'draw-highlighter' ? 50 : selected.kind === 'anchored-vwap' ? 6 : 4;
       selected.width = Math.max(1, Math.min(maxWidth, Number(widthSelect.value || '2')));
@@ -6651,6 +6858,7 @@ export class SimpleChart {
     input.type = 'text';
     input.value = (shape.text ?? '').trim();
     input.placeholder = '텍스트 입력';
+    const textColor = shape.color ?? '#e6edf9';
     input.style.cssText = [
       'position:fixed',
       `left:${Math.round(rect.left + layout.x)}px`,
@@ -6660,14 +6868,14 @@ export class SimpleChart {
       'z-index:2400',
       'box-sizing:border-box',
       'padding:0 7px',
-      'border:1px solid #5672a3',
+      'border:0',
       'border-radius:0',
-      'background:rgba(20,26,38,0.94)',
-      'color:#e6edf9',
+      'background:transparent',
+      `color:${textColor}`,
       `font:12px ${CHART_FONT_STACK}`,
       'outline:none',
-      'box-shadow:0 0 0 1px rgba(47,108,255,0.22)',
-      'caret-color:#e6edf9',
+      'box-shadow:none',
+      `caret-color:${textColor}`,
     ].join(';');
     document.body.appendChild(input);
     this.textNoteEditorEl = input;
@@ -8185,15 +8393,9 @@ export class SimpleChart {
       case 'text-note': {
         const txt = (shape as DrawingShape).text ?? '텍스트';
         ctx.globalAlpha = alpha;
-        ctx.fillStyle = 'rgba(20,26,38,0.9)';
-        ctx.strokeStyle = '#5672a3';
-        ctx.lineWidth = 1;
         ctx.font = `12px ${CHART_FONT_STACK}`;
-        const tw = Math.ceil(ctx.measureText(txt).width) + 12;
         const th = 22;
-        ctx.fillRect(ax, ay - th, tw, th);
-        ctx.strokeRect(ax, ay - th, tw, th);
-        ctx.fillStyle = '#e6edf9';
+        ctx.fillStyle = (shape as DrawingShape).color ?? '#e6edf9';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillText(txt, ax + 6, ay - th / 2);
@@ -8917,6 +9119,20 @@ export class SimpleChart {
           lo = obvLo - pad;
           hi = obvHi + pad;
           accentColor = this.resolveStyle('obv', '#22ab94').color;
+        } else if (hoveredPanelId === 'cvd') {
+          const cvdD = this.calcCVD();
+          const cvdSig9 = this.sma(cvdD.map((v) => v as number | null), 9);
+          const rangeValues = [
+            ...cvdD.slice(visStart, visEnd).filter((v): v is number => v != null),
+            ...cvdSig9.slice(visStart, visEnd).filter((v): v is number => v != null),
+          ];
+          let cvdLo = Math.min(...rangeValues, 0);
+          let cvdHi = Math.max(...rangeValues, 1);
+          if (cvdLo === cvdHi) cvdHi = cvdLo + 1;
+          const pad = Math.max((cvdHi - cvdLo) * 0.18, 1);
+          lo = cvdLo - pad;
+          hi = cvdHi + pad;
+          accentColor = this.resolveStyle('cvd', '#7b68ee').color;
         }
 
         const clampedY = Math.max(plotTop, Math.min(plotTop + plotH, this.mouseY));
@@ -8925,7 +9141,7 @@ export class SimpleChart {
           labelText = formatKUnit(value, 1);
         } else {
           labelText = value.toFixed(2);
-          if (hoveredPanelId === 'macd' || hoveredPanelId === 'cci' || hoveredPanelId === 'obv') {
+          if (hoveredPanelId === 'macd' || hoveredPanelId === 'cci' || hoveredPanelId === 'obv' || hoveredPanelId === 'cvd') {
             accentColor = value >= 0 ? '#22ab94' : '#f23645';
           }
         }

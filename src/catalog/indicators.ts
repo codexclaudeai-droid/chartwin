@@ -6,6 +6,7 @@
   { id: 'stochS', label: 'Stochastic Slow', desc: 'Slow Stochastic Oscillator', panel: 'sub' },
   { id: 'cci', label: 'CCI', desc: 'Commodity Channel Index', panel: 'sub' },
   { id: 'obv', label: 'OBV', desc: 'On Balance Volume', panel: 'sub' },
+  { id: 'cvd', label: 'CVD', desc: 'Cumulative Volume Delta', panel: 'sub' },
   { id: 'volume', label: 'Volume', desc: 'Trading Volume', panel: 'sub' },
   { id: 'bb', label: 'Bollinger Band', desc: 'Bollinger Bands (20,2)', panel: 'main' },
   { id: 'ma', label: 'MA', desc: 'Moving Average lines (MA1, MA2, ...)', panel: 'main' },
