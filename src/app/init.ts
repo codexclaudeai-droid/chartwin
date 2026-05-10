@@ -2032,7 +2032,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         'position:absolute',
         `width:${JUMP_BTN_SIZE}px`, `height:${JUMP_BTN_SIZE}px`,
         'z-index:1600',
-        'display:flex', 'align-items:center', 'justify-content:center',
+        'display:none', 'align-items:center', 'justify-content:center',
         'background:transparent', 'color:#c2ccdf',
         'border:1px solid #3a4a66', 'border-radius:50%',
         'cursor:pointer', 'padding:0',
@@ -2063,6 +2063,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           jumpBtn.style.right = `${axisOffsetFromWsRight + JUMP_BTN_MARGIN}px`;
           jumpBtn.style.left  = 'auto';
         }
+
+        // 버튼 표시 조건: 최신 캔들이 보이지 않을 때만 표시
+        const { endIndex } = pane.chart.getVisibleCandleRange();
+        const dataLen = pane.chart.totalCandleCount;
+        jumpBtn.style.display = endIndex < dataLen ? 'flex' : 'none';
 
         // Y: 주 캔들 영역 하단 (보조지표 상단 또는 시간축 바로 위)
         if (panels.length) {

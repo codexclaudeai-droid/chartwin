@@ -3335,6 +3335,11 @@ export class SimpleChart {
     this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
     this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
     this.canvas.addEventListener('mouseup',   this.handleMouseUp.bind(this));
+    document.addEventListener('mouseup', () => {
+      if (this.isDragging || this.yAxisDragging || this.subYAxisDragging || this.drawingMoveState || this.drawingDragActive) {
+        this.handleMouseUp();
+      }
+    });
     this.canvas.addEventListener('dblclick',  this.handleDoubleClick.bind(this));
     this.canvas.addEventListener('mouseleave', () => {
       const keepCrosshair = Boolean(this.drawingTool && this.drawingTool !== 'eraser')
@@ -3661,6 +3666,8 @@ export class SimpleChart {
   public getVisibleCandleRange(): { startIndex: number; endIndex: number } {
     return { startIndex: this.startIndex, endIndex: this.endIndex };
   }
+
+  public get totalCandleCount(): number { return this.data.length; }
 
   public setLeftPanEnabled(enabled: boolean): void {
     (this.config.layout as any).leftPanEnabled = enabled === true;
