@@ -8828,7 +8828,8 @@ export class SimpleChart {
     const isHorizontalLineEditMode = !this.drawingTool && selectedShape?.kind === 'hline';
     const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
     const isDrawingEditMode = Boolean(this.drawingTool && this.drawingTool !== 'eraser');
-    const onYAxis = this.isOnMainYAxis(this.mouseX, this.mouseY);
+    const onYAxis = this.isOnMainYAxis(this.mouseX, this.mouseY)
+      || Boolean(this.getSubYAxisPanel(this.mouseX, this.mouseY));
     const shouldDrawCrosshairGuides = !onYAxis && (
       (!_isTouchDevice && (noDrawingInteraction || isTrendlineEditMode || isTextNoteEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isHorizontalLineEditMode || isDrawingEditMode || Boolean(this.drawingMoveState)))
       || (_isTouchDevice && this.isCrosshairMode && noDrawingInteraction)
@@ -9017,7 +9018,7 @@ export class SimpleChart {
     }
 
     // 보조지표 패널 크로스헤어: 좌측 Y축 수치 박스
-    if (this.mouseY >= mainH && this.mouseY <= plotHeight) {
+    if (!onYAxis && this.mouseY >= mainH && this.mouseY <= plotHeight) {
       const hoveredPanelId = panels.find((id) => {
         if (hiddenPanels.has(id)) return false;
         const top = panelTops[id];
@@ -9122,8 +9123,8 @@ export class SimpleChart {
             ...obvD.slice(visStart, visEnd).filter((v): v is number => v != null),
             ...obvSignal9.slice(visStart, visEnd).filter((v): v is number => v != null),
           ];
-          let obvLo = Math.min(...rangeValues, 0);
-          let obvHi = Math.max(...rangeValues, 1);
+          let obvLo = rangeValues.length ? Math.min(...rangeValues) : 0;
+          let obvHi = rangeValues.length ? Math.max(...rangeValues) : 1;
           if (obvLo === obvHi) obvHi = obvLo + 1;
           const pad = Math.max((obvHi - obvLo) * 0.18, 1);
           lo = obvLo - pad;
@@ -9163,7 +9164,9 @@ export class SimpleChart {
         const boxX = width - boxW - 2;
         const boxY = Math.max(panelTop + 2, Math.min(panelTop + panelHeight - boxH - 2, clampedY - boxH / 2));
         const plusR = 9;
-        const plusCx = boxX - 4 - plusR;
+        const plusCx = geometry.side === 'left'
+          ? (geometry.axisRight + plusR + 4)
+          : (geometry.axisLeft - plusR - 4);
         const plusCy = boxY + boxH / 2;
 
         ctx.fillStyle = toRgba(accentColor, 0.28, 'rgba(80,90,110,0.28)');
@@ -9498,6 +9501,15 @@ export class SimpleChart {
     if (!this.drawingTool && !this.drawingMoveState && this.isOnMainYAxis(this.mouseX, this.mouseY)) {
       this.canvas.style.cursor = NS_RESIZE_CURSOR;
       return;
+    }
+    if (this.hoveredSubIndicatorAddButton) {
+      const { x: bx, y: by, r: br } = this.hoveredSubIndicatorAddButton;
+      const dx = this.mouseX - bx;
+      const dy = this.mouseY - by;
+      if (dx * dx + dy * dy <= (br + 4) * (br + 4)) {
+        this.canvas.style.cursor = 'pointer';
+        return;
+      }
     }
     if (!this.drawingTool && !this.drawingMoveState && this.getSubYAxisPanel(this.mouseX, this.mouseY)) {
       this.canvas.style.cursor = NS_RESIZE_CURSOR;

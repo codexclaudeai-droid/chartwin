@@ -834,8 +834,8 @@ export function renderIndicatorBlocks(this: any, params: any): void {
           ...obvD.slice(this.startIndex, this.endIndex).filter(v => v != null) as number[],
           ...obvSignal9.slice(this.startIndex, this.endIndex).filter(v => v != null) as number[],
         ];
-        let lo = Math.min(...rangeValues, 0);
-        let hi = Math.max(...rangeValues, 1);
+        let lo = rangeValues.length ? Math.min(...rangeValues) : 0;
+        let hi = rangeValues.length ? Math.max(...rangeValues) : 1;
         if (lo === hi) { hi = lo + 1; }
         const pad = Math.max((hi - lo) * 0.18, 1);
         lo -= pad; hi += pad;
