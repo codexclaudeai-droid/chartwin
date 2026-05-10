@@ -251,6 +251,37 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     return input;
   };
 
+  const createDbSelect = (
+    key: string,
+    labelText: string,
+    options: Array<{ value: string; label: string }>,
+    toValue?: (raw: string) => string | number | boolean,
+  ) => {
+    const wrap = document.createElement('label');
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+    const label = document.createElement('span');
+    label.textContent = labelText;
+    label.style.cssText = 'font-size:11px;color:#aeb9cf;';
+    const select = document.createElement('select');
+    select.style.cssText = 'background:#101827;border:1px solid #3a4864;border-radius:6px;padding:7px;color:white;font-size:12px;';
+    select.innerHTML = options.map((option) => `<option value="${option.value}">${option.label}</option>`).join('');
+    select.addEventListener('change', () => {
+      chart.setDoubleBreakConfig?.({ [key]: toValue ? toValue(select.value) : select.value });
+      onApply();
+    });
+    wrap.appendChild(label);
+    wrap.appendChild(select);
+    dbGrid.appendChild(wrap);
+    return select;
+  };
+
+  const createDbBoolSelect = (key: string, labelText: string) => {
+    return createDbSelect(key, labelText, [
+      { value: '1', label: '사용' },
+      { value: '0', label: '미사용' },
+    ], (raw) => raw === '1');
+  };
+
   const dbInputs = {
     bbPeriod: createDbField('bbPeriod', 'BB 기간'),
     bbStd: createDbField('bbStd', 'BB 표준편차', '0.1'),
@@ -262,7 +293,19 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     slMulti: createDbField('slMulti', 'SL ATR 배수', '0.1'),
     crossTol: createDbField('crossTol', '교차 허용값', '0.001'),
     minBarGap: createDbField('minBarGap', '신호 간격'),
+    adxPeriod: createDbField('adxPeriod', 'ADX 기간'),
+    adxMin: createDbField('adxMin', 'ADX 최소값', '0.1'),
   };
+  const dbAdxFilterSel = createDbBoolSelect('useAdxFilter', 'ADX 필터');
+  const dbSameBarSel = createDbSelect('sameBarMode', '동봉 TP/SL 처리', [
+    { value: 'conservative', label: '보수적(SL 우선)' },
+    { value: 'optimistic', label: '공격적(TP 우선)' },
+    { value: 'candle', label: '캔들 방향 기준' },
+  ]);
+  const dbRunnerExitSel = createDbSelect('runnerExitMode', 'TP1 후 잔여청산', [
+    { value: 'tp2', label: 'TP2 청산' },
+    { value: 'opposite', label: '반대신호 청산' },
+  ]);
 
   const bollingerRiskBox = document.createElement('div');
   bollingerRiskBox.style.cssText = 'display:none;margin-top:12px;padding:12px;border:1px solid #3d4d33;border-radius:8px;background:#162114;';
@@ -591,6 +634,9 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
       Object.entries(dbInputs).forEach(([key, input]) => {
         input.value = String(cfg[key] ?? '');
       });
+      dbAdxFilterSel.value = cfg.useAdxFilter ? '1' : '0';
+      dbSameBarSel.value = String(cfg.sameBarMode ?? 'conservative');
+      dbRunnerExitSel.value = String(cfg.runnerExitMode ?? 'tp2');
     }
 
     bollingerRiskBox.style.display = activeIsBollinger ? 'block' : 'none';
@@ -1895,6 +1941,8 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
       ? 'ZLMA - Zero-Lag MA Trend Levels'
     : popupKey === 'bb'
       ? 'Bollinger Band'
+    : popupKey === 'cvd'
+      ? 'CVD - Cumulative Volume Delta'
       : popupKey.toUpperCase();
   hdr.innerHTML = `<span>${headerTitle}</span>`;
   const xb = document.createElement('button');
@@ -1911,7 +1959,7 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     rsi: ['period'], dmi: ['period'], macd: ['fast','slow','signal'],
     stochF: ['kPeriod','dPeriod'], stochS: ['kPeriod','dPeriod'],
     cci: ['period'], ichimoku: ['tenkan','kijun','senkou'],
-    envelope: ['period','pct'], vwap: [], volumeProfile: ['rows', 'widthPct'], vpvr: [], obv: [], volume: [],
+    envelope: ['period','pct'], vwap: [], volumeProfile: ['rows', 'widthPct'], vpvr: [], obv: [], cvd: [], volume: [],
   };
   const LABELS: Record<string, string> = {
     value: '값', period: '기간', stdDev: '표준편차',
@@ -2391,6 +2439,23 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     });
     row.appendChild(lbl); row.appendChild(inp); popup.appendChild(row);
   });
+
+  if (popupKey === 'cvd') {
+    if (typeof ind.barMode !== 'boolean') ind.barMode = true;
+    const barRow = document.createElement('div');
+    barRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+    const barLabel = document.createElement('span');
+    barLabel.textContent = '캔들 표시';
+    barLabel.style.color = '#84898e';
+    const { button: barSwitch } = createSwitch(ind.barMode, (next) => {
+      ind.barMode = next;
+      chart.draw();
+      onUpdate();
+    }, { on: '캔들', off: '라인' });
+    barRow.appendChild(barLabel);
+    barRow.appendChild(barSwitch);
+    popup.appendChild(barRow);
+  }
 
   if (popupKey === 'dmi') {
     if (!Number.isFinite(Number(ind.topThreshold))) ind.topThreshold = 30;

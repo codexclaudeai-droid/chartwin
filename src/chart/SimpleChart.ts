@@ -427,7 +427,7 @@ export class SimpleChart {
       stochS:   { show: false, kPeriod: 14, dPeriod: 3 },
       cci:      { show: false, period: 20 },
       obv:      { show: false },
-      cvd:      { show: false },
+      cvd:      { show: false, barMode: true },
       vwap:     { show: false },
       volumeProfile: { show: false, rows: 24, widthPct: 22, upOpacity: 45, downOpacity: 45, pocOpacity: 95 },
       vpvr: {

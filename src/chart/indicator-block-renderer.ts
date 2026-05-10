@@ -849,21 +849,56 @@ export function renderIndicatorBlocks(this: any, params: any): void {
         if (showLine('obv')) drawSubAxisValue(lastObv, top, pH, lo, hi, s.color, lastObv.toFixed(2));
       }
       if (id === 'cvd') {
-        const rangeValues = [
-          ...cvdD.slice(this.startIndex, this.endIndex).filter(v => v != null) as number[],
-          ...cvdSignal9.slice(this.startIndex, this.endIndex).filter(v => v != null) as number[],
-        ];
-        let lo = Math.min(...rangeValues, 0);
-        let hi = Math.max(...rangeValues, 1);
+        const cvdBarMode = Boolean(ind.cvd?.barMode);
+        const visCvd = cvdD.slice(this.startIndex, this.endIndex).filter(v => v != null) as number[];
+        const visSig = cvdSignal9.slice(this.startIndex, this.endIndex).filter(v => v != null) as number[];
+        let lo: number, hi: number;
+        if (cvdBarMode) {
+          // barMode: 가시 범위의 실제 min/max만 사용해 캔들이 패널을 꽉 채우게 함
+          const allVis = visCvd.length ? visCvd : [0];
+          lo = Math.min(...allVis);
+          hi = Math.max(...allVis);
+        } else {
+          lo = Math.min(...visCvd, ...visSig, 0);
+          hi = Math.max(...visCvd, ...visSig, 1);
+        }
         if (lo === hi) { hi = lo + 1; }
         const pad = Math.max((hi - lo) * 0.18, 1);
         lo -= pad; hi += pad;
-        drawPanelLegend('CVD', top, [
-          { text: 'CVD', color: this.resolveStyle('cvd', '#7b68ee').color, enabled: showLine('cvd') },
+        const cvdLineColor = this.resolveStyle('cvd', '#7b68ee').color;
+        drawPanelLegend(cvdBarMode ? 'CVD (Candle)' : 'CVD', top, [
+          { text: 'CVD', color: cvdLineColor, enabled: showLine('cvd') },
           { text: 'Signal 9', color: this.resolveStyle('cvdSignal9', '#ffa726').color, enabled: showLine('cvdSignal9') },
         ]);
-        const s = this.resolveStyle('cvd', '#7b68ee');
-        if (showLine('cvd')) subLine(cvdD, s.color, s.width, top, pH, lo, hi, s.dash);
+        const upColor = this.config?.candleStyle?.upColor ?? '#22ab94';
+        const downColor = this.config?.candleStyle?.downColor ?? '#f23645';
+        const sy = (v: number) => top + (hi - v) / (hi - lo) * pH;
+        if (cvdBarMode && showLine('cvd')) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(chartLeft, top, subChartW, pH);
+          ctx.clip();
+          visData.forEach((_, i) => {
+            const idx = this.startIndex + i;
+            const curr = cvdD[idx];
+            const prev = cvdD[idx - 1] ?? 0;
+            if (curr == null) return;
+            const openY = sy(prev);
+            const closeY = sy(curr);
+            const bodyTop = Math.min(openY, closeY);
+            const bodyH = Math.max(Math.abs(openY - closeY), 1);
+            const isUp = curr >= prev;
+            ctx.fillStyle = isUp ? toRgba(upColor, 0.85) : toRgba(downColor, 0.85);
+            ctx.fillRect(Math.round(effectiveChartLeft + i * totalSp), Math.round(bodyTop), Math.max(1, Math.round(candleW)), Math.round(bodyH));
+            ctx.strokeStyle = isUp ? upColor : downColor;
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(Math.round(effectiveChartLeft + i * totalSp), Math.round(bodyTop), Math.max(1, Math.round(candleW)), Math.round(bodyH));
+          });
+          ctx.restore();
+        } else {
+          const s = this.resolveStyle('cvd', '#7b68ee');
+          if (showLine('cvd')) subLine(cvdD, s.color, s.width, top, pH, lo, hi, s.dash);
+        }
         if (showLine('cvdSignal9')) {
           const sig = this.resolveStyle('cvdSignal9', '#ffa726', 1.5, [4, 2]);
           subLine(cvdSignal9, sig.color, sig.width, top, pH, lo, hi, sig.dash);
@@ -874,7 +909,8 @@ export function renderIndicatorBlocks(this: any, params: any): void {
         }
         drawSubAlertLines('cvd', top, pH, lo, hi);
         const lastCvd = cvdD[cvdD.length - 1] ?? 0;
-        if (showLine('cvd')) drawSubAxisValue(lastCvd, top, pH, lo, hi, s.color, lastCvd.toFixed(2));
+        const lastColor = cvdBarMode ? (lastCvd >= (cvdD[cvdD.length - 2] ?? 0) ? upColor : downColor) : cvdLineColor;
+        drawSubAxisValue(lastCvd, top, pH, lo, hi, lastColor, lastCvd.toFixed(2));
       }
       ctx.restore();
       ctx.save();

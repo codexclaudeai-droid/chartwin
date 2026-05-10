@@ -173,6 +173,7 @@ export function createDefaultPanelState(): IndicatorPanelState {
   Object.keys(lineStyles).forEach((key) => {
     lineVisibility[key] = true;
   });
+  lineVisibility['cvdSignal9'] = false;
   return {
     panelOrder: [...SUB_PANEL_IDS],
     panelRatios: {
