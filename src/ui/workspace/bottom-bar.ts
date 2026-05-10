@@ -710,7 +710,7 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
   const navPanel = document.createElement('div');
   navPanel.style.cssText = `position:absolute;left:50%;transform:translate(-50%,8px);bottom:${bottomOffset + 26}px;
     display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:10px;
-    background:rgba(19,23,34,0.94);border:1px solid #2f3649;box-shadow:0 8px 20px rgba(0,0,0,0.35);
+    background:transparent;border:none;box-shadow:none;
     opacity:0;pointer-events:none;transition:opacity .16s ease, transform .16s ease;z-index:1010;`;
   app.appendChild(navPanel);
 
