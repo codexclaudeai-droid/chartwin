@@ -317,6 +317,10 @@ export class SimpleChart {
   private yAxisDragging = false;
   private yAxisDragStartY = 0;
   private yAxisDragStartFactor = 1.0;
+  private subPanelScaleFactors: Record<string, number> = {};
+  private subYAxisDragging: string | null = null;
+  private subYAxisDragStartY = 0;
+  private subYAxisDragStartFactor = 1.0;
   private logBtn: HTMLButtonElement | null = null;
   private _logBtnHovered = false;
   private logBtnHideTimer: ReturnType<typeof setTimeout> | null = null;
@@ -3071,6 +3075,9 @@ export class SimpleChart {
     leftGap: number;
     getY: (p: number) => number;
     getYLinear: (p: number) => number;
+    panelTops: Record<string, number>;
+    subPanelHeights: Record<string, number>;
+    subAxisStart: number;
   } = null;
 
   private drawSignalLayer(meta: {
@@ -5579,6 +5586,9 @@ export class SimpleChart {
       leftGap,
       getY,
       getYLinear,
+      panelTops,
+      subPanelHeights: Object.fromEntries(panels.map((id) => [id, plotHeight * this.getPanelRatio(id)])),
+      subAxisStart,
     };
     this.updateLogBtnPosition();
     this.drawConfirmedPatternBoxes(this.lastDrawMeta);
@@ -9349,6 +9359,28 @@ export class SimpleChart {
     return x >= 0 && x <= meta.axisPad;
   }
 
+  private getSubYAxisPanel(x: number, y: number): string | null {
+    const meta = this.lastDrawMeta as any;
+    if (!meta?.panelTops || meta.subAxisStart == null) return null;
+    if (x < meta.subAxisStart) return null;
+    const tops = meta.panelTops as Record<string, number>;
+    const heights = meta.subPanelHeights as Record<string, number>;
+    for (const id of Object.keys(tops)) {
+      const top = tops[id];
+      const h = heights[id] ?? 0;
+      if (y >= top && y < top + h) return id;
+    }
+    return null;
+  }
+
+  getSubPanelScaledRange(panelId: string, lo: number, hi: number): { lo: number; hi: number } {
+    const sf = this.subPanelScaleFactors[panelId] ?? 1.0;
+    if (sf === 1.0) return { lo, hi };
+    const mid = (lo + hi) / 2;
+    const half = (hi - lo) / 2 * sf;
+    return { lo: mid - half, hi: mid + half };
+  }
+
   private scheduleLogBtnHide(): void {
     if (this.logBtnHideTimer) return;
     this.logBtnHideTimer = setTimeout(() => {
@@ -9408,6 +9440,10 @@ export class SimpleChart {
       this.canvas.style.cursor = NS_RESIZE_CURSOR;
       return;
     }
+    if (this.subYAxisDragging) {
+      this.canvas.style.cursor = NS_RESIZE_CURSOR;
+      return;
+    }
     if (this.isDragging) {
       this.canvas.style.cursor = 'grabbing';
       return;
@@ -9460,6 +9496,10 @@ export class SimpleChart {
       return;
     }
     if (!this.drawingTool && !this.drawingMoveState && this.isOnMainYAxis(this.mouseX, this.mouseY)) {
+      this.canvas.style.cursor = NS_RESIZE_CURSOR;
+      return;
+    }
+    if (!this.drawingTool && !this.drawingMoveState && this.getSubYAxisPanel(this.mouseX, this.mouseY)) {
       this.canvas.style.cursor = NS_RESIZE_CURSOR;
       return;
     }
@@ -9539,6 +9579,16 @@ export class SimpleChart {
       this.yAxisDragging = true;
       this.yAxisDragStartY = e.clientY;
       this.yAxisDragStartFactor = this.yScaleFactor;
+      this.updateChartCursor();
+      e.preventDefault();
+      return;
+    }
+    // 보조지표 Y축 드래그 시작
+    const subAxisPanel = this.getSubYAxisPanel(this.mouseX, this.mouseY);
+    if (subAxisPanel) {
+      this.subYAxisDragging = subAxisPanel;
+      this.subYAxisDragStartY = e.clientY;
+      this.subYAxisDragStartFactor = this.subPanelScaleFactors[subAxisPanel] ?? 1.0;
       this.updateChartCursor();
       e.preventDefault();
       return;
@@ -10070,6 +10120,14 @@ export class SimpleChart {
     this.mouseX = mx;
     this.mouseY = my;
     this.isMouseOver = true;
+    // 보조지표 Y축 더블클릭 → 스케일 초기화
+    const subPanel = this.getSubYAxisPanel(mx, my);
+    if (subPanel) {
+      delete this.subPanelScaleFactors[subPanel];
+      this.draw();
+      e.preventDefault();
+      return;
+    }
     const hitDrawing = this.findDrawingAt(mx, my);
     if (hitDrawing && hitDrawing.shape.kind === 'trendline') {
       this.selectedDrawingId = hitDrawing.shape.id;
@@ -10116,6 +10174,12 @@ export class SimpleChart {
     if (this.yAxisDragging) {
       const dy = e.clientY - this.yAxisDragStartY;
       this.yScaleFactor = Math.max(0.1, Math.min(20, this.yAxisDragStartFactor * Math.exp(dy * 0.005)));
+      this.draw();
+      return;
+    }
+    if (this.subYAxisDragging) {
+      const dy = e.clientY - this.subYAxisDragStartY;
+      this.subPanelScaleFactors[this.subYAxisDragging] = Math.max(0.05, Math.min(20, this.subYAxisDragStartFactor * Math.exp(dy * 0.005)));
       this.draw();
       return;
     }
@@ -10210,6 +10274,11 @@ export class SimpleChart {
     this.stopMouseLongPressTooltip();
     if (this.yAxisDragging) {
       this.yAxisDragging = false;
+      this.updateChartCursor();
+      return;
+    }
+    if (this.subYAxisDragging) {
+      this.subYAxisDragging = null;
       this.updateChartCursor();
       return;
     }
@@ -10696,6 +10765,17 @@ export class SimpleChart {
         return;
       }
 
+      // ── 보조지표 Y축 터치 드래그 ───────────────────────────────────
+      if (!this.drawingTool) {
+        const subAxisPanel = this.getSubYAxisPanel(pos.x, pos.y);
+        if (subAxisPanel) {
+          this.subYAxisDragging = subAxisPanel;
+          this.subYAxisDragStartY = e.touches[0].clientY;
+          this.subYAxisDragStartFactor = this.subPanelScaleFactors[subAxisPanel] ?? 1.0;
+          return;
+        }
+      }
+
       // ── 롱프레스: 십자선 모드 진입 ─────────────────────────────────
       this.cancelLongPress();
       this.longPressTimer = setTimeout(() => {
@@ -10765,6 +10845,14 @@ export class SimpleChart {
     if (e.touches.length === 1) {
       const touch = e.touches[0];
       const pos = this.touchPos(touch);
+
+      // ── 보조지표 Y축 터치 드래그 ─────────────────────────────────────
+      if (this.subYAxisDragging) {
+        const dy = touch.clientY - this.subYAxisDragStartY;
+        this.subPanelScaleFactors[this.subYAxisDragging] = Math.max(0.05, Math.min(20, this.subYAxisDragStartFactor * Math.exp(dy * 0.005)));
+        this.draw();
+        return;
+      }
 
       // ????????????????????????????????????????????????????????????????????
       // ? 기존 드로잉 드래그: 터치로 앵커 이동
@@ -10918,6 +11006,11 @@ export class SimpleChart {
   private handleTouchEnd(e: TouchEvent) {
     e.preventDefault();
     this.cancelLongPress();
+
+    if (this.subYAxisDragging) {
+      this.subYAxisDragging = null;
+      return;
+    }
 
     // ????????????????????????????????????????????????????????????????????????????
     // ? 기존 드로잉 편집: 드래그 완료 (선택은 유지하여 toolbar 표시)

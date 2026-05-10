@@ -593,6 +593,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
 
     for (const id of panels) {
       const top = panelTops[id], pH = plotHeight * this.getPanelRatio(id);
+      const scaleRange = (lo: number, hi: number) => this.getSubPanelScaledRange(id, lo, hi);
       if (hiddenPanels.has(id)) {
         subLabel(getPanelTitle(id), top);
         ctx.save();
@@ -627,24 +628,26 @@ export function renderIndicatorBlocks(this: any, params: any): void {
         const lastRsi = (rsiD.filter(v => v != null).slice(-1)[0] ?? 0) as number;
         const s = this.resolveStyle('rsi', '#ffeb3b');
         drawPanelLegend(`RSI(${ind.rsi.period})`, top, [{ text: `RSI ${lastRsi.toFixed(1)}`, color: s.color, enabled: showLine('rsi') }]);
-        subGrid([70, 50, 30], top, pH, 0, 100);
+        const { lo: rsiLo, hi: rsiHi } = scaleRange(0, 100);
+        subGrid([70, 50, 30], top, pH, rsiLo, rsiHi);
         ctx.save();
         ctx.beginPath();
         ctx.rect(chartLeft, top, subChartW, pH);
         ctx.clip();
-        const sy = (v: number) => top + (100 - v) / 100 * (pH - 20) + 20;
+        const rsiRng = rsiHi - rsiLo || 1;
+        const rsiSy = (v: number) => top + 20 + (rsiHi - v) / rsiRng * (pH - 20);
         ctx.fillStyle = 'rgba(242,54,69,0.06)';
-        ctx.fillRect(chartLeft, sy(100), subChartW, sy(70) - sy(100));
+        ctx.fillRect(chartLeft, rsiSy(rsiHi), subChartW, Math.max(0, rsiSy(70) - rsiSy(rsiHi)));
         ctx.fillStyle = 'rgba(34,171,148,0.06)';
-        ctx.fillRect(chartLeft, sy(30), subChartW, sy(0) - sy(30));
+        ctx.fillRect(chartLeft, rsiSy(30), subChartW, Math.max(0, rsiSy(rsiLo) - rsiSy(30)));
         ctx.restore();
-        if (showLine('rsi')) subLine(rsiD, s.color, s.width, top, pH, 0, 100, s.dash);
+        if (showLine('rsi')) subLine(rsiD, s.color, s.width, top, pH, rsiLo, rsiHi, s.dash);
         if (showLine('rsiBaseline')) {
           const b = this.resolveStyle('rsiBaseline', '#999999', 1, [4, 4]);
-          subHorizontalLine(50, b.color, b.width, top, pH, 0, 100, b.dash);
+          subHorizontalLine(50, b.color, b.width, top, pH, rsiLo, rsiHi, b.dash);
         }
-        drawSubAlertLines('rsi', top, pH, 0, 100);
-        if (showLine('rsi')) drawSubAxisValue(lastRsi, top, pH, 0, 100, s.color, lastRsi.toFixed(2));
+        drawSubAlertLines('rsi', top, pH, rsiLo, rsiHi);
+        if (showLine('rsi')) drawSubAxisValue(lastRsi, top, pH, rsiLo, rsiHi, s.color, lastRsi.toFixed(2));
       }
       if (id === 'dmi') {
         const plus = this.resolveStyle('dmiPlus', '#22ab94');
@@ -699,6 +702,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
         if (dmiHi - dmiLo < dmiSnapUnit * 2) {
           dmiHi = Math.min(100, dmiLo + dmiSnapUnit * 2);
         }
+        ({ lo: dmiLo, hi: dmiHi } = scaleRange(dmiLo, dmiHi));
         const dmiMid = (dmiLo + dmiHi) / 2;
         const topLine = Math.max(dmiLo, Math.min(dmiHi, dmiTopThreshold));
         const bottomLine = Math.max(dmiLo, Math.min(dmiHi, dmiBottomThreshold));
@@ -739,7 +743,9 @@ export function renderIndicatorBlocks(this: any, params: any): void {
           ...macdD.sigLine.slice(this.startIndex, this.endIndex).filter(v => v != null) as number[],
         ];
         const mMaxBase = Math.max(...macdVals.map(Math.abs), 0.001);
-        const mMax = mMaxBase * 1.4;
+        const mMaxRaw = mMaxBase * 1.4;
+        const { lo: macdLo, hi: macdHi } = scaleRange(-mMaxRaw, mMaxRaw);
+        const mMax = (macdHi - macdLo) / 2;
         const macdLineStyle = this.resolveStyle('macdLine', '#2962ff');
         const sigLineStyle = this.resolveStyle('macdSignal', '#f23645');
         drawPanelLegend(`MACD(${ind.macd.fast},${ind.macd.slow},${ind.macd.signal})`, top, [
@@ -776,16 +782,17 @@ export function renderIndicatorBlocks(this: any, params: any): void {
           { text: '%K', color: k.color, enabled: showLine('stochFastK') },
           { text: '%D', color: d.color, enabled: showLine('stochFastD') },
         ]);
-        subGrid([80, 50, 20], top, pH, 0, 100);
-        if (showLine('stochFastK')) subLine(stFD.k, k.color, k.width, top, pH, 0, 100, k.dash);
+        const { lo: sfLo, hi: sfHi } = scaleRange(0, 100);
+        subGrid([80, 50, 20], top, pH, sfLo, sfHi);
+        if (showLine('stochFastK')) subLine(stFD.k, k.color, k.width, top, pH, sfLo, sfHi, k.dash);
         if (showLine('stochFastBaseline')) {
           const b = this.resolveStyle('stochFastBaseline', '#999999', 1, [4, 4]);
-          subHorizontalLine(50, b.color, b.width, top, pH, 0, 100, b.dash);
+          subHorizontalLine(50, b.color, b.width, top, pH, sfLo, sfHi, b.dash);
         }
-        if (showLine('stochFastD')) subLine(stFD.d, d.color, d.width, top, pH, 0, 100, d.dash);
-        drawSubAlertLines('stochF', top, pH, 0, 100);
+        if (showLine('stochFastD')) subLine(stFD.d, d.color, d.width, top, pH, sfLo, sfHi, d.dash);
+        drawSubAlertLines('stochF', top, pH, sfLo, sfHi);
         const lastK = (stFD.k.filter(v => v != null).slice(-1)[0] ?? 0) as number;
-        if (showLine('stochFastK')) drawSubAxisValue(lastK, top, pH, 0, 100, k.color, lastK.toFixed(2));
+        if (showLine('stochFastK')) drawSubAxisValue(lastK, top, pH, sfLo, sfHi, k.color, lastK.toFixed(2));
       }
       if (id === 'stochS' && stSD) {
         const k = this.resolveStyle('stochSlowK', '#22ab94');
@@ -794,31 +801,33 @@ export function renderIndicatorBlocks(this: any, params: any): void {
           { text: '%K', color: k.color, enabled: showLine('stochSlowK') },
           { text: '%D', color: d.color, enabled: showLine('stochSlowD') },
         ]);
-        subGrid([80, 50, 20], top, pH, 0, 100);
-        if (showLine('stochSlowK')) subLine(stSD.k, k.color, k.width, top, pH, 0, 100, k.dash);
+        const { lo: ssLo, hi: ssHi } = scaleRange(0, 100);
+        subGrid([80, 50, 20], top, pH, ssLo, ssHi);
+        if (showLine('stochSlowK')) subLine(stSD.k, k.color, k.width, top, pH, ssLo, ssHi, k.dash);
         if (showLine('stochSlowBaseline')) {
           const b = this.resolveStyle('stochSlowBaseline', '#999999', 1, [4, 4]);
-          subHorizontalLine(50, b.color, b.width, top, pH, 0, 100, b.dash);
+          subHorizontalLine(50, b.color, b.width, top, pH, ssLo, ssHi, b.dash);
         }
-        if (showLine('stochSlowD')) subLine(stSD.d, d.color, d.width, top, pH, 0, 100, d.dash);
-        drawSubAlertLines('stochS', top, pH, 0, 100);
+        if (showLine('stochSlowD')) subLine(stSD.d, d.color, d.width, top, pH, ssLo, ssHi, d.dash);
+        drawSubAlertLines('stochS', top, pH, ssLo, ssHi);
         const lastK = (stSD.k.filter(v => v != null).slice(-1)[0] ?? 0) as number;
-        if (showLine('stochSlowK')) drawSubAxisValue(lastK, top, pH, 0, 100, k.color, lastK.toFixed(2));
+        if (showLine('stochSlowK')) drawSubAxisValue(lastK, top, pH, ssLo, ssHi, k.color, lastK.toFixed(2));
       }
       if (id === 'cci') {
         const vis = cciD.slice(this.startIndex, this.endIndex).filter(v => v != null) as number[];
         const cMax = Math.max(...vis.map(Math.abs), 100);
+        const { lo: cciLo, hi: cciHi } = scaleRange(-cMax, cMax);
         drawPanelLegend(`CCI(${ind.cci.period})`, top, [{ text: 'CCI', color: this.resolveStyle('cci', '#22ab94').color, enabled: showLine('cci') }]);
-        subGrid([100, 0, -100], top, pH, -cMax, cMax);
+        subGrid([100, 0, -100], top, pH, cciLo, cciHi);
         const s = this.resolveStyle('cci', '#22ab94');
-        if (showLine('cci')) subLine(cciD, s.color, s.width, top, pH, -cMax, cMax, s.dash);
+        if (showLine('cci')) subLine(cciD, s.color, s.width, top, pH, cciLo, cciHi, s.dash);
         if (showLine('cciBaseline')) {
           const b = this.resolveStyle('cciBaseline', '#999999', 1, [4, 4]);
-          subHorizontalLine(0, b.color, b.width, top, pH, -cMax, cMax, b.dash);
+          subHorizontalLine(0, b.color, b.width, top, pH, cciLo, cciHi, b.dash);
         }
-        drawSubAlertLines('cci', top, pH, -cMax, cMax);
+        drawSubAlertLines('cci', top, pH, cciLo, cciHi);
         const lastCci = (cciD.filter(v => v != null).slice(-1)[0] ?? 0) as number;
-        if (showLine('cci')) drawSubAxisValue(lastCci, top, pH, -cMax, cMax, s.color, lastCci.toFixed(2));
+        if (showLine('cci')) drawSubAxisValue(lastCci, top, pH, cciLo, cciHi, s.color, lastCci.toFixed(2));
       }
       if (id === 'obv') {
         const rangeValues = [
@@ -830,6 +839,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
         if (lo === hi) { hi = lo + 1; }
         const pad = Math.max((hi - lo) * 0.18, 1);
         lo -= pad; hi += pad;
+        ({ lo, hi } = scaleRange(lo, hi));
         drawPanelLegend('OBV', top, [
           { text: 'OBV', color: this.resolveStyle('obv', '#22ab94').color, enabled: showLine('obv') },
           { text: 'Signal 9', color: this.resolveStyle('obvSignal9', '#ffc107').color, enabled: showLine('obvSignal9') },
@@ -865,6 +875,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
         if (lo === hi) { hi = lo + 1; }
         const pad = Math.max((hi - lo) * 0.18, 1);
         lo -= pad; hi += pad;
+        ({ lo, hi } = scaleRange(lo, hi));
         const cvdLineColor = this.resolveStyle('cvd', '#7b68ee').color;
         drawPanelLegend(cvdBarMode ? 'CVD (Candle)' : 'CVD', top, [
           { text: 'CVD', color: cvdLineColor, enabled: showLine('cvd') },
