@@ -621,6 +621,7 @@ export function loadStrategies(): StrategyDefinition[] {
       if (
         (
           saved.id === 'strategy_pine_bbands_directed'
+          || saved.id === 'strategy_js_double_break'
           || saved.id === 'strategy_pine_sma_5_20'
           || saved.id === 'strategy_js_grid_atr_bnf_srouter_v1'
         )

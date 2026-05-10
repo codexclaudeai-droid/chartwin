@@ -15,6 +15,8 @@ const DEFAULT_SYMBOL_CATALOG: Record<string, { id: string; label: string; desc: 
   ],
   index: [
     { id: 'SPX500', label: 'SPX500', desc: 'S&P 500' },
+    { id: 'NASDAQ', label: 'NASDAQ', desc: 'NASDAQ Composite' },
+    { id: 'NDX', label: 'NDX', desc: 'Nasdaq 100 Index' },
     { id: 'HSI', label: 'HSI', desc: 'Hang Seng' },
     { id: 'KOSPI', label: 'KOSPI', desc: 'Korea Composite Stock Price Index' },
     { id: 'KOSPI200', label: 'KOSPI200', desc: 'KOSPI 200' },
@@ -79,7 +81,7 @@ export const SYMBOL_CATALOG: Record<string, { id: string; label: string; desc: s
 export const CUSTOM_SYMBOLS: SymbolCatalogItem[] = [];
 
 const SYMBOL_ICON_CATEGORY: Record<string, string> = {
-  'NQ1!': 'index', NAS100: 'index', SPX500: 'index', HKG33: 'index', HSI: 'index',
+  'NQ1!': 'index', NAS100: 'index', SPX500: 'index', NASDAQ: 'index', NDX: 'index', HKG33: 'index', HSI: 'index',
   KOSPI: 'index', KOSPI200: 'index', KOSDAQ: 'index',
   BTCUSDT: 'crypto', ETHUSDT: 'crypto', SOLUSDT: 'crypto',
   XRPUSDT: 'crypto', BNBUSDT: 'crypto', TRXUSDT: 'crypto',
@@ -335,6 +337,8 @@ export function getSymbolIconUrl(symbolId: string): string | undefined {
     'KOSPI200':     'https://s3-symbol-logo.tradingview.com/indices/kospi-200.svg',
     'KOSDAQ':       'https://s3-symbol-logo.tradingview.com/indices/kosdaq.svg',
     'SPX500':       'https://s3-symbol-logo.tradingview.com/indices/s-and-p-500.svg',
+    'NASDAQ':       'https://s3-symbol-logo.tradingview.com/indices/nasdaq-composite.svg',
+    'NDX':          'https://s3-symbol-logo.tradingview.com/indices/nasdaq-100.svg',
     'NQ1!':         'https://s3-symbol-logo.tradingview.com/indices/nasdaq-100.svg',
     'NAS100':       'https://s3-symbol-logo.tradingview.com/indices/nasdaq-100.svg',
     'HSI':          'https://s3-symbol-logo.tradingview.com/indices/hang-seng.svg',
@@ -363,4 +367,3 @@ export function getSymbolIconUrl(symbolId: string): string | undefined {
 }
 
 loadSymbolRegistry();
-

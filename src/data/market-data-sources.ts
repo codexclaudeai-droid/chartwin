@@ -6,6 +6,9 @@ import { getBucketStartSec, shiftBucketSec } from '../chart/axis-utils';
 const INDEX_SYMBOLS_2DP = new Set([
   'NQ1!',
   'NAS100',
+  'NASDAQ',
+  'NDX',
+  'IXIC',
   'SPX500',
   'HKG33',
   'HSI',

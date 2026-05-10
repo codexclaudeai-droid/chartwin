@@ -5,6 +5,7 @@
 
 - `crypto`: 기본 `binance`
 - `futures`, `index`, `commodity`, `fx`: 기본 `webhook`
+- `KOSPI`, `KOSPI200`, `KOSDAQ`, `NDX`, `NASDAQ`, `IXIC`, `NQ1!`: 기본 `kis` 심볼 provider
 
 ## 1) 실행
 
@@ -28,11 +29,34 @@ npm run backend:dev
     "index": "webhook",
     "commodity": "webhook",
     "fx": "webhook"
+  },
+  "symbolProviders": {
+    "index": {
+      "KOSPI": "kis",
+      "KOSPI200": "kis",
+      "KOSDAQ": "kis",
+      "NDX": "kis",
+      "NASDAQ": "kis",
+      "IXIC": "kis",
+      "NQ1!": "kis"
+    }
+  },
+  "kis": {
+    "symbols": {
+      "NDX": { "code": "DNASNDX" },
+      "NASDAQ": { "code": "DNASCOMP" },
+      "NQ1!": { "code": "NQ", "matchPrefix": true }
+    }
   }
 }
 ```
 
 캔들 데이터는 `server/data/candles-db.json`에 자동 저장되며, 백엔드 재시작 시 자동 복구됩니다.
+
+KIS 웹소켓은 `KIS_APP_KEY`/`KIS_APP_SECRET` 환경변수로 웹소켓 접속키를 자동 발급받거나, `KIS_WS_APPROVAL_KEY`를 직접 넣으면 시작됩니다.
+KIS에서 수신한 tick은 완성된 1분봉을 기다리지 않고 현재 1분 bucket의 `high/low/close`를 즉시 갱신합니다.
+`NQ1!`은 KIS 해외선물옵션 실시간체결(`HDFFF020`) 경로라 CME 유료시세 신청이 필요할 수 있습니다.
+`NDX`/`NASDAQ`의 KIS 종목코드는 계정 권한 또는 KIS 종목 마스터에 따라 다를 수 있으므로, 수신이 없으면 `kis.symbols.<symbol>.code`만 교체하면 됩니다.
 
 ## 3) 관리자: provider 변경
 

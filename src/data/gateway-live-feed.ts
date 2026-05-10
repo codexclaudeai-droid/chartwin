@@ -89,6 +89,7 @@ const FX_QUOTES = ['USD', 'EUR', 'JPY', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD', 'KRW'
 function normalizeSymbol(symbol: string): string {
   const normalized = symbol.replace(/\s+/g, '').toUpperCase();
   if (normalized === 'NAS100' || normalized === 'NQ') return 'NQ1!';
+  if (normalized === '^IXIC') return 'NASDAQ';
   return normalized;
 }
 
@@ -121,7 +122,7 @@ export function shouldUseBinanceDirect(symbol: string): boolean {
 export function inferGatewayMarket(symbol: string): 'futures' | 'index' | 'commodity' | 'fx' {
   if (isCommodityLikeSymbol(symbol)) return 'commodity';
   if (isFxLikeSymbol(symbol)) return 'fx';
-  if (/^([A-Z]{2,5}\d{2,4}|SPX500|NAS100|NQ1!|NDX|HSI|DAX|NIKKEI|KOSPI|KOSDAQ|KOSPI200)$/.test(normalizeSymbol(symbol))) {
+  if (/^([A-Z]{2,5}\d{2,4}|SPX500|NAS100|NQ1!|NDX|NASDAQ|IXIC|HSI|DAX|NIKKEI|KOSPI|KOSDAQ|KOSPI200)$/.test(normalizeSymbol(symbol))) {
     return 'index';
   }
   return 'futures';
@@ -217,6 +218,7 @@ export function createGatewayLiveFeed({
   let pollingTimer: number | null = null;
   let fastPollingTimer: number | null = null;
   let abortController: AbortController | null = null;
+  let socket: WebSocket | null = null;
   let connecting = false;
   let fastSyncConfig = loadGatewayFastSyncConfig();
 
@@ -235,6 +237,26 @@ export function createGatewayLiveFeed({
     if (!abortController) return;
     abortController.abort();
     abortController = null;
+  };
+
+  const stopSocket = () => {
+    if (!socket) return;
+    try {
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onerror = null;
+      socket.onclose = null;
+      socket.close();
+    } catch {
+      // Ignore close errors.
+    }
+    socket = null;
+  };
+
+  const toWebSocketBaseUrl = (baseUrl: string): string => {
+    if (baseUrl.startsWith('https://')) return `wss://${baseUrl.slice('https://'.length)}`;
+    if (baseUrl.startsWith('http://')) return `ws://${baseUrl.slice('http://'.length)}`;
+    return baseUrl;
   };
 
   const applySnapshot = (candles: CandleDataLike[]) => {
@@ -350,10 +372,43 @@ export function createGatewayLiveFeed({
     }, fastSyncConfig.intervalMs);
   };
 
+  const setupWebSocket = () => {
+    stopSocket();
+    const market = inferGatewayMarket(chart.config.symbol);
+    const query = new URLSearchParams({
+      market,
+      symbol: normalizeSymbol(chart.config.symbol),
+      timeframe: chart.config.timeframe,
+    });
+    socket = new WebSocket(`${toWebSocketBaseUrl(resolveGatewayBaseUrl())}/stream?${query.toString()}`);
+    socket.onopen = () => {
+      if (running) onStatusChange?.('live');
+    };
+    socket.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(String(event.data)) as { candle?: unknown };
+        const rows = sanitizeCandles(payload.candle ? [payload.candle] : []);
+        if (!rows.length) return;
+        applyIncremental(rows);
+      } catch {
+        // Ignore malformed live packets.
+      }
+    };
+    socket.onerror = () => {
+      stopSocket();
+    };
+    socket.onclose = () => {
+      socket = null;
+    };
+  };
+
   const restart = async (reloadHistory: boolean): Promise<boolean> => {
     onStatusChange?.('connecting');
     const ok = await pollOnce(reloadHistory);
-    if (ok) setupPolling();
+    if (ok) {
+      setupWebSocket();
+      setupPolling();
+    }
     return ok;
   };
 
@@ -372,6 +427,7 @@ export function createGatewayLiveFeed({
     stopPolling();
     stopFastPolling();
     stopFetch();
+    stopSocket();
     onStatusChange?.('idle');
   };
 

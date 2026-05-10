@@ -70,6 +70,9 @@ type ReportResult = {
   grossProfit: number;
   grossLoss: number;
   averagePnl: number;
+  signalCount: number;
+  closedTradeCount: number;
+  openPositionCount: number;
   trades: ReportTrade[];
 };
 
@@ -154,6 +157,9 @@ self.onmessage = function (event) {
         grossProfit: 0,
         grossLoss: 0,
         averagePnl: 0,
+        signalCount: 0,
+        closedTradeCount: 0,
+        openPositionCount: 0,
         trades: []
       }
     });
@@ -1017,20 +1023,26 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const applyCapitalBasedRatios = (result: ReportResult): ReportResult => {
-    const lever = Math.max(1, Math.min(1000, Math.floor(leverage) || 1));
-    const applied = lever === 1 ? result : {
+    const normalized: ReportResult = {
       ...result,
-      equity: result.equity.map((v) => v * lever),
-      buyHold: result.buyHold.map((v) => v * lever),
-      excursion: result.excursion.map((v) => v * lever),
-      runup: result.runup.map((v) => v * lever),
-      drawdown: result.drawdown.map((v) => v * lever),
-      netProfit: result.netProfit * lever,
-      maxDrawdown: result.maxDrawdown * lever,
-      grossProfit: result.grossProfit * lever,
-      grossLoss: result.grossLoss * lever,
-      averagePnl: result.averagePnl * lever,
-      trades: result.trades.map((t) => ({ ...t, pnl: t.pnl * lever })),
+      signalCount: Number.isFinite(result.signalCount) ? result.signalCount : result.tradeCount,
+      closedTradeCount: Number.isFinite(result.closedTradeCount) ? result.closedTradeCount : result.tradeCount,
+      openPositionCount: Number.isFinite(result.openPositionCount) ? result.openPositionCount : 0,
+    };
+    const lever = Math.max(1, Math.min(1000, Math.floor(leverage) || 1));
+    const applied = lever === 1 ? normalized : {
+      ...normalized,
+      equity: normalized.equity.map((v) => v * lever),
+      buyHold: normalized.buyHold.map((v) => v * lever),
+      excursion: normalized.excursion.map((v) => v * lever),
+      runup: normalized.runup.map((v) => v * lever),
+      drawdown: normalized.drawdown.map((v) => v * lever),
+      netProfit: normalized.netProfit * lever,
+      maxDrawdown: normalized.maxDrawdown * lever,
+      grossProfit: normalized.grossProfit * lever,
+      grossLoss: normalized.grossLoss * lever,
+      averagePnl: normalized.averagePnl * lever,
+      trades: normalized.trades.map((t) => ({ ...t, pnl: t.pnl * lever })),
     };
 
     const base = Number.isFinite(initialCapital) && initialCapital > 0 ? initialCapital : null;
@@ -1075,6 +1087,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
             <div style="font-size:${kpiLabelFs};color:#95a8cb;">수익지수</div>
             <div style="font-size:${kpiValueFs};font-weight:700;color:#f7c948;margin-top:2px;">${r.profitFactor.toFixed(2)}</div>
           </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:${kpiGap};margin-top:${kpiTitleMb};padding-top:${kpiTitleMb};border-top:1px solid #22314d;color:#9fb1d3;font-size:${kpiLabelFs};">
+          <span>신호 ${r.signalCount}</span>
+          <span>청산거래 ${r.closedTradeCount}</span>
+          <span>미청산 ${r.openPositionCount}</span>
         </div>
       </div>
     `;

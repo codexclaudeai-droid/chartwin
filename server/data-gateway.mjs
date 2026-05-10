@@ -2,6 +2,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { createKisWebSocketCollector, hasKisCredentials } from './kis-websocket-collector.mjs';
 
 const PORT = Number(process.env.DATA_GATEWAY_PORT || 8787);
 const HOST = process.env.DATA_GATEWAY_HOST || '0.0.0.0';
@@ -9,7 +11,7 @@ const CONFIG_PATH = resolve(process.cwd(), 'server/config/runtime-config.json');
 const CANDLE_DB_PATH = resolve(process.cwd(), 'server/data/candles-db.json');
 const MAX_CANDLES_PER_KEY = 20000;
 
-const ALLOWED_PROVIDERS = ['binance', 'api', 'webhook'];
+const ALLOWED_PROVIDERS = ['binance', 'api', 'webhook', 'kis'];
 const ALLOWED_MARKETS = ['crypto', 'futures', 'index', 'commodity', 'fx'];
 const DEFAULT_PROVIDER_BY_MARKET = {
   crypto: 'binance',
@@ -18,15 +20,28 @@ const DEFAULT_PROVIDER_BY_MARKET = {
   commodity: 'webhook',
   fx: 'webhook',
 };
+const DEFAULT_SYMBOL_PROVIDER_BY_MARKET = {
+  index: {
+    KOSPI: 'kis',
+    KOSPI200: 'kis',
+    KOSDAQ: 'kis',
+    NDX: 'kis',
+    NASDAQ: 'kis',
+    IXIC: 'kis',
+    'NQ1!': 'kis',
+  },
+};
 
 /** @typedef {{time:number,open:number,high:number,low:number,close:number,volume:number}} Candle */
 
-/** @type {{adminToken:string, webhookPassphrase:string, providers: Record<string, string>}} */
+/** @type {{adminToken:string, webhookPassphrase:string, providers: Record<string, string>, symbolProviders: Record<string, Record<string, string>>, kis?: Record<string, unknown>}} */
 let runtimeConfig;
 
 /** @type {Map<string, Candle[]>} */
 const candleStore = new Map();
+const streamClients = new Set();
 let persistTimer = null;
+let kisCollector = null;
 
 function splitCandleKey(key) {
   const parts = String(key || '').split(':');
@@ -79,6 +94,44 @@ function sendJson(res, code, payload) {
   res.end(JSON.stringify(payload));
 }
 
+function sendWebSocketText(socket, payload) {
+  if (!socket || socket.destroyed) return;
+  const body = Buffer.from(payload);
+  let header;
+  if (body.length < 126) {
+    header = Buffer.from([0x81, body.length]);
+  } else if (body.length < 65536) {
+    header = Buffer.alloc(4);
+    header[0] = 0x81;
+    header[1] = 126;
+    header.writeUInt16BE(body.length, 2);
+  } else {
+    header = Buffer.alloc(10);
+    header[0] = 0x81;
+    header[1] = 127;
+    header.writeBigUInt64BE(BigInt(body.length), 2);
+  }
+  socket.write(Buffer.concat([header, body]));
+}
+
+function streamKey(market, symbol, timeframe) {
+  return candleKey(market, canonicalizeSymbolByMarket(market, symbol), timeframe);
+}
+
+function broadcastLiveCandle(market, symbol, timeframe, candle) {
+  const key = streamKey(market, symbol, timeframe);
+  const message = JSON.stringify({
+    type: 'candle',
+    market,
+    symbol: canonicalizeSymbolByMarket(market, symbol),
+    timeframe,
+    candle,
+  });
+  for (const client of streamClients) {
+    if (client.key === key) sendWebSocketText(client.socket, message);
+  }
+}
+
 function normalizeMarket(input) {
   const market = String(input || '').trim().toLowerCase();
   return ALLOWED_MARKETS.includes(market) ? market : null;
@@ -96,6 +149,7 @@ function normalizeSymbol(input) {
 function canonicalizeSymbolByMarket(market, symbol) {
   const normalized = normalizeSymbol(symbol);
   if (market === 'index' && (normalized === 'NAS100' || normalized === 'NQ')) return 'NQ1!';
+  if (market === 'index' && normalized === '^IXIC') return 'NASDAQ';
   return normalized;
 }
 
@@ -112,7 +166,7 @@ function inferMarketFromSymbol(symbol) {
     if (FX_QUOTES.includes(base) && FX_QUOTES.includes(quote)) return 'fx';
   }
   // index
-  if (/^([A-Z]{2,5}\d{2,4}|SPX500|NAS100|NQ1!|NDX|HSI|DAX|NIKKEI|KOSPI|KOSDAQ|KOSPI200)$/.test(upper)) return 'index';
+  if (/^([A-Z]{2,5}\d{2,4}|SPX500|NAS100|NQ1!|NDX|NASDAQ|\^IXIC|IXIC|HSI|DAX|NIKKEI|KOSPI|KOSDAQ|KOSPI200)$/.test(upper)) return 'index';
   // default
   return 'futures';
 }
@@ -328,6 +382,48 @@ function upsertCandles(market, symbol, timeframe, incomingCandles) {
   return merged;
 }
 
+function mergeLiveCandle(existing, incoming) {
+  if (!existing) return { ...incoming };
+  return {
+    time: existing.time,
+    open: Number.isFinite(existing.open) ? existing.open : incoming.open,
+    high: Math.max(existing.high, incoming.high, incoming.close),
+    low: Math.min(existing.low, incoming.low, incoming.close),
+    close: incoming.close,
+    volume: Number.isFinite(incoming.volume) ? incoming.volume : existing.volume,
+  };
+}
+
+function applyLiveCandle(market, symbol, timeframe, incomingCandle) {
+  const canonicalSymbol = canonicalizeSymbolByMarket(market, symbol);
+  const sanitized = sanitizeCandles([incomingCandle], timeframe);
+  const incoming = sanitized[0];
+  if (!market || !canonicalSymbol || !timeframe || !incoming) return [];
+
+  const key = candleKey(market, canonicalSymbol, timeframe);
+  const current = candleStore.get(key) || [];
+  const last = current[current.length - 1];
+  let nextRows;
+  if (last && last.time === incoming.time) {
+    const merged = mergeLiveCandle(last, incoming);
+    nextRows = current.slice(0, -1).concat(merged);
+    broadcastLiveCandle(market, canonicalSymbol, timeframe, merged);
+  } else if (last && incoming.time < last.time) {
+    const map = new Map(current.map((candle) => [candle.time, candle]));
+    const merged = mergeLiveCandle(map.get(incoming.time), incoming);
+    map.set(incoming.time, merged);
+    nextRows = Array.from(map.values()).sort((a, b) => a.time - b.time);
+    broadcastLiveCandle(market, canonicalSymbol, timeframe, merged);
+  } else {
+    nextRows = current.concat(incoming);
+    broadcastLiveCandle(market, canonicalSymbol, timeframe, incoming);
+  }
+  const trimmed = nextRows.slice(-MAX_CANDLES_PER_KEY);
+  candleStore.set(key, trimmed);
+  schedulePersistCandleStore();
+  return trimmed;
+}
+
 function checkAdmin(req) {
   const token = req.headers['x-admin-token'];
   return typeof token === 'string' && token === runtimeConfig.adminToken;
@@ -339,6 +435,8 @@ async function loadRuntimeConfig() {
       adminToken: 'change-me-admin-token',
       webhookPassphrase: 'change-me-webhook-passphrase',
       providers: { ...DEFAULT_PROVIDER_BY_MARKET },
+      symbolProviders: structuredClone(DEFAULT_SYMBOL_PROVIDER_BY_MARKET),
+      kis: {},
     };
     await persistRuntimeConfig();
     return;
@@ -352,7 +450,25 @@ async function loadRuntimeConfig() {
       ...DEFAULT_PROVIDER_BY_MARKET,
       ...(parsed.providers && typeof parsed.providers === 'object' ? parsed.providers : {}),
     },
+    symbolProviders: mergeSymbolProviders(parsed.symbolProviders),
+    kis: parsed.kis && typeof parsed.kis === 'object' ? parsed.kis : {},
   };
+}
+
+function mergeSymbolProviders(raw) {
+  const merged = structuredClone(DEFAULT_SYMBOL_PROVIDER_BY_MARKET);
+  if (!raw || typeof raw !== 'object') return merged;
+  for (const [marketRaw, symbolsRaw] of Object.entries(raw)) {
+    const market = normalizeMarket(marketRaw);
+    if (!market || !symbolsRaw || typeof symbolsRaw !== 'object') continue;
+    if (!merged[market]) merged[market] = {};
+    for (const [symbolRaw, providerRaw] of Object.entries(symbolsRaw)) {
+      const symbol = canonicalizeSymbolByMarket(market, symbolRaw);
+      const provider = normalizeProvider(providerRaw);
+      if (symbol && provider) merged[market][symbol] = provider;
+    }
+  }
+  return merged;
 }
 
 async function loadCandleStore() {
@@ -385,9 +501,19 @@ async function persistRuntimeConfig() {
   await writeFile(CONFIG_PATH, JSON.stringify(runtimeConfig, null, 2), 'utf8');
 }
 
-function getProviderForMarket(market) {
+function getProviderForMarket(market, symbol = '') {
+  const canonicalSymbol = canonicalizeSymbolByMarket(market, symbol);
+  const symbolProvider = runtimeConfig.symbolProviders?.[market]?.[canonicalSymbol];
+  if (symbolProvider) return normalizeProvider(symbolProvider) || DEFAULT_PROVIDER_BY_MARKET[market] || 'webhook';
   const fromConfig = runtimeConfig.providers[market];
   return normalizeProvider(fromConfig) || DEFAULT_PROVIDER_BY_MARKET[market] || 'webhook';
+}
+
+function getKisEnabledSymbols() {
+  const indexProviders = runtimeConfig.symbolProviders?.index || {};
+  return Object.entries(indexProviders)
+    .filter(([, provider]) => normalizeProvider(provider) === 'kis')
+    .map(([symbol]) => canonicalizeSymbolByMarket('index', symbol));
 }
 
 function handleHealth(req, res) {
@@ -396,6 +522,11 @@ function handleHealth(req, res) {
     service: 'data-gateway',
     now: new Date().toISOString(),
     markets: runtimeConfig.providers,
+    symbolProviders: runtimeConfig.symbolProviders,
+    kis: {
+      enabledSymbols: getKisEnabledSymbols(),
+      credentialsSet: hasKisCredentials(runtimeConfig.kis),
+    },
   });
 }
 
@@ -407,6 +538,7 @@ function handleGetConfig(req, res) {
   sendJson(res, 200, {
     ok: true,
     providers: runtimeConfig.providers,
+    symbolProviders: runtimeConfig.symbolProviders,
     adminTokenSet: Boolean(runtimeConfig.adminToken),
     webhookPassphraseSet: Boolean(runtimeConfig.webhookPassphrase),
   });
@@ -479,7 +611,7 @@ async function handleWebhookIngest(req, res) {
     return;
   }
 
-  const selectedProvider = getProviderForMarket(market);
+  const selectedProvider = getProviderForMarket(market, symbol);
   if (selectedProvider !== 'webhook') {
     sendJson(res, 409, {
       ok: false,
@@ -527,7 +659,7 @@ async function handleApiIngest(req, res) {
     return;
   }
 
-  const selectedProvider = getProviderForMarket(market);
+  const selectedProvider = getProviderForMarket(market, symbol);
   if (selectedProvider === 'webhook') {
     sendJson(res, 409, {
       ok: false,
@@ -579,7 +711,7 @@ function handleGetCandles(req, res, url) {
     timeframe,
     raw: rawMode,
     source: rawMode ? 'stored' : (aggregatedRows === requestedRows ? 'stored' : 'aggregated_from_1m'),
-    provider: getProviderForMarket(market),
+    provider: getProviderForMarket(market, symbol),
     total: normalizedRows.length,
     candles: sliced,
   });
@@ -634,8 +766,63 @@ function handleNotFound(res) {
   });
 }
 
+function handleWebSocketUpgrade(req, socket) {
+  const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+  if (url.pathname !== '/stream') {
+    socket.destroy();
+    return;
+  }
+
+  const market = normalizeMarket(url.searchParams.get('market'));
+  const symbol = canonicalizeSymbolByMarket(market, url.searchParams.get('symbol'));
+  const timeframe = normalizeTimeframe(url.searchParams.get('timeframe') || '1m');
+  const secKey = req.headers['sec-websocket-key'];
+  if (!market || !symbol || !timeframe || typeof secKey !== 'string') {
+    socket.destroy();
+    return;
+  }
+
+  const acceptKey = createHash('sha1')
+    .update(`${secKey}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
+    .digest('base64');
+  socket.write([
+    'HTTP/1.1 101 Switching Protocols',
+    'Upgrade: websocket',
+    'Connection: Upgrade',
+    `Sec-WebSocket-Accept: ${acceptKey}`,
+    '',
+    '',
+  ].join('\r\n'));
+
+  const client = { key: streamKey(market, symbol, timeframe), socket };
+  streamClients.add(client);
+  socket.on('data', (buffer) => {
+    const opcode = Number(buffer?.[0] ?? 0) & 0x0f;
+    if (opcode === 0x8) {
+      streamClients.delete(client);
+      socket.end(Buffer.from([0x88, 0x00]));
+    } else if (opcode === 0x9) {
+      socket.write(Buffer.from([0x8a, 0x00]));
+    }
+  });
+  socket.on('close', () => streamClients.delete(client));
+  socket.on('end', () => streamClients.delete(client));
+  socket.on('error', () => streamClients.delete(client));
+}
+
 await loadRuntimeConfig();
 await loadCandleStore();
+
+kisCollector = createKisWebSocketCollector({
+  config: runtimeConfig.kis,
+  getEnabledSymbols: getKisEnabledSymbols,
+  applyLiveCandle,
+});
+if (getKisEnabledSymbols().length && hasKisCredentials(runtimeConfig.kis)) {
+  kisCollector.start();
+} else if (getKisEnabledSymbols().length) {
+  console.warn('[data-gateway] KIS symbols are enabled, but KIS credentials are not set. Set KIS_APP_KEY/KIS_APP_SECRET or KIS_WS_APPROVAL_KEY.');
+}
 
 const server = createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
@@ -687,6 +874,8 @@ const server = createServer(async (req, res) => {
 
   handleNotFound(res);
 });
+
+server.on('upgrade', handleWebSocketUpgrade);
 
 server.listen(PORT, HOST, () => {
   console.log(`[data-gateway] listening on http://${HOST}:${PORT}`);
