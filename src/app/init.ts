@@ -2112,8 +2112,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           { opacity: 1,   transform: 'translateX(0)'    },
           { opacity: 0.2, transform: 'translateX(1px)'  },
         ];
-        jmpLeft.animate(chevFrames,  { duration: 760, iterations: Infinity, easing: 'ease-in-out' });
-        jmpRight.animate(chevFrames, { duration: 760, delay: 210, iterations: Infinity, easing: 'ease-in-out' });
+        jmpLeft.animate(chevFrames,  { duration: 1064, iterations: Infinity, easing: 'ease-in-out' });
+        jmpRight.animate(chevFrames, { duration: 1064, delay: 294, iterations: Infinity, easing: 'ease-in-out' });
       }
 
       // 초기 위치 설정 및 리사이즈·패널 변경 시 재계산
