@@ -179,8 +179,8 @@ export function createDefaultPanelState(): IndicatorPanelState {
     panelRatios: {
       volume: 0.12,
       rsi: 0.12,
-      dmi: 0.1,
-      macd: 0.11,
+      dmi: 0.12,
+      macd: 0.12,
       stochF: 0.12,
       stochS: 0.12,
       cci: 0.12,
@@ -219,11 +219,13 @@ export function movePanel(state: IndicatorPanelState, panelId: SubPanelId, direc
 }
 
 export function ensurePanelRatios(state: IndicatorPanelState, activePanels: string[]): void {
-  activePanels.forEach((id) => {
-    if (!state.panelRatios[id] || Number.isNaN(state.panelRatios[id])) {
-      state.panelRatios[id] = 0.12;
-    }
-  });
+  const existingIds = activePanels.filter((id) => state.panelRatios[id] > 0 && !Number.isNaN(state.panelRatios[id]));
+  const newIds      = activePanels.filter((id) => !(state.panelRatios[id] > 0) || Number.isNaN(state.panelRatios[id]));
+  // New panels get the average ratio of existing panels so they appear the same height.
+  const avgRatio = existingIds.length > 0
+    ? existingIds.reduce((sum, id) => sum + state.panelRatios[id], 0) / existingIds.length
+    : 0.12;
+  newIds.forEach((id) => { state.panelRatios[id] = avgRatio; });
   clampTotalSubRatio(state, activePanels);
 }
 
