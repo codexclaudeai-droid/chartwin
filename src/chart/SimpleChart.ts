@@ -404,7 +404,7 @@ export class SimpleChart {
       ma120:    { show: false, value: 120 },
       ma200:    { show: false, value: 200 },
       ma: {
-        show: true,
+        show: false,
         nextId: 5,
         lines: [
           { id: 'ma1', period: 5 },
@@ -423,7 +423,7 @@ export class SimpleChart {
           { id: 'ema4', period: 120 },
         ],
       },
-      bb:       { show: true,  period: 20, stdDev: 2 },
+      bb:       { show: false, period: 20, stdDev: 2 },
       rsi:      { show: false, period: 14 },
       macd:     { show: false, fast: 12, slow: 26, signal: 9 },
       dmi:      { show: false, period: 14, axisMode: 'auto' as 'auto' | 'fixed', topThreshold: 30, bottomThreshold: 20 },
