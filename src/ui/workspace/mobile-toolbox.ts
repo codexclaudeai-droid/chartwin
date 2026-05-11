@@ -56,6 +56,7 @@ const MOBILE_DRAWING_TOOLS: MobileDrawingTool[] = [
   { id: '__magnet_soft__', title: '자석 약하게', isAction: true, svg: MAGNET_SOFT_SVG },
   { id: '__magnet_strong__', title: '자석 강하게', isAction: true, svg: MAGNET_STRONG_SVG },
   { id: '__trash_drawings__', title: '드로잉 삭제', isAction: true, svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6m3 0V4h8v2"/></svg>' },
+  { id: 'eraser', title: '지우개', isAction: true, svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16l11-11 6 6-4.5 4.5"/><path d="M6.5 17.5l3-3"/></svg>' },
 ];
 
 const MAGNET_MODE_TO_ID: Record<string, string> = {
@@ -80,16 +81,15 @@ export function createMobileDrawingToolPanel({
   closePanel,
 }: CreateMobileDrawingPanelArgs): void {
   const categories = [
-    { key: 'pointer', label: '포인터', ids: ['cursor-cross', 'cursor-dot', 'cursor-arrow', 'cursor-demo'] },
     { key: 'trend', label: '추세', ids: ['trendline', 'hline', 'channel'] },
     { key: 'fibonacci', label: '피보나치', ids: ['fib-retracement', 'fib-trend'] },
     { key: 'position', label: '예측', ids: ['long-position', 'short-position', 'anchored-vwap'] },
     { key: 'magnet', label: '자석', ids: ['__magnet_off__', '__magnet_soft__', '__magnet_strong__'] },
     { key: 'hide', label: '감추기', ids: ['__hide_drawings__', '__hide_indicators__', '__hide_all__'] },
   ] as const;
-  const quickToolIds: Array<string> = ['measure', 'text-note', '__trash_drawings__'];
+  const quickToolIds: Array<string> = ['measure', 'text-note', '__trash_drawings__', 'eraser'];
   type CategoryKey = (typeof categories)[number]['key'];
-  let activeCategory: CategoryKey = 'pointer';
+  let activeCategory: CategoryKey = 'trend';
 
   const tabBar = document.createElement('div');
   tabBar.style.cssText = [
@@ -121,7 +121,7 @@ export function createMobileDrawingToolPanel({
   const quickRow = document.createElement('div');
   quickRow.style.cssText = [
     'display:grid',
-    'grid-template-columns:repeat(3,1fr)',
+    'grid-template-columns:repeat(4,1fr)',
     'gap:8px',
     'padding:0 16px 20px',
     'border-top:1px solid rgba(63,84,120,0.45)',
@@ -331,7 +331,7 @@ export function createMobileDrawingToolPanel({
   });
 
   renderQuickTools();
-  setActiveTab('pointer');
+  setActiveTab('trend');
 
   const observer = new MutationObserver(() => {
     if (toolPanelEl.style.display !== 'none' && toolPanelEl.offsetParent !== null) {
