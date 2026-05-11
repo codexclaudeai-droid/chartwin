@@ -2312,13 +2312,21 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         </div>
       `;
       getSignalNoticeHost().prepend(card);
+      let closed = false;
       const closeCard = () => {
+        if (closed) return;
+        closed = true;
+        document.removeEventListener('touchstart', outsideTouchHandler, true);
         card.style.animation = 'signalNoticeOut 0.18s ease-in forwards';
         window.setTimeout(() => card.remove(), 180);
       };
+      const outsideTouchHandler = (ev: TouchEvent) => {
+        if (!card.contains(ev.target as Node)) closeCard();
+      };
+      document.addEventListener('touchstart', outsideTouchHandler, true);
       const closeBtn = card.querySelector('[data-k="close"]') as HTMLButtonElement | null;
       closeBtn?.addEventListener('click', closeCard);
-      window.setTimeout(closeCard, 6500);
+      window.setTimeout(closeCard, 13000);
     };
     const getSignalEventCountByPane = (paneId: number): number => {
       const pane = paneControllers.get(paneId) ?? ensurePane(paneId);
