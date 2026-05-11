@@ -799,9 +799,9 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
       if (!iconWrap) return;
       stopIconMotion();
       if (motionKind === 'pan-left') {
-        runningAnimations.push(iconWrap.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-2.8px)' }, { transform: 'translateX(0)' }], { duration: 560, iterations: Infinity, easing: 'ease-in-out' }));
+        runningAnimations.push(iconWrap.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-2.8px)' }, { transform: 'translateX(0)' }], { duration: 560, iterations: 1, easing: 'ease-in-out' }));
       } else if (motionKind === 'pan-right') {
-        runningAnimations.push(iconWrap.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(2.8px)' }, { transform: 'translateX(0)' }], { duration: 560, iterations: Infinity, easing: 'ease-in-out' }));
+        runningAnimations.push(iconWrap.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(2.8px)' }, { transform: 'translateX(0)' }], { duration: 560, iterations: 1, easing: 'ease-in-out' }));
       } else if (motionKind === 'zoom-in') {
         runningAnimations.push(iconWrap.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.18)' }, { transform: 'scale(1)' }], { duration: 620, iterations: Infinity, easing: 'ease-in-out' }));
       } else if (motionKind === 'zoom-out') {
@@ -827,8 +827,8 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
     if (!pane || !pane.chart) return;
     fn(pane.chart);
   };
-  navPanel.appendChild(makeNavButton(ICON_PAN_LEFT, 'Pan Left', 'pan-left', () => callChartControl((chart) => chart.panViewport?.(-10))));
-  navPanel.appendChild(makeNavButton(ICON_PAN_RIGHT, 'Pan Right', 'pan-right', () => callChartControl((chart) => chart.panViewport?.(10))));
+  navPanel.appendChild(makeNavButton(ICON_PAN_LEFT, 'Pan Left', 'pan-left', () => callChartControl((chart) => chart.panViewport?.(-1))));
+  navPanel.appendChild(makeNavButton(ICON_PAN_RIGHT, 'Pan Right', 'pan-right', () => callChartControl((chart) => chart.panViewport?.(1))));
   navPanel.appendChild(makeNavButton(ICON_ZOOM_IN, 'Zoom In', 'zoom-in', () => callChartControl((chart) => chart.zoomByCandles?.(-6))));
   navPanel.appendChild(makeNavButton(ICON_ZOOM_OUT, 'Zoom Out', 'zoom-out', () => callChartControl((chart) => chart.zoomByCandles?.(6))));
   navPanel.appendChild(makeNavButton(ICON_JUMP_LATEST, 'Jump To Latest Candle', 'latest', () => callChartControl((chart) => chart.jumpToLatest?.())));
