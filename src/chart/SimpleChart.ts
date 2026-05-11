@@ -10838,6 +10838,14 @@ export class SimpleChart {
         return;
       }
 
+      // ── 메인 Y축 터치 드래그 ────────────────────────────────────────
+      if (!this.drawingTool && this.isOnMainYAxis(pos.x, pos.y)) {
+        this.yAxisDragging = true;
+        this.yAxisDragStartY = e.touches[0].clientY;
+        this.yAxisDragStartFactor = this.yScaleFactor;
+        return;
+      }
+
       // ── 보조지표 Y축 터치 드래그 ───────────────────────────────────
       if (!this.drawingTool) {
         const subAxisPanel = this.getSubYAxisPanel(pos.x, pos.y);
@@ -10918,6 +10926,14 @@ export class SimpleChart {
     if (e.touches.length === 1) {
       const touch = e.touches[0];
       const pos = this.touchPos(touch);
+
+      // ── 메인 Y축 터치 드래그 ─────────────────────────────────────────
+      if (this.yAxisDragging) {
+        const dy = touch.clientY - this.yAxisDragStartY;
+        this.yScaleFactor = Math.max(0.1, Math.min(20, this.yAxisDragStartFactor * Math.exp(dy * 0.005)));
+        this.draw();
+        return;
+      }
 
       // ── 보조지표 Y축 터치 드래그 ─────────────────────────────────────
       if (this.subYAxisDragging) {
@@ -11079,6 +11095,11 @@ export class SimpleChart {
   private handleTouchEnd(e: TouchEvent) {
     e.preventDefault();
     this.cancelLongPress();
+
+    if (this.yAxisDragging) {
+      this.yAxisDragging = false;
+      return;
+    }
 
     if (this.subYAxisDragging) {
       this.subYAxisDragging = null;
