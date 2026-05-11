@@ -438,6 +438,8 @@ export function renderIndicatorBlocks(this: any, params: any): void {
 
     // 거래량 막대는 볼륨 패널 범위로 별도 클리핑해서 렌더.
     if (ind.volume.show && volH > 0 && showLine('volumeBars')) {
+      const { lo: vLo, hi: vHi } = this.getSubPanelScaledRange('volume', 0, vScaleMax);
+      const vRange = Math.max(1, vHi - vLo);
       ctx.save();
       ctx.beginPath();
       ctx.rect(chartLeft, volTop, chartW, volH);
@@ -449,7 +451,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
         const downColor = this.config.candleStyle?.downColor ?? '#f23645';
         const rawVolume = Number(visRawData[i]?.volume ?? c.volume ?? 0);
         if (rawVolume <= 0) return;
-        const vh = (rawVolume / vScaleMax) * (volH - 20);
+        const vh = Math.max(0, (rawVolume - vLo) / vRange) * (volH - 20);
         ctx.fillStyle = isUp ? toRgba(upColor, 0.35) : toRgba(downColor, 0.35);
         ctx.fillRect(
           Math.round(x),
@@ -621,8 +623,9 @@ export function renderIndicatorBlocks(this: any, params: any): void {
 
       if (id === 'volume') {
         subLabel('Volume', top);
-        subGrid([vMax, vMax / 2], top, pH, 0, vScaleMax, (value) => formatKUnit(value, 2));
-        drawSubAlertLines('volume', top, pH, 0, vScaleMax);
+        const { lo: vLo, hi: vHi } = scaleRange(0, vScaleMax);
+        subGrid([vHi * 0.8, vHi * 0.5, vHi * 0.2].filter(v => v > vLo), top, pH, vLo, vHi, (value) => formatKUnit(value, 2));
+        drawSubAlertLines('volume', top, pH, vLo, vHi);
       }
       if (id === 'rsi') {
         const lastRsi = (rsiD.filter(v => v != null).slice(-1)[0] ?? 0) as number;

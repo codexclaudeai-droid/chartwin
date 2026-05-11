@@ -9106,8 +9106,7 @@ export class SimpleChart {
           const vis = this.data.slice(visStart, visEnd);
           const vMax = Math.max(...vis.map((d) => d.volume), 1);
           const vScaleMax = Math.max(1, vMax * 1.14);
-          lo = 0;
-          hi = vScaleMax;
+          ({ lo, hi } = this.getSubPanelScaledRange('volume', 0, vScaleMax));
           accentColor = '#22ab94';
         } else if (hoveredPanelId === 'rsi') {
           lo = 0; hi = 100;
