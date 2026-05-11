@@ -818,7 +818,7 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
     };
     btn.addEventListener('mouseenter', () => { btn.style.background = '#f3f4f6'; btn.style.borderColor = '#9ca3af'; btn.style.color = '#1f2937'; startIconMotion(); });
     btn.addEventListener('mouseleave', () => { btn.style.background = '#ffffff'; btn.style.borderColor = '#d1d5db'; btn.style.color = '#374151'; stopIconMotion(); });
-    btn.addEventListener('click', onClick);
+    btn.addEventListener('click', () => { if (motionKind === 'pan-left' || motionKind === 'pan-right') startIconMotion(); onClick(); });
     return btn;
   };
 
