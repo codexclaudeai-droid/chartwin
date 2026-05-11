@@ -127,7 +127,7 @@ function getPriceArrowTextAnchor(
 export const MOBILE_BOTTOM_BAR_HEIGHT = 44;
 
 // 플로팅 버튼 SVG: 오른쪽(최신 캔들) 방향 이중 화살표 >>
-export const MOBILE_JUMP_LATEST_SVG = `<svg class="jmp-anim" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 17 11 12 6 7"/><polyline points="13 17 18 12 13 7"/></svg>`;
+export const MOBILE_JUMP_LATEST_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline class="chev-left" points="6 17 11 12 6 7"/><polyline class="chev-right" points="13 17 18 12 13 7"/></svg>`;
 
 type BollingerRiskConfig = {
   enabled: boolean;

@@ -2024,25 +2024,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       mobileBarEl.appendChild(tzWrap);
 
       // ── 플로팅 버튼: >> (최상단 보조지표 바로 위, 가격축 안쪽) ───────────
-      if (!document.getElementById('mobile-jump-btn-style')) {
-        const s = document.createElement('style');
-        s.id = 'mobile-jump-btn-style';
-        s.textContent = `
-          @keyframes jmp-slide {
-            0%,100% { transform:translateX(0);   opacity:0.6; }
-            50%      { transform:translateX(3px); opacity:1;   }
-          }
-          svg.jmp-anim polyline:nth-child(1) {
-            animation: jmp-slide 1.1s ease-in-out infinite;
-            animation-delay: 0s;
-          }
-          svg.jmp-anim polyline:nth-child(2) {
-            animation: jmp-slide 1.1s ease-in-out infinite;
-            animation-delay: 0.2s;
-          }
-        `;
-        document.head.appendChild(s);
-      }
       const JUMP_BTN_SIZE = 36;  // 40px의 10% 감소
       const jumpBtn = document.createElement('button');
       jumpBtn.innerHTML = MOBILE_JUMP_LATEST_SVG;
@@ -2121,6 +2102,19 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       });
 
       workspace.appendChild(jumpBtn);
+
+      // PC nav 버튼 'latest' 모션과 동일한 애니메이션 (항상 재생)
+      const jmpLeft  = jumpBtn.querySelector('.chev-left')  as SVGElement | null;
+      const jmpRight = jumpBtn.querySelector('.chev-right') as SVGElement | null;
+      if (jmpLeft && jmpRight) {
+        const chevFrames = [
+          { opacity: 0.2, transform: 'translateX(-1px)' },
+          { opacity: 1,   transform: 'translateX(0)'    },
+          { opacity: 0.2, transform: 'translateX(1px)'  },
+        ];
+        jmpLeft.animate(chevFrames,  { duration: 760, iterations: Infinity, easing: 'ease-in-out' });
+        jmpRight.animate(chevFrames, { duration: 760, delay: 210, iterations: Infinity, easing: 'ease-in-out' });
+      }
 
       // 초기 위치 설정 및 리사이즈·패널 변경 시 재계산
       requestAnimationFrame(display_update_jump_pos);
