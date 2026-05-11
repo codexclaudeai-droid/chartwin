@@ -234,6 +234,20 @@ export function resizePanelBoundary(
   deltaRatio: number,
 ): void {
   if (!activePanels.length) return;
+
+  // Topmost divider: scale all sub-panels proportionally so their relative sizes are preserved.
+  if (boundaryIndex === 0) {
+    const currentTotal = activePanels.reduce((sum, id) => sum + (state.panelRatios[id] ?? 0.12), 0);
+    const minTotal = activePanels.reduce((sum, id) => sum + getMinPanelRatio(state, id), 0);
+    const newTotal = Math.max(minTotal, Math.min(MAX_SUB_RATIO_TOTAL, currentTotal - deltaRatio));
+    const scale = currentTotal > 1e-9 ? newTotal / currentTotal : 1;
+    activePanels.forEach((id) => {
+      state.panelRatios[id] = Math.max(getMinPanelRatio(state, id), (state.panelRatios[id] ?? 0.12) * scale);
+    });
+    clampTotalSubRatio(state, activePanels);
+    return;
+  }
+
   const idx = Math.max(0, Math.min(boundaryIndex, activePanels.length - 1));
   const targetId = activePanels[idx];
   if (!targetId) return;
