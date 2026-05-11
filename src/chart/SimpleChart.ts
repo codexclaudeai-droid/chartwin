@@ -3197,41 +3197,41 @@ export class SimpleChart {
         drawExitLine(fromX, detail.tp2, 'TP2', detail.side === 'LONG' ? '#21b86b' : '#ff5252', [8, 4], isLatest ? 1 : 0.64);
         drawExitLine(fromX, detail.sl, 'SL', detail.side === 'LONG' ? '#ff6b6b' : '#37d67a', [2, 3], isLatest ? 1 : 0.72);
       }
+      const upColor = this.config.candleStyle?.upColor ?? '#22ab94';
+      const downColor = this.config.candleStyle?.downColor ?? '#f23645';
+      const motionColor = signal > 0 ? upColor : downColor;
+
       const phase = (Math.sin(timeMs * 0.008) + 1) / 2;
       const pulseScale = isLatest ? (0.9 + phase * 0.6) : 1;
       const pulseAlpha = isLatest ? (0.45 + phase * 0.55) : 1;
       const radius = baseRadius * pulseScale;
 
       ctx.beginPath();
-      ctx.fillStyle = signal > 0
-        ? `rgba(46,204,113,${pulseAlpha})`
-        : `rgba(255,82,82,${pulseAlpha})`;
+      ctx.fillStyle = `rgba(14,20,31,${0.7 * pulseAlpha})`;
+      ctx.strokeStyle = toRgba(motionColor, pulseAlpha, motionColor);
+      ctx.lineWidth = 1.6;
       ctx.arc(x, y, radius * 0.5, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
 
       if (isLatest) {
         ctx.beginPath();
         ctx.lineWidth = 1.4;
-        ctx.strokeStyle = signal > 0
-          ? `rgba(46,204,113,${Math.min(1, pulseAlpha + 0.2)})`
-          : `rgba(255,82,82,${Math.min(1, pulseAlpha + 0.2)})`;
+        ctx.strokeStyle = toRgba(motionColor, Math.min(1, pulseAlpha + 0.2), motionColor);
         ctx.arc(x, y, radius * 0.66, 0, Math.PI * 2);
         ctx.stroke();
       }
 
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = toRgba(motionColor, Math.min(1, pulseAlpha + 0.1), motionColor);
       ctx.fillText(signal > 0 ? '▲' : '▼', x, y + 0.3);
 
       // Mark the entry-price Y level beside the signal candle body with a small triangle.
       if (entryY >= 0 && entryY <= meta.mainH) {
-        const bodyLeft = x - meta.candleW / 2;
         const triW = Math.max(7, Math.min(12, meta.candleW * 0.55));
         const triH = Math.max(5, Math.min(9, meta.candleW * 0.4));
-        const tipX = bodyLeft - 1;
-        const baseX = bodyLeft - triW - 2;
-        const fill = signal > 0
-          ? (isLatest ? '#f2be2b' : 'rgba(242,190,43,0.82)')
-          : (isLatest ? '#ff9f43' : 'rgba(255,159,67,0.82)');
+        const tipX = x;
+        const baseX = x - triW;
+        const fill = toRgba(motionColor, isLatest ? 1 : 0.82, motionColor);
         ctx.save();
         ctx.beginPath();
         ctx.moveTo(tipX, entryY);
