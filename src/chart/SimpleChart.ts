@@ -8961,7 +8961,9 @@ export class SimpleChart {
       ctx.restore();
 
       // OHLCV 툴팁: 모바일=canvas floating, PC=헤더 콜백
-      if (noDrawingInteraction && this.isMobileCrosshairTooltipEnabled() && (this.isCrosshairMode || this.mouseLongPressTooltipActive)) {
+      const isOnSignalCandle = _isTouchDevice && this.strategySignalVisible
+        && (this.strategySignals[snappedCandleIndex] ?? 0) !== 0;
+      if (noDrawingInteraction && this.isMobileCrosshairTooltipEnabled() && (this.isCrosshairMode || this.mouseLongPressTooltipActive) && !isOnSignalCandle) {
         const isUp = c.close >= c.open;
         const closeColor = isUp ? '#ef5350' : '#26a69a';
         const tradingValue = c.close * c.volume;
