@@ -3186,7 +3186,6 @@ export class SimpleChart {
       if (!signal) continue;
       const candle = visible[i];
       const x = meta.chartLeft + (i + meta.leftGap) * meta.totalSp + meta.candleW / 2;
-      const y = signal > 0 ? meta.getY(candle.low) + 12 : meta.getY(candle.high) - 12;
       const entryPrice = candle.close;
       const entryY = meta.getY(entryPrice);
       const isLatest = gi === latestSignalIndex;
@@ -3197,33 +3196,87 @@ export class SimpleChart {
         drawExitLine(fromX, detail.tp2, 'TP2', detail.side === 'LONG' ? '#21b86b' : '#ff5252', [8, 4], isLatest ? 1 : 0.64);
         drawExitLine(fromX, detail.sl, 'SL', detail.side === 'LONG' ? '#ff6b6b' : '#37d67a', [2, 3], isLatest ? 1 : 0.72);
       }
-      const upColor = this.config.candleStyle?.upColor ?? '#22ab94';
-      const downColor = this.config.candleStyle?.downColor ?? '#f23645';
-      const motionColor = signal > 0 ? upColor : downColor;
+      const isLong = signal > 0;
+      const boxColor = isLong ? '#1a9e6e' : '#c0392b';
+      const label = isLong ? 'L' : 'S';
 
       const phase = (Math.sin(timeMs * 0.008) + 1) / 2;
-      const pulseScale = isLatest ? (0.9 + phase * 0.6) : 1;
-      const pulseAlpha = isLatest ? (0.45 + phase * 0.55) : 1;
-      const radius = baseRadius * pulseScale;
+      const pulseAlpha = isLatest ? (0.65 + phase * 0.35) : 1;
 
-      ctx.beginPath();
-      ctx.fillStyle = `rgba(14,20,31,${0.7 * pulseAlpha})`;
-      ctx.strokeStyle = toRgba(motionColor, pulseAlpha, motionColor);
-      ctx.lineWidth = 1.6;
-      ctx.arc(x, y, radius * 0.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
+      // callout box dimensions
+      const bW = 18;
+      const bH = 14;
+      const ptrH = 8;
+      const bX = x - bW / 2;
+      const anchorY = isLong
+        ? meta.getY(candle.low) + 4
+        : meta.getY(candle.high) - 4;
+      const bY = isLong ? anchorY + ptrH : anchorY - ptrH - bH;
+      const boxCx = x;
+      const boxCy = bY + bH / 2;
+      const radius = bW * 0.5; // for hit area
 
+      // latest: expanding glow ring
       if (isLatest) {
+        const ringR = (bW * 0.525) + phase * (bW * 0.675);
+        const ringAlpha = (1 - phase) * 0.55;
+        ctx.save();
         ctx.beginPath();
-        ctx.lineWidth = 1.4;
-        ctx.strokeStyle = toRgba(motionColor, Math.min(1, pulseAlpha + 0.2), motionColor);
-        ctx.arc(x, y, radius * 0.66, 0, Math.PI * 2);
+        ctx.arc(boxCx, boxCy, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = toRgba(boxColor, ringAlpha, boxColor);
+        ctx.lineWidth = 2;
         ctx.stroke();
+        ctx.restore();
       }
 
-      ctx.fillStyle = toRgba(motionColor, Math.min(1, pulseAlpha + 0.1), motionColor);
-      ctx.fillText(signal > 0 ? '▲' : '▼', x, y + 0.3);
+      ctx.save();
+      ctx.globalAlpha = pulseAlpha;
+
+      // unified callout path (box + pointer as one shape)
+      const r = 3;
+      const pb = 3; // pointer half-base width (4 * 0.7 ≈ 3)
+      ctx.beginPath();
+      if (isLong) {
+        // pointer at top edge, pointing up
+        ctx.moveTo(bX + r, bY);
+        ctx.lineTo(x - pb, bY);
+        ctx.lineTo(x, anchorY);
+        ctx.lineTo(x + pb, bY);
+        ctx.lineTo(bX + bW - r, bY);
+        ctx.arcTo(bX + bW, bY, bX + bW, bY + r, r);
+        ctx.lineTo(bX + bW, bY + bH - r);
+        ctx.arcTo(bX + bW, bY + bH, bX + bW - r, bY + bH, r);
+        ctx.lineTo(bX + r, bY + bH);
+        ctx.arcTo(bX, bY + bH, bX, bY + bH - r, r);
+        ctx.lineTo(bX, bY + r);
+        ctx.arcTo(bX, bY, bX + r, bY, r);
+      } else {
+        // pointer at bottom edge, pointing down
+        ctx.moveTo(bX + r, bY);
+        ctx.lineTo(bX + bW - r, bY);
+        ctx.arcTo(bX + bW, bY, bX + bW, bY + r, r);
+        ctx.lineTo(bX + bW, bY + bH - r);
+        ctx.arcTo(bX + bW, bY + bH, bX + bW - r, bY + bH, r);
+        ctx.lineTo(x + pb, bY + bH);
+        ctx.lineTo(x, anchorY);
+        ctx.lineTo(x - pb, bY + bH);
+        ctx.lineTo(bX + r, bY + bH);
+        ctx.arcTo(bX, bY + bH, bX, bY + bH - r, r);
+        ctx.lineTo(bX, bY + r);
+        ctx.arcTo(bX, bY, bX + r, bY, r);
+      }
+      ctx.closePath();
+      ctx.fillStyle = boxColor;
+      ctx.fill();
+
+      // label
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `700 10px ${CHART_FONT_STACK}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, x, boxCy + 0.5);
+
+      ctx.restore();
 
       // Mark the entry-price Y level beside the signal candle body with a small triangle.
       if (entryY >= 0 && entryY <= meta.mainH) {
@@ -3231,22 +3284,22 @@ export class SimpleChart {
         const triH = Math.max(5, Math.min(9, meta.candleW * 0.4));
         const tipX = x;
         const baseX = x - triW;
-        const fill = toRgba(motionColor, isLatest ? 1 : 0.82, motionColor);
         ctx.save();
+        ctx.globalAlpha = isLatest ? 1 : 0.82;
         ctx.beginPath();
         ctx.moveTo(tipX, entryY);
         ctx.lineTo(baseX, entryY - triH);
         ctx.lineTo(baseX, entryY + triH);
         ctx.closePath();
-        ctx.fillStyle = fill;
+        ctx.fillStyle = boxColor;
         ctx.fill();
         ctx.restore();
       }
 
       this.signalHitAreas.push({
         x,
-        y,
-        r: radius * 0.6,
+        y: bY + bH / 2,
+        r: radius,
         signal,
         entryPrice,
         candleIndex: gi,
