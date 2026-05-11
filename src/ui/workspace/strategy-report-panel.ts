@@ -2061,7 +2061,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   window.addEventListener('resize', () => {
     if (!panelVisible) return;
     if (panelMode === 'expanded') {
-      applyExpandedHeight(expandedHeight);
+      applyExpandedHeight(Math.floor(app.clientHeight * 0.5));
       return;
     }
     applyNormalHeight(normalHeight);
