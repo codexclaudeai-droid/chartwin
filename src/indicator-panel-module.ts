@@ -201,14 +201,20 @@ export function getPanelRatio(state: IndicatorPanelState, panelId: string): numb
   return state.panelRatios[panelId] ?? 0.12;
 }
 
-export function movePanel(state: IndicatorPanelState, panelId: SubPanelId, direction: -1 | 1): void {
+export function movePanel(state: IndicatorPanelState, panelId: SubPanelId, direction: -1 | 1, activePanels?: string[]): void {
   const order = ensurePanelOrder(state);
-  const from = order.indexOf(panelId);
-  if (from < 0) return;
-  const to = from + direction;
-  if (to < 0 || to >= order.length) return;
-  const [picked] = order.splice(from, 1);
-  order.splice(to, 0, picked);
+  const active = activePanels ?? order;
+  // Find the neighbour in the active list and swap positions in full order
+  const activeFrom = active.indexOf(panelId);
+  if (activeFrom < 0) return;
+  const activeTo = activeFrom + direction;
+  if (activeTo < 0 || activeTo >= active.length) return;
+  const neighbourId = active[activeTo] as SubPanelId;
+  const fullFrom = order.indexOf(panelId);
+  const fullTo = order.indexOf(neighbourId);
+  if (fullFrom < 0 || fullTo < 0) return;
+  order[fullFrom] = neighbourId;
+  order[fullTo] = panelId;
   state.panelOrder = order;
 }
 

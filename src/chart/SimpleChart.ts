@@ -557,7 +557,7 @@ export class SimpleChart {
   }
 
   public shiftPanelOrder(panelId: string, direction: -1 | 1) {
-    movePanel(this.config.panelState, panelId as any, direction);
+    movePanel(this.config.panelState, panelId as any, direction, this.activePanels);
   }
 
   public setIndicatorStyle(styleKey: string, patch: { color?: string; width?: number; dash?: number[] }) {
