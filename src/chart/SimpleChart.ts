@@ -1194,8 +1194,26 @@ export class SimpleChart {
   private getDefaultChannelOffset(a: DrawingAnchor, b: DrawingAnchor): DrawingAnchor {
     const fallbackMax = Math.max(a.price, b.price);
     const fallbackMin = Math.min(a.price, b.price);
-    const visibleRange = (this.lastDrawMeta?.maxP ?? fallbackMax) - (this.lastDrawMeta?.minP ?? fallbackMin);
-    const gap = Math.max(0.5, Math.abs(visibleRange) * 0.01);
+    const meta = this.lastDrawMeta;
+    const visibleRange = (meta?.maxP ?? fallbackMax) - (meta?.minP ?? fallbackMin);
+
+    // Channel(평행 추세선) 기본 간격은 "보이는 가격 범위" 기반이되,
+    // 화면 상에서 너무 붙어 보이지 않도록 최소 픽셀 간격도 함께 보장한다.
+    const absRange = Math.max(0, Math.abs(visibleRange));
+    const minRangeGap = Math.max(0.5, absRange * 0.02);
+    const maxRangeGap = Math.max(minRangeGap, absRange * 0.15);
+    let gap = minRangeGap;
+    if (meta && absRange > 0) {
+      const mid = (a.price + b.price) * 0.5;
+      const probe = Math.max(1e-9, absRange * 0.001);
+      const dy = Math.abs(meta.getY(mid + probe) - meta.getY(mid));
+      if (dy > 1e-6) {
+        const targetPx = 28;
+        const pxGap = probe * (targetPx / dy);
+        if (Number.isFinite(pxGap)) gap = Math.max(gap, Math.abs(pxGap));
+      }
+    }
+    gap = Math.min(gap, maxRangeGap);
     const direction = b.price >= a.price ? 1 : -1;
     return { index: 0, price: gap * direction };
   }
@@ -10702,7 +10720,9 @@ export class SimpleChart {
           startY: pos.y,
           baseShape: this.cloneShape(hitDrawing.shape),
         };
-        if (hitDrawing.shape.kind === 'trendline') {
+        // Trendline 복제(카피)는 라인(line) 롱프레스에서만 동작.
+        // 앵커(start/end) 롱프레스는 이동/조절로만 처리한다.
+        if (hitDrawing.shape.kind === 'trendline' && hitDrawing.part === 'line') {
           this.cancelLongPress();
           const capturedPos = { x: pos.x, y: pos.y };
           this.longPressTimer = setTimeout(() => {
