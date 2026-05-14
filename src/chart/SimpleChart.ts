@@ -510,8 +510,8 @@ export class SimpleChart {
       rightPadding: 0,
       rightGapBars: 0,
       marketInfoSide: 'right' as 'left' | 'right',
-      leftPanEnabled: false,
-      verticalPanEnabled: false,
+      leftPanEnabled: true,
+      verticalPanEnabled: true,
       mobileCrosshairTooltipEnabled: true,
     },
     candleStyle: {
@@ -3227,6 +3227,11 @@ export class SimpleChart {
 
     const latestSignalIndex = this.latestStrategySignalIndex;
 
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(meta.chartLeft, 0, Math.max(1, meta.chartRight - meta.chartLeft), Math.max(1, meta.mainH));
+    ctx.clip();
+
     for (let i = 0; i < visible.length; i += 1) {
       const gi = this.startIndex + i;
       const signal = this.strategySignals[gi] ?? 0;
@@ -3353,6 +3358,7 @@ export class SimpleChart {
       });
     }
 
+    ctx.restore();
   }
 
   constructor(container: HTMLElement) {
