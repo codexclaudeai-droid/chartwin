@@ -213,6 +213,7 @@ export class SimpleChart {
   private strategies: StrategyDefinition[] = loadStrategies();
   private activeStrategyId: string | null = null;
   private strategySignals: StrategySignal[] = [];
+  private latestStrategySignalIndex = -1;
   private strategySignalVisible = true;
   private doubleBreakConfig: DoubleBreakConfig = { ...DOUBLE_BREAK_DEFAULT_CONFIG };
   private bollingerRiskConfig: BollingerRiskConfig = { ...BOLLINGER_RISK_DEFAULT_CONFIG };
@@ -227,6 +228,8 @@ export class SimpleChart {
   public onStrategyComputed: (() => void) | null = null;
   private strategyWorker: Worker | null = null;
   private signalAnimationFrame = 0;
+  private signalAnimationActive = false;
+  private lastSignalDrawTimeMs = 0;
   private strategyRequestId = 0;
   private pendingStrategyRequestId = 0;
   private dmiScaleRange: { lo: number; hi: number } | null = null;
@@ -2229,7 +2232,45 @@ export class SimpleChart {
   public setStrategySignalVisible(visible: boolean): void {
     this.strategySignalVisible = visible;
     this.drawSignalLayer(this.lastDrawMeta);
+    this.updateSignalAnimationLoop();
   }
+
+  private computeLatestSignalIndex(signals: StrategySignal[]): number {
+    for (let i = signals.length - 1; i >= 0; i -= 1) {
+      if ((signals[i] ?? 0) !== 0) return i;
+    }
+    return -1;
+  }
+
+  private updateSignalAnimationLoop(): void {
+    const shouldAnimate = this.strategySignalVisible && this.latestStrategySignalIndex >= 0;
+    if (shouldAnimate) {
+      if (!this.signalAnimationActive) {
+        this.signalAnimationActive = true;
+        this.lastSignalDrawTimeMs = 0;
+        const raf = window.requestAnimationFrame(this.handleSignalAnimationTick);
+        this.signalAnimationFrame = raf;
+      }
+      return;
+    }
+    if (this.signalAnimationActive) {
+      this.signalAnimationActive = false;
+      if (this.signalAnimationFrame) {
+        window.cancelAnimationFrame(this.signalAnimationFrame);
+      }
+      this.signalAnimationFrame = 0;
+    }
+  }
+
+  private handleSignalAnimationTick = (timeMs: number) => {
+    if (!this.signalAnimationActive) return;
+    // Throttle to ~30fps to avoid starving crosshair interaction on desktop.
+    if (timeMs - this.lastSignalDrawTimeMs >= 33) {
+      this.lastSignalDrawTimeMs = timeMs;
+      this.drawSignalLayer(this.lastDrawMeta, timeMs);
+    }
+    this.signalAnimationFrame = window.requestAnimationFrame(this.handleSignalAnimationTick);
+  };
 
   public getDoubleBreakConfig(): DoubleBreakConfig {
     return { ...this.doubleBreakConfig };
@@ -2440,19 +2481,11 @@ export class SimpleChart {
       if (message.requestId < this.pendingStrategyRequestId) return;
       this.pendingStrategyRequestId = message.requestId;
       this.strategySignals = message.signals;
+      this.latestStrategySignalIndex = this.computeLatestSignalIndex(this.strategySignals);
       this.drawSignalLayer(this.lastDrawMeta);
+      this.updateSignalAnimationLoop();
       this.onStrategyComputed?.();
     });
-  }
-
-  private startSignalAnimationLoop(): void {
-    const tick = (timeMs: number) => {
-      this.drawSignalLayer(this.lastDrawMeta, timeMs);
-      this.signalAnimationFrame = window.requestAnimationFrame(tick);
-    };
-    if (!this.signalAnimationFrame) {
-      this.signalAnimationFrame = window.requestAnimationFrame(tick);
-    }
   }
 
   private requestStrategyCompute(changedFrom: number): void {
@@ -2461,7 +2494,9 @@ export class SimpleChart {
     if (!strategy || !this.data.length) {
       this.strategySignals = [];
       this.signalHitAreas = [];
+      this.latestStrategySignalIndex = -1;
       this.drawSignalLayer(this.lastDrawMeta);
+      this.updateSignalAnimationLoop();
       return;
     }
     this.strategyRequestId += 1;
@@ -3190,13 +3225,7 @@ export class SimpleChart {
       ctx.restore();
     };
 
-    let latestSignalIndex = -1;
-    for (let i = this.strategySignals.length - 1; i >= 0; i -= 1) {
-      if ((this.strategySignals[i] ?? 0) !== 0) {
-        latestSignalIndex = i;
-        break;
-      }
-    }
+    const latestSignalIndex = this.latestStrategySignalIndex;
 
     for (let i = 0; i < visible.length; i += 1) {
       const gi = this.startIndex + i;
@@ -3382,7 +3411,6 @@ export class SimpleChart {
     });
 
     this.initStrategyWorker();
-    this.startSignalAnimationLoop();
     this.resize();
     this.canvas.style.cursor = 'none';
     const scheduleResize = () => {
