@@ -3826,7 +3826,8 @@ export class SimpleChart {
     const dataLength = this.data.length;
     const leftPanEnabled = Boolean((this.config.layout as any).leftPanEnabled);
     const maxStart = leftPanEnabled
-      ? Math.max(0, dataLength - 1 + Math.floor(visibleCount / 2))
+      // Keep at least one real candle visible so draw/overlay layers never lose anchor data.
+      ? Math.max(0, dataLength - 1)
       : Math.max(0, dataLength - visibleCount);
     return Math.max(0, Math.min(maxStart, startIndex));
   }
@@ -4660,6 +4661,13 @@ export class SimpleChart {
       this.lastDrawMeta = null;
       this.requestOverlayDraw();
       return;
+    }
+    // Recover from stale pan state so render/overlay never run with an empty visible slice.
+    const renderVisibleCount = Math.max(1, this.endIndex - this.startIndex);
+    const normalizedStart = this.clampPanStartIndex(this.startIndex, renderVisibleCount);
+    if (normalizedStart !== this.startIndex) {
+      this.startIndex = normalizedStart;
+      this.endIndex = this.startIndex + renderVisibleCount;
     }
 
     const plotHeight = Math.max(40, height - X_AXIS_HEIGHT);
@@ -5723,7 +5731,12 @@ export class SimpleChart {
     this.overlayDrawScheduled = true;
     window.requestAnimationFrame(() => {
       this.overlayDrawScheduled = false;
-      this.drawOverlay();
+      try {
+        this.drawOverlay();
+      } catch (error) {
+        (window as any).__simpleChartOverlayError = error;
+        console.error('[SimpleChart] overlay draw failed', error);
+      }
     });
   }
 
@@ -6664,8 +6677,9 @@ export class SimpleChart {
     if (!m) return null;
     if (mx < m.chartLeft || mx > m.chartRight || my < m.top || my > m.mainH) return null;
     const rawIndex = this.startIndex + (mx - m.effectiveChartLeft - m.candleW / 2) / Math.max(1e-6, m.totalSp);
-    // No upper clamp ? allow drawing in the future (right margin) area beyond data.length.
-    const index = Math.max(0, rawIndex);
+    const visibleCount = Math.max(1, this.endIndex - this.startIndex);
+    const maxVisibleIndex = this.startIndex + visibleCount - 1;
+    const index = Math.max(0, Math.min(maxVisibleIndex, rawIndex));
     const price = m.maxP - ((my - m.top) / Math.max(1, m.mainH - m.top)) * m.range;
     return { index, price };
   }
@@ -6682,6 +6696,7 @@ export class SimpleChart {
     const metrics = this.getMainViewportMetrics();
     if (!metrics) return anchor;
     const nearIdx = Math.round(anchor.index);
+    if (nearIdx < 0 || nearIdx >= this.data.length) return anchor;
     const candle  = this.data[Math.max(0, Math.min(this.data.length - 1, nearIdx))];
     if (!candle) return anchor;
 
@@ -8645,38 +8660,42 @@ export class SimpleChart {
 
     // 현재가 라인: draw()에서 계산된 캐시 스케일 재사용 (linear Y - log 전환 시 위치 유지)
     if (this.data.length && mainScale && linearToY) {
-      const priceIdx = Math.max(this.startIndex, this.endIndex - 1);
-      const last = this.data[priceIdx].close;
-      const prev = priceIdx > 0 ? this.data[priceIdx - 1].close : last;
-      const py = linearToY(last);
-      if (py >= R.top && py <= mainH) {
-        const isUp = last >= prev;
-        const boxColor = isUp ? '#22ab94' : '#f23645';
-        ctx.strokeStyle = isUp ? 'rgba(34,171,148,0.9)' : 'rgba(242,54,69,0.9)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([1, 2]);
-        ctx.lineCap = 'round';
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(chartLeft, R.top, chartW, Math.max(0, mainH - R.top));
-        ctx.clip();
-        ctx.beginPath(); ctx.moveTo(chartLeft, py); ctx.lineTo(chartRight, py); ctx.stroke();
-        ctx.restore();
-        ctx.setLineDash([]);
-        ctx.lineCap = 'butt';
-        const boundaryPadding = 12;
-        if (py < mainH - boundaryPadding) {
-          ctx.fillStyle = boxColor;
-          const priceBoxW = geometry.side === 'left'
-            ? Math.max(20, geometry.axisPad - 10)
-            : Math.max(20, geometry.axisPad - 2);
-          const priceBoxX = geometry.side === 'left' ? 6 : chartRight;
-          drawPriceArrowBox(ctx, priceBoxX, py, priceBoxW, 20, geometry.side);
-          ctx.fill();
-          ctx.fillStyle = getContrastTextColor(boxColor);
-          const priceTextAnchor = getPriceArrowTextAnchor(priceBoxX, priceBoxW, geometry.side, 5);
-          ctx.font = `500 11px ${CHART_FONT_STACK}`; ctx.textAlign = priceTextAnchor.align;
-          ctx.fillText(formatWithComma(last, symbolPriceDigits), priceTextAnchor.x, py + 4);
+      const rawPriceIdx = Number.isFinite(this.endIndex) ? this.endIndex - 1 : this.data.length - 1;
+      const priceIdx = Math.max(0, Math.min(this.data.length - 1, rawPriceIdx));
+      const priceCandle = this.data[priceIdx];
+      if (priceCandle) {
+        const last = priceCandle.close;
+        const prev = priceIdx > 0 ? this.data[priceIdx - 1].close : last;
+        const py = linearToY(last);
+        if (py >= R.top && py <= mainH) {
+          const isUp = last >= prev;
+          const boxColor = isUp ? '#22ab94' : '#f23645';
+          ctx.strokeStyle = isUp ? 'rgba(34,171,148,0.9)' : 'rgba(242,54,69,0.9)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([1, 2]);
+          ctx.lineCap = 'round';
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(chartLeft, R.top, chartW, Math.max(0, mainH - R.top));
+          ctx.clip();
+          ctx.beginPath(); ctx.moveTo(chartLeft, py); ctx.lineTo(chartRight, py); ctx.stroke();
+          ctx.restore();
+          ctx.setLineDash([]);
+          ctx.lineCap = 'butt';
+          const boundaryPadding = 12;
+          if (py < mainH - boundaryPadding) {
+            ctx.fillStyle = boxColor;
+            const priceBoxW = geometry.side === 'left'
+              ? Math.max(20, geometry.axisPad - 10)
+              : Math.max(20, geometry.axisPad - 2);
+            const priceBoxX = geometry.side === 'left' ? 6 : chartRight;
+            drawPriceArrowBox(ctx, priceBoxX, py, priceBoxW, 20, geometry.side);
+            ctx.fill();
+            ctx.fillStyle = getContrastTextColor(boxColor);
+            const priceTextAnchor = getPriceArrowTextAnchor(priceBoxX, priceBoxW, geometry.side, 5);
+            ctx.font = `500 11px ${CHART_FONT_STACK}`; ctx.textAlign = priceTextAnchor.align;
+            ctx.fillText(formatWithComma(last, symbolPriceDigits), priceTextAnchor.x, py + 4);
+          }
         }
       }
     }
@@ -8807,7 +8826,9 @@ export class SimpleChart {
 
     const visibleCount = Math.max(1, this.endIndex - this.startIndex);
     const gapBars = Math.min(Math.max(0, this.config.layout.rightGapBars ?? 0), 50 / Math.max(1, chartW / Math.max(1, this.endIndex - this.startIndex)));
-    const totalSp = chartW / (visibleCount + gapBars);
+    const leftGap = Math.max(0, this.lastDrawMeta?.leftGap ?? 0);
+    const totalSp = chartW / (visibleCount + gapBars + leftGap);
+    const effectiveChartLeft = chartLeft + leftGap * totalSp;
     const candleW = Math.max(totalSp * 0.8, 1);
 
     if (this.focusedTradeRange) {
@@ -8820,8 +8841,8 @@ export class SimpleChart {
       if (drawStart <= drawEnd) {
         const startLocal = drawStart - this.startIndex;
         const endLocal = drawEnd - this.startIndex;
-        const x1 = chartLeft + startLocal * totalSp;
-        const x2 = chartLeft + endLocal * totalSp + candleW;
+        const x1 = effectiveChartLeft + startLocal * totalSp;
+        const x2 = effectiveChartLeft + endLocal * totalSp + candleW;
         const elapsed = this.focusVisualStartedAt > 0 ? (Date.now() - this.focusVisualStartedAt) : 0;
         const pulse = 0.5 + 0.5 * Math.sin(elapsed / 170);
         const fillAlpha = 0.18 + pulse * 0.14;
@@ -8898,19 +8919,22 @@ export class SimpleChart {
     // 드로잉 모드 밖에서는 자석 설정에 따라 십자선이 캔들에 스냅.
     let snapX = this.mouseX;
     let snappedCandleIndex = -1;
+    const maxLocalDataIndex = Math.max(0, Math.min(visibleCount - 1, this.data.length - 1 - this.startIndex));
     const isInMainPanelForMagnet = this.mouseY >= R.top && this.mouseY <= mainH;
     const allowCrosshairXSnap = !this.drawingTool && this.drawingMagnetMode !== 'off';
     if (allowCrosshairXSnap && isInMainPanelForMagnet && this.mouseX >= chartLeft && this.mouseX <= chartRight) {
-      const nearestIndex = Math.round((this.mouseX - chartLeft - candleW / 2) / totalSp);
-      const clampedIndex = Math.max(0, Math.min(visibleCount - 1, nearestIndex));
-      snapX = chartLeft + clampedIndex * totalSp + candleW / 2;
-      snappedCandleIndex = this.startIndex + clampedIndex;
+      const nearestIndex = Math.round((this.mouseX - effectiveChartLeft - candleW / 2) / totalSp);
+      if (nearestIndex >= 0 && nearestIndex <= maxLocalDataIndex) {
+        snapX = effectiveChartLeft + nearestIndex * totalSp + candleW / 2;
+        snappedCandleIndex = this.startIndex + nearestIndex;
+      }
     }
     // Keep crosshair guides unsnapped, but still resolve nearest candle for timeline/tooltip label.
     if (snappedCandleIndex < 0 && this.mouseX >= chartLeft && this.mouseX <= chartRight) {
-      const nearestIndex = Math.round((this.mouseX - chartLeft - candleW / 2) / totalSp);
-      const clampedIndex = Math.max(0, Math.min(visibleCount - 1, nearestIndex));
-      snappedCandleIndex = this.startIndex + clampedIndex;
+      const nearestIndex = Math.round((this.mouseX - effectiveChartLeft - candleW / 2) / totalSp);
+      if (nearestIndex >= 0 && nearestIndex <= maxLocalDataIndex) {
+        snappedCandleIndex = this.startIndex + nearestIndex;
+      }
     }
 
     const solidX = snapX;
