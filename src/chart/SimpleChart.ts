@@ -324,6 +324,10 @@ export class SimpleChart {
   private subYAxisDragging: string | null = null;
   private subYAxisDragStartY = 0;
   private subYAxisDragStartFactor = 1.0;
+  private xAxisDragging = false;
+  private xAxisDragStartX = 0;
+  private xAxisDragStartVisible = 0;
+  private xAxisDragStartIndex = 0;
   private logBtn: HTMLButtonElement | null = null;
   private _logBtnHovered = false;
   private logBtnHideTimer: ReturnType<typeof setTimeout> | null = null;
@@ -9499,6 +9503,13 @@ export class SimpleChart {
     return x >= 0 && x <= meta.axisPad;
   }
 
+  private isOnXAxis(x: number, y: number): boolean {
+    if (y < this.viewportHeight - X_AXIS_HEIGHT || y > this.viewportHeight) return false;
+    const meta = this.lastDrawMeta;
+    if (!meta) return true;
+    return x >= meta.chartLeft && x <= meta.chartRight;
+  }
+
   private getSubYAxisPanel(x: number, y: number): string | null {
     const meta = this.lastDrawMeta as any;
     if (!meta?.panelTops || meta.subAxisStart == null) return null;
@@ -9584,6 +9595,10 @@ export class SimpleChart {
       this.canvas.style.cursor = NS_RESIZE_CURSOR;
       return;
     }
+    if (this.xAxisDragging) {
+      this.canvas.style.cursor = EW_RESIZE_CURSOR;
+      return;
+    }
     if (this.isDragging) {
       this.canvas.style.cursor = 'grabbing';
       return;
@@ -9637,6 +9652,10 @@ export class SimpleChart {
     }
     if (!this.drawingTool && !this.drawingMoveState && this.isOnMainYAxis(this.mouseX, this.mouseY)) {
       this.canvas.style.cursor = NS_RESIZE_CURSOR;
+      return;
+    }
+    if (!this.drawingTool && !this.drawingMoveState && this.isOnXAxis(this.mouseX, this.mouseY)) {
+      this.canvas.style.cursor = EW_RESIZE_CURSOR;
       return;
     }
     if (this.hoveredSubIndicatorAddButton) {
@@ -9728,6 +9747,16 @@ export class SimpleChart {
       this.yAxisDragging = true;
       this.yAxisDragStartY = e.clientY;
       this.yAxisDragStartFactor = this.yScaleFactor;
+      this.updateChartCursor();
+      e.preventDefault();
+      return;
+    }
+    // X축 드래그 시작
+    if (this.isOnXAxis(this.mouseX, this.mouseY)) {
+      this.xAxisDragging = true;
+      this.xAxisDragStartX = e.clientX;
+      this.xAxisDragStartVisible = Math.max(1, this.endIndex - this.startIndex);
+      this.xAxisDragStartIndex = this.startIndex;
       this.updateChartCursor();
       e.preventDefault();
       return;
@@ -10320,6 +10349,19 @@ export class SimpleChart {
     }
     this.isMouseOver = true;
 
+    if (this.xAxisDragging) {
+      const dx = e.clientX - this.xAxisDragStartX;
+      const minVisible = 5;
+      const maxVisible = this.data.length || 1;
+      const newVisible = Math.max(minVisible, Math.min(maxVisible, Math.round(this.xAxisDragStartVisible * Math.exp(-dx * 0.008))));
+      const mid = this.xAxisDragStartIndex + this.xAxisDragStartVisible / 2;
+      const newStart = Math.round(mid - newVisible / 2);
+      const clampedStart = Math.max(0, Math.min(maxVisible - newVisible, newStart));
+      this.startIndex = clampedStart;
+      this.endIndex = clampedStart + newVisible;
+      this.draw();
+      return;
+    }
     if (this.yAxisDragging) {
       const dy = e.clientY - this.yAxisDragStartY;
       this.yScaleFactor = Math.max(0.1, Math.min(20, this.yAxisDragStartFactor * Math.exp(dy * 0.005)));
@@ -10421,6 +10463,11 @@ export class SimpleChart {
   private handleMouseUp() {
     this.isMouseDownForTooltip = false;
     this.stopMouseLongPressTooltip();
+    if (this.xAxisDragging) {
+      this.xAxisDragging = false;
+      this.updateChartCursor();
+      return;
+    }
     if (this.yAxisDragging) {
       this.yAxisDragging = false;
       this.updateChartCursor();
@@ -11173,6 +11220,11 @@ export class SimpleChart {
   private handleTouchEnd(e: TouchEvent) {
     e.preventDefault();
     this.cancelLongPress();
+
+    if (this.xAxisDragging) {
+      this.xAxisDragging = false;
+      return;
+    }
 
     if (this.yAxisDragging) {
       this.yAxisDragging = false;
