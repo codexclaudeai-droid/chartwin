@@ -88,6 +88,7 @@ const LOCK_ICON_CLOSED_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fi
 const LOCK_ICON_OPEN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M16 11V8a4 4 0 1 0-8 0"></path></svg>';
 const ERASER_CURSOR = 'url("/eraser-cursor.svg") 4 20, pointer';
 const NS_RESIZE_CURSOR = `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"48\" viewBox=\"0 0 40 48\"><polygon points=\"20,13 24,19 16,19\" fill=\"white\"/><polygon points=\"20,35 24,29 16,29\" fill=\"white\"/><line x1=\"20\" y1=\"19\" x2=\"20\" y2=\"29\" stroke=\"white\" stroke-width=\"2\"/></svg>')}") 20 24, ns-resize`;
+const X_AXIS_CURSOR = `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"48\" height=\"40\" viewBox=\"0 0 48 40\"><polygon points=\"35,20 29,24 29,16\" fill=\"white\"/><polygon points=\"13,20 19,24 19,16\" fill=\"white\"/><line x1=\"29\" y1=\"20\" x2=\"19\" y2=\"20\" stroke=\"white\" stroke-width=\"2\"/></svg>')}") 24 20, ew-resize`;
 const EW_RESIZE_CURSOR = `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"0 0 40 40\"><g fill=\"none\" stroke=\"white\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"7\" y1=\"20\" x2=\"33\" y2=\"20\"/><polyline points=\"13,14 7,20 13,26\"/><polyline points=\"27,14 33,20 27,26\"/></g></svg>')}") 20 20, ew-resize`;
 
 function drawPriceArrowBox(
@@ -8970,7 +8971,8 @@ export class SimpleChart {
     const isDrawingEditMode = Boolean(this.drawingTool && this.drawingTool !== 'eraser');
     const onYAxis = this.isOnMainYAxis(this.mouseX, this.mouseY)
       || Boolean(this.getSubYAxisPanel(this.mouseX, this.mouseY));
-    const shouldDrawCrosshairGuides = !onYAxis && (
+    const onXAxis = this.isOnXAxis(this.mouseX, this.mouseY);
+    const shouldDrawCrosshairGuides = !onYAxis && !onXAxis && (
       (!_isTouchDevice && (noDrawingInteraction || isTrendlineEditMode || isTextNoteEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isHorizontalLineEditMode || isDrawingEditMode || Boolean(this.drawingMoveState)))
       || (_isTouchDevice && this.isCrosshairMode && noDrawingInteraction)
     );
@@ -9023,7 +9025,7 @@ export class SimpleChart {
       ctx.restore();
     }
 
-    if (noDrawingInteraction && snappedCandleIndex >= 0 && snappedCandleIndex < this.data.length) {
+    if (noDrawingInteraction && !onXAxis && snappedCandleIndex >= 0 && snappedCandleIndex < this.data.length) {
       const c = this.data[snappedCandleIndex];
       const label = formatCrosshairTimelineLabel(c.time, this.config.timezone);
       ctx.save();
@@ -9596,7 +9598,7 @@ export class SimpleChart {
       return;
     }
     if (this.xAxisDragging) {
-      this.canvas.style.cursor = EW_RESIZE_CURSOR;
+      this.canvas.style.cursor = X_AXIS_CURSOR;
       return;
     }
     if (this.isDragging) {
@@ -9655,7 +9657,7 @@ export class SimpleChart {
       return;
     }
     if (!this.drawingTool && !this.drawingMoveState && this.isOnXAxis(this.mouseX, this.mouseY)) {
-      this.canvas.style.cursor = EW_RESIZE_CURSOR;
+      this.canvas.style.cursor = X_AXIS_CURSOR;
       return;
     }
     if (this.hoveredSubIndicatorAddButton) {
