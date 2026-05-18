@@ -32,6 +32,8 @@ export interface PatternSignal {
   message: string;
   checklist: string[];
   barIndex: number;
+  startIndex?: number;
+  endIndex?: number;
 }
 
 export interface PatternDetectionPreset {
@@ -61,6 +63,27 @@ export interface PatternDetectionResult {
   start: number;
   lastBar: number;
   candidates: PatternSignal[];
+}
+
+export type PatternSignalRange = { startIndex: number; endIndex: number };
+
+export function getPatternSignalRange(signal: Pick<PatternSignal, 'key' | 'barIndex' | 'startIndex' | 'endIndex'>): PatternSignalRange | null {
+  if (Number.isFinite(signal.startIndex) && Number.isFinite(signal.endIndex)) {
+    return {
+      startIndex: Math.min(signal.startIndex as number, signal.endIndex as number),
+      endIndex: Math.max(signal.startIndex as number, signal.endIndex as number),
+    };
+  }
+  const matches = [...signal.key.matchAll(/-(\d+)/g)];
+  if (!matches.length) return null;
+  const nums = matches
+    .map((m) => Number(m[1]))
+    .filter((n) => Number.isFinite(n));
+  if (!nums.length) return null;
+  return {
+    startIndex: Math.min(...nums),
+    endIndex: Math.max(...nums),
+  };
 }
 
 type CandleShape = {
@@ -227,6 +250,8 @@ function detectDoubleBottom(data: CandleData[], lastBar: number, pivotLows: numb
       `저점 간격 ${b2 - b1}봉`,
     ],
     barIndex: lastBar,
+    startIndex: b1,
+    endIndex: b2,
   };
 }
 
@@ -259,6 +284,8 @@ function detectDoubleTop(data: CandleData[], lastBar: number, pivotHighs: number
       `고점 간격 ${t2 - t1}봉`,
     ],
     barIndex: lastBar,
+    startIndex: t1,
+    endIndex: t2,
   };
 }
 
@@ -295,6 +322,8 @@ function detectHeadAndShoulders(data: CandleData[], lastBar: number, pivotHighs:
       `머리 고점 ${(hh as number).toFixed(2)}`,
     ],
     barIndex: lastBar,
+    startIndex: left,
+    endIndex: right,
   };
 }
 
@@ -331,6 +360,8 @@ function detectInverseHeadAndShoulders(data: CandleData[], lastBar: number, pivo
       `머리 저점 ${(hl as number).toFixed(2)}`,
     ],
     barIndex: lastBar,
+    startIndex: left,
+    endIndex: right,
   };
 }
 
@@ -366,6 +397,8 @@ function detectBullishBearishEngulfing(data: CandleData[], lastBar: number, avgB
         trend.down ? '직전 하락 추세 확인' : '추세 중립',
       ],
       barIndex: lastBar,
+      startIndex: lastBar - 1,
+      endIndex: lastBar,
     });
   }
 
@@ -391,6 +424,8 @@ function detectBullishBearishEngulfing(data: CandleData[], lastBar: number, avgB
         trend.up ? '직전 상승 추세 확인' : '추세 중립',
       ],
       barIndex: lastBar,
+      startIndex: lastBar - 1,
+      endIndex: lastBar,
     });
   }
   return out;
@@ -427,6 +462,8 @@ function detectHaramiSet(data: CandleData[], lastBar: number, avgBody: number, a
         '하락 추세 말단 반전 시그널',
       ],
       barIndex: lastBar,
+      startIndex: lastBar - 1,
+      endIndex: lastBar,
     });
   } else if (p.bullish && c.bearish && trend.up) {
     out.push({
@@ -441,6 +478,8 @@ function detectHaramiSet(data: CandleData[], lastBar: number, avgBody: number, a
         '상승 추세 말단 반전 시그널',
       ],
       barIndex: lastBar,
+      startIndex: lastBar - 1,
+      endIndex: lastBar,
     });
   } else {
     out.push({
@@ -454,6 +493,8 @@ function detectHaramiSet(data: CandleData[], lastBar: number, avgBody: number, a
         doji ? '도지 하라미 성격' : '일반 하라미',
       ],
       barIndex: lastBar,
+      startIndex: lastBar - 1,
+      endIndex: lastBar,
     });
   }
   return out;
@@ -492,6 +533,8 @@ function detectDarkCloudAndPiercing(data: CandleData[], lastBar: number, avgBody
         '음봉 종가가 이전 양봉 몸통의 절반 아래',
       ],
       barIndex: lastBar,
+      startIndex: lastBar - 1,
+      endIndex: lastBar,
     });
   }
 
@@ -516,6 +559,8 @@ function detectDarkCloudAndPiercing(data: CandleData[], lastBar: number, avgBody
         '양봉 종가가 이전 음봉 몸통 절반 이상 복구',
       ],
       barIndex: lastBar,
+      startIndex: lastBar - 1,
+      endIndex: lastBar,
     });
   }
 
@@ -551,6 +596,8 @@ function detectThreeSoldiersAndCrows(data: CandleData[], lastBar: number, avgBod
         '각 캔들 시가가 직전 몸통 내부에서 시작',
       ],
       barIndex: lastBar,
+      startIndex: lastBar - 2,
+      endIndex: lastBar,
     });
   }
 
@@ -573,6 +620,8 @@ function detectThreeSoldiersAndCrows(data: CandleData[], lastBar: number, avgBod
         '각 캔들 시가가 직전 몸통 내부에서 시작',
       ],
       barIndex: lastBar,
+      startIndex: lastBar - 2,
+      endIndex: lastBar,
     });
   }
   return out;
@@ -611,6 +660,8 @@ function detectMorningEveningFamily(data: CandleData[], lastBar: number, avgBody
         '3번째 양봉이 1번째 몸통 중간 이상 회복',
       ],
       barIndex: lastBar,
+      startIndex: lastBar - 2,
+      endIndex: lastBar,
     });
     if (midDoji) {
       out.push({
@@ -624,6 +675,8 @@ function detectMorningEveningFamily(data: CandleData[], lastBar: number, avgBody
           '반전 강도 강화',
         ],
         barIndex: lastBar,
+        startIndex: lastBar - 2,
+        endIndex: lastBar,
       });
     }
   }
@@ -647,6 +700,8 @@ function detectMorningEveningFamily(data: CandleData[], lastBar: number, avgBody
         '3번째 음봉이 1번째 몸통 중간 이하로 하락',
       ],
       barIndex: lastBar,
+      startIndex: lastBar - 2,
+      endIndex: lastBar,
     });
     if (midDoji) {
       out.push({
@@ -660,6 +715,8 @@ function detectMorningEveningFamily(data: CandleData[], lastBar: number, avgBody
           '반전 강도 강화',
         ],
         barIndex: lastBar,
+        startIndex: lastBar - 2,
+        endIndex: lastBar,
       });
     }
   }
@@ -688,6 +745,8 @@ function detectShootingAndInvertedHammer(data: CandleData[], lastBar: number, av
         '상승 추세 끝단에서 매도 압력 증가',
       ],
       barIndex: lastBar,
+      startIndex: lastBar,
+      endIndex: lastBar,
     });
   } else if (trend.down) {
     out.push({
@@ -701,6 +760,8 @@ function detectShootingAndInvertedHammer(data: CandleData[], lastBar: number, av
         '하락 추세 끝단에서 반등 시도',
       ],
       barIndex: lastBar,
+      startIndex: lastBar,
+      endIndex: lastBar,
     });
   }
   return out;
