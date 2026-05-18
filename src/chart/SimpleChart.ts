@@ -343,7 +343,7 @@ export class SimpleChart {
   private isMouseOver = false;
   private focusedSignalCandleIndex: number | null = null;
   private hoveredSignalCandleIndex: number | null = null;
-  private focusedTradeRange: { startIndex: number; endIndex: number } | null = null;
+  private focusedTradeRange: { startIndex: number; endIndex: number; style?: 'range' | 'candle' } | null = null;
   private focusVisualTimer: ReturnType<typeof setTimeout> | null = null;
   private focusVisualStartedAt = 0;
   private gotoDateMarker: { candleIndex: number; label: string } | null = null;
@@ -3947,7 +3947,7 @@ export class SimpleChart {
     return geometry.chartLeft + (leftGap + localIndex) * totalSp + candleW / 2;
   }
 
-  private focusSignalVisual(candleIndex: number, options?: { showCrosshair?: boolean }): void {
+  private focusSignalVisual(candleIndex: number, options?: { showCrosshair?: boolean; focusStyle?: 'range' | 'candle' }): void {
     const showCrosshair = options?.showCrosshair !== false;
     const clamped = Math.max(0, Math.min(this.data.length - 1, Math.floor(candleIndex)));
     this.focusedSignalCandleIndex = clamped;
@@ -3995,7 +3995,7 @@ export class SimpleChart {
     startIndex: number,
     endIndex: number,
     paddingBars = 8,
-    options?: { showCrosshair?: boolean },
+    options?: { showCrosshair?: boolean; focusStyle?: 'range' | 'candle' },
   ): void {
     if (!this.data.length) return;
 
@@ -4030,6 +4030,7 @@ export class SimpleChart {
     this.focusedTradeRange = {
       startIndex: Math.max(0, Math.min(lastIndex, Math.min(normalizedStart, normalizedEnd))),
       endIndex: Math.max(0, Math.min(lastIndex, Math.max(normalizedStart, normalizedEnd))),
+      style: options?.focusStyle ?? 'range',
     };
     this.draw();
     this.focusSignalVisual(this.focusedTradeRange.startIndex, options);
@@ -9162,15 +9163,23 @@ export class SimpleChart {
         const strokeAlpha = 0.5 + pulse * 0.38;
         const glowAlpha = 0.14 + pulse * 0.22;
         const rangeW = Math.max(2, x2 - x1);
-        const rangeH = Math.max(0, mainH - R.top);
+        const candleFocus = this.focusedTradeRange.style === 'candle' && mainScale && drawStart === drawEnd;
+        const candle = candleFocus ? this.data[drawStart] : null;
+        const boxTop = candle && mainScale
+          ? Math.max(R.top, Math.min(mainH, Math.min(mainScale.toY(candle.high), mainScale.toY(candle.low)) - 6 - pulse * 3))
+          : R.top;
+        const boxBottom = candle && mainScale
+          ? Math.max(R.top, Math.min(mainH, Math.max(mainScale.toY(candle.high), mainScale.toY(candle.low)) + 6 + pulse * 3))
+          : mainH;
+        const rangeH = Math.max(2, boxBottom - boxTop);
         ctx.save();
         ctx.fillStyle = `rgba(72,118,255,${fillAlpha.toFixed(3)})`;
         ctx.strokeStyle = `rgba(145,188,255,${strokeAlpha.toFixed(3)})`;
         ctx.shadowColor = `rgba(96,154,255,${glowAlpha.toFixed(3)})`;
         ctx.shadowBlur = 16 + pulse * 10;
         ctx.lineWidth = 1.3 + pulse * 0.7;
-        ctx.fillRect(x1, R.top, rangeW, rangeH);
-        ctx.strokeRect(x1 + 0.5, R.top + 0.5, Math.max(1, rangeW - 1), Math.max(1, rangeH - 1));
+        ctx.fillRect(x1, boxTop, rangeW, rangeH);
+        ctx.strokeRect(x1 + 0.5, boxTop + 0.5, Math.max(1, rangeW - 1), Math.max(1, rangeH - 1));
         ctx.restore();
         this.requestOverlayDraw();
       }

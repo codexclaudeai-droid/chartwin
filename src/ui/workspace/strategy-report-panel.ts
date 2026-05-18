@@ -19,7 +19,7 @@ type StrategyReportChartLike = {
     startIndex: number,
     endIndex: number,
     paddingBars?: number,
-    options?: { showCrosshair?: boolean },
+    options?: { showCrosshair?: boolean; focusStyle?: 'range' | 'candle' },
   ) => void;
   buildStrategyReport?: (args: {
     feeBps: number;
@@ -1327,24 +1327,24 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const formatTradeTs = (sec: number | null): string => {
     if (!Number.isFinite(Number(sec))) return '-';
     const d = new Date(Number(sec) * 1000);
-    const yyyy = d.getFullYear();
+    const yy = String(d.getFullYear()).slice(-2);
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     const hh = String(d.getHours()).padStart(2, '0');
     const mi = String(d.getMinutes()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+    return `${yy}-${mm}-${dd} ${hh}:${mi}`;
   };
 
 
   const formatTradeTsCompact = (sec: number | null): string => {
     if (!Number.isFinite(Number(sec))) return '-';
     const d = new Date(Number(sec) * 1000);
-    const yyyy = d.getFullYear();
+    const yy = String(d.getFullYear()).slice(-2);
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     const hh = String(d.getHours()).padStart(2, '0');
     const mi = String(d.getMinutes()).padStart(2, '0');
-    return `${yyyy}.${mm}.${dd} ${hh}:${mi}`;
+    return `${yy}.${mm}.${dd} ${hh}:${mi}`;
   };
 
   const formatTradeLevels = (trade: ReportTrade): string => {
@@ -1432,7 +1432,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const chart = getActiveChart();
     if (typeof chart.focusRangeByIndex !== 'function') return;
     const padding = panelMode === 'expanded' ? 10 : 6;
-    chart.focusRangeByIndex(trade.entryIndex, trade.exitIndex, padding, { showCrosshair: false });
+    const focusEndIndex = trade.status === 'OPEN' ? trade.entryIndex : trade.exitIndex;
+    chart.focusRangeByIndex(trade.entryIndex, focusEndIndex, padding, {
+      showCrosshair: false,
+      focusStyle: trade.status === 'OPEN' ? 'candle' : 'range',
+    });
     window.dispatchEvent(new CustomEvent('chart-signal-trade-viewed'));
   };
 
@@ -1444,14 +1448,16 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     }
     const panelWidth = Math.max(320, panel.clientWidth);
     const isPhoneWidth = panelWidth < 760;
-    const baseColumns = isPhoneWidth ? '20px 42px 40px 1.05fr 1.55fr 1.35fr 72px' : '32px 64px 56px 1fr 1fr 1.1fr 96px';
-    const fullColumns = isPhoneWidth ? '20px 42px 40px 1.05fr 1.55fr 1.35fr 72px 52px' : '32px 64px 56px 1fr 1fr 1.1fr 96px 88px';
+    const gridGap = isPhoneWidth ? '4px' : '8px';
+    const rowPadding = isPhoneWidth ? '7px 5px' : '7px 8px';
+    const headerPadding = isPhoneWidth ? '8px 5px' : '8px';
+    const baseColumns = isPhoneWidth ? '14px 30px 1.18fr 1.45fr 0.95fr 64px' : '32px 64px 1fr 1fr 1.1fr 96px';
+    const fullColumns = isPhoneWidth ? '14px 30px 1.18fr 1.45fr 0.95fr 64px 32px' : '32px 64px 1fr 1fr 1.1fr 96px 44px';
     const rowArrowSvg = '<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;opacity:.95;"><path d="M2 8h9"></path><path d="M8 4l4 4-4 4"></path></svg>';
 
-    const headerRow = `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:8px;border-bottom:1px solid #2b3d5d;background:#17243a;color:#9fb3d5;font-size:11px;font-weight:700;text-align:center;">
+    const headerRow = `<div style="display:grid;grid-template-columns:${baseColumns};gap:${gridGap};align-items:center;padding:${headerPadding};border-bottom:1px solid #2b3d5d;background:#17243a;color:#9fb3d5;font-size:11px;font-weight:700;text-align:center;">
       <div>#</div>
       <div>타입</div>
-      <div>상태</div>
       <div>진입 -> 청산</div>
       <div style="text-align:center;">일시</div>
       <div style="text-align:center;">SL / TP</div>
@@ -1464,17 +1470,15 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       .map((t, idx) => {
         const pnlColor = t.pnl >= 0 ? '#39d98a' : '#ff7f7f';
         const sideColor = t.side === 'LONG' ? '#39d98a' : '#ff7f7f';
+        const sideText = isPhoneWidth ? (t.side === 'LONG' ? 'BUY' : 'SELL') : t.side;
         const isOpen = t.status === 'OPEN';
-        const statusText = isOpen ? 'OPEN' : 'CLOSED';
-        const statusColor = isOpen ? '#f7c948' : '#8ab4ff';
         const pnlText = isOpen ? `미실현 ${formatAmount(t.pnl)}` : formatAmount(t.pnl);
         const levelText = formatTradeLevels(t);
         const entryTs = formatTradeTsCompact(t.entryTime);
         const exitTs = isOpen ? 'OPEN' : formatTradeTsCompact(t.exitTime);
-        return `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid #1f2b44;">
-          <div style="color:#8aa0c5;text-align:center;">${idx + 1}</div>
-          <div style="color:${sideColor};font-weight:700;text-align:center;font-size:${isPhoneWidth ? '10px' : '12px'};white-space:nowrap;letter-spacing:${isPhoneWidth ? '-0.1px' : '0'};">${t.side}</div>
-          <div style="color:${statusColor};font-weight:700;text-align:center;font-size:${isPhoneWidth ? '9px' : '11px'};white-space:nowrap;">${statusText}</div>
+        return `<div style="display:grid;grid-template-columns:${baseColumns};gap:${gridGap};align-items:center;padding:${rowPadding};border-bottom:1px solid #1f2b44;">
+          <div style="color:#8aa0c5;text-align:center;font-size:${isPhoneWidth ? '11px' : '12px'};">${idx + 1}</div>
+          <div style="color:${sideColor};font-weight:700;text-align:center;font-size:${isPhoneWidth ? '10px' : '12px'};white-space:nowrap;">${sideText}</div>
           <div style="color:#cdd8ee;font-size:12px;line-height:1.12;font-weight:${isPhoneWidth ? '700' : '500'};text-align:center;">
             ${isPhoneWidth
               ? `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)}</div>
@@ -1506,7 +1510,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     rowEls[0].style.gridTemplateColumns = fullColumns;
     const moveHeader = document.createElement('div');
     moveHeader.style.textAlign = 'center';
-    moveHeader.textContent = '보기';
+    moveHeader.textContent = '시그널';
     rowEls[0].appendChild(moveHeader);
 
     rowEls.slice(1).forEach((rowEl, idx) => {
@@ -1519,10 +1523,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       });
       const moveBtn = document.createElement('button');
       moveBtn.type = 'button';
-      moveBtn.textContent = '차트보기';
+      moveBtn.textContent = '확인';
       moveBtn.style.cssText = isPhoneWidth
-        ? 'height:20px;min-width:48px;padding:0 4px;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:5px;font-size:10px;cursor:pointer;'
-        : 'height:24px;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:6px;font-size:11px;cursor:pointer;';
+        ? 'height:20px;min-width:0;width:max-content;padding:0 5px;justify-self:center;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:5px;font-size:10px;line-height:18px;cursor:pointer;'
+        : 'height:22px;min-width:0;width:max-content;padding:0 7px;justify-self:center;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:5px;font-size:11px;line-height:20px;cursor:pointer;';
       if (tradeViewAlertActive) moveBtn.classList.add('strategy-trade-view-alert');
       moveBtn.addEventListener('click', (event) => {
         event.stopPropagation();
