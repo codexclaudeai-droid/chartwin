@@ -3717,6 +3717,14 @@ export class SimpleChart {
     const symbolPriceDigits = getSymbolPricePrecision(this.config.symbol, this.config.quoteCurrency);
     const baseRadius = Math.max(8, Math.min(12, meta.candleW * 0.8));
     const signalRiskDetails = this.buildSignalRiskDetails();
+    const riskDrawJobs: Array<{
+      fromX: number;
+      price: number;
+      label: string;
+      color: string;
+      dash: number[];
+      alpha: number;
+    }> = [];
 
     const drawExitLine = (
       x1: number,
@@ -3729,16 +3737,6 @@ export class SimpleChart {
       if (price < meta.minP || price > meta.maxP) return;
       const y = meta.getY(price);
       if (y < 0 || y > meta.mainH) return;
-      const x2 = Math.max(x1 + meta.totalSp * 2, meta.chartRight - 6);
-      ctx.save();
-      ctx.strokeStyle = toRgba(color, alpha, color);
-      ctx.lineWidth = 1.1;
-      ctx.setLineDash(dash);
-      ctx.beginPath();
-      ctx.moveTo(x1, Math.round(y) + 0.5);
-      ctx.lineTo(x2, Math.round(y) + 0.5);
-      ctx.stroke();
-      ctx.setLineDash([]);
       const priceText = formatWithComma(price, symbolPriceDigits);
       const boxH = 20;
       const boxW = meta.axisSide === 'left'
@@ -3753,7 +3751,23 @@ export class SimpleChart {
       const labelX = meta.axisSide === 'left'
         ? boxX + boxW + labelGap
         : boxX - labelW - labelGap;
-      ctx.fillStyle = toRgba(color, 0.18, 'rgba(255,255,255,0.12)');
+      const x2 = meta.axisSide === 'right'
+        ? Math.max(x1 + 10, labelX - 6)
+        : Math.max(x1 + meta.totalSp * 2, meta.chartRight - 6);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(meta.chartLeft, 0, Math.max(1, meta.chartRight - meta.chartLeft), Math.max(1, meta.mainH));
+      ctx.clip();
+      ctx.strokeStyle = toRgba(color, alpha, color);
+      ctx.lineWidth = 1.1;
+      ctx.setLineDash(dash);
+      ctx.beginPath();
+      ctx.moveTo(x1, Math.round(y) + 0.5);
+      ctx.lineTo(x2, Math.round(y) + 0.5);
+      ctx.stroke();
+      ctx.restore();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#111a2b';
       ctx.strokeStyle = toRgba(color, 0.9, color);
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -3800,14 +3814,28 @@ export class SimpleChart {
         const fromX = x + meta.candleW * 0.55;
         const stopColor = '#ff6b6b';
         if (typeof detail.stopLoss === 'number' && Number.isFinite(detail.stopLoss)) {
-          drawExitLine(fromX, detail.stopLoss, 'SL', stopColor, [2, 3], isLatest ? 1 : 0.72);
+          riskDrawJobs.push({
+            fromX,
+            price: detail.stopLoss,
+            label: 'SL',
+            color: stopColor,
+            dash: [2, 3],
+            alpha: isLatest ? 1 : 0.72,
+          });
         }
         detail.takeProfits.forEach((price, idx) => {
           if (!Number.isFinite(price)) return;
           const label = detail.takeProfits.length > 1 ? `TP${idx + 1}` : 'TP';
           const takeProfitPalette = ['#37d67a', '#21b86b', '#139b5a'];
           const color = takeProfitPalette[idx] ?? takeProfitPalette[takeProfitPalette.length - 1];
-          drawExitLine(fromX, price, label, color, idx === 0 ? [4, 3] : [8, 4], isLatest ? 1 : (idx === 0 ? 0.68 : 0.64));
+          riskDrawJobs.push({
+            fromX,
+            price,
+            label,
+            color,
+            dash: idx === 0 ? [4, 3] : [8, 4],
+            alpha: isLatest ? 1 : (idx === 0 ? 0.68 : 0.64),
+          });
         });
       }
       const isLong = signal > 0;
@@ -3925,6 +3953,9 @@ export class SimpleChart {
     }
 
     ctx.restore();
+    riskDrawJobs.forEach((job) => {
+      drawExitLine(job.fromX, job.price, job.label, job.color, job.dash, job.alpha);
+    });
   }
 
   constructor(container: HTMLElement) {
