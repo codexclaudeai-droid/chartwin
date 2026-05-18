@@ -4,8 +4,7 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   server: {
-    host: true,
-    allowedHosts: ['bargraph-petted-unnoticed.ngrok-free.dev']
+    host: true
   },
   build: {
     rollupOptions: {

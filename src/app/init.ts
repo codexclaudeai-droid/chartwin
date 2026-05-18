@@ -1410,11 +1410,16 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       gatewayFeed.stop();
       setLiveStatus('connecting');
       void refreshExchange24hPercent(true);
-      const selectedFeed = shouldUseBinanceDirect(chart.config.symbol) ? binanceFeed : gatewayFeed;
+      const useBinance = shouldUseBinanceDirect(chart.config.symbol);
+      const selectedFeed = useBinance ? binanceFeed : gatewayFeed;
       const ok = await selectedFeed.reload();
       if (!ok) {
         binanceFeed.stop();
         gatewayFeed.stop();
+        if (!useBinance) {
+          setLiveStatus(chart.getCandles().length ? 'connecting' : 'idle');
+          return;
+        }
         applyMockData();
         setLiveStatus('fallback');
         fallbackTicker.startLive();

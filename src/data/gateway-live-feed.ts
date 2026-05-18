@@ -265,36 +265,46 @@ export function createGatewayLiveFeed({
   };
 
   const applyIncremental = (latestRows: CandleDataLike[]) => {
+    const incoming = sanitizeCandles(latestRows);
+    if (!incoming.length) return;
+
     const current = chart.getCandles();
     if (!current.length) {
-      applySnapshot(latestRows);
+      applySnapshot(incoming);
       onLiveTick?.();
       return;
     }
 
-    const last = current[current.length - 1];
-    const updates = latestRows.filter((row) => row.time >= last.time);
-    if (!updates.length) return;
+    const currentMap = new Map<number, CandleDataLike>();
+    current.forEach((row) => currentMap.set(row.time, row));
+    const latestTime = current[current.length - 1]?.time ?? -Infinity;
+    let hasMiddleRepair = false;
+    let hasNewerRows = false;
+    let hasLastPatch = false;
 
-    updates.forEach((next) => {
-      const nowLast = chart.getCandles()[chart.getCandles().length - 1];
-      if (!nowLast) {
-        chart.setData([next]);
-        return;
+    incoming.forEach((row) => {
+      const existing = currentMap.get(row.time);
+      if (!existing && row.time < latestTime) hasMiddleRepair = true;
+      if (row.time > latestTime) hasNewerRows = true;
+      if (row.time === latestTime) {
+        hasLastPatch = !existing
+          || existing.close !== row.close
+          || existing.high !== row.high
+          || existing.low !== row.low
+          || existing.volume !== row.volume
+          || existing.open !== row.open;
       }
-      if (next.time > nowLast.time) {
-        chart.addNewCandle(next);
-        return;
-      }
-      if (next.time === nowLast.time) {
-        chart.updateLastCandle({
-          close: next.close,
-          high: next.high,
-          low: next.low,
-          volume: next.volume,
-        });
-      }
+      currentMap.set(row.time, row);
     });
+
+    if (!hasMiddleRepair && !hasNewerRows && !hasLastPatch) return;
+
+    const merged = Array.from(currentMap.values())
+      .sort((a, b) => a.time - b.time)
+      .slice(-Math.max(1, limit));
+
+    // Full merge keeps polling capable of repairing missing candles inside the visible history.
+    applySnapshot(merged);
     onLiveTick?.();
   };
 
@@ -303,7 +313,7 @@ export function createGatewayLiveFeed({
 
     const symbol = chart.config.symbol;
     if (disabledSymbols.has(normalizeSymbol(symbol))) {
-      if (running) onStatusChange?.('fallback');
+      if (running) onStatusChange?.('idle');
       return false;
     }
 
@@ -338,7 +348,7 @@ export function createGatewayLiveFeed({
       onStatusChange?.('live');
       return true;
     } catch {
-      if (running) onStatusChange?.('fallback');
+      if (running) onStatusChange?.(chart.getCandles().length ? 'connecting' : 'idle');
       return false;
     } finally {
       abortController = null;
@@ -353,7 +363,9 @@ export function createGatewayLiveFeed({
     const intervalMs = POLL_INTERVAL_MS_BY_TIMEFRAME[chart.config.timeframe] ?? 5_000;
     pollingTimer = window.setInterval(() => {
       if (!running) return;
-      void pollOnce(false);
+      void pollOnce(false).then((ok) => {
+        if (ok && running && !socket) setupWebSocket();
+      });
     }, intervalMs);
 
     // After symbol/timeframe changes, run a short 1s sync burst for snappy UI updates.
@@ -365,7 +377,9 @@ export function createGatewayLiveFeed({
         return;
       }
       ticks += 1;
-      void pollOnce(false);
+      void pollOnce(false).then((ok) => {
+        if (ok && running && !socket) setupWebSocket();
+      });
       if (ticks >= fastSyncConfig.ticks) {
         stopFastPolling();
       }
@@ -404,12 +418,15 @@ export function createGatewayLiveFeed({
 
   const restart = async (reloadHistory: boolean): Promise<boolean> => {
     onStatusChange?.('connecting');
-    const ok = await pollOnce(reloadHistory);
-    if (ok) {
-      setupWebSocket();
-      setupPolling();
+    if (disabledSymbols.has(normalizeSymbol(chart.config.symbol))) {
+      onStatusChange?.('idle');
+      return false;
     }
-    return ok;
+    const ok = await pollOnce(reloadHistory);
+    if (!running) return false;
+    if (ok) setupWebSocket();
+    setupPolling();
+    return true;
   };
 
   const start = async (): Promise<boolean> => {
