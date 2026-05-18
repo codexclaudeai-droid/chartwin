@@ -3740,11 +3740,31 @@ export class SimpleChart {
       ctx.stroke();
       ctx.setLineDash([]);
       const priceText = formatWithComma(price, symbolPriceDigits);
-      const boxH = 24;
+      const boxH = 20;
       const boxW = meta.axisSide === 'left'
         ? Math.max(46, meta.axisPad - 10)
         : Math.max(46, meta.axisPad - 2);
       const boxX = meta.axisSide === 'left' ? 6 : meta.chartRight;
+      const labelPadX = 6;
+      const labelTextW = Math.ceil(ctx.measureText(label).width);
+      const labelW = Math.max(24, labelTextW + labelPadX * 2);
+      const labelH = 16;
+      const labelGap = 4;
+      const labelX = meta.axisSide === 'left'
+        ? boxX + boxW + labelGap
+        : boxX - labelW - labelGap;
+      ctx.fillStyle = toRgba(color, 0.18, 'rgba(255,255,255,0.12)');
+      ctx.strokeStyle = toRgba(color, 0.9, color);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(labelX, y - labelH / 2, labelW, labelH, 6);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.font = `700 9px ${CHART_FONT_STACK}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, labelX + labelW / 2, y + 0.5);
       ctx.fillStyle = toRgba(color, 0.95, color);
       drawPriceArrowBox(ctx, boxX, y, boxW, boxH, meta.axisSide, 5);
       ctx.fill();
@@ -3754,10 +3774,8 @@ export class SimpleChart {
       const textAnchor = getPriceArrowTextAnchor(boxX, boxW, meta.axisSide, 5);
       ctx.textAlign = textAnchor.align;
       ctx.fillStyle = getContrastTextColor(color);
-      ctx.font = `700 8px ${CHART_FONT_STACK}`;
-      ctx.fillText(label, textAnchor.x, y - 5);
       ctx.font = `700 10px ${CHART_FONT_STACK}`;
-      ctx.fillText(priceText, textAnchor.x, y + 6);
+      ctx.fillText(priceText, textAnchor.x, y + 0.5);
       ctx.restore();
     };
 
