@@ -307,6 +307,29 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     { value: 'opposite', label: '반대신호 청산' },
   ]);
 
+  const strategyRiskLineBox = document.createElement('div');
+  strategyRiskLineBox.style.cssText = 'display:none;margin-top:12px;padding:12px;border:1px solid #3e4a63;border-radius:8px;background:#121a29;';
+  const strategyRiskLineTitle = document.createElement('div');
+  strategyRiskLineTitle.textContent = '시그널 리스크 라인';
+  strategyRiskLineTitle.style.cssText = 'font-size:13px;font-weight:700;color:#e5edf9;margin-bottom:8px;';
+  strategyRiskLineBox.appendChild(strategyRiskLineTitle);
+  const strategyRiskLineWrap = document.createElement('label');
+  strategyRiskLineWrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+  const strategyRiskLineLabel = document.createElement('span');
+  strategyRiskLineLabel.textContent = '호버 SL/TP 라인 표시';
+  strategyRiskLineLabel.style.cssText = 'font-size:11px;color:#aeb9cf;';
+  const strategyRiskLineSel = document.createElement('select');
+  strategyRiskLineSel.style.cssText = 'background:#101827;border:1px solid #3a4864;border-radius:6px;padding:7px;color:white;font-size:12px;max-width:180px;';
+  strategyRiskLineSel.innerHTML = '<option value="1">표시</option><option value="0">숨김</option>';
+  strategyRiskLineSel.addEventListener('change', () => {
+    chart.setStrategyRiskLinesVisible?.(strategyRiskLineSel.value === '1');
+    onApply();
+  });
+  strategyRiskLineWrap.appendChild(strategyRiskLineLabel);
+  strategyRiskLineWrap.appendChild(strategyRiskLineSel);
+  strategyRiskLineBox.appendChild(strategyRiskLineWrap);
+  listPanel.appendChild(strategyRiskLineBox);
+
   const bollingerRiskBox = document.createElement('div');
   bollingerRiskBox.style.cssText = 'display:none;margin-top:12px;padding:12px;border:1px solid #3d4d33;border-radius:8px;background:#162114;';
   const bbRiskTitle = document.createElement('div');
@@ -551,6 +574,7 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     const activeIsDoubleBreak = activeId === 'strategy_js_double_break';
     const activeIsBollinger = activeId === 'strategy_pine_bbands_directed';
     const activeIsSrouter = activeId === GRID_ATR_BNF_SROUTER_ID;
+    const activeSupportsRiskLines = activeIsDoubleBreak || (activeIsBollinger && chart.getBollingerRiskConfig?.().enabled);
 
     listWrap.innerHTML = '';
     strategies.forEach((s) => {
@@ -637,6 +661,11 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
       dbAdxFilterSel.value = cfg.useAdxFilter ? '1' : '0';
       dbSameBarSel.value = String(cfg.sameBarMode ?? 'conservative');
       dbRunnerExitSel.value = String(cfg.runnerExitMode ?? 'tp2');
+    }
+
+    strategyRiskLineBox.style.display = activeSupportsRiskLines ? 'block' : 'none';
+    if (activeSupportsRiskLines && chart.isStrategyRiskLinesVisible) {
+      strategyRiskLineSel.value = chart.isStrategyRiskLinesVisible() ? '1' : '0';
     }
 
     bollingerRiskBox.style.display = activeIsBollinger ? 'block' : 'none';

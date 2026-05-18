@@ -153,6 +153,21 @@ const BOLLINGER_RISK_DEFAULT_CONFIG: BollingerRiskConfig = {
   moveSlToEntryOnTp1: true,
 };
 
+const DOUBLE_BREAK_STRATEGY_ID = 'strategy_js_double_break';
+const DOUBLE_BREAK_PARAM_DEFAULT_KEY = '__double_break_config_default__';
+const DOUBLE_BREAK_PARAM_SYMBOL_PREFIX = '__double_break_config_symbol__';
+const STRATEGY_RISK_LINES_VISIBLE_STORAGE_KEY = 'my-chart-lib-strategy-risk-lines-visible-v1';
+
+function loadStrategyRiskLinesVisiblePreference(): boolean {
+  try {
+    const raw = localStorage.getItem(STRATEGY_RISK_LINES_VISIBLE_STORAGE_KEY);
+    if (raw == null) return true;
+    return raw !== '0';
+  } catch {
+    return true;
+  }
+}
+
 type StrategyReportArgs = {
   feeBps: number;
   slippageBps: number;
@@ -223,7 +238,9 @@ export class SimpleChart {
   private strategySignals: StrategySignal[] = [];
   private latestStrategySignalIndex = -1;
   private strategySignalVisible = true;
+  private strategyRiskLinesVisible = loadStrategyRiskLinesVisiblePreference();
   private doubleBreakConfig: DoubleBreakConfig = { ...DOUBLE_BREAK_DEFAULT_CONFIG };
+  private doubleBreakConfigSymbolKey = '';
   private bollingerRiskConfig: BollingerRiskConfig = { ...BOLLINGER_RISK_DEFAULT_CONFIG };
   private signalHitAreas: Array<{
     x: number;
@@ -2268,6 +2285,21 @@ export class SimpleChart {
     this.updateSignalAnimationLoop();
   }
 
+  public isStrategyRiskLinesVisible(): boolean {
+    return this.strategyRiskLinesVisible;
+  }
+
+  public setStrategyRiskLinesVisible(visible: boolean): void {
+    this.strategyRiskLinesVisible = Boolean(visible);
+    try {
+      localStorage.setItem(STRATEGY_RISK_LINES_VISIBLE_STORAGE_KEY, this.strategyRiskLinesVisible ? '1' : '0');
+    } catch {
+      // Ignore storage failures and keep runtime state.
+    }
+    this.drawSignalLayer(this.lastDrawMeta);
+    this.updateSignalAnimationLoop();
+  }
+
   private computeLatestSignalIndex(signals: StrategySignal[]): number {
     for (let i = signals.length - 1; i >= 0; i -= 1) {
       if ((signals[i] ?? 0) !== 0) return i;
@@ -2305,12 +2337,8 @@ export class SimpleChart {
     this.signalAnimationFrame = window.requestAnimationFrame(this.handleSignalAnimationTick);
   };
 
-  public getDoubleBreakConfig(): DoubleBreakConfig {
-    return { ...this.doubleBreakConfig };
-  }
-
-  public setDoubleBreakConfig(patch: Partial<DoubleBreakConfig>): void {
-    const next = { ...this.doubleBreakConfig, ...patch };
+  private normalizeDoubleBreakConfig(config: Partial<DoubleBreakConfig>): DoubleBreakConfig {
+    const next = { ...DOUBLE_BREAK_DEFAULT_CONFIG, ...config };
     next.bbPeriod = Math.max(1, Math.round(next.bbPeriod));
     next.bbStd = Math.max(0.1, next.bbStd);
     next.envPeriod = Math.max(1, Math.round(next.envPeriod));
@@ -2328,7 +2356,36 @@ export class SimpleChart {
       ? next.sameBarMode
       : 'conservative';
     next.runnerExitMode = next.runnerExitMode === 'opposite' ? 'opposite' : 'tp2';
-    this.doubleBreakConfig = next;
+    return next;
+  }
+
+  private getStrategySymbolParamSuffix(symbol = this.config.symbol): string {
+    return encodeURIComponent(String(symbol || 'DEFAULT').trim().toUpperCase() || 'DEFAULT');
+  }
+
+  private getDoubleBreakConfigParamKey(symbol = this.config.symbol): string {
+    return `${DOUBLE_BREAK_PARAM_SYMBOL_PREFIX}${this.getStrategySymbolParamSuffix(symbol)}`;
+  }
+
+  private readDoubleBreakConfigFromParams(symbol = this.config.symbol): DoubleBreakConfig {
+    const params = this.getStrategyParams(DOUBLE_BREAK_STRATEGY_ID);
+    const parseConfig = (raw: StrategyParamValue | undefined): Partial<DoubleBreakConfig> => {
+      if (typeof raw !== 'string' || !raw.trim()) return {};
+      try {
+        const parsed = JSON.parse(raw) as Partial<DoubleBreakConfig>;
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch {
+        return {};
+      }
+    };
+    return this.normalizeDoubleBreakConfig({
+      ...DOUBLE_BREAK_DEFAULT_CONFIG,
+      ...parseConfig(params[DOUBLE_BREAK_PARAM_DEFAULT_KEY]),
+      ...parseConfig(params[this.getDoubleBreakConfigParamKey(symbol)]),
+    });
+  }
+
+  private syncDoubleBreakIndicators(): void {
     const indicators = this.config.indicators as any;
     if (indicators.bb) {
       indicators.bb.period = this.doubleBreakConfig.bbPeriod;
@@ -2342,6 +2399,31 @@ export class SimpleChart {
     if (indicators.dmi) {
       indicators.dmi.period = this.doubleBreakConfig.adxPeriod;
     }
+  }
+
+  private syncDoubleBreakConfigFromParams(force = false): void {
+    const symbolKey = this.getStrategySymbolParamSuffix(this.config.symbol);
+    if (!force && this.doubleBreakConfigSymbolKey === symbolKey) return;
+    this.doubleBreakConfig = this.readDoubleBreakConfigFromParams(this.config.symbol);
+    this.doubleBreakConfigSymbolKey = symbolKey;
+    this.syncDoubleBreakIndicators();
+  }
+
+  public getDoubleBreakConfig(): DoubleBreakConfig {
+    this.syncDoubleBreakConfigFromParams();
+    return { ...this.doubleBreakConfig };
+  }
+
+  public setDoubleBreakConfig(patch: Partial<DoubleBreakConfig>): void {
+    this.syncDoubleBreakConfigFromParams();
+    const next = this.normalizeDoubleBreakConfig({ ...this.doubleBreakConfig, ...patch });
+    this.doubleBreakConfig = next;
+    this.doubleBreakConfigSymbolKey = this.getStrategySymbolParamSuffix(this.config.symbol);
+    this.syncDoubleBreakIndicators();
+    this.setStrategyParams(DOUBLE_BREAK_STRATEGY_ID, {
+      [DOUBLE_BREAK_PARAM_DEFAULT_KEY]: JSON.stringify(next),
+      [this.getDoubleBreakConfigParamKey(this.config.symbol)]: JSON.stringify(next),
+    }, { skipRefresh: true });
     this.requestStrategyCompute(0);
     this.draw();
   }
@@ -2356,7 +2438,11 @@ export class SimpleChart {
     return { ...(strategy?.params ?? {}) };
   }
 
-  public setStrategyParams(strategyId: string, patch: Record<string, StrategyParamValue>): void {
+  public setStrategyParams(
+    strategyId: string,
+    patch: Record<string, StrategyParamValue>,
+    options: { skipRefresh?: boolean } = {},
+  ): void {
     let changed = false;
     this.strategies = this.strategies.map((strategy) => {
       if (strategy.id !== strategyId) return strategy;
@@ -2369,8 +2455,8 @@ export class SimpleChart {
     });
     if (!changed) return;
     saveStrategies(this.strategies);
-    if (strategyId === this.activeStrategyId) this.requestStrategyCompute(0);
-    this.draw();
+    if (!options.skipRefresh && strategyId === this.activeStrategyId) this.requestStrategyCompute(0);
+    if (!options.skipRefresh) this.draw();
   }
 
   public setBollingerRiskConfig(patch: Partial<BollingerRiskConfig>): void {
@@ -2410,8 +2496,10 @@ export class SimpleChart {
 
   public setActiveStrategy(strategyId: string | null): void {
     this.activeStrategyId = strategyId;
-    if (strategyId === 'strategy_js_double_break') {
-      this.setDoubleBreakConfig({});
+    if (strategyId === DOUBLE_BREAK_STRATEGY_ID) {
+      this.syncDoubleBreakConfigFromParams(true);
+      this.requestStrategyCompute(0);
+      this.draw();
       return;
     }
     if (strategyId === 'strategy_pine_bbands_directed') {
@@ -2532,6 +2620,25 @@ export class SimpleChart {
       this.updateSignalAnimationLoop();
       return;
     }
+    if (strategy.id === DOUBLE_BREAK_STRATEGY_ID) {
+      this.syncDoubleBreakConfigFromParams();
+      const result = this.getDoubleBreakResult();
+      const signals = new Array<StrategySignal>(this.data.length).fill(0);
+      if (result) {
+        result.longSignals.forEach((signal) => {
+          if (signal.index >= 0 && signal.index < signals.length) signals[signal.index] = 1;
+        });
+        result.shortSignals.forEach((signal) => {
+          if (signal.index >= 0 && signal.index < signals.length) signals[signal.index] = -1;
+        });
+      }
+      this.strategySignals = signals;
+      this.latestStrategySignalIndex = this.computeLatestSignalIndex(this.strategySignals);
+      this.drawSignalLayer(this.lastDrawMeta);
+      this.updateSignalAnimationLoop();
+      this.onStrategyComputed?.();
+      return;
+    }
     this.strategyRequestId += 1;
     this.strategyWorker.postMessage({
       type: 'compute',
@@ -2540,15 +2647,16 @@ export class SimpleChart {
       candles: this.data,
       changedFrom,
       previousSignals: this.strategySignals,
-      doubleBreakConfig: this.doubleBreakConfig,
+      doubleBreakConfig: this.getDoubleBreakConfig(),
       strategyParams: strategy.params ?? {},
       symbol: this.config.symbol,
     });
   }
 
   private getDoubleBreakResult(): DoubleBreakResult | null {
-    if (this.activeStrategyId !== 'strategy_js_double_break' || !this.data.length) return null;
+    if (this.activeStrategyId !== DOUBLE_BREAK_STRATEGY_ID || !this.data.length) return null;
     try {
+      this.syncDoubleBreakConfigFromParams();
       return new DoubleBreakStrategy(this.doubleBreakConfig).run(this.data);
     } catch {
       return null;
@@ -3511,6 +3619,72 @@ export class SimpleChart {
     subAxisStart: number;
   } = null;
 
+  private buildSignalRiskDetails(): Map<number, {
+    side: 'LONG' | 'SHORT';
+    stopLoss: number | null;
+    takeProfits: number[];
+  }> {
+    const details = new Map<number, {
+      side: 'LONG' | 'SHORT';
+      stopLoss: number | null;
+      takeProfits: number[];
+    }>();
+
+    if (this.activeStrategyId === DOUBLE_BREAK_STRATEGY_ID) {
+      const doubleBreakResult = this.getDoubleBreakResult();
+      if (!doubleBreakResult) return details;
+      doubleBreakResult.longSignals.forEach((signal) => {
+        details.set(signal.index, {
+          side: 'LONG',
+          stopLoss: signal.sl,
+          takeProfits: [signal.tp1, signal.tp2],
+        });
+      });
+      doubleBreakResult.shortSignals.forEach((signal) => {
+        details.set(signal.index, {
+          side: 'SHORT',
+          stopLoss: signal.sl,
+          takeProfits: [signal.tp1, signal.tp2],
+        });
+      });
+      return details;
+    }
+
+    if (this.activeStrategyId === 'strategy_pine_bbands_directed' && this.bollingerRiskConfig.enabled) {
+      const risk = this.bollingerRiskConfig;
+      const atr = this.calcAtrSeries(risk.atrPeriod);
+      for (let i = 0; i < this.strategySignals.length; i += 1) {
+        const signal = this.strategySignals[i] ?? 0;
+        if (!signal) continue;
+        const candle = this.data[i];
+        if (!candle) continue;
+        const atrNow = atr[i];
+        const atrValue = atrNow && Number.isFinite(atrNow) ? atrNow : Math.max(1e-9, candle.high - candle.low);
+        if (signal > 0) {
+          details.set(i, {
+            side: 'LONG',
+            stopLoss: candle.close - atrValue * risk.slAtrMult,
+            takeProfits: [
+              candle.close + atrValue * risk.tp1AtrMult,
+              candle.close + atrValue * risk.tp2AtrMult,
+            ],
+          });
+        } else if (signal < 0) {
+          details.set(i, {
+            side: 'SHORT',
+            stopLoss: candle.close + atrValue * risk.slAtrMult,
+            takeProfits: [
+              candle.close - atrValue * risk.tp1AtrMult,
+              candle.close - atrValue * risk.tp2AtrMult,
+            ],
+          });
+        }
+      }
+    }
+
+    return details;
+  }
+
   private drawSignalLayer(meta: {
     chartLeft: number;
     chartRight: number;
@@ -3541,31 +3715,7 @@ export class SimpleChart {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const baseRadius = Math.max(8, Math.min(12, meta.candleW * 0.8));
-    const doubleBreakResult = this.getDoubleBreakResult();
-    const doubleBreakDetails = new Map<number, {
-      side: 'LONG' | 'SHORT';
-      tp1: number;
-      tp2: number;
-      sl: number;
-    }>();
-    if (doubleBreakResult) {
-      doubleBreakResult.longSignals.forEach((signal) => {
-        doubleBreakDetails.set(signal.index, {
-          side: 'LONG',
-          tp1: signal.tp1,
-          tp2: signal.tp2,
-          sl: signal.sl,
-        });
-      });
-      doubleBreakResult.shortSignals.forEach((signal) => {
-        doubleBreakDetails.set(signal.index, {
-          side: 'SHORT',
-          tp1: signal.tp1,
-          tp2: signal.tp2,
-          sl: signal.sl,
-        });
-      });
-    }
+    const signalRiskDetails = this.buildSignalRiskDetails();
 
     const drawExitLine = (
       x1: number,
@@ -3619,12 +3769,23 @@ export class SimpleChart {
       const entryPrice = candle.close;
       const entryY = meta.getY(entryPrice);
       const isLatest = gi === latestSignalIndex;
-      const detail = doubleBreakDetails.get(gi);
-      if (detail && (gi === this.hoveredSignalCandleIndex || gi === this.focusedSignalCandleIndex)) {
+      const detail = signalRiskDetails.get(gi);
+      if (this.strategyRiskLinesVisible && detail && (gi === this.hoveredSignalCandleIndex || gi === this.focusedSignalCandleIndex)) {
         const fromX = x + meta.candleW * 0.55;
-        drawExitLine(fromX, detail.tp1, 'TP1', detail.side === 'LONG' ? '#37d67a' : '#ff6b6b', [4, 3], isLatest ? 1 : 0.68);
-        drawExitLine(fromX, detail.tp2, 'TP2', detail.side === 'LONG' ? '#21b86b' : '#ff5252', [8, 4], isLatest ? 1 : 0.64);
-        drawExitLine(fromX, detail.sl, 'SL', detail.side === 'LONG' ? '#ff6b6b' : '#37d67a', [2, 3], isLatest ? 1 : 0.72);
+        const stopColor = detail.side === 'LONG' ? '#ff6b6b' : '#37d67a';
+        if (typeof detail.stopLoss === 'number' && Number.isFinite(detail.stopLoss)) {
+          drawExitLine(fromX, detail.stopLoss, 'SL', stopColor, [2, 3], isLatest ? 1 : 0.72);
+        }
+        detail.takeProfits.forEach((price, idx) => {
+          if (!Number.isFinite(price)) return;
+          const label = detail.takeProfits.length > 1 ? `TP${idx + 1}` : 'TP';
+          const longPalette = ['#37d67a', '#21b86b', '#139b5a'];
+          const shortPalette = ['#ff6b6b', '#ff5252', '#ff3d3d'];
+          const color = detail.side === 'LONG'
+            ? (longPalette[idx] ?? longPalette[longPalette.length - 1])
+            : (shortPalette[idx] ?? shortPalette[shortPalette.length - 1]);
+          drawExitLine(fromX, price, label, color, idx === 0 ? [4, 3] : [8, 4], isLatest ? 1 : (idx === 0 ? 0.68 : 0.64));
+        });
       }
       const isLong = signal > 0;
       const boxColor = isLong ? '#1a9e6e' : '#c0392b';
