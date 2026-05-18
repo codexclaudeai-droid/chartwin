@@ -3714,6 +3714,7 @@ export class SimpleChart {
     ctx.font = `600 12px ${CHART_FONT_STACK}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    const symbolPriceDigits = getSymbolPricePrecision(this.config.symbol, this.config.quoteCurrency);
     const baseRadius = Math.max(8, Math.min(12, meta.candleW * 0.8));
     const signalRiskDetails = this.buildSignalRiskDetails();
 
@@ -3738,18 +3739,25 @@ export class SimpleChart {
       ctx.lineTo(x2, Math.round(y) + 0.5);
       ctx.stroke();
       ctx.setLineDash([]);
+      const priceText = formatWithComma(price, symbolPriceDigits);
+      const boxH = 24;
+      const boxW = meta.axisSide === 'left'
+        ? Math.max(46, meta.axisPad - 10)
+        : Math.max(46, meta.axisPad - 2);
+      const boxX = meta.axisSide === 'left' ? 6 : meta.chartRight;
+      ctx.fillStyle = toRgba(color, 0.95, color);
+      drawPriceArrowBox(ctx, boxX, y, boxW, boxH, meta.axisSide, 5);
+      ctx.fill();
+      ctx.strokeStyle = toRgba(color, 1, color);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      const textAnchor = getPriceArrowTextAnchor(boxX, boxW, meta.axisSide, 5);
+      ctx.textAlign = textAnchor.align;
+      ctx.fillStyle = getContrastTextColor(color);
+      ctx.font = `700 8px ${CHART_FONT_STACK}`;
+      ctx.fillText(label, textAnchor.x, y - 5);
       ctx.font = `700 10px ${CHART_FONT_STACK}`;
-      ctx.textAlign = meta.axisSide === 'left' ? 'left' : 'right';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = toRgba(color, 0.14, 'rgba(255,255,255,0.12)');
-      const textW = ctx.measureText(label).width + 8;
-      const boxX = meta.axisSide === 'left'
-        ? 3
-        : (meta.chartRight - textW - 3);
-      ctx.fillRect(boxX, y - 8, textW, 16);
-      ctx.fillStyle = color;
-      const textX = meta.axisSide === 'left' ? 7 : (meta.chartRight - 7);
-      ctx.fillText(label, textX, y);
+      ctx.fillText(priceText, textAnchor.x, y + 6);
       ctx.restore();
     };
 
@@ -3772,18 +3780,15 @@ export class SimpleChart {
       const detail = signalRiskDetails.get(gi);
       if (this.strategyRiskLinesVisible && detail && (gi === this.hoveredSignalCandleIndex || gi === this.focusedSignalCandleIndex)) {
         const fromX = x + meta.candleW * 0.55;
-        const stopColor = detail.side === 'LONG' ? '#ff6b6b' : '#37d67a';
+        const stopColor = '#ff6b6b';
         if (typeof detail.stopLoss === 'number' && Number.isFinite(detail.stopLoss)) {
           drawExitLine(fromX, detail.stopLoss, 'SL', stopColor, [2, 3], isLatest ? 1 : 0.72);
         }
         detail.takeProfits.forEach((price, idx) => {
           if (!Number.isFinite(price)) return;
           const label = detail.takeProfits.length > 1 ? `TP${idx + 1}` : 'TP';
-          const longPalette = ['#37d67a', '#21b86b', '#139b5a'];
-          const shortPalette = ['#ff6b6b', '#ff5252', '#ff3d3d'];
-          const color = detail.side === 'LONG'
-            ? (longPalette[idx] ?? longPalette[longPalette.length - 1])
-            : (shortPalette[idx] ?? shortPalette[shortPalette.length - 1]);
+          const takeProfitPalette = ['#37d67a', '#21b86b', '#139b5a'];
+          const color = takeProfitPalette[idx] ?? takeProfitPalette[takeProfitPalette.length - 1];
           drawExitLine(fromX, price, label, color, idx === 0 ? [4, 3] : [8, 4], isLatest ? 1 : (idx === 0 ? 0.68 : 0.64));
         });
       }
