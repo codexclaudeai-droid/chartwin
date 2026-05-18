@@ -1,6 +1,8 @@
 ﻿import { getCandleCountForPeriod } from '../../chart/axis-utils';
 import type { TimeframeKey } from '../../catalog/time';
 import { isBetaAppVariant } from '../../app/runtime';
+import { getSymbolPricePrecision } from '../../data/market-data-sources';
+import type { DisplayCurrency } from '../../types/market';
 
 type CandleLike = {
   time?: number;
@@ -11,6 +13,7 @@ type StrategyReportChartLike = {
   config: {
     symbol: string;
     timeframe: string;
+    quoteCurrency?: DisplayCurrency;
   };
   getCandles: () => CandleLike[];
   getStrategySignalSeries: () => number[];
@@ -408,6 +411,14 @@ function formatAmount(value: number): string {
   return value.toLocaleString('ko-KR', {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
+  });
+}
+
+function formatPriceValue(value: number, fractionDigits: number): string {
+  if (!Number.isFinite(value)) return '-';
+  return value.toLocaleString('en-US', {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   });
 }
 
@@ -1359,14 +1370,19 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     return `${yy}.${mm}.${dd} ${hh}:${mi}`;
   };
 
-  const formatTradeLevels = (trade: ReportTrade): string => {
+  const getCurrentPriceDigits = (): number => {
+    const chart = getActiveChart();
+    return getSymbolPricePrecision(chart.config.symbol, chart.config.quoteCurrency ?? 'USDT');
+  };
+
+  const formatTradeLevels = (trade: ReportTrade, priceDigits: number): string => {
     const parts: string[] = [];
     if (typeof trade.stopLoss === 'number' && Number.isFinite(trade.stopLoss)) {
-      parts.push(`SL ${formatAmount(trade.stopLoss)}`);
+      parts.push(`SL ${formatPriceValue(trade.stopLoss, priceDigits)}`);
     }
     const profits = Array.isArray(trade.takeProfits) ? trade.takeProfits : [];
     profits.forEach((value, idx) => {
-      if (typeof value === 'number' && Number.isFinite(value)) parts.push(`TP${idx + 1} ${formatAmount(value)}`);
+      if (typeof value === 'number' && Number.isFinite(value)) parts.push(`TP${idx + 1} ${formatPriceValue(value, priceDigits)}`);
     });
     return parts.length ? parts.join(' / ') : '없음';
   };
@@ -1380,6 +1396,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const createCsvContent = (trades: ReportTrade[]): string => {
+    const priceDigits = getCurrentPriceDigits();
     const header = [
       'no',
       'side',
@@ -1398,15 +1415,15 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       idx + 1,
       trade.side,
       trade.status,
-      trade.entry,
-      trade.exit,
+      formatPriceValue(trade.entry, priceDigits),
+      formatPriceValue(trade.exit, priceDigits),
       trade.pnl,
-      typeof trade.stopLoss === 'number' && Number.isFinite(trade.stopLoss) ? trade.stopLoss : '없음',
+      typeof trade.stopLoss === 'number' && Number.isFinite(trade.stopLoss) ? formatPriceValue(trade.stopLoss, priceDigits) : '없음',
       (() => {
         const values = Array.isArray(trade.takeProfits)
           ? trade.takeProfits.filter((value) => typeof value === 'number' && Number.isFinite(value))
           : [];
-        return values.length ? values.join('|') : '없음';
+        return values.length ? values.map((value) => formatPriceValue(value, priceDigits)).join('|') : '없음';
       })(),
       trade.entryIndex,
       trade.exitIndex,
@@ -1465,12 +1482,13 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const headerPadding = isPhoneWidth ? '8px 5px' : '8px';
     const baseColumns = isPhoneWidth ? '14px 30px 1.18fr 1.45fr 0.95fr 64px' : '32px 64px 1fr 1fr 1.1fr 96px';
     const fullColumns = isPhoneWidth ? '14px 30px 1.18fr 1.45fr 0.95fr 64px 32px' : '32px 64px 1fr 1fr 1.1fr 96px 44px';
+    const priceDigits = getCurrentPriceDigits();
     const rowArrowSvg = '<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;opacity:.95;"><path d="M2 8h9"></path><path d="M8 4l4 4-4 4"></path></svg>';
 
     const headerRow = `<div style="display:grid;grid-template-columns:${baseColumns};gap:${gridGap};align-items:center;padding:${headerPadding};border-bottom:1px solid #2b3d5d;background:#17243a;color:#9fb3d5;font-size:11px;font-weight:700;text-align:center;">
       <div>#</div>
       <div>타입</div>
-      <div>진입 -> 청산</div>
+      <div style="display:inline-flex;align-items:center;justify-content:center;gap:3px;">진입 ${rowArrowSvg} 청산</div>
       <div style="text-align:center;">일시</div>
       <div style="text-align:center;">SL / TP</div>
       <div style="text-align:center;">손익</div>
@@ -1482,10 +1500,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       .map((t, idx) => {
         const pnlColor = t.pnl >= 0 ? '#39d98a' : '#ff7f7f';
         const sideColor = t.side === 'LONG' ? '#39d98a' : '#ff7f7f';
-        const sideText = isPhoneWidth ? (t.side === 'LONG' ? 'BUY' : 'SELL') : t.side;
+        const sideText = t.side === 'LONG' ? 'BUY' : 'SELL';
         const isOpen = t.status === 'OPEN';
         const pnlText = isOpen ? `미실현 ${formatAmount(t.pnl)}` : formatAmount(t.pnl);
-        const levelText = formatTradeLevels(t);
+        const levelText = formatTradeLevels(t, priceDigits);
         const entryTs = formatTradeTsCompact(t.entryTime);
         const exitTs = isOpen ? 'OPEN' : formatTradeTsCompact(t.exitTime);
         return `<div style="display:grid;grid-template-columns:${baseColumns};gap:${gridGap};align-items:center;padding:${rowPadding};border-bottom:1px solid #1f2b44;">
@@ -1493,9 +1511,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
           <div style="color:${sideColor};font-weight:700;text-align:center;font-size:${isPhoneWidth ? '10px' : '12px'};white-space:nowrap;">${sideText}</div>
           <div style="color:#cdd8ee;font-size:12px;line-height:1.12;font-weight:${isPhoneWidth ? '700' : '500'};text-align:center;">
             ${isPhoneWidth
-              ? `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)}</div>
-                 <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${isOpen ? 'OPEN' : formatAmount(t.exit)}</div>`
-              : `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)} ${rowArrowSvg} ${isOpen ? 'OPEN' : formatAmount(t.exit)}</div>`
+              ? `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatPriceValue(t.entry, priceDigits)}</div>
+                 <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${isOpen ? 'OPEN' : formatPriceValue(t.exit, priceDigits)}</div>`
+              : `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatPriceValue(t.entry, priceDigits)} ${rowArrowSvg} ${isOpen ? 'OPEN' : formatPriceValue(t.exit, priceDigits)}</div>`
             }
           </div>
           <div style="color:#aab9d6;font-size:${isPhoneWidth ? '11px' : '13px'};line-height:1.22;text-align:center;">

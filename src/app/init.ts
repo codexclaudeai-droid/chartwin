@@ -2298,6 +2298,16 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         // ignore speech errors
       }
     };
+    const formatSignalNoticePrice = (symbol: string, value: number): string => {
+      if (!Number.isFinite(value)) return '-';
+      const activeChart = getActivePane().chart;
+      const quoteCurrency = activeChart.config.symbol === symbol ? activeChart.config.quoteCurrency : 'USDT';
+      const fractionDigits = getSymbolPricePrecision(symbol, quoteCurrency);
+      return value.toLocaleString('en-US', {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+      });
+    };
     const showSignalNoticePopup = (args: {
       side: 'LONG' | 'SHORT';
       symbol: string;
@@ -2306,7 +2316,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       timezone: string;
     }) => {
       const { side, symbol, entry, timeSec, timezone } = args;
-      const sideLabel = side === 'LONG' ? 'Long' : 'Short';
+      const sideLabel = side === 'LONG' ? 'BUY' : 'SELL';
       const sideText = side === 'LONG' ? '매수신호발생' : '매도신호발생';
       const sideColor = side === 'LONG' ? '#39d98a' : '#ff7f7f';
       const timeText = formatDateWithTimezone(new Date(timeSec * 1000), timezone, {
@@ -2328,7 +2338,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           <div style="color:#8fa2c6;">시그널</div><div style="color:${sideColor};font-weight:700;">${sideLabel}</div>
           <div style="color:#8fa2c6;">시간</div><div>${timeText}</div>
           <div style="color:#8fa2c6;">종목</div><div>${symbol}</div>
-          <div style="color:#8fa2c6;">진입가</div><div>${formatWithComma(entry)}</div>
+          <div style="color:#8fa2c6;">진입가</div><div>${formatSignalNoticePrice(symbol, entry)}</div>
         </div>
       `;
       getSignalNoticeHost().prepend(card);

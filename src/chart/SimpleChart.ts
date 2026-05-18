@@ -3554,7 +3554,7 @@ export class SimpleChart {
       }
       const isLong = signal > 0;
       const boxColor = isLong ? '#1a9e6e' : '#c0392b';
-      const label = isLong ? 'L' : 'S';
+      const label = isLong ? 'B' : 'S';
 
       const phase = (Math.sin(timeMs * 0.008) + 1) / 2;
       const pulseAlpha = isLatest ? (0.65 + phase * 0.35) : 1;
@@ -9693,7 +9693,7 @@ export class SimpleChart {
     this.hoveredSignalCandleIndex = hoverSignal?.candleIndex ?? null;
 
     if (hoverSignal) {
-      const sideText = hoverSignal.signal > 0 ? 'LONG' : 'SHORT';
+      const sideText = hoverSignal.signal > 0 ? 'BUY' : 'SELL';
       const priceText = `진입가 ${formatWithComma(hoverSignal.entryPrice, symbolPriceDigits)}`;
       const text = `${sideText} · ${priceText}`;
       ctx.font = `12px ${CHART_FONT_STACK}`;
