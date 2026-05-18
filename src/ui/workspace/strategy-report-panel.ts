@@ -512,6 +512,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   openSettings: () => void;
   collapse: () => void;
   markStale: () => void;
+  syncContext: (options?: { clearResult?: boolean; stale?: boolean }) => void;
   setTradeViewAlertActive: (active: boolean) => void;
 } {
   const betaVariant = isBetaAppVariant();
@@ -546,6 +547,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let latestMeta = { symbol: '', timeframe: '', strategyName: '전략 없음' };
   let tradeViewAlertActive = false;
   let reportStale = false;
+  let lastRefreshSignature = '';
   const sectionOpen: Record<Exclude<WidgetKey, 'equity'>, boolean> = {
     performance: true,
     tradeAnalysis: true,
@@ -557,6 +559,15 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     buyHold: true,
     excursion: false,
     runupDrawdown: false,
+  };
+
+  const syncLatestMetaFromActiveChart = () => {
+    const chart = getActiveChart();
+    latestMeta = {
+      symbol: chart.config.symbol,
+      timeframe: chart.config.timeframe,
+      strategyName: chart.getActiveStrategyName() ?? '전략 없음',
+    };
   };
 
   const worker = createReportWorker();
@@ -613,9 +624,13 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   headerTitleText.textContent = '전략 리포트';
   const headerStrategyName = document.createElement('span');
   headerStrategyName.style.cssText = 'font-size:10px;color:#6a84a8;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;';
+  const headerStaleBadge = document.createElement('span');
+  headerStaleBadge.style.cssText = 'display:none;height:18px;padding:0 8px;border-radius:999px;border:1px solid #7a5a20;background:#2a2112;color:#f7c948;font-size:10px;font-weight:700;align-items:center;justify-content:center;white-space:nowrap;flex-shrink:0;';
+  headerStaleBadge.textContent = '갱신 필요';
   headerTitle.appendChild(headerTitleIcon);
   headerTitle.appendChild(headerTitleText);
   headerTitle.appendChild(headerStrategyName);
+  headerTitle.appendChild(headerStaleBadge);
   header.appendChild(headerTitle);
   const titleControls = document.createElement('div');
   titleControls.style.cssText = 'display:flex;align-items:center;gap:6px;position:absolute;right:8px;top:50%;transform:translateY(-50%);';
@@ -630,6 +645,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       ? (hovered ? '#3a2c12' : '#2a2112')
       : (hovered ? '#263655' : '#1b2438');
     manualRefreshBtn.style.color = reportStale ? '#f7c948' : (hovered ? '#ffffff' : '#dce4f5');
+    manualRefreshBtn.style.boxShadow = reportStale ? '0 0 0 1px rgba(247,201,72,0.2), 0 0 12px rgba(247,201,72,0.12)' : 'none';
   };
   manualRefreshBtn.addEventListener('mouseenter', () => applyRefreshButtonStyle(true));
   manualRefreshBtn.addEventListener('mouseleave', () => applyRefreshButtonStyle(false));
@@ -1136,7 +1152,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const renderKpi = () => {
     const r = latestResult;
     if (!r) {
-      kpiRow.innerHTML = '<div style="grid-column:1 / -1;color:#8ea0c2;font-size:12px;">리포트 계산 중...</div>';
+      if (reportStale) {
+        kpiRow.innerHTML = '<div style="grid-column:1 / -1;padding:12px;border:1px solid #7a5a20;background:#2a2112;border-radius:8px;color:#f7c948;font-size:12px;font-weight:700;">리포트가 아직 계산되지 않았습니다. 새로고침 버튼을 눌러 최신 KPI를 계산하세요.</div>';
+      } else {
+        kpiRow.innerHTML = '<div style="grid-column:1 / -1;color:#8ea0c2;font-size:12px;">리포트가 아직 없습니다.</div>';
+      }
       return;
     }
     const panelWidth = Math.max(320, panel.clientWidth);
@@ -1148,8 +1168,15 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const kpiLabelFs = isMobileKpi ? '10px' : '11px';
     const kpiValueFs = isMobileKpi ? '12px' : '14px';
     const kpiTitleMb = isMobileKpi ? '6px' : '8px';
+    const staleBanner = reportStale
+      ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:${kpiTitleMb};padding:${isMobileKpi ? '7px 8px' : '8px 10px'};border:1px solid #7a5a20;border-radius:8px;background:#2a2112;color:#f7c948;font-size:${kpiLabelFs};font-weight:700;">
+          <span>리포트가 최신 시그널 기준으로 아직 갱신되지 않았습니다.</span>
+          <span style="color:#ffe29a;white-space:nowrap;">새로고침 필요</span>
+        </div>`
+      : '';
     kpiRow.innerHTML = `
       <div style="grid-column:1 / -1;padding:${kpiPad};border:1px solid #2a3a58;background:#141f33;border-radius:8px;">
+        ${staleBanner}
         <div style="font-size:12px;color:#c9d6ee;font-weight:700;margin-bottom:${kpiTitleMb};">핵심 성과 요약</div>
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:${kpiGap};">
           <div>
@@ -1669,6 +1696,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       headerStrategyName.textContent = sName;
       headerStrategyName.style.display = sName ? '' : 'none';
     }
+    headerStaleBadge.style.display = reportStale ? 'inline-flex' : 'none';
 
     // 모바일 normal/collapsed 모드에서 탭우측 일부 버튼 숨김
     const hideMobileTabBtns = isMobileWidth && panelMode !== 'expanded';
@@ -1846,15 +1874,91 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     renderAll();
   });
 
+  const syncContext = (options: { clearResult?: boolean; stale?: boolean } = {}) => {
+    syncLatestMetaFromActiveChart();
+    if (options.clearResult) {
+      latestResult = null;
+      timelineTimes = [];
+      lastAppliedRequestId = nextRequestId;
+    }
+    if (typeof options.stale === 'boolean') {
+      reportStale = options.stale;
+    }
+    if (panelVisible) renderAll();
+  };
+
+  const buildCurrentReportSignature = (): string => {
+    const chart = getActiveChart();
+    const candles = chart.getCandles();
+    const signals = chart.getStrategySignalSeries().map((s) => Number(s || 0));
+    const closes = candles.map((c) => Number(c.close));
+    const times = candles.map((c) => Number(c.time ?? NaN));
+    const nAll = Math.min(closes.length, signals.length > 0 ? signals.length : closes.length);
+    let start = 0;
+    let end = nAll;
+
+    if (periodStartSec != null || periodEndSec != null) {
+      while (start < nAll) {
+        const ts = times[start];
+        if (!Number.isFinite(ts) || (periodStartSec != null && ts < periodStartSec)) {
+          start += 1;
+          continue;
+        }
+        break;
+      }
+      while (end > start) {
+        const ts = times[end - 1];
+        if (!Number.isFinite(ts) || (periodEndSec != null && ts > periodEndSec)) {
+          end -= 1;
+          continue;
+        }
+        break;
+      }
+    }
+
+    if (periodBars > 0 && periodBars < end - start) start = end - periodBars;
+
+    let signalCount = 0;
+    let signalSum = 0;
+    let weightedSignalSum = 0;
+    for (let i = start; i < end; i += 1) {
+      const sig = Number(signals[i] || 0);
+      if (!sig) continue;
+      signalCount += 1;
+      signalSum += sig;
+      weightedSignalSum += sig * (i - start + 1);
+    }
+
+    const lastIndex = end > start ? end - 1 : -1;
+    const lastTime = lastIndex >= 0 ? Number(times[lastIndex] ?? NaN) : NaN;
+    const lastClose = lastIndex >= 0 ? Number(closes[lastIndex] ?? NaN) : NaN;
+    return [
+      chart.config.symbol,
+      chart.config.timeframe,
+      chart.getActiveStrategyName() ?? '전략 없음',
+      sideFilter,
+      periodBars,
+      periodStartSec ?? '',
+      periodEndSec ?? '',
+      feeBps,
+      slippageBps,
+      initialCapital,
+      leverage,
+      start,
+      end,
+      signalCount,
+      signalSum,
+      weightedSignalSum,
+      Number.isFinite(lastTime) ? lastTime : 'NaN',
+      Number.isFinite(lastClose) ? lastClose.toFixed(8) : 'NaN',
+    ].join('|');
+  };
+
   const refresh = () => {
     if (!panelVisible || panelMode === 'collapsed') return;
     reportStale = false;
     const chart = getActiveChart();
-    latestMeta = {
-      symbol: chart.config.symbol,
-      timeframe: chart.config.timeframe,
-      strategyName: chart.getActiveStrategyName() ?? '전략 없음',
-    };
+    syncLatestMetaFromActiveChart();
 
     const candles = chart.getCandles();
     const closes = candles.map((c) => Number(c.close));
@@ -1896,6 +2000,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
     timelineTimes = slicedTimes.map((t) => (Number.isFinite(t) ? t : NaN));
     netProfitPctBase = Number.isFinite(initialCapital) && initialCapital > 0 ? initialCapital : null;
+    lastRefreshSignature = buildCurrentReportSignature();
 
     const override = chart.buildStrategyReport?.({
       feeBps,
@@ -1934,6 +2039,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
   const markStale = () => {
     if (reportStale) return;
+    const nextSignature = buildCurrentReportSignature();
+    if (nextSignature === lastRefreshSignature) return;
     reportStale = true;
     if (panelVisible) renderAll();
   };
@@ -1956,7 +2063,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
         periodEndSec = nowSec;
       }
       closeMenus();
-      refresh();
+      markStale();
     });
   });
 
@@ -1987,7 +2094,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     periodEndSec = endSec;
     periodBars = 0;
     closeMenus();
-    refresh();
+    markStale();
   });
 
   periodResetBtn.addEventListener('click', () => {
@@ -1997,7 +2104,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     periodStartInput.value = '';
     periodEndInput.value = '';
     closeMenus();
-    refresh();
+    markStale();
   });
 
   updateWidgetMenu();
@@ -2062,25 +2169,25 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   });
   sideSelect.addEventListener('change', () => {
     sideFilter = (sideSelect.value as SideFilter) ?? 'all';
-    refresh();
+    markStale();
   });
   feeInput.addEventListener('change', () => {
     feeBps = Math.max(0, Number(feeInput.value || 0));
-    refresh();
+    markStale();
   });
   slipInput.addEventListener('change', () => {
     slippageBps = Math.max(0, Number(slipInput.value || 0));
-    refresh();
+    markStale();
   });
   initialCapitalInput.addEventListener('change', () => {
     initialCapital = Math.max(1, Number(initialCapitalInput.value || 10_000));
     netProfitPctBase = initialCapital;
-    refresh();
+    markStale();
   });
   leverageInput.addEventListener('change', () => {
     leverage = Math.max(1, Math.min(1000, Math.floor(Number(leverageInput.value || 1))));
     leverageInput.value = String(leverage);
-    refresh();
+    markStale();
   });
 
   document.addEventListener('click', () => closeMenus());
@@ -2102,7 +2209,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       applyNormalHeight(normalHeight);
     }
     applyPanelMode(panelMode);
-    refresh();
+    syncContext();
   };
 
   window.addEventListener('resize', () => {
@@ -2115,7 +2222,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     renderAll();
   });
 
-  refresh();
+  syncContext({ clearResult: true, stale: true });
   onHeightChange?.(normalHeight);
 
   return {
@@ -2152,6 +2259,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     },
     collapse: () => applyPanelMode('collapsed'),
     markStale,
+    syncContext,
     setTradeViewAlertActive: (active: boolean) => {
       tradeViewAlertActive = Boolean(active);
       if (activeTab === 'trades') renderTradesTable();

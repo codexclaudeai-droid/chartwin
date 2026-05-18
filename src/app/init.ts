@@ -639,7 +639,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   };
   let monitorMode: 'single' | 'multi' = 'single';
   let refreshTopControlIcons = () => {};
-  let refreshStrategyReport = () => {};
+  let refreshStrategyReport = (_paneChanged = false) => {};
+  let forceRefreshStrategyReport = () => {};
   let markStrategyReportStale = () => {};
   let refreshStrategyReportOnNewSignal = (_paneId: number) => {};
   let setTopBarSignalNotification = (_count: number) => {};
@@ -1494,6 +1495,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           const hasStoredTarget = restoreCurrentChartDrawings({ clearWhenMissing: false });
           if (hasStoredTarget) {
             persistCurrentChartDrawings();
+            forceRefreshStrategyReport();
             return;
           }
           const remapped = remapTemporalDrawingSnapshot(beforeSnapshot, rawCandles);
@@ -1501,6 +1503,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           chart.setDrawingsVisible(remapped.drawingsVisible);
           persistCurrentChartDrawings();
           refreshChartUi();
+          forceRefreshStrategyReport();
         });
       },
       onIndicatorClick: () => openIndicatorModal(chart, refreshChartUi),
@@ -1603,13 +1606,15 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   });
 
   const setActivePane = (paneId: number) => {
+    const prevActivePaneId = paneState.activePaneId;
+    if (prevActivePaneId === paneId) return;
     paneManager.setActivePane(paneId);
     applyActivePaneOutline({
       paneSlots,
       currentVisiblePaneIds: paneState.currentVisiblePaneIds,
       activePaneId: paneState.activePaneId,
     });
-    refreshStrategyReport();
+    refreshStrategyReport(true);
   };
 
   const renderPaneVisibility = () => {
@@ -2266,6 +2271,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         }
       },
     });
+    forceRefreshStrategyReport = () => strategyReport.refresh();
     const strategyReportOpenByPane = new Map<number, boolean>();
     const prevStrategyActiveByPane = new Map<number, boolean>();
     const announcedSignalKeys = new Set<string>();
@@ -2497,7 +2503,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       }
       strategyReportOpenByPane.set(paneId, true);
       strategyReport.setVisible(true);
-      strategyReport.refresh();
+      strategyReport.syncContext({ stale: true });
       strategyReport.openTradesTab();
       acknowledgedSignalCountByPane.set(paneId, getSignalEventCountByPane(paneId));
       refreshSignalNotification();
@@ -2521,6 +2527,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       saveTimeframe(nextTimeframe);
       void pane.reloadLiveData().finally(() => {
         applyRangeToChart(pane.chart, label);
+        forceRefreshStrategyReport();
       });
       return;
     }
@@ -2568,7 +2575,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const pane = ensurePane(paneId);
       openStrategyModal(pane.chart, pane.refreshChartUi, { mode: 'frontend' });
     });
-    refreshStrategyReport = () => {
+    refreshStrategyReport = (paneChanged = false) => {
       const activePane = getActivePane();
       const activePaneId = paneState.activePaneId;
       const hasActiveStrategy = Boolean(activePane.chart.getActiveStrategyName());
@@ -2587,7 +2594,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           strategyReport.setVisible(true);
         }
         prevStrategyActiveByPane.set(activePaneId, true);
-        strategyReport.refresh();
+        strategyReport.syncContext({ clearResult: paneChanged, stale: true });
       }
       refreshSignalNotification();
     };
@@ -2604,7 +2611,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (strategyReportOpenByPane.get(paneId) !== true) return;
       const activePane = getActivePane();
       if (!activePane.chart.getActiveStrategyName()) return;
-      strategyReport.refresh();
+      strategyReport.markStale();
       refreshSignalNotification();
     };
     startManagedInterval(() => {
