@@ -46,9 +46,12 @@ type MainTab = 'metrics' | 'trades';
 
 type ReportTrade = {
   side: 'LONG' | 'SHORT';
+  status: 'OPEN' | 'CLOSED';
   entry: number;
   exit: number;
   pnl: number;
+  stopLoss?: number | null;
+  takeProfits?: number[];
   entryIndex: number;
   exitIndex: number;
   entryTime: number | null;
@@ -112,6 +115,8 @@ self.onmessage = function (event) {
   var grossLoss = 0;
   var tradeCount = 0;
   var absExcursion = 0;
+  var signalCount = 0;
+  var openPositionCount = 0;
 
   var nAll = Math.min(closes.length, signals.length || closes.length);
   var start = 0;
@@ -199,9 +204,12 @@ self.onmessage = function (event) {
           }
           trades.push({
             side: 'SHORT',
+            status: 'CLOSED',
             entry: entry,
             exit: close,
             pnl: pnlShort,
+            stopLoss: null,
+            takeProfits: [],
             entryIndex: entryIndex,
             exitIndex: i,
             entryTime: entryTime,
@@ -214,6 +222,7 @@ self.onmessage = function (event) {
         entry = close;
         entryIndex = i;
         entryTime = Number.isFinite(Number(times[i])) ? Number(times[i]) : null;
+        if (sideFilter === 'all' || sideFilter === 'long') signalCount += 1;
       }
     } else if (sig === -1) {
       if (pos === 1) {
@@ -233,9 +242,12 @@ self.onmessage = function (event) {
           }
           trades.push({
             side: 'LONG',
+            status: 'CLOSED',
             entry: entry,
             exit: close,
             pnl: pnlLong,
+            stopLoss: null,
+            takeProfits: [],
             entryIndex: entryIndex,
             exitIndex: i,
             entryTime: entryTime,
@@ -248,6 +260,7 @@ self.onmessage = function (event) {
         entry = close;
         entryIndex = i;
         entryTime = Number.isFinite(Number(times[i])) ? Number(times[i]) : null;
+        if (sideFilter === 'all' || sideFilter === 'short') signalCount += 1;
       }
     }
 
@@ -270,6 +283,30 @@ self.onmessage = function (event) {
   var winRate = tradeCount > 0 ? (wins / tradeCount) * 100 : 0;
   var profitFactor = grossLoss > 0 ? (grossProfit / grossLoss) : (grossProfit > 0 ? 999 : 0);
   var averagePnl = tradeCount > 0 ? (cum / tradeCount) : 0;
+  if (pos !== 0 && entryIndex >= start) {
+    var lastIndex = Math.max(start, end - 1);
+    var markPrice = Number(closes[lastIndex]);
+    if (!Number.isFinite(markPrice)) markPrice = entry;
+    var openPnl = pos === 1 ? markPrice - entry : entry - markPrice;
+    openPnl -= (entry + markPrice) * ((feeBps + slippageBps) / 10000);
+    var openSide = pos === 1 ? 'LONG' : 'SHORT';
+    if (sideFilter === 'all' || sideFilter === openSide.toLowerCase()) {
+      openPositionCount = 1;
+      trades.push({
+        side: openSide,
+        status: 'OPEN',
+        entry: entry,
+        exit: markPrice,
+        pnl: openPnl,
+        stopLoss: null,
+        takeProfits: [],
+        entryIndex: entryIndex,
+        exitIndex: lastIndex,
+        entryTime: entryTime,
+        exitTime: null
+      });
+    }
+  }
 
   self.postMessage({
     requestId: requestId,
@@ -288,6 +325,9 @@ self.onmessage = function (event) {
       grossProfit: grossProfit,
       grossLoss: grossLoss,
       averagePnl: averagePnl,
+      signalCount: signalCount,
+      closedTradeCount: tradeCount,
+      openPositionCount: openPositionCount,
       trades: trades
     }
   });
@@ -1307,6 +1347,18 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     return `${yyyy}.${mm}.${dd} ${hh}:${mi}`;
   };
 
+  const formatTradeLevels = (trade: ReportTrade): string => {
+    const parts: string[] = [];
+    if (typeof trade.stopLoss === 'number' && Number.isFinite(trade.stopLoss)) {
+      parts.push(`SL ${formatAmount(trade.stopLoss)}`);
+    }
+    const profits = Array.isArray(trade.takeProfits) ? trade.takeProfits : [];
+    profits.forEach((value, idx) => {
+      if (typeof value === 'number' && Number.isFinite(value)) parts.push(`TP${idx + 1} ${formatAmount(value)}`);
+    });
+    return parts.length ? parts.join(' / ') : '없음';
+  };
+
   const escapeCsvCell = (value: string | number): string => {
     const text = String(value ?? '');
     if (text.includes('"') || text.includes(',') || text.includes('\n')) {
@@ -1319,9 +1371,12 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const header = [
       'no',
       'side',
+      'status',
       'entry',
       'exit',
       'pnl',
+      'stop_loss',
+      'take_profits',
       'entry_index',
       'exit_index',
       'entry_time',
@@ -1330,9 +1385,17 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const rows = trades.map((trade, idx) => [
       idx + 1,
       trade.side,
+      trade.status,
       trade.entry,
       trade.exit,
       trade.pnl,
+      typeof trade.stopLoss === 'number' && Number.isFinite(trade.stopLoss) ? trade.stopLoss : '없음',
+      (() => {
+        const values = Array.isArray(trade.takeProfits)
+          ? trade.takeProfits.filter((value) => typeof value === 'number' && Number.isFinite(value))
+          : [];
+        return values.length ? values.join('|') : '없음';
+      })(),
       trade.entryIndex,
       trade.exitIndex,
       formatTradeTs(trade.entryTime),
@@ -1381,15 +1444,17 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     }
     const panelWidth = Math.max(320, panel.clientWidth);
     const isPhoneWidth = panelWidth < 760;
-    const baseColumns = isPhoneWidth ? '20px 34px 1.15fr 2fr 62px' : '32px 56px 1fr 1fr 86px';
-    const fullColumns = isPhoneWidth ? '20px 34px 1.15fr 2fr 62px 52px' : '32px 56px 1fr 1fr 86px 88px';
+    const baseColumns = isPhoneWidth ? '20px 42px 40px 1.05fr 1.55fr 1.35fr 72px' : '32px 64px 56px 1fr 1fr 1.1fr 96px';
+    const fullColumns = isPhoneWidth ? '20px 42px 40px 1.05fr 1.55fr 1.35fr 72px 52px' : '32px 64px 56px 1fr 1fr 1.1fr 96px 88px';
     const rowArrowSvg = '<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;opacity:.95;"><path d="M2 8h9"></path><path d="M8 4l4 4-4 4"></path></svg>';
 
     const headerRow = `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:8px;border-bottom:1px solid #2b3d5d;background:#17243a;color:#9fb3d5;font-size:11px;font-weight:700;text-align:center;">
       <div>#</div>
       <div>타입</div>
+      <div>상태</div>
       <div>진입 -> 청산</div>
       <div style="text-align:center;">일시</div>
+      <div style="text-align:center;">SL / TP</div>
       <div style="text-align:center;">손익</div>
     </div>`;
 
@@ -1399,16 +1464,22 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       .map((t, idx) => {
         const pnlColor = t.pnl >= 0 ? '#39d98a' : '#ff7f7f';
         const sideColor = t.side === 'LONG' ? '#39d98a' : '#ff7f7f';
+        const isOpen = t.status === 'OPEN';
+        const statusText = isOpen ? 'OPEN' : 'CLOSED';
+        const statusColor = isOpen ? '#f7c948' : '#8ab4ff';
+        const pnlText = isOpen ? `미실현 ${formatAmount(t.pnl)}` : formatAmount(t.pnl);
+        const levelText = formatTradeLevels(t);
         const entryTs = formatTradeTsCompact(t.entryTime);
-        const exitTs = formatTradeTsCompact(t.exitTime);
+        const exitTs = isOpen ? 'OPEN' : formatTradeTsCompact(t.exitTime);
         return `<div style="display:grid;grid-template-columns:${baseColumns};gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid #1f2b44;">
           <div style="color:#8aa0c5;text-align:center;">${idx + 1}</div>
           <div style="color:${sideColor};font-weight:700;text-align:center;font-size:${isPhoneWidth ? '10px' : '12px'};white-space:nowrap;letter-spacing:${isPhoneWidth ? '-0.1px' : '0'};">${t.side}</div>
+          <div style="color:${statusColor};font-weight:700;text-align:center;font-size:${isPhoneWidth ? '9px' : '11px'};white-space:nowrap;">${statusText}</div>
           <div style="color:#cdd8ee;font-size:12px;line-height:1.12;font-weight:${isPhoneWidth ? '700' : '500'};text-align:center;">
             ${isPhoneWidth
               ? `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)}</div>
-                 <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${formatAmount(t.exit)}</div>`
-              : `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)} ${rowArrowSvg} ${formatAmount(t.exit)}</div>`
+                 <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rowArrowSvg}${isOpen ? 'OPEN' : formatAmount(t.exit)}</div>`
+              : `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${formatAmount(t.entry)} ${rowArrowSvg} ${isOpen ? 'OPEN' : formatAmount(t.exit)}</div>`
             }
           </div>
           <div style="color:#aab9d6;font-size:${isPhoneWidth ? '11px' : '13px'};line-height:1.22;text-align:center;">
@@ -1418,7 +1489,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
               : `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${entryTs} ${rowArrowSvg} ${exitTs}</div>`
             }
           </div>
-          <div style="color:${pnlColor};font-weight:700;text-align:center;font-size:12px;line-height:1.12;">${formatAmount(t.pnl)}</div>
+          <div style="color:#aab9d6;font-size:${isPhoneWidth ? '10px' : '11px'};line-height:1.18;text-align:center;white-space:normal;word-break:keep-all;">${levelText}</div>
+          <div style="color:${pnlColor};font-weight:700;text-align:center;font-size:${isPhoneWidth ? '11px' : '12px'};line-height:1.12;">${pnlText}</div>
         </div>`;
       })
       .join('');
@@ -1947,7 +2019,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       const xIdx = 30;
       const xSide = 70;
       const xPrice = 120;
-      const xTime = 320;
+      const xTime = 285;
+      const xLevels = 470;
       const xPnl = canW - padX;
 
       let y = titleH;
@@ -1961,11 +2034,13 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       offCtx.textAlign = 'left';
       offCtx.fillText('가격 (진입 → 청산)', xPrice, y + headerH / 2);
       offCtx.fillText('일시 (진입 → 청산)', xTime, y + headerH / 2);
+      offCtx.fillText('SL / TP', xLevels, y + headerH / 2);
       offCtx.textAlign = 'right';
       offCtx.fillText('손익', xPnl, y + headerH / 2);
       y += headerH;
 
       trades.forEach((t, idx) => {
+        const isOpen = t.status === 'OPEN';
         offCtx.fillStyle = idx % 2 === 0 ? '#0f1a2d' : '#111d30';
         offCtx.fillRect(0, y, canW, rowH);
         const midY = y + rowH / 2;
@@ -1983,13 +2058,14 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
         offCtx.fillStyle = '#cdd8ee';
         offCtx.font = '12px "Segoe UI",Arial,sans-serif';
         offCtx.textAlign = 'left';
-        offCtx.fillText(`${formatAmount(t.entry)} → ${formatAmount(t.exit)}`, xPrice, midY);
-        offCtx.fillText(`${formatTradeTsCompact(t.entryTime)} → ${formatTradeTsCompact(t.exitTime)}`, xTime, midY);
+        offCtx.fillText(`${formatAmount(t.entry)} → ${isOpen ? 'OPEN' : formatAmount(t.exit)}`, xPrice, midY);
+        offCtx.fillText(`${formatTradeTsCompact(t.entryTime)} → ${isOpen ? 'OPEN' : formatTradeTsCompact(t.exitTime)}`, xTime, midY);
+        offCtx.fillText(formatTradeLevels(t), xLevels, midY);
 
         offCtx.fillStyle = t.pnl >= 0 ? '#39d98a' : '#ff7f7f';
         offCtx.font = 'bold 12px "Segoe UI",Arial,sans-serif';
         offCtx.textAlign = 'right';
-        offCtx.fillText(formatAmount(t.pnl), xPnl, midY);
+        offCtx.fillText(isOpen ? `미실현 ${formatAmount(t.pnl)}` : formatAmount(t.pnl), xPnl, midY);
 
         y += rowH;
       });

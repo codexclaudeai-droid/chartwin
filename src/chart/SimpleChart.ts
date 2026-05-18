@@ -163,9 +163,12 @@ type StrategyReportArgs = {
 
 type StrategyReportTrade = {
   side: 'LONG' | 'SHORT';
+  status: 'OPEN' | 'CLOSED';
   entry: number;
   exit: number;
   pnl: number;
+  stopLoss?: number | null;
+  takeProfits?: number[];
   entryIndex: number;
   exitIndex: number;
   entryTime: number | null;
@@ -2548,6 +2551,290 @@ export class SimpleChart {
     });
   }
 
+  private resolveStrategyReportRange(args: StrategyReportArgs): { start: number; end: number } | null {
+    const nAll = this.data.length;
+    let start = 0;
+    let end = nAll;
+    if (args.rangeStartSec != null || args.rangeEndSec != null) {
+      while (start < nAll) {
+        const ts = Number(this.data[start]?.time);
+        if (!Number.isFinite(ts) || (args.rangeStartSec != null && ts < args.rangeStartSec)) {
+          start += 1;
+          continue;
+        }
+        break;
+      }
+      while (end > start) {
+        const ts = Number(this.data[end - 1]?.time);
+        if (!Number.isFinite(ts) || (args.rangeEndSec != null && ts > args.rangeEndSec)) {
+          end -= 1;
+          continue;
+        }
+        break;
+      }
+    }
+    if (args.periodBars > 0 && args.periodBars < end - start) start = end - args.periodBars;
+    if (end <= start) return null;
+    return { start, end };
+  }
+
+  private buildSummaryReport(args: StrategyReportArgs, trades: StrategyReportTrade[], signalCount: number, openPositionCount: number, start: number, end: number): StrategyReportResult {
+    const equity: number[] = [];
+    const buyHold: number[] = [];
+    const excursion: number[] = [];
+    const runup: number[] = [];
+    const drawdown: number[] = [];
+    let cum = 0;
+    let peak = 0;
+    let trough = 0;
+    let maxDrawdown = 0;
+    let maxDrawdownPct = 0;
+    let cursor = 0;
+    let absExcursion = 0;
+    const closedTrades = trades
+      .filter((trade) => trade.status === 'CLOSED')
+      .slice()
+      .sort((a, b) => a.exitIndex - b.exitIndex);
+    const baseClose = Number(this.data[start]?.close) || 1;
+
+    for (let i = start; i < end; i += 1) {
+      while (cursor < closedTrades.length && closedTrades[cursor].exitIndex <= i) {
+        cum += closedTrades[cursor].pnl;
+        absExcursion += Math.abs(closedTrades[cursor].pnl);
+        cursor += 1;
+      }
+      if (cum > peak) peak = cum;
+      if (cum < trough) trough = cum;
+      const dd = peak - cum;
+      if (dd > maxDrawdown) maxDrawdown = dd;
+      if (peak > 0) maxDrawdownPct = Math.max(maxDrawdownPct, (dd / peak) * 100);
+      equity.push(cum);
+      buyHold.push((Number(this.data[i]?.close) || baseClose) - baseClose);
+      excursion.push(absExcursion);
+      runup.push(Math.max(0, cum - trough));
+      drawdown.push(Math.max(0, peak - cum));
+    }
+
+    let wins = 0;
+    let grossProfit = 0;
+    let grossLoss = 0;
+    closedTrades.forEach((trade) => {
+      if (trade.pnl > 0) {
+        wins += 1;
+        grossProfit += trade.pnl;
+      } else if (trade.pnl < 0) {
+        grossLoss += Math.abs(trade.pnl);
+      }
+    });
+    const tradeCount = closedTrades.length;
+    return {
+      equity,
+      buyHold,
+      excursion,
+      runup,
+      drawdown,
+      netProfit: cum,
+      winRate: tradeCount > 0 ? (wins / tradeCount) * 100 : 0,
+      maxDrawdown,
+      maxDrawdownPct,
+      profitFactor: grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? 999 : 0),
+      tradeCount,
+      grossProfit,
+      grossLoss,
+      averagePnl: tradeCount > 0 ? cum / tradeCount : 0,
+      signalCount,
+      closedTradeCount: tradeCount,
+      openPositionCount,
+      trades: trades.slice().sort((a, b) => a.entryIndex - b.entryIndex).slice(-350),
+    };
+  }
+
+  private buildGridMartingaleReport(args: StrategyReportArgs): StrategyReportResult | null {
+    if (this.activeStrategyId !== 'strategy_js_grid_martingale' || !this.data.length || !this.strategySignals.length) return null;
+    const range = this.resolveStrategyReportRange(args);
+    if (!range) return null;
+    const { start, end } = range;
+    const feeRate = (args.feeBps + args.slippageBps) / 10000;
+    const trades: StrategyReportTrade[] = [];
+    const openLegs: Array<{ entry: number; entryIndex: number; entryTime: number | null }> = [];
+    let signalCount = 0;
+
+    for (let i = start; i < end; i += 1) {
+      const candle = this.data[i];
+      if (!candle) continue;
+      const signal = this.strategySignals[i] ?? 0;
+      if (signal > 0) {
+        signalCount += 1;
+        openLegs.push({
+          entry: candle.close,
+          entryIndex: i,
+          entryTime: Number.isFinite(Number(candle.time)) ? Number(candle.time) : null,
+        });
+      } else if (signal < 0 && openLegs.length > 0) {
+        const exit = candle.close;
+        const exitTime = Number.isFinite(Number(candle.time)) ? Number(candle.time) : null;
+        while (openLegs.length > 0) {
+          const leg = openLegs.shift()!;
+          const pnl = (exit - leg.entry) - (leg.entry + exit) * feeRate;
+          if (args.sideFilter === 'all' || args.sideFilter === 'long') {
+            trades.push({
+              side: 'LONG',
+              status: 'CLOSED',
+              entry: leg.entry,
+              exit,
+              pnl,
+              stopLoss: null,
+              takeProfits: [],
+              entryIndex: leg.entryIndex,
+              exitIndex: i,
+              entryTime: leg.entryTime,
+              exitTime,
+            });
+          }
+        }
+      }
+    }
+
+    const lastIndex = Math.max(start, end - 1);
+    const lastCandle = this.data[lastIndex];
+    if (lastCandle && (args.sideFilter === 'all' || args.sideFilter === 'long')) {
+      openLegs.forEach((leg) => {
+        const mark = lastCandle.close;
+        trades.push({
+          side: 'LONG',
+          status: 'OPEN',
+          entry: leg.entry,
+          exit: mark,
+          pnl: (mark - leg.entry) - (leg.entry + mark) * feeRate,
+          stopLoss: null,
+          takeProfits: [],
+          entryIndex: leg.entryIndex,
+          exitIndex: lastIndex,
+          entryTime: leg.entryTime,
+          exitTime: null,
+        });
+      });
+    }
+    const openPositionCount = (args.sideFilter === 'all' || args.sideFilter === 'long') ? openLegs.length : 0;
+    return this.buildSummaryReport(args, trades, signalCount, openPositionCount, start, end);
+  }
+
+  private buildSrouterReport(args: StrategyReportArgs): StrategyReportResult | null {
+    if (this.activeStrategyId !== 'strategy_js_grid_atr_bnf_srouter_v1' || !this.data.length || !this.strategySignals.length) return null;
+    const range = this.resolveStrategyReportRange(args);
+    if (!range) return null;
+    const { start, end } = range;
+    const feeRate = (args.feeBps + args.slippageBps) / 10000;
+    const trades: StrategyReportTrade[] = [];
+    const longLegs: Array<{ entry: number; entryIndex: number; entryTime: number | null }> = [];
+    let shortLeg: { entry: number; entryIndex: number; entryTime: number | null } | null = null;
+    let signalCount = 0;
+
+    for (let i = start; i < end; i += 1) {
+      const candle = this.data[i];
+      if (!candle) continue;
+      const signal = this.strategySignals[i] ?? 0;
+      if (signal > 0) {
+        if (shortLeg) {
+          if (args.sideFilter === 'all' || args.sideFilter === 'short') {
+            trades.push({
+              side: 'SHORT',
+              status: 'CLOSED',
+              entry: shortLeg.entry,
+              exit: candle.close,
+              pnl: (shortLeg.entry - candle.close) - (shortLeg.entry + candle.close) * feeRate,
+              stopLoss: null,
+              takeProfits: [],
+              entryIndex: shortLeg.entryIndex,
+              exitIndex: i,
+              entryTime: shortLeg.entryTime,
+              exitTime: Number.isFinite(Number(candle.time)) ? Number(candle.time) : null,
+            });
+          }
+          shortLeg = null;
+        } else {
+          signalCount += 1;
+          longLegs.push({
+            entry: candle.close,
+            entryIndex: i,
+            entryTime: Number.isFinite(Number(candle.time)) ? Number(candle.time) : null,
+          });
+        }
+      } else if (signal < 0) {
+        if (longLegs.length > 0) {
+          const exitTime = Number.isFinite(Number(candle.time)) ? Number(candle.time) : null;
+          while (longLegs.length > 0) {
+            const leg = longLegs.shift()!;
+            if (args.sideFilter === 'all' || args.sideFilter === 'long') {
+              trades.push({
+                side: 'LONG',
+                status: 'CLOSED',
+                entry: leg.entry,
+                exit: candle.close,
+                pnl: (candle.close - leg.entry) - (leg.entry + candle.close) * feeRate,
+                stopLoss: null,
+                takeProfits: [],
+                entryIndex: leg.entryIndex,
+                exitIndex: i,
+                entryTime: leg.entryTime,
+                exitTime,
+              });
+            }
+          }
+        } else if (!shortLeg) {
+          signalCount += 1;
+          shortLeg = {
+            entry: candle.close,
+            entryIndex: i,
+            entryTime: Number.isFinite(Number(candle.time)) ? Number(candle.time) : null,
+          };
+        }
+      }
+    }
+
+    const lastIndex = Math.max(start, end - 1);
+    const lastCandle = this.data[lastIndex];
+    if (lastCandle) {
+      if (args.sideFilter === 'all' || args.sideFilter === 'long') {
+        longLegs.forEach((leg) => {
+          trades.push({
+            side: 'LONG',
+            status: 'OPEN',
+            entry: leg.entry,
+            exit: lastCandle.close,
+            pnl: (lastCandle.close - leg.entry) - (leg.entry + lastCandle.close) * feeRate,
+            stopLoss: null,
+            takeProfits: [],
+            entryIndex: leg.entryIndex,
+            exitIndex: lastIndex,
+            entryTime: leg.entryTime,
+            exitTime: null,
+          });
+        });
+      }
+      if (shortLeg && (args.sideFilter === 'all' || args.sideFilter === 'short')) {
+        trades.push({
+          side: 'SHORT',
+          status: 'OPEN',
+          entry: shortLeg.entry,
+          exit: lastCandle.close,
+          pnl: (shortLeg.entry - lastCandle.close) - (shortLeg.entry + lastCandle.close) * feeRate,
+          stopLoss: null,
+          takeProfits: [],
+          entryIndex: shortLeg.entryIndex,
+          exitIndex: lastIndex,
+          entryTime: shortLeg.entryTime,
+          exitTime: null,
+        });
+      }
+    }
+
+    const openPositionCount =
+      ((args.sideFilter === 'all' || args.sideFilter === 'long') ? longLegs.length : 0)
+      + ((shortLeg && (args.sideFilter === 'all' || args.sideFilter === 'short')) ? 1 : 0);
+    return this.buildSummaryReport(args, trades, signalCount, openPositionCount, start, end);
+  }
+
   private buildBollingerRiskManagedReport(args: StrategyReportArgs): StrategyReportResult | null {
     if (this.activeStrategyId !== 'strategy_pine_bbands_directed' || !this.data.length || !this.strategySignals.length) {
       return null;
@@ -2620,9 +2907,12 @@ export class SimpleChart {
       if (includeTrade(side)) {
         trades.push({
           side,
+          status: 'CLOSED',
           entry,
           exit,
           pnl: net,
+          stopLoss: stop,
+          takeProfits: [tp1, tp2],
           entryIndex,
           exitIndex,
           entryTime,
@@ -2785,6 +3075,12 @@ export class SimpleChart {
   }
 
   public buildStrategyReport(args: StrategyReportArgs): StrategyReportResult | null {
+    const gridMartingale = this.buildGridMartingaleReport(args);
+    if (gridMartingale) return gridMartingale;
+
+    const srouter = this.buildSrouterReport(args);
+    if (srouter) return srouter;
+
     if (this.activeStrategyId === 'strategy_pine_bbands_directed' && this.bollingerRiskConfig.enabled) {
       return this.buildBollingerRiskManagedReport(args);
     }
@@ -2882,9 +3178,12 @@ export class SimpleChart {
       if (includeTrade(side)) {
         trades.push({
           side,
+          status: 'CLOSED',
           entry: activeSignal.price,
           exit: exitPrice,
           pnl: net,
+          stopLoss: activeSignal.sl,
+          takeProfits: [activeSignal.tp1, activeSignal.tp2],
           entryIndex,
           exitIndex,
           entryTime,
