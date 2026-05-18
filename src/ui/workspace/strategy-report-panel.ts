@@ -461,11 +461,11 @@ const icon = {
   calendar: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,0A11.972,11.972,0,0,0,4,3.073V1A1,1,0,0,0,2,1V4A3,3,0,0,0,5,7H8A1,1,0,0,0,8,5H5a.854.854,0,0,1-.1-.021A9.987,9.987,0,1,1,2,12a1,1,0,0,0-2,0A12,12,0,1,0,12,0Z"/><path d="M12,6a1,1,0,0,0-1,1v5a1,1,0,0,0,.293.707l3,3a1,1,0,0,0,1.414-1.414L13,11.586V7A1,1,0,0,0,12,6Z"/></svg>`,
   download: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"></path><polyline points="7 10 12 15 17 10"></polyline><rect x="4" y="17" width="16" height="4" rx="1.5"></rect></svg>`,
   menu: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>`,
+  refresh: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><polyline points="21 3 21 9 15 9"></polyline></svg>`,
   maximize: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="9 3 3 3 3 9"></polyline><polyline points="15 3 21 3 21 9"></polyline><polyline points="21 15 21 21 15 21"></polyline><polyline points="9 21 3 21 3 15"></polyline></svg>`,
   restore: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="10 4 10 10 4 10"></polyline><polyline points="14 4 14 10 20 10"></polyline><polyline points="10 20 10 14 4 14"></polyline><polyline points="14 20 14 14 20 14"></polyline></svg>`,
   fold: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
   unfold: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 15 12 9 18 15"></polyline></svg>`,
-  camera: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7h3l1.2-2h7.6L17 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`,
   settings: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,8a4,4,0,1,0,4,4A4,4,0,0,0,12,8Zm0,6a2,2,0,1,1,2-2A2,2,0,0,1,12,14Z"/><path d="M21.294,13.9l-.444-.256a9.1,9.1,0,0,0,0-3.29l.444-.256a3,3,0,1,0-3-5.2l-.445.257A8.977,8.977,0,0,0,15,3.513V3A3,3,0,0,0,9,3v.513A8.977,8.977,0,0,0,6.152,5.159L5.705,4.9a3,3,0,0,0-3,5.2l.444.256a9.1,9.1,0,0,0,0,3.29l-.444.256a3,3,0,1,0,3,5.2l.445-.257A8.977,8.977,0,0,0,9,20.487V21a3,3,0,0,0,6,0v-.513a8.977,8.977,0,0,0,2.848-1.646l.447.258a3,3,0,0,0,3-5.2Zm-2.548-3.776a7.048,7.048,0,0,1,0,3.75,1,1,0,0,0,.464,1.133l1.084.626a1,1,0,0,1-1,1.733l-1.086-.628a1,1,0,0,0-1.215.165,6.984,6.984,0,0,1-3.243,1.875,1,1,0,0,0-.751.969V21a1,1,0,0,1-2,0V19.748a1,1,0,0,0-.751-.969A6.984,6.984,0,0,1,7.006,16.9a1,1,0,0,0-1.215-.165l-1.084.627a1,1,0,1,1-1-1.732l1.084-.626a1,1,0,0,0,.464-1.133,7.048,7.048,0,0,1,0-3.75A1,1,0,0,0,4.79,8.992L3.706,8.366a1,1,0,0,1,1-1.733l1.086.628A1,1,0,0,0,7.006,7.1a6.984,6.984,0,0,1,3.243-1.875A1,1,0,0,0,11,4.252V3a1,1,0,0,1,2,0V4.252a1,1,0,0,0,.751.969A6.984,6.984,0,0,1,16.994,7.1a1,1,0,0,0,1.215.165l1.084-.627a1,1,0,1,1,1,1.732l-1.084.626A1,1,0,0,0,18.746,10.125Z"/></svg>`,
   details: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="7" y1="9" x2="17" y2="9"></line><line x1="7" y1="13" x2="14" y2="13"></line></svg>`,
   eyeOn: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
@@ -488,6 +488,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   openTradesTab: () => void;
   openSettings: () => void;
   collapse: () => void;
+  markStale: () => void;
   setTradeViewAlertActive: (active: boolean) => void;
 } {
   const betaVariant = isBetaAppVariant();
@@ -521,6 +522,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let netProfitPctBase: number | null = null;
   let latestMeta = { symbol: '', timeframe: '', strategyName: '전략 없음' };
   let tradeViewAlertActive = false;
+  let reportStale = false;
   const sectionOpen: Record<Exclude<WidgetKey, 'equity'>, boolean> = {
     performance: true,
     tradeAnalysis: true,
@@ -596,8 +598,18 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   titleControls.style.cssText = 'display:flex;align-items:center;gap:6px;position:absolute;right:8px;top:50%;transform:translateY(-50%);';
   header.appendChild(titleControls);
 
-  const shotBtn = mkIconBtn('스크린샷', icon.camera);
-  titleControls.appendChild(shotBtn);
+  const manualRefreshBtn = mkIconBtn('리포트 새로고침', icon.refresh);
+  titleControls.appendChild(manualRefreshBtn);
+  const applyRefreshButtonStyle = (hovered = false) => {
+    manualRefreshBtn.title = reportStale ? '리포트 새로고침 (데이터 변경됨)' : '리포트 새로고침';
+    manualRefreshBtn.style.borderColor = reportStale ? '#7a5a20' : '#34435f';
+    manualRefreshBtn.style.background = reportStale
+      ? (hovered ? '#3a2c12' : '#2a2112')
+      : (hovered ? '#263655' : '#1b2438');
+    manualRefreshBtn.style.color = reportStale ? '#f7c948' : (hovered ? '#ffffff' : '#dce4f5');
+  };
+  manualRefreshBtn.addEventListener('mouseenter', () => applyRefreshButtonStyle(true));
+  manualRefreshBtn.addEventListener('mouseleave', () => applyRefreshButtonStyle(false));
   const expandBtn = mkIconBtn('전체화면', icon.maximize);
   titleControls.appendChild(expandBtn);
   const collapseBtn = mkIconBtn('접기', icon.fold);
@@ -1629,6 +1641,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     applyResponsiveLayout();
     updatePeriodText();
     timeframeLabel.textContent = `캔들: ${formatTimeframeLabel(latestMeta.timeframe)}`;
+    applyRefreshButtonStyle(false);
     setChartLayoutByMode();
     updateTabStyles();
     renderKpi();
@@ -1791,11 +1804,13 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     if (!message || message.requestId < lastAppliedRequestId) return;
     lastAppliedRequestId = message.requestId;
     latestResult = applyCapitalBasedRatios(message.result);
+    reportStale = false;
     renderAll();
   });
 
   const refresh = () => {
     if (!panelVisible || panelMode === 'collapsed') return;
+    reportStale = false;
     const chart = getActiveChart();
     latestMeta = {
       symbol: chart.config.symbol,
@@ -1856,6 +1871,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       nextRequestId += 1;
       lastAppliedRequestId = nextRequestId;
       latestResult = applyCapitalBasedRatios(override);
+      reportStale = false;
       renderAll();
       return;
     }
@@ -1876,6 +1892,12 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     });
 
     renderAll();
+  };
+
+  const markStale = () => {
+    if (reportStale) return;
+    reportStale = true;
+    if (panelVisible) renderAll();
   };
 
   periodMenu.querySelectorAll<HTMLButtonElement>('button[data-days]').forEach((btn) => {
@@ -1984,101 +2006,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       openSettingsMenu();
     }
   });
-  shotBtn.addEventListener('click', () => {
-    const prevMode = panelMode;
-    if (prevMode !== 'expanded') applyPanelMode('expanded');
-
-    const a = document.createElement('a');
-    a.download = `strategy_report_${latestMeta.symbol}_${latestMeta.timeframe}_${activeTab}.png`;
-
-    if (activeTab === 'metrics') {
-      drawChart();
-      a.href = canvas.toDataURL('image/png');
-      a.click();
-    } else {
-      const r = latestResult;
-      const trades = (r?.trades ?? []).slice().reverse().slice(0, 320);
-      const rowH = 30;
-      const titleH = 40;
-      const headerH = 32;
-      const padX = 14;
-      const canW = Math.max(720, panel.clientWidth || 720);
-      const canH = titleH + headerH + trades.length * rowH + 16;
-      const dpr = 2;
-      const off = document.createElement('canvas');
-      off.width = canW * dpr;
-      off.height = canH * dpr;
-      const offCtx = off.getContext('2d')!;
-      offCtx.scale(dpr, dpr);
-
-      offCtx.fillStyle = '#0f1524';
-      offCtx.fillRect(0, 0, canW, canH);
-
-      offCtx.fillStyle = '#d5deef';
-      offCtx.font = 'bold 13px "Segoe UI",Arial,sans-serif';
-      offCtx.textBaseline = 'middle';
-      offCtx.textAlign = 'left';
-      offCtx.fillText(`거래내역 | ${latestMeta.symbol} ${latestMeta.timeframe} | ${latestMeta.strategyName}`, padX, titleH / 2);
-
-      const xIdx = 30;
-      const xSide = 70;
-      const xPrice = 120;
-      const xTime = 285;
-      const xLevels = 470;
-      const xPnl = canW - padX;
-
-      let y = titleH;
-      offCtx.fillStyle = '#17243a';
-      offCtx.fillRect(0, y, canW, headerH);
-      offCtx.fillStyle = '#9fb3d5';
-      offCtx.font = 'bold 11px "Segoe UI",Arial,sans-serif';
-      offCtx.textAlign = 'center';
-      offCtx.fillText('#', xIdx, y + headerH / 2);
-      offCtx.fillText('타입', xSide, y + headerH / 2);
-      offCtx.textAlign = 'left';
-      offCtx.fillText('가격 (진입 → 청산)', xPrice, y + headerH / 2);
-      offCtx.fillText('일시 (진입 → 청산)', xTime, y + headerH / 2);
-      offCtx.fillText('SL / TP', xLevels, y + headerH / 2);
-      offCtx.textAlign = 'right';
-      offCtx.fillText('손익', xPnl, y + headerH / 2);
-      y += headerH;
-
-      trades.forEach((t, idx) => {
-        const isOpen = t.status === 'OPEN';
-        offCtx.fillStyle = idx % 2 === 0 ? '#0f1a2d' : '#111d30';
-        offCtx.fillRect(0, y, canW, rowH);
-        const midY = y + rowH / 2;
-        offCtx.font = '12px "Segoe UI",Arial,sans-serif';
-        offCtx.textBaseline = 'middle';
-
-        offCtx.fillStyle = '#8aa0c5';
-        offCtx.textAlign = 'center';
-        offCtx.fillText(String(idx + 1), xIdx, midY);
-
-        offCtx.fillStyle = t.side === 'LONG' ? '#39d98a' : '#ff7f7f';
-        offCtx.font = 'bold 12px "Segoe UI",Arial,sans-serif';
-        offCtx.fillText(t.side, xSide, midY);
-
-        offCtx.fillStyle = '#cdd8ee';
-        offCtx.font = '12px "Segoe UI",Arial,sans-serif';
-        offCtx.textAlign = 'left';
-        offCtx.fillText(`${formatAmount(t.entry)} → ${isOpen ? 'OPEN' : formatAmount(t.exit)}`, xPrice, midY);
-        offCtx.fillText(`${formatTradeTsCompact(t.entryTime)} → ${isOpen ? 'OPEN' : formatTradeTsCompact(t.exitTime)}`, xTime, midY);
-        offCtx.fillText(formatTradeLevels(t), xLevels, midY);
-
-        offCtx.fillStyle = t.pnl >= 0 ? '#39d98a' : '#ff7f7f';
-        offCtx.font = 'bold 12px "Segoe UI",Arial,sans-serif';
-        offCtx.textAlign = 'right';
-        offCtx.fillText(isOpen ? `미실현 ${formatAmount(t.pnl)}` : formatAmount(t.pnl), xPnl, midY);
-
-        y += rowH;
-      });
-
-      a.href = off.toDataURL('image/png');
-      a.click();
-    }
-
-    if (prevMode !== 'expanded') applyPanelMode(prevMode);
+  manualRefreshBtn.addEventListener('click', () => {
+    refresh();
   });
   expandBtn.addEventListener('click', () => {
     if (panelMode === 'collapsed') {
@@ -2184,6 +2113,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       openSettingsMenu();
     },
     collapse: () => applyPanelMode('collapsed'),
+    markStale,
     setTradeViewAlertActive: (active: boolean) => {
       tradeViewAlertActive = Boolean(active);
       if (activeTab === 'trades') renderTradesTable();

@@ -640,6 +640,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   let monitorMode: 'single' | 'multi' = 'single';
   let refreshTopControlIcons = () => {};
   let refreshStrategyReport = () => {};
+  let markStrategyReportStale = () => {};
+  let refreshStrategyReportOnNewSignal = (_paneId: number) => {};
   let setTopBarSignalNotification = (_count: number) => {};
   let onSignalNotificationClick = () => {};
   const acknowledgedSignalCountByPane = new Map<number, number>();
@@ -870,7 +872,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         });
       }
     };
-    chart.onStrategyComputed = () => refreshStrategyReport();
+    chart.onStrategyComputed = () => markStrategyReportStale();
     if (persistedSymbol) {
       chart.config.symbol = persistedSymbol;
     }
@@ -1253,7 +1255,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             low: convertPrice(candle.low),
             close: convertPrice(candle.close),
           });
-          refreshStrategyReport();
+          markStrategyReportStale();
         },
         updateLastCandle: (patch) => {
           chart.updateLastCandle({
@@ -1262,6 +1264,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             high: convertPrice(patch.high),
             low: convertPrice(patch.low),
           });
+          markStrategyReportStale();
         },
       },
       getData: () => rawCandles,
@@ -1281,7 +1284,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           rawCandles.push(candle);
           if (gapMode === 'smooth') {
             applyDisplayCurrencyToChart();
-            refreshStrategyReport();
+            markStrategyReportStale();
             return;
           }
           chart.addNewCandle({
@@ -1291,7 +1294,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             low: convertPrice(candle.low),
             close: convertPrice(candle.close),
           });
-          refreshStrategyReport();
+          markStrategyReportStale();
         },
         updateLastCandle: (patch) => {
           const last = rawCandles[rawCandles.length - 1];
@@ -1302,6 +1305,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           if (Number.isFinite(patch.volume)) last.volume = patch.volume;
           if (gapMode === 'smooth') {
             applyDisplayCurrencyToChart();
+            markStrategyReportStale();
             return;
           }
           chart.updateLastCandle({
@@ -1310,6 +1314,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             low: convertPrice(last.low),
             volume: last.volume,
           });
+          markStrategyReportStale();
         },
       },
       limit: 3000,
@@ -1339,7 +1344,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           rawCandles.push(candle);
           if (gapMode === 'smooth') {
             applyDisplayCurrencyToChart();
-            refreshStrategyReport();
+            markStrategyReportStale();
             return;
           }
           chart.addNewCandle({
@@ -1349,7 +1354,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             low: convertPrice(candle.low),
             close: convertPrice(candle.close),
           });
-          refreshStrategyReport();
+          markStrategyReportStale();
         },
         updateLastCandle: (patch) => {
           const last = rawCandles[rawCandles.length - 1];
@@ -1360,6 +1365,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           if (Number.isFinite(patch.volume)) last.volume = patch.volume;
           if (gapMode === 'smooth') {
             applyDisplayCurrencyToChart();
+            markStrategyReportStale();
             return;
           }
           chart.updateLastCandle({
@@ -1368,6 +1374,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             low: convertPrice(last.low),
             volume: last.volume,
           });
+          markStrategyReportStale();
         },
       },
       limit: 3000,
@@ -2442,6 +2449,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           showSignalNoticePopup(item);
           speakSignalNotice(item.side);
         });
+      if (detected.some((item) => item.key.startsWith(`${paneState.activePaneId}:`))) {
+        refreshStrategyReportOnNewSignal(paneState.activePaneId);
+      }
     };
     const refreshSignalNotification = () => {
       const paneId = paneState.activePaneId;
@@ -2554,9 +2564,25 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       }
       refreshSignalNotification();
     };
+    markStrategyReportStale = () => {
+      const activePane = getActivePane();
+      const hasActiveStrategy = Boolean(activePane.chart.getActiveStrategyName());
+      if (hasActiveStrategy) {
+        strategyReport.markStale();
+      }
+      refreshSignalNotification();
+    };
+    refreshStrategyReportOnNewSignal = (paneId: number) => {
+      if (paneId !== paneState.activePaneId) return;
+      if (strategyReportOpenByPane.get(paneId) !== true) return;
+      const activePane = getActivePane();
+      if (!activePane.chart.getActiveStrategyName()) return;
+      strategyReport.refresh();
+      refreshSignalNotification();
+    };
     startManagedInterval(() => {
       notifyLiveSignals();
-      refreshStrategyReport();
+      refreshSignalNotification();
     }, 1000);
     refreshStrategyReport();
     applyViewportOffsets();
