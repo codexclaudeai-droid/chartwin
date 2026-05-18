@@ -3812,6 +3812,14 @@ export class SimpleChart {
       const detail = signalRiskDetails.get(gi);
       if (this.strategyRiskLinesVisible && detail && (gi === this.hoveredSignalCandleIndex || gi === this.focusedSignalCandleIndex)) {
         const fromX = x + meta.candleW * 0.55;
+        riskDrawJobs.push({
+          fromX,
+          price: entryPrice,
+          label: 'ENTRY',
+          color: '#6ea8ff',
+          dash: [6, 3],
+          alpha: isLatest ? 0.95 : 0.7,
+        });
         const stopColor = '#ff6b6b';
         if (typeof detail.stopLoss === 'number' && Number.isFinite(detail.stopLoss)) {
           riskDrawJobs.push({
@@ -3920,8 +3928,12 @@ export class SimpleChart {
 
       ctx.restore();
 
+      const showRiskOverlayForSignal = this.strategyRiskLinesVisible
+        && !!detail
+        && (gi === this.hoveredSignalCandleIndex || gi === this.focusedSignalCandleIndex);
+
       // Mark the entry-price Y level beside the signal candle body with a small triangle.
-      if (entryY >= 0 && entryY <= meta.mainH) {
+      if (!showRiskOverlayForSignal && entryY >= 0 && entryY <= meta.mainH) {
         const triW = Math.max(7, Math.min(12, meta.candleW * 0.55));
         const triH = Math.max(5, Math.min(9, meta.candleW * 0.4));
         const tipX = x;
