@@ -45,6 +45,7 @@ const DEFAULT_LINE_STYLES: Record<string, LineStyle> = {
   ichimokuKijun: { color: '#2962ff', width: 1, dash: [] },
   ichimokuSenkouA: { color: 'rgba(34,171,148,0.6)', width: 1, dash: [4, 4] },
   ichimokuSenkouB: { color: 'rgba(242,54,69,0.6)', width: 1, dash: [4, 4] },
+  ichimokuChikou: { color: '#43a047', width: 1, dash: [] },
   volumeProfileUp: { color: 'rgba(38,166,154,0.45)', width: 1, dash: [] },
   volumeProfileDown: { color: 'rgba(239,83,80,0.45)', width: 1, dash: [] },
   volumeProfilePoc: { color: 'rgba(255,193,7,0.95)', width: 1.2, dash: [4, 3] },
@@ -109,10 +110,11 @@ export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: strin
     { key: 'volumeProfilePoc', label: 'POC' },
   ],
   ichimoku: [
-    { key: 'ichimokuTenkan', label: 'Tenkan' },
-    { key: 'ichimokuKijun', label: 'Kijun' },
-    { key: 'ichimokuSenkouA', label: 'Senkou A' },
-    { key: 'ichimokuSenkouB', label: 'Senkou B' },
+    { key: 'ichimokuTenkan', label: '전환선' },
+    { key: 'ichimokuKijun', label: '기준선' },
+    { key: 'ichimokuSenkouA', label: '선행스팬 1' },
+    { key: 'ichimokuSenkouB', label: '선행스팬 2' },
+    { key: 'ichimokuChikou', label: '후행스팬' },
   ],
   envelope: [
     { key: 'envelopeUpper', label: 'Upper' },

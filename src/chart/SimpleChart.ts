@@ -4304,7 +4304,8 @@ export class SimpleChart {
     const kLine = source.map((_, i) => mid(i, kijun));
     const sA    = tLine.map((t, i) => t != null && kLine[i] != null ? (t + kLine[i]!) / 2 : null);
     const sB    = source.map((_, i) => mid(i, senkou));
-    return { tenkanLine: tLine, kijunLine: kLine, senkouA: sA, senkouB: sB };
+    const chikouSpan = source.map((c) => c.close);
+    return { tenkanLine: tLine, kijunLine: kLine, senkouA: sA, senkouB: sB, chikouSpan };
   }
 
   private calcEnvelope(period: number, pct: number) {
@@ -5017,14 +5018,14 @@ export class SimpleChart {
     };
 
     // 메인 패널 라인 그리기 헬퍼
-    const line = (data: (number|null)[], color: string, lw = 1.5, dash: number[] = []) => {
+    const line = (data: (number|null)[], color: string, lw = 1.5, dash: number[] = [], offsetBars = 0) => {
       ctx.save();
       ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.setLineDash(dash);
       ctx.beginPath(); let started = false;
       visData.forEach((_, i) => {
         const v = data[this.startIndex + i];
         if (v == null) { started = false; return; }
-        const x = effectiveChartLeft + i * totalSp + candleW / 2;
+        const x = effectiveChartLeft + (i + offsetBars) * totalSp + candleW / 2;
         if (!started) { ctx.moveTo(x, getY(v)); started = true; } else ctx.lineTo(x, getY(v));
       });
       ctx.stroke(); ctx.setLineDash([]); ctx.restore();
@@ -5133,10 +5134,12 @@ export class SimpleChart {
       const kijunStyle = this.resolveStyle('ichimokuKijun', '#2962ff', 1);
       const senkouAStyle = this.resolveStyle('ichimokuSenkouA', 'rgba(34,171,148,0.6)', 1, [4, 4]);
       const senkouBStyle = this.resolveStyle('ichimokuSenkouB', 'rgba(242,54,69,0.6)', 1, [4, 4]);
+      const chikouStyle = this.resolveStyle('ichimokuChikou', '#43a047', 1);
       if (showLine('ichimokuTenkan')) line(ichiD.tenkanLine, tenkanStyle.color, tenkanStyle.width, tenkanStyle.dash);
       if (showLine('ichimokuKijun')) line(ichiD.kijunLine, kijunStyle.color, kijunStyle.width, kijunStyle.dash);
       if (showLine('ichimokuSenkouA')) line(ichiD.senkouA, senkouAStyle.color, senkouAStyle.width, senkouAStyle.dash);
       if (showLine('ichimokuSenkouB')) line(ichiD.senkouB, senkouBStyle.color, senkouBStyle.width, senkouBStyle.dash);
+      if (showLine('ichimokuChikou')) line(ichiD.chikouSpan, chikouStyle.color, chikouStyle.width, chikouStyle.dash, -ind.ichimoku.kijun);
     }
 
     // 3) 볼린저 밴드 배경
