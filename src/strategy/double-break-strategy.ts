@@ -76,6 +76,7 @@ export type DoubleBreakResult = {
   envBands: BandPoint[];
   atr: Array<number | null>;
   adx: Array<number | null>;
+  adxFilteredSignalCount: number;
   config: DoubleBreakConfig;
 };
 
@@ -242,11 +243,12 @@ export function detectSignals(
   atrArr: Array<number | null>,
   cfg: DoubleBreakConfig,
   adxArr: Array<number | null> = [],
-): Pick<DoubleBreakResult, 'longSignals' | 'shortSignals' | 'longZones' | 'shortZones'> {
+): Pick<DoubleBreakResult, 'longSignals' | 'shortSignals' | 'longZones' | 'shortZones' | 'adxFilteredSignalCount'> {
   const longSignals: LongSignal[] = [];
   const shortSignals: ShortSignal[] = [];
   const longZones: number[] = [];
   const shortZones: number[] = [];
+  let adxFilteredSignalCount = 0;
 
   for (let i = 1; i < candles.length; i += 1) {
     const bbU = bb[i]?.upper;
@@ -267,27 +269,31 @@ export function detectSignals(
     const isLongZone = proximity(bbU, envU) <= cfg.crossTol;
     if (isLongZone) longZones.push(i);
 
-    if (isLongZone && isBull && adxAllowed) {
+    if (isLongZone && isBull) {
       const resistance = Math.max(bbU, envU);
       if (close > resistance) {
-        const last = longSignals[longSignals.length - 1];
-        if (!last || i - last.index >= cfg.minBarGap) {
-          longSignals.push({
-            index: i,
-            type: 'LONG',
-            price: close,
-            bbUpper: bbU,
-            envUpper: envU,
-            resistance,
-            tp1: close + atrV * cfg.tp1Multi,
-            tp2: close + atrV * cfg.tp2Multi,
-            sl: close - atrV * cfg.slMulti,
-            atr: atrV,
-            adx: adxV,
-            open,
-            high,
-            low,
-          });
+        if (!adxAllowed) {
+          adxFilteredSignalCount += 1;
+        } else {
+          const last = longSignals[longSignals.length - 1];
+          if (!last || i - last.index >= cfg.minBarGap) {
+            longSignals.push({
+              index: i,
+              type: 'LONG',
+              price: close,
+              bbUpper: bbU,
+              envUpper: envU,
+              resistance,
+              tp1: close + atrV * cfg.tp1Multi,
+              tp2: close + atrV * cfg.tp2Multi,
+              sl: close - atrV * cfg.slMulti,
+              atr: atrV,
+              adx: adxV,
+              open,
+              high,
+              low,
+            });
+          }
         }
       }
     }
@@ -295,33 +301,37 @@ export function detectSignals(
     const isShortZone = proximity(bbL, envL) <= cfg.crossTol;
     if (isShortZone) shortZones.push(i);
 
-    if (isShortZone && isBear && adxAllowed) {
+    if (isShortZone && isBear) {
       const support = Math.min(bbL, envL);
       if (close < support) {
-        const last = shortSignals[shortSignals.length - 1];
-        if (!last || i - last.index >= cfg.minBarGap) {
-          shortSignals.push({
-            index: i,
-            type: 'SHORT',
-            price: close,
-            bbLower: bbL,
-            envLower: envL,
-            support,
-            tp1: close - atrV * cfg.tp1Multi,
-            tp2: close - atrV * cfg.tp2Multi,
-            sl: close + atrV * cfg.slMulti,
-            atr: atrV,
-            adx: adxV,
-            open,
-            high,
-            low,
-          });
+        if (!adxAllowed) {
+          adxFilteredSignalCount += 1;
+        } else {
+          const last = shortSignals[shortSignals.length - 1];
+          if (!last || i - last.index >= cfg.minBarGap) {
+            shortSignals.push({
+              index: i,
+              type: 'SHORT',
+              price: close,
+              bbLower: bbL,
+              envLower: envL,
+              support,
+              tp1: close - atrV * cfg.tp1Multi,
+              tp2: close - atrV * cfg.tp2Multi,
+              sl: close + atrV * cfg.slMulti,
+              atr: atrV,
+              adx: adxV,
+              open,
+              high,
+              low,
+            });
+          }
         }
       }
     }
   }
 
-  return { longSignals, shortSignals, longZones, shortZones };
+  return { longSignals, shortSignals, longZones, shortZones, adxFilteredSignalCount };
 }
 
 export class DoubleBreakStrategy {
@@ -346,7 +356,7 @@ export class DoubleBreakStrategy {
     const envBands = calcEnvelopeBands(closes, cfg.envPeriod, cfg.envPct);
     const atr = calcATR(candles, cfg.atrPeriod);
     const adx = calcADX(candles, cfg.adxPeriod);
-    const { longSignals, shortSignals, longZones, shortZones } = detectSignals(
+    const detected = detectSignals(
       candles,
       bbBands,
       envBands,
@@ -356,14 +366,15 @@ export class DoubleBreakStrategy {
     );
 
     return {
-      longSignals,
-      shortSignals,
-      longZones,
-      shortZones,
+      longSignals: detected.longSignals,
+      shortSignals: detected.shortSignals,
+      longZones: detected.longZones,
+      shortZones: detected.shortZones,
       bbBands,
       envBands,
       atr,
       adx,
+      adxFilteredSignalCount: detected.adxFilteredSignalCount,
       config: { ...cfg },
     };
   }

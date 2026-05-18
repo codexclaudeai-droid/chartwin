@@ -825,6 +825,31 @@ export function openChartSettingsModal(chart: any, onApply: () => void, onSymbol
   marketRow.appendChild(marketSelect);
   body.appendChild(marketRow);
 
+  const yAxisTransparentRow = document.createElement('div');
+  yAxisTransparentRow.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+  const yAxisTransparentLabel = document.createElement('div');
+  yAxisTransparentLabel.innerHTML = '<div style="font-size:13px;font-weight:700;">Y축 배경 투명</div><div style="font-size:11px;color:#84898e;margin-top:2px;">캔들/드로잉이 시세영역 아래까지 보이도록 합니다.</div>';
+  let yAxisTransparentOn = (chart.config.layout as any).yAxisTransparentBackground !== false;
+  const yaToggleTrack = document.createElement('div');
+  yaToggleTrack.style.cssText = `position:relative;width:44px;height:24px;border-radius:12px;cursor:pointer;transition:background 0.2s;background:${yAxisTransparentOn ? '#3b82f6' : '#3a4155'};flex-shrink:0;`;
+  const yaToggleThumb = document.createElement('div');
+  yaToggleThumb.style.cssText = `position:absolute;top:3px;left:${yAxisTransparentOn ? '23px' : '3px'};width:18px;height:18px;border-radius:50%;background:#ffffff;box-shadow:0 1px 4px rgba(0,0,0,0.35);transition:left 0.18s;`;
+  yaToggleTrack.appendChild(yaToggleThumb);
+  yaToggleTrack.addEventListener('click', () => {
+    yAxisTransparentOn = !yAxisTransparentOn;
+    (chart as any).setYAxisTransparentBackground?.(yAxisTransparentOn);
+    if (!(chart as any).setYAxisTransparentBackground) {
+      (chart.config.layout as any).yAxisTransparentBackground = yAxisTransparentOn;
+      chart.draw();
+    }
+    yaToggleTrack.style.background = yAxisTransparentOn ? '#3b82f6' : '#3a4155';
+    yaToggleThumb.style.left = yAxisTransparentOn ? '23px' : '3px';
+    onApply();
+  });
+  yAxisTransparentRow.appendChild(yAxisTransparentLabel);
+  yAxisTransparentRow.appendChild(yaToggleTrack);
+  body.appendChild(yAxisTransparentRow);
+
   const row = document.createElement('div');
   row.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
 

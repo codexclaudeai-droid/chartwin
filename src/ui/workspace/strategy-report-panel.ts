@@ -76,7 +76,10 @@ type ReportResult = {
   grossProfit: number;
   grossLoss: number;
   averagePnl: number;
+  realizedProfit: number;
+  unrealizedProfit: number;
   signalCount: number;
+  adxFilteredSignalCount: number;
   closedTradeCount: number;
   openPositionCount: number;
   trades: ReportTrade[];
@@ -119,7 +122,9 @@ self.onmessage = function (event) {
   var tradeCount = 0;
   var absExcursion = 0;
   var signalCount = 0;
+  var adxFilteredSignalCount = 0;
   var openPositionCount = 0;
+  var unrealizedProfit = 0;
 
   var nAll = Math.min(closes.length, signals.length || closes.length);
   var start = 0;
@@ -165,7 +170,10 @@ self.onmessage = function (event) {
         grossProfit: 0,
         grossLoss: 0,
         averagePnl: 0,
+        realizedProfit: 0,
+        unrealizedProfit: 0,
         signalCount: 0,
+        adxFilteredSignalCount: 0,
         closedTradeCount: 0,
         openPositionCount: 0,
         trades: []
@@ -292,6 +300,7 @@ self.onmessage = function (event) {
     if (!Number.isFinite(markPrice)) markPrice = entry;
     var openPnl = pos === 1 ? markPrice - entry : entry - markPrice;
     openPnl -= (entry + markPrice) * ((feeBps + slippageBps) / 10000);
+    unrealizedProfit = openPnl;
     var openSide = pos === 1 ? 'LONG' : 'SHORT';
     if (sideFilter === 'all' || sideFilter === openSide.toLowerCase()) {
       openPositionCount = 1;
@@ -328,7 +337,10 @@ self.onmessage = function (event) {
       grossProfit: grossProfit,
       grossLoss: grossLoss,
       averagePnl: averagePnl,
+      realizedProfit: cum,
+      unrealizedProfit: unrealizedProfit,
       signalCount: signalCount,
+      adxFilteredSignalCount: adxFilteredSignalCount,
       closedTradeCount: tradeCount,
       openPositionCount: openPositionCount,
       trades: trades
@@ -1088,7 +1100,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const applyCapitalBasedRatios = (result: ReportResult): ReportResult => {
     const normalized: ReportResult = {
       ...result,
+      realizedProfit: Number.isFinite(result.realizedProfit) ? result.realizedProfit : result.netProfit,
+      unrealizedProfit: Number.isFinite(result.unrealizedProfit) ? result.unrealizedProfit : 0,
       signalCount: Number.isFinite(result.signalCount) ? result.signalCount : result.tradeCount,
+      adxFilteredSignalCount: Number.isFinite(result.adxFilteredSignalCount) ? result.adxFilteredSignalCount : 0,
       closedTradeCount: Number.isFinite(result.closedTradeCount) ? result.closedTradeCount : result.tradeCount,
       openPositionCount: Number.isFinite(result.openPositionCount) ? result.openPositionCount : 0,
     };
@@ -1105,6 +1120,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       grossProfit: normalized.grossProfit * lever,
       grossLoss: normalized.grossLoss * lever,
       averagePnl: normalized.averagePnl * lever,
+      realizedProfit: normalized.realizedProfit * lever,
+      unrealizedProfit: normalized.unrealizedProfit * lever,
       trades: normalized.trades.map((t) => ({ ...t, pnl: t.pnl * lever })),
     };
 
@@ -1124,7 +1141,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     }
     const panelWidth = Math.max(320, panel.clientWidth);
     const isMobileKpi = panelWidth < 760;
-    const pnlColor = r.netProfit >= 0 ? '#39d98a' : '#ff7f7f';
+    const pnlColor = r.realizedProfit >= 0 ? '#39d98a' : '#ff7f7f';
+    const unrealizedColor = r.unrealizedProfit >= 0 ? '#7ed9a4' : '#ff9b9b';
     const kpiGap = isMobileKpi ? '4px' : '8px';
     const kpiPad = isMobileKpi ? '8px' : '10px';
     const kpiLabelFs = isMobileKpi ? '10px' : '11px';
@@ -1135,8 +1153,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
         <div style="font-size:12px;color:#c9d6ee;font-weight:700;margin-bottom:${kpiTitleMb};">핵심 성과 요약</div>
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:${kpiGap};">
           <div>
-            <div style="font-size:${kpiLabelFs};color:#95a8cb;">총손익</div>
-            <div style="font-size:${kpiValueFs};font-weight:700;color:${pnlColor};margin-top:2px;">${formatNetProfitValue(r.netProfit)}</div>
+            <div style="font-size:${kpiLabelFs};color:#95a8cb;">실현손익</div>
+            <div style="font-size:${kpiValueFs};font-weight:700;color:${pnlColor};margin-top:2px;">${formatNetProfitValue(r.realizedProfit)}</div>
           </div>
           <div>
             <div style="font-size:${kpiLabelFs};color:#95a8cb;">승률</div>
@@ -1152,7 +1170,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
           </div>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:${kpiGap};margin-top:${kpiTitleMb};padding-top:${kpiTitleMb};border-top:1px solid #22314d;color:#9fb1d3;font-size:${kpiLabelFs};">
+          <span>평가손익 <span style="color:${unrealizedColor};font-weight:700;">${formatAmount2(r.unrealizedProfit)}</span></span>
           <span>신호 ${r.signalCount}</span>
+          <span>ADX 필터 ${r.adxFilteredSignalCount}</span>
           <span>청산거래 ${r.closedTradeCount}</span>
           <span>미청산 ${r.openPositionCount}</span>
         </div>

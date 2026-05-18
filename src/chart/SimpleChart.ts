@@ -61,6 +61,7 @@ import {
 import { getSymbolPricePrecision } from '../data/market-data-sources';
 import {
   detectPatternCandidates,
+  getPatternSignalRange,
   pickTopPatternSignal,
   type ChartPatternType,
   type PatternAnalysisScope,
@@ -190,7 +191,10 @@ type StrategyReportResult = {
   grossProfit: number;
   grossLoss: number;
   averagePnl: number;
+  realizedProfit: number;
+  unrealizedProfit: number;
   signalCount: number;
+  adxFilteredSignalCount: number;
   closedTradeCount: number;
   openPositionCount: number;
   trades: StrategyReportTrade[];
@@ -306,6 +310,7 @@ export class SimpleChart {
   private confirmedPatternBoxes: Array<{
     id: string;
     type: ChartPatternType;
+    level: PatternSignal['level'];
     startIndex: number;
     endIndex: number;
     createdAt: number;
@@ -518,6 +523,7 @@ export class SimpleChart {
       rightPadding: 0,
       rightGapBars: 0,
       marketInfoSide: 'right' as 'left' | 'right',
+      yAxisTransparentBackground: true,
       leftPanEnabled: true,
       verticalPanEnabled: true,
       mobileCrosshairTooltipEnabled: true,
@@ -533,6 +539,10 @@ export class SimpleChart {
     return this.config.layout.marketInfoSide === 'left' ? 'left' : 'right';
   }
 
+  private isYAxisBackgroundTransparent(): boolean {
+    return (this.config.layout as any).yAxisTransparentBackground !== false;
+  }
+
   private getChartGeometry(width: number, dynamicPad?: number): {
     side: 'left' | 'right';
     axisPad: number;
@@ -544,11 +554,12 @@ export class SimpleChart {
     axisCenter: number;
   } {
     const side = this.getMarketInfoSide();
+    const transparentAxis = this.isYAxisBackgroundTransparent();
     const axisPad = Math.max(24, dynamicPad ?? this.config.layout.rightPadding);
     const chartLeft = 0;
     // Main panel right edge: in left-mode use full width, in right-mode keep right axis area.
     const chartRight = side === 'left' ? width : Math.max(0, width - axisPad);
-    const chartWidth = Math.max(1, chartRight - chartLeft);
+    const chartWidth = Math.max(1, (transparentAxis ? width : chartRight) - chartLeft);
     const axisLeft = side === 'left' ? 0 : chartRight;
     const axisRight = side === 'left' ? axisPad : width;
     const axisCenter = (axisLeft + axisRight) / 2;
@@ -1379,7 +1390,18 @@ export class SimpleChart {
   private showPatternPopup(signal: PatternSignal): void {
     const host = this.canvas.parentElement;
     if (!host) return;
-    showPatternPopupUi(host, signal);
+    showPatternPopupUi(host, signal, {
+      patternVisible: this.isPatternBoxesVisible(),
+      onMoveToPattern: () => {
+        this.focusPatternSignalRange(signal);
+      },
+      onConfirmPatternVisible: () => {
+        if (!this.isPatternBoxesVisible()) {
+          this.setPatternBoxesVisible(true);
+        }
+        this.focusPatternSignalRange(signal);
+      },
+    });
   }
 
   private clearPatternPopups(): void {
@@ -1392,28 +1414,22 @@ export class SimpleChart {
     this.confirmedPatternBoxes = [];
   }
 
-  private parsePatternRangeFromSignal(signal: PatternSignal): { startIndex: number; endIndex: number } | null {
-    const matches = [...signal.key.matchAll(/-(\d+)/g)];
-    if (!matches.length) return null;
-    const nums = matches
-      .map((m) => Number(m[1]))
-      .filter((n) => Number.isFinite(n));
-    if (!nums.length) return null;
-    const startIndex = Math.min(...nums);
-    const endIndex = Math.max(...nums);
-    return { startIndex, endIndex };
-  }
-
   private registerConfirmedPatternBox(signal: PatternSignal): void {
-    if (signal.level !== 'confirmed') return;
-    const range = this.parsePatternRangeFromSignal(signal);
+    const range = getPatternSignalRange(signal);
     if (!range) return;
     const id = `${this.config.symbol}:${this.config.timeframe}:${signal.type}:${range.startIndex}:${range.endIndex}`;
-    const exists = this.confirmedPatternBoxes.some((box) => box.id === id);
-    if (exists) return;
+    const existing = this.confirmedPatternBoxes.find((box) => box.id === id);
+    if (existing) {
+      existing.level = signal.level;
+      existing.startIndex = range.startIndex;
+      existing.endIndex = range.endIndex;
+      existing.createdAt = Date.now();
+      return;
+    }
     this.confirmedPatternBoxes.push({
       id,
       type: signal.type,
+      level: signal.level,
       startIndex: range.startIndex,
       endIndex: range.endIndex,
       createdAt: Date.now(),
@@ -1421,6 +1437,14 @@ export class SimpleChart {
     if (this.confirmedPatternBoxes.length > 60) {
       this.confirmedPatternBoxes.splice(0, this.confirmedPatternBoxes.length - 60);
     }
+  }
+
+  private focusPatternSignalRange(signal: PatternSignal): void {
+    const range = getPatternSignalRange(signal);
+    if (!range) return;
+    this.registerConfirmedPatternBox(signal);
+    if (!this.moveViewportToRange(range.startIndex, range.endIndex, 8)) return;
+    this.draw();
   }
 
   private getPriceBoundsInRange(startIndex: number, endIndex: number): { lo: number; hi: number } | null {
@@ -1449,14 +1473,14 @@ export class SimpleChart {
     const chartTop = 0;
     const chartBottom = meta.mainH;
     const labelMap: Record<ChartPatternType, string> = {
-      'double-bottom': '쌍바닥 확정',
-      'double-top': '쌍봉 확정',
-      'head-and-shoulders': 'H&S 확정',
-      'inverse-head-and-shoulders': '역H&S 확정',
-      'bullish-engulfing': '상승장악형',
-      'bearish-engulfing': '하락장악형',
-      'bearish-harami': '하락잉태형',
-      'bullish-harami': '상승잉태형',
+      'double-bottom': '쌍바닥',
+      'double-top': '쌍봉',
+      'head-and-shoulders': 'H&S',
+      'inverse-head-and-shoulders': '역H&S',
+      'bullish-engulfing': '상승 장악형',
+      'bearish-engulfing': '하락 장악형',
+      'bearish-harami': '하락 잉태형',
+      'bullish-harami': '상승 잉태형',
       harami: '하라미',
       'dark-cloud-cover': '흑운형',
       'piercing-line': '관통형',
@@ -1505,7 +1529,8 @@ export class SimpleChart {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'bottom';
       const labelY = Math.max(12, top - 2);
-      ctx.fillText(labelMap[box.type], left + 4, labelY);
+      const levelSuffix = box.level === 'confirmed' ? ' 확정' : box.level === 'warn' ? ' 경계' : box.level === 'watch' ? ' 주시' : '';
+      ctx.fillText(`${labelMap[box.type]}${levelSuffix}`, left + 4, labelY);
       ctx.restore();
     }
     ctx.restore();
@@ -2578,7 +2603,15 @@ export class SimpleChart {
     return { start, end };
   }
 
-  private buildSummaryReport(args: StrategyReportArgs, trades: StrategyReportTrade[], signalCount: number, openPositionCount: number, start: number, end: number): StrategyReportResult {
+  private buildSummaryReport(
+    args: StrategyReportArgs,
+    trades: StrategyReportTrade[],
+    signalCount: number,
+    openPositionCount: number,
+    start: number,
+    end: number,
+    extras: { adxFilteredSignalCount?: number } = {},
+  ): StrategyReportResult {
     const equity: number[] = [];
     const buyHold: number[] = [];
     const excursion: number[] = [];
@@ -2618,6 +2651,8 @@ export class SimpleChart {
     let wins = 0;
     let grossProfit = 0;
     let grossLoss = 0;
+    const openTrades = trades.filter((trade) => trade.status === 'OPEN');
+    const unrealizedProfit = openTrades.reduce((sum, trade) => sum + trade.pnl, 0);
     closedTrades.forEach((trade) => {
       if (trade.pnl > 0) {
         wins += 1;
@@ -2642,7 +2677,10 @@ export class SimpleChart {
       grossProfit,
       grossLoss,
       averagePnl: tradeCount > 0 ? cum / tradeCount : 0,
+      realizedProfit: cum,
+      unrealizedProfit,
       signalCount,
+      adxFilteredSignalCount: extras.adxFilteredSignalCount ?? 0,
       closedTradeCount: tradeCount,
       openPositionCount,
       trades: trades.slice().sort((a, b) => a.entryIndex - b.entryIndex).slice(-350),
@@ -3067,7 +3105,10 @@ export class SimpleChart {
       grossProfit,
       grossLoss,
       averagePnl: tradeCount > 0 ? cum / tradeCount : 0,
+      realizedProfit: cum,
+      unrealizedProfit: 0,
       signalCount: sortedTrades.length,
+      adxFilteredSignalCount: 0,
       closedTradeCount: sortedTrades.length,
       openPositionCount: 0,
       trades: sortedTrades.slice(-350),
@@ -3347,7 +3388,37 @@ export class SimpleChart {
     }
 
     if (side && activeSignal && includeTrade(side)) {
+      const active: DoubleBreakReportSignal = activeSignal;
       openPositionCount = 1;
+      const lastIndex = Math.max(entryIndex, end - 1, start);
+      const lastCandle = this.data[lastIndex];
+      const markPrice = Number.isFinite(Number(lastCandle?.close))
+        ? Number(lastCandle?.close)
+        : active.price;
+      let openGross = realizedGross;
+      let openCost = realizedCost;
+      if (tp1Hit) {
+        if (side === 'LONG') openGross += (markPrice - active.price) * runnerPortion;
+        else openGross += (active.price - markPrice) * runnerPortion;
+        openCost += (active.price + markPrice) * runnerPortion * feeRate;
+      } else {
+        if (side === 'LONG') openGross += markPrice - active.price;
+        else openGross += active.price - markPrice;
+        openCost += (active.price + markPrice) * feeRate;
+      }
+      trades.push({
+        side,
+        status: 'OPEN',
+        entry: active.price,
+        exit: markPrice,
+        pnl: openGross - openCost,
+        stopLoss: active.sl,
+        takeProfits: [active.tp1, active.tp2],
+        entryIndex,
+        exitIndex: lastIndex,
+        entryTime,
+        exitTime: null,
+      });
     }
 
     const equity: number[] = [];
@@ -3411,7 +3482,10 @@ export class SimpleChart {
       grossProfit,
       grossLoss,
       averagePnl: tradeCount > 0 ? cum / tradeCount : 0,
+      realizedProfit: cum,
+      unrealizedProfit: 0,
       signalCount,
+      adxFilteredSignalCount: doubleBreak.adxFilteredSignalCount,
       closedTradeCount: tradeCount,
       openPositionCount,
       trades: sortedTrades.slice(-350),
@@ -3649,6 +3723,10 @@ export class SimpleChart {
         ctx.closePath();
         ctx.fillStyle = boxColor;
         ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
         ctx.restore();
       }
 
@@ -3999,6 +4077,25 @@ export class SimpleChart {
   ): void {
     if (!this.data.length) return;
 
+    const normalizedRange = this.moveViewportToRange(startIndex, endIndex, paddingBars);
+    if (!normalizedRange) return;
+    const lastIndex = this.data.length - 1;
+    this.focusedTradeRange = {
+      startIndex: Math.max(0, Math.min(lastIndex, normalizedRange.startIndex)),
+      endIndex: Math.max(0, Math.min(lastIndex, normalizedRange.endIndex)),
+      style: options?.focusStyle ?? 'range',
+    };
+    this.draw();
+    this.focusSignalVisual(this.focusedTradeRange.startIndex, options);
+  }
+
+  private moveViewportToRange(
+    startIndex: number,
+    endIndex: number,
+    paddingBars = 8,
+  ): { startIndex: number; endIndex: number } | null {
+    if (!this.data.length) return null;
+
     const lastIndex = this.data.length - 1;
     const normalizedStart = Number.isFinite(startIndex) ? Math.floor(startIndex) : 0;
     const normalizedEnd = Number.isFinite(endIndex) ? Math.floor(endIndex) : normalizedStart;
@@ -4027,23 +4124,56 @@ export class SimpleChart {
 
     this.startIndex = lo;
     this.endIndex = Math.max(this.startIndex + 1, hi + 1);
-    this.focusedTradeRange = {
+    this.focusedTradeRange = null;
+    this.focusedSignalCandleIndex = null;
+    this.focusVisualStartedAt = 0;
+    this.clearFocusVisualTimer();
+    return {
       startIndex: Math.max(0, Math.min(lastIndex, Math.min(normalizedStart, normalizedEnd))),
       endIndex: Math.max(0, Math.min(lastIndex, Math.max(normalizedStart, normalizedEnd))),
-      style: options?.focusStyle ?? 'range',
     };
-    this.draw();
-    this.focusSignalVisual(this.focusedTradeRange.startIndex, options);
   }
 
   /** 최신(가장 오른쪽) 캔들로 뷰포트 이동 */
   public jumpToLatest(): void {
     if (!this.data.length) return;
-    const visibleCount = Math.max(10, this.endIndex - this.startIndex);
-    this.endIndex   = this.data.length;
-    this.startIndex = Math.max(0, this.endIndex - visibleCount);
+    const realVisibleCount = Math.max(
+      10,
+      Math.min(this.data.length, Math.min(this.endIndex, this.data.length) - this.startIndex),
+    );
+    const futureSlots = this.getFutureSlotsForLatestAtAxisStart(realVisibleCount);
+    this.startIndex = Math.max(0, this.data.length - realVisibleCount);
+    this.endIndex = this.data.length + futureSlots;
     this.leftPanBars = 0;
     this.draw();
+  }
+
+  private getFutureSlotsForLatestAtAxisStart(realVisibleCount: number): number {
+    const geometry = this.getChartGeometry(this.viewportWidth, this.lastDrawMeta?.axisPad);
+    if (geometry.side !== 'right') return 0;
+    const realCount = Math.max(1, Math.min(this.data.length || 1, Math.floor(realVisibleCount)));
+    const chartW = Math.max(1, geometry.chartWidth);
+    const targetX = geometry.axisLeft;
+    const maxSlots = Math.max(8, Math.min(500, Math.ceil(realCount * 0.35)));
+    let bestSlots = 0;
+    let bestDelta = Number.POSITIVE_INFINITY;
+    for (let futureSlots = 0; futureSlots <= maxSlots; futureSlots += 1) {
+      const visibleSlots = realCount + futureSlots;
+      const gapBars = Math.min(
+        Math.max(0, this.config.layout.rightGapBars ?? 0),
+        50 / Math.max(1, chartW / Math.max(1, visibleSlots)),
+      );
+      const totalSp = chartW / Math.max(1, visibleSlots + gapBars);
+      const candleW = Math.max(totalSp * 0.8, 1);
+      const latestCenterX = geometry.chartLeft + (realCount - 1) * totalSp + candleW / 2;
+      const delta = Math.abs(latestCenterX - targetX);
+      if (delta < bestDelta) {
+        bestDelta = delta;
+        bestSlots = futureSlots;
+      }
+      if (latestCenterX <= targetX) break;
+    }
+    return bestSlots;
   }
 
   /** 뷰포트를 좌/우로 이동 (음수: 왼쪽, 양수: 오른쪽) */
@@ -4099,6 +4229,11 @@ export class SimpleChart {
 
   public setMobileCrosshairTooltipEnabled(enabled: boolean): void {
     (this.config.layout as any).mobileCrosshairTooltipEnabled = enabled !== false;
+    this.draw();
+  }
+
+  public setYAxisTransparentBackground(enabled: boolean): void {
+    (this.config.layout as any).yAxisTransparentBackground = enabled !== false;
     this.draw();
   }
 
@@ -5009,28 +5144,27 @@ export class SimpleChart {
     const subAxisStart = width - geometry.axisPad;
     const subChartRight = subAxisStart;
     const subChartW = Math.max(1, subChartRight - chartLeft);
-
-    // Opaque market-axis strip (left in left-mode, right in right-mode).
-    ctx.save();
-    ctx.fillStyle = '#0f172a';
-    if (geometry.side === 'left') {
-      ctx.fillRect(0, 0, geometry.axisPad, mainH);
-      ctx.strokeStyle = '#2a3142';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(geometry.axisPad + 0.5, 0);
-      ctx.lineTo(geometry.axisPad + 0.5, mainH);
-      ctx.stroke();
+    const yAxisTransparent = this.isYAxisBackgroundTransparent();
+    const axisClearLeft = geometry.side === 'left' ? 0 : chartRight;
+    const axisClearTop = 0;
+    const axisClearWidth = geometry.axisPad;
+    const axisClearHeight = plotHeight;
+    if (yAxisTransparent) {
+      // Force the Y-axis strip to remain transparent regardless of base canvas fill.
+      ctx.clearRect(axisClearLeft, axisClearTop, axisClearWidth, axisClearHeight);
     } else {
-      ctx.fillRect(chartRight, 0, geometry.axisPad, plotHeight);
+      ctx.save();
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(axisClearLeft, axisClearTop, axisClearWidth, axisClearHeight);
       ctx.strokeStyle = '#2a3142';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(chartRight - 0.5, 0);
-      ctx.lineTo(chartRight - 0.5, plotHeight);
+      const boundaryX = geometry.side === 'left' ? geometry.axisPad + 0.5 : chartRight - 0.5;
+      ctx.moveTo(boundaryX, 0);
+      ctx.lineTo(boundaryX, plotHeight);
       ctx.stroke();
+      ctx.restore();
     }
-    ctx.restore();
 
     // 보조 패널 top 계산
     const panelTops: Record<string, number> = {};
@@ -5385,12 +5519,14 @@ export class SimpleChart {
     const axisDigits = Math.max(0, Math.ceil(-Math.log10(mainAxisStep)) + 2);
     const tickCount = Math.max(1, Math.floor((maxP - minP) / mainAxisStep) + 1);
     const axisBottomPadding = 14;
+    const axisLineLeft = yAxisTransparent && geometry.side === 'left' ? 0 : chartLeft;
+    const axisLineRight = yAxisTransparent && geometry.side === 'right' ? width : chartRight;
     for (let i = 0; i < tickCount; i += 1) {
       const p = maxP - i * mainAxisStep;
       if (p < minP - mainAxisStep * 0.5) break;
       const y = getYLinear(p);
       if (y >= mainH - axisBottomPadding) continue;
-      ctx.beginPath(); ctx.moveTo(chartLeft, y); ctx.lineTo(chartRight, y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(axisLineLeft, y); ctx.lineTo(axisLineRight, y); ctx.stroke();
       const axisTextX = geometry.side === 'left'
         ? (geometry.axisPad * 0.5)
         : (chartRight + (geometry.axisPad * 0.5));
@@ -5398,10 +5534,10 @@ export class SimpleChart {
     }
     ctx.restore();
 
-    // 1-2) 세로 격자: 차트 영역에만 클리핑하여 시세영역 침범 방지
+    // 1-2) 세로 격자: 투명 축 모드에서는 시세영역까지 이어 그린다.
     ctx.save();
     ctx.beginPath();
-    ctx.rect(chartLeft, 0, chartW, plotHeight);
+    ctx.rect(yAxisTransparent ? 0 : chartLeft, 0, yAxisTransparent ? width : chartW, plotHeight);
     ctx.clip();
     ctx.strokeStyle = '#1e2230';
     tickIndices.forEach((i) => {
@@ -5933,6 +6069,7 @@ export class SimpleChart {
       hiddenPanels,
       subAxisStart,
       geometry,
+      yAxisTransparent,
       width,
       subChartW,
       subChartRight,
@@ -5944,16 +6081,18 @@ export class SimpleChart {
       chartTextSecondary: CHART_TEXT_SECONDARY,
     });
     if (geometry.side === 'left') {
-      // Main price-axis background should remain opaque in left mode.
+      // Draw left-axis text without filling a separate background strip.
       ctx.save();
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, geometry.axisPad, mainH);
-      ctx.strokeStyle = '#2a3142';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(geometry.axisPad - 0.5, 0);
-      ctx.lineTo(geometry.axisPad - 0.5, mainH);
-      ctx.stroke();
+      if (!yAxisTransparent) {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, geometry.axisPad, mainH);
+        ctx.strokeStyle = '#2a3142';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(geometry.axisPad - 0.5, 0);
+        ctx.lineTo(geometry.axisPad - 0.5, mainH);
+        ctx.stroke();
+      }
       ctx.fillStyle = CHART_TEXT_SECONDARY;
       ctx.font = `400 11px ${CHART_FONT_STACK}`;
       ctx.textAlign = 'right';
@@ -6965,13 +7104,17 @@ export class SimpleChart {
     const leftGap = this.lastDrawMeta.leftGap ?? 0;
     const range = this.lastDrawMeta.maxP - this.lastDrawMeta.minP || 1;
     const effectiveChartLeft = geometry.chartLeft + leftGap * totalSp;
+    const yAxisTransparent = this.isYAxisBackgroundTransparent();
+    const contentRight = yAxisTransparent ? width : geometry.chartRight;
     return {
       chartLeft: geometry.chartLeft,
       effectiveChartLeft,
-      chartRight: geometry.chartRight,
-      chartW: geometry.chartWidth,
+      chartRight: contentRight,
+      chartW: Math.max(1, contentRight - geometry.chartLeft),
       axisPad: geometry.axisPad,
       axisSide: geometry.side,
+      axisLeft: geometry.axisLeft,
+      axisRight: geometry.axisRight,
       mainH,
       top,
       totalSp,
@@ -8107,7 +8250,7 @@ export class SimpleChart {
           });
           labelItems.forEach((item) => {
             const boxW = Math.max(20, metrics.axisPad - 2);
-            const boxX = metrics.axisSide === 'left' ? 2 : metrics.chartRight;
+            const boxX = metrics.axisSide === 'left' ? 2 : metrics.axisLeft;
             const boxH = 18;
             ctx.save();
             ctx.setLineDash([]);
@@ -8309,7 +8452,7 @@ export class SimpleChart {
 
         // Axis price box follows the hline color automatically.
         const boxW = Math.max(20, metrics.axisPad - 2);
-        const boxX = metrics.axisSide === 'left' ? 2 : metrics.chartRight;
+        const boxX = metrics.axisSide === 'left' ? 2 : metrics.axisLeft;
         const boxH = 20;
         ctx.save();
         ctx.setLineDash([]);
@@ -8359,7 +8502,7 @@ export class SimpleChart {
             const handleOffset = Math.max(20, boxW * 2);
             const handleXRaw = metrics.axisSide === 'left'
               ? metrics.chartLeft + handleOffset
-              : metrics.chartRight - handleOffset;
+              : metrics.axisLeft - handleOffset;
             const handleX = Math.max(metrics.chartLeft + 12, Math.min(metrics.chartRight - 12, handleXRaw));
             drawHandle(handleX, ay);
             ctx.restore();
