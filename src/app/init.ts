@@ -715,7 +715,17 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   const topBarHeight = isPopout ? 0 : 40;
   // 모바일: 좌측 툴바 숨김 (width=0), 하단바도 숨김
   const drawingToolbarDockMinWidth = (isPopout || isMobile) ? 0 : 56;
-  let drawingToolbarDockWidth = drawingToolbarDockMinWidth;
+  const TOOLBOX_VISIBILITY_STORAGE_KEY = 'my-chart-lib.toolbox-hidden.v1';
+  const loadToolboxHiddenAtBoot = (): boolean => {
+    try {
+      const raw = localStorage.getItem(TOOLBOX_VISIBILITY_STORAGE_KEY);
+      return raw === '1' || raw === 'true';
+    } catch {
+      return false;
+    }
+  };
+  const toolboxHiddenAtBoot = !isPopout && !isMobile && loadToolboxHiddenAtBoot();
+  let drawingToolbarDockWidth = toolboxHiddenAtBoot ? 0 : drawingToolbarDockMinWidth;
   // 모바일도 하단 바 공간 확보 (터치 최적화 44px)
   const bottomBarHeight = isPopout ? 0 : (isMobile ? MOBILE_BOTTOM_BAR_HEIGHT : 32);
   let reportPanelHeight = isPopout ? 0 : 320;
