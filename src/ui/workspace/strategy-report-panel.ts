@@ -624,13 +624,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   headerTitleText.textContent = '전략 리포트';
   const headerStrategyName = document.createElement('span');
   headerStrategyName.style.cssText = 'font-size:10px;color:#6a84a8;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;';
-  const headerStaleBadge = document.createElement('span');
-  headerStaleBadge.style.cssText = 'display:none;height:18px;padding:0 8px;border-radius:999px;border:1px solid #7a5a20;background:#2a2112;color:#f7c948;font-size:10px;font-weight:700;align-items:center;justify-content:center;white-space:nowrap;flex-shrink:0;';
-  headerStaleBadge.textContent = '갱신 필요';
   headerTitle.appendChild(headerTitleIcon);
   headerTitle.appendChild(headerTitleText);
   headerTitle.appendChild(headerStrategyName);
-  headerTitle.appendChild(headerStaleBadge);
   header.appendChild(headerTitle);
   const titleControls = document.createElement('div');
   titleControls.style.cssText = 'display:flex;align-items:center;gap:6px;position:absolute;right:8px;top:50%;transform:translateY(-50%);';
@@ -645,7 +641,6 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       ? (hovered ? '#3a2c12' : '#2a2112')
       : (hovered ? '#263655' : '#1b2438');
     manualRefreshBtn.style.color = reportStale ? '#f7c948' : (hovered ? '#ffffff' : '#dce4f5');
-    manualRefreshBtn.style.boxShadow = reportStale ? '0 0 0 1px rgba(247,201,72,0.2), 0 0 12px rgba(247,201,72,0.12)' : 'none';
   };
   manualRefreshBtn.addEventListener('mouseenter', () => applyRefreshButtonStyle(true));
   manualRefreshBtn.addEventListener('mouseleave', () => applyRefreshButtonStyle(false));
@@ -1168,15 +1163,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const kpiLabelFs = isMobileKpi ? '10px' : '11px';
     const kpiValueFs = isMobileKpi ? '12px' : '14px';
     const kpiTitleMb = isMobileKpi ? '6px' : '8px';
-    const staleBanner = reportStale
-      ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:${kpiTitleMb};padding:${isMobileKpi ? '7px 8px' : '8px 10px'};border:1px solid #7a5a20;border-radius:8px;background:#2a2112;color:#f7c948;font-size:${kpiLabelFs};font-weight:700;">
-          <span>리포트가 최신 시그널 기준으로 아직 갱신되지 않았습니다.</span>
-          <span style="color:#ffe29a;white-space:nowrap;">새로고침 필요</span>
-        </div>`
-      : '';
     kpiRow.innerHTML = `
       <div style="grid-column:1 / -1;padding:${kpiPad};border:1px solid #2a3a58;background:#141f33;border-radius:8px;">
-        ${staleBanner}
         <div style="font-size:12px;color:#c9d6ee;font-weight:700;margin-bottom:${kpiTitleMb};">핵심 성과 요약</div>
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:${kpiGap};">
           <div>
@@ -1696,7 +1684,6 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       headerStrategyName.textContent = sName;
       headerStrategyName.style.display = sName ? '' : 'none';
     }
-    headerStaleBadge.style.display = reportStale ? 'inline-flex' : 'none';
 
     // 모바일 normal/collapsed 모드에서 탭우측 일부 버튼 숨김
     const hideMobileTabBtns = isMobileWidth && panelMode !== 'expanded';
