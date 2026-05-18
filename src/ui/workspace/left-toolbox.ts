@@ -309,6 +309,8 @@ export function createLeftToolbox(workspace: HTMLElement): void {
 
   const DESKTOP_COLLAPSED_WIDTH = 56;
   const MOBILE_COLLAPSED_WIDTH = 50;
+  const TOOLBOX_HIDDEN_HANDLE_WIDTH = 0;
+  const TOOLBOX_VISIBILITY_STORAGE_KEY = 'my-chart-lib.toolbox-hidden.v1';
 
   const rail = document.createElement('div');
   rail.style.cssText = [
@@ -372,8 +374,61 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   measureHint.innerHTML = `<span>재기</span> <span style="display:inline-block;padding:1px 6px;border-radius:4px;background:#4b515f;color:#ffffff;font-weight:700;margin:0 2px;">Shift</span> <span style="color:#d3d9e7;">+ 차트위 클릭</span>`;
   workspace.appendChild(measureHint);
 
+  const railToggleBtn = document.createElement('button');
+  railToggleBtn.type = 'button';
+  railToggleBtn.title = '드로잉툴바 감추기';
+  railToggleBtn.style.cssText = [
+    'position:absolute',
+    'top:62%',
+    'left:44px',
+    'width:16px',
+    'height:44px',
+    'z-index:1401',
+    'display:flex',
+    'align-items:center',
+    'justify-content:center',
+    'padding:0',
+    'border:1px solid #2f3f5f',
+    'border-left:none',
+    'border-radius:0 8px 8px 0',
+    'background:rgba(20,28,45,0.95)',
+    'color:#d9e3f8',
+    'cursor:pointer',
+    'box-shadow:0 6px 16px rgba(0,0,0,0.32)',
+    'transform:translateY(-50%)',
+  ].join(';');
+  railToggleBtn.addEventListener('mouseenter', () => {
+    const glyph = railToggleBtn.querySelector('span');
+    if (glyph) {
+      glyph.style.animation = 'toolbox-chevron-wiggle 360ms ease-in-out infinite alternate';
+    }
+  });
+  railToggleBtn.addEventListener('mouseleave', () => {
+    const glyph = railToggleBtn.querySelector('span');
+    if (glyph) {
+      glyph.style.animation = 'none';
+    }
+  });
+  workspace.appendChild(railToggleBtn);
+
   let activeToolId: string | null = null;
   let currentDockCollapsedWidth = DESKTOP_COLLAPSED_WIDTH;
+  const loadToolboxHidden = (): boolean => {
+    try {
+      const raw = localStorage.getItem(TOOLBOX_VISIBILITY_STORAGE_KEY);
+      return raw === '1' || raw === 'true';
+    } catch {
+      return false;
+    }
+  };
+  const saveToolboxHidden = (hidden: boolean) => {
+    try {
+      localStorage.setItem(TOOLBOX_VISIBILITY_STORAGE_KEY, hidden ? '1' : '0');
+    } catch {
+      // ignore storage failures
+    }
+  };
+  let toolboxHidden = loadToolboxHidden();
   let autoCloseTimer = 0;
   let submenuPreferredTop = 8;
   let drawingsVisible = true;
@@ -396,11 +451,20 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   const toolChevronMap = new Map<string, HTMLSpanElement>();
 
   const emitLayoutWidth = () => {
+    const effectiveWidth = toolboxHidden ? TOOLBOX_HIDDEN_HANDLE_WIDTH : currentDockCollapsedWidth;
     window.dispatchEvent(
       new CustomEvent('chart-toolbox-layout', {
-        detail: { width: currentDockCollapsedWidth },
+        detail: { width: effectiveWidth, hidden: toolboxHidden },
       }),
     );
+  };
+
+  const syncRailToggleButton = () => {
+    railToggleBtn.innerHTML = `<span style="display:inline-flex;align-items:center;justify-content:center;">${toolboxHidden ? '&#8250;' : '&#8249;'}</span>`;
+    railToggleBtn.title = toolboxHidden ? '드로잉툴바 펼치기' : '드로잉툴바 감추기';
+    railToggleBtn.style.left = toolboxHidden
+      ? '0px'
+      : `${Math.max(0, currentDockCollapsedWidth - 8)}px`;
   };
 
   const syncTrendToolIconForViewport = () => {
@@ -475,6 +539,23 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     activeToolId = null;
     clearActiveStyles();
     renderMenu(null);
+  };
+  const applyToolboxVisibility = () => {
+    if (toolboxHidden) {
+      closeSubmenu();
+      rail.style.display = 'none';
+      submenu.style.display = 'none';
+      measureHint.style.display = 'none';
+    } else {
+      rail.style.display = 'flex';
+      submenu.style.display = 'block';
+    }
+    syncRailToggleButton();
+    saveToolboxHidden(toolboxHidden);
+    window.dispatchEvent(new CustomEvent('chart-toolbox-visibility-changed', {
+      detail: { hidden: toolboxHidden },
+    }));
+    emitLayoutWidth();
   };
 
   const clearAutoCloseTimer = () => {
@@ -1217,7 +1298,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   const mq = window.matchMedia('(max-width: 900px)');
   const applyMobileLayout = () => {
     if (mq.matches) {
-      currentDockCollapsedWidth = MOBILE_COLLAPSED_WIDTH;
+      if (!toolboxHidden) currentDockCollapsedWidth = MOBILE_COLLAPSED_WIDTH;
       rail.style.left = '0';
       rail.style.top = '0';
       rail.style.bottom = '0';
@@ -1225,7 +1306,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       submenu.style.left = `${currentDockCollapsedWidth}px`;
       submenu.style.width = 'min(250px, calc(100vw - 72px))';
     } else {
-      currentDockCollapsedWidth = DESKTOP_COLLAPSED_WIDTH;
+      if (!toolboxHidden) currentDockCollapsedWidth = DESKTOP_COLLAPSED_WIDTH;
       rail.style.left = '0';
       rail.style.top = '0';
       rail.style.bottom = '0';
@@ -1235,13 +1316,25 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     }
     syncTrendToolIconForViewport();
     if (activeToolId) positionSubmenu();
-    emitLayoutWidth();
+    applyToolboxVisibility();
   };
+  railToggleBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    toolboxHidden = !toolboxHidden;
+    applyToolboxVisibility();
+  });
+  window.addEventListener('chart-toolbox-visibility-set', (event: Event) => {
+    const customEvent = event as CustomEvent<{ hidden?: boolean }>;
+    const nextHidden = Boolean(customEvent.detail?.hidden);
+    if (nextHidden === toolboxHidden) return;
+    toolboxHidden = nextHidden;
+    applyToolboxVisibility();
+  });
   mq.addEventListener('change', applyMobileLayout);
   applyMobileLayout();
   syncTrendToolIconForViewport();
   syncHideToolIcon();
-  emitLayoutWidth();
+  applyToolboxVisibility();
 }
 
 

@@ -776,6 +776,22 @@ export function openChartSettingsModal(chart: any, onApply: () => void, onSymbol
     localStorage.setItem(PATTERN_ALERT_ENABLED_STORAGE_KEY, enabled ? '1' : '0');
     window.dispatchEvent(new CustomEvent('my-chart-lib:pattern-alert-updated'));
   };
+  const TOOLBOX_VISIBILITY_STORAGE_KEY = 'my-chart-lib.toolbox-hidden.v1';
+  const loadToolboxHidden = (): boolean => {
+    try {
+      const raw = localStorage.getItem(TOOLBOX_VISIBILITY_STORAGE_KEY);
+      return raw === '1' || raw === 'true';
+    } catch {
+      return false;
+    }
+  };
+  const saveToolboxHidden = (hidden: boolean) => {
+    try {
+      localStorage.setItem(TOOLBOX_VISIBILITY_STORAGE_KEY, hidden ? '1' : '0');
+    } catch {
+      // ignore storage failures
+    }
+  };
 
   const indicatorRow = document.createElement('div');
   indicatorRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:12px;';
@@ -892,6 +908,33 @@ export function openChartSettingsModal(chart: any, onApply: () => void, onSymbol
   verticalPanRow.appendChild(verticalPanLabel);
   verticalPanRow.appendChild(vpToggleTrack);
   body.appendChild(verticalPanRow);
+
+  const toolboxHiddenRow = document.createElement('div');
+  toolboxHiddenRow.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+  const toolboxHiddenLabel = document.createElement('div');
+  toolboxHiddenLabel.innerHTML = '<div style="font-size:13px;font-weight:700;">드로잉툴바 감추기</div><div style="font-size:11px;color:#84898e;margin-top:2px;">좌측 드로잉 툴바 표시를 On/Off 합니다.</div>';
+  let toolboxHiddenOn = loadToolboxHidden();
+  const tbToggleTrack = document.createElement('div');
+  tbToggleTrack.style.cssText = `position:relative;width:44px;height:24px;border-radius:12px;cursor:pointer;transition:background 0.2s;background:${toolboxHiddenOn ? '#3b82f6' : '#3a4155'};flex-shrink:0;`;
+  const tbToggleThumb = document.createElement('div');
+  tbToggleThumb.style.cssText = `position:absolute;top:3px;left:${toolboxHiddenOn ? '23px' : '3px'};width:18px;height:18px;border-radius:50%;background:#ffffff;box-shadow:0 1px 4px rgba(0,0,0,0.35);transition:left 0.18s;`;
+  tbToggleTrack.appendChild(tbToggleThumb);
+  const syncToolboxToggle = () => {
+    tbToggleTrack.style.background = toolboxHiddenOn ? '#3b82f6' : '#3a4155';
+    tbToggleThumb.style.left = toolboxHiddenOn ? '23px' : '3px';
+  };
+  tbToggleTrack.addEventListener('click', () => {
+    toolboxHiddenOn = !toolboxHiddenOn;
+    saveToolboxHidden(toolboxHiddenOn);
+    syncToolboxToggle();
+    window.dispatchEvent(new CustomEvent('chart-toolbox-visibility-set', {
+      detail: { hidden: toolboxHiddenOn },
+    }));
+    onApply();
+  });
+  toolboxHiddenRow.appendChild(toolboxHiddenLabel);
+  toolboxHiddenRow.appendChild(tbToggleTrack);
+  body.appendChild(toolboxHiddenRow);
 
   const mobileTooltipRow = document.createElement('div');
   mobileTooltipRow.style.cssText = 'margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;';

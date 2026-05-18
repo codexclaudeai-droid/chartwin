@@ -2514,9 +2514,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     strategyReport.setVisible(false);
     window.addEventListener('chart-toolbox-layout', (event: Event) => {
       if (isMobile) return;  // 모바일: 툴바 레이아웃 이벤트 무시
-      const customEvent = event as CustomEvent<{ width?: number }>;
+      const customEvent = event as CustomEvent<{ width?: number; hidden?: boolean }>;
       const nextWidth = Number(customEvent.detail?.width ?? drawingToolbarDockMinWidth);
-      const normalized = Number.isFinite(nextWidth) ? Math.max(drawingToolbarDockMinWidth, Math.round(nextWidth)) : drawingToolbarDockMinWidth;
+      const normalized = customEvent.detail?.hidden
+        ? Math.max(0, Math.round(nextWidth))
+        : (Number.isFinite(nextWidth) ? Math.max(drawingToolbarDockMinWidth, Math.round(nextWidth)) : drawingToolbarDockMinWidth);
       if (normalized === drawingToolbarDockWidth) return;
       drawingToolbarDockWidth = normalized;
       strategyReport.setLeftInset(drawingToolbarDockWidth);
