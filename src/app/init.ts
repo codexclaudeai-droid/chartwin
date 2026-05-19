@@ -570,6 +570,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     root: HTMLDivElement;
     chartArea: HTMLDivElement;
     chart: SimpleChart;
+    tfSelect: HTMLSelectElement;
     refreshChartUi: () => void;
     refreshHeader: () => void;
     startLive: () => void;
@@ -1582,6 +1583,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       root: host,
       chartArea,
       chart,
+      tfSelect,
       refreshChartUi,
       refreshHeader,
       startLive,
@@ -2289,6 +2291,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       height: reportPanelHeight,
       leftInset: drawingToolbarDockWidth,
       getActiveChart: () => getActivePane().chart,
+      timeframes: TFS,
+      onTimeframeChange: (timeframe) => {
+        const pane = getActivePane();
+        pane.tfSelect.value = timeframe as TimeframeKey;
+        pane.tfSelect.dispatchEvent(new Event('change'));
+      },
+      getExpandedAvailableHeight: () => Math.max(0, app.clientHeight - topBarHeight - bottomBarHeight),
       onHeightChange: (nextHeight) => {
         reportPanelHeight = nextHeight;
         applyViewportOffsets();

@@ -39,6 +39,9 @@ type CreateStrategyReportPanelArgs<TChart extends StrategyReportChartLike> = {
   height: number;
   leftInset?: number;
   getActiveChart: () => TChart;
+  timeframes?: readonly { key: string; label: string }[];
+  onTimeframeChange?: (timeframe: string) => void;
+  getExpandedAvailableHeight?: () => number;
   onHeightChange?: (height: number) => void;
   onModeChange?: (mode: 'normal' | 'expanded' | 'collapsed', prevMode: 'normal' | 'expanded' | 'collapsed') => void;
 };
@@ -500,6 +503,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   height,
   leftInset = 0,
   getActiveChart,
+  timeframes = [],
+  onTimeframeChange,
+  getExpandedAvailableHeight,
   onHeightChange,
   onModeChange,
 }: CreateStrategyReportPanelArgs<TChart>): {
@@ -522,11 +528,15 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const getMinNormalHeight = () => (window.matchMedia('(max-width: 760px)').matches ? 204 : 430);
   const maxNormalHeightRatio = 0.85;
   const defaultHeight = window.matchMedia('(max-width: 760px)').matches ? 264 : Math.max(height, 360);
+  const getExpandedSplitBaseHeight = () => {
+    const provided = Number(getExpandedAvailableHeight?.());
+    return Number.isFinite(provided) && provided > 0 ? provided : app.clientHeight;
+  };
 
   let panelMode: 'normal' | 'expanded' | 'collapsed' = 'normal';
   let panelVisible = true;
   let normalHeight = Math.max(defaultHeight, getMinNormalHeight());
-  let expandedHeight = Math.max(220, Math.floor(app.clientHeight * 0.5));
+  let expandedHeight = Math.max(220, Math.floor(getExpandedSplitBaseHeight() * 0.5));
   let autoExpandedHeight = 0;
   let mobileSummarySnapLocked = false;
   let activeWidget: WidgetKey = 'equity';
@@ -663,12 +673,14 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   tabTrades.style.cssText = 'height:22px;border:1px solid #2b3b58;background:#131d31;color:#9fb1d3;border-radius:999px;padding:0 10px;font-size:11px;cursor:pointer;';
   tabLeft.appendChild(tabMetrics);
   tabLeft.appendChild(tabTrades);
-  const timeframeLabel = document.createElement('span');
-  timeframeLabel.style.cssText = 'font-size:11px;color:#8ea4c9;white-space:nowrap;min-width:0;flex:0 1 auto;';
+  const timeframeBtn = document.createElement('button');
+  timeframeBtn.type = 'button';
+  timeframeBtn.title = '시간프레임 선택';
+  timeframeBtn.style.cssText = 'height:22px;background:#1f2e4a;color:#d1d4dc;border:1px solid #38507b;border-radius:4px;padding:0 8px;font-size:11px;cursor:pointer;white-space:nowrap;line-height:1;min-width:32px;flex:0 0 auto;';
   const tabRight = document.createElement('div');
   tabRight.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0;flex:1;justify-content:flex-end;';
   tabRow.appendChild(tabRight);
-  tabRight.appendChild(timeframeLabel);
+  tabRight.appendChild(timeframeBtn);
 
   const periodBtn = mkIconBtn('기간 설정', icon.calendar);
   const periodText = document.createElement('span');
@@ -703,6 +715,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const settingsMenu = document.createElement('div');
   settingsMenu.style.cssText = 'position:absolute;top:0;left:0;background:#171f32;border:1px solid #30405e;border-radius:8px;padding:8px;display:none;z-index:950;min-width:210px;';
   panel.appendChild(settingsMenu);
+  const timeframeMenu = document.createElement('div');
+  timeframeMenu.style.cssText = 'position:absolute;top:0;left:0;background:#ffffff;border:1px solid #d5dbe7;border-radius:6px;padding:4px 0;display:none;z-index:960;min-width:128px;max-height:280px;overflow-y:auto;box-shadow:0 8px 22px rgba(0,0,0,0.28);scrollbar-width:thin;scrollbar-color:#c5ccd8 transparent;';
+  panel.appendChild(timeframeMenu);
 
   const metricsView = document.createElement('div');
   metricsView.style.cssText = 'display:flex;flex-direction:column;min-height:0;flex:1;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;';
@@ -899,20 +914,24 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const _periodTimer  = { v: null as ReturnType<typeof setTimeout> | null };
   const _widgetTimer  = { v: null as ReturnType<typeof setTimeout> | null };
   const _settingsTimer = { v: null as ReturnType<typeof setTimeout> | null };
+  const _timeframeTimer = { v: null as ReturnType<typeof setTimeout> | null };
 
   const hidePeriodMenu   = () => hideSlideMenu(periodMenu,   _periodTimer);
   const hideWidgetMenu   = () => hideSlideMenu(widgetMenu,   _widgetTimer);
   const hideSettingsMenu = () => hideSlideMenu(settingsMenu, _settingsTimer);
+  const hideTimeframeMenu = () => hideSlideMenu(timeframeMenu, _timeframeTimer);
 
   const closeMenus = () => {
     hidePeriodMenu();
     hideWidgetMenu();
     hideSettingsMenu();
+    hideTimeframeMenu();
   };
 
   const openPeriodMenu   = () => openSlideMenu(periodMenu,   periodBtn,   hidePeriodMenu);
   const openWidgetMenu   = () => openSlideMenu(widgetMenu,   widgetBtn,   hideWidgetMenu);
   const openSettingsMenu = () => openSlideMenu(settingsMenu, settingsBtn, hideSettingsMenu);
+  const openTimeframeMenu = () => openSlideMenu(timeframeMenu, timeframeBtn, hideTimeframeMenu);
 
   const placeMenuAtButton = (menu: HTMLDivElement, btn: HTMLButtonElement) => {
     const panelRect = panel.getBoundingClientRect();
@@ -941,9 +960,15 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
   const fmtShortDate = (sec: number): string => {
     const d = new Date(sec * 1000);
-    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+    return `${String(d.getFullYear()).slice(-2)}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+  };
+  const formatSelectedTimeframeLabel = (rawTf: string): string => {
+    const tf = String(rawTf || '').trim();
+    if (tf === '1M') return '1mo';
+    return tf.toLowerCase();
   };
   const formatTimeframeLabel = (rawTf: string): string => {
+    if (String(rawTf || '').trim() === '1M') return '1개월';
     const tf = String(rawTf || '').trim().toLowerCase();
     const map: Record<string, string> = {
       '1s': '1초',
@@ -967,6 +992,38 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       '1mth': '1개월',
     };
     return map[tf] ?? rawTf;
+  };
+
+  const renderTimeframeMenu = () => {
+    timeframeMenu.innerHTML = '';
+    const activeTf = String(latestMeta.timeframe || getActiveChart().config.timeframe || '');
+    const options = timeframes.length ? timeframes : [{ key: activeTf, label: activeTf }];
+    options.forEach(({ key }) => {
+      const active = key === activeTf;
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.style.cssText = `display:block;width:calc(100% - 8px);margin:0 4px;padding:9px 14px;border:none;border-radius:4px;background:${active ? '#1e2d42' : 'transparent'};color:${active ? '#ffffff' : '#1e2a3c'};font-size:13px;font-weight:${active ? '600' : '400'};text-align:left;cursor:pointer;white-space:nowrap;line-height:1;`;
+      item.textContent = formatTimeframeLabel(key);
+      item.addEventListener('mouseenter', () => {
+        if (key === activeTf) return;
+        item.style.background = '#eef1f7';
+        item.style.color = '#1a2438';
+      });
+      item.addEventListener('mouseleave', () => {
+        item.style.background = key === activeTf ? '#1e2d42' : 'transparent';
+        item.style.color = key === activeTf ? '#ffffff' : '#1e2a3c';
+      });
+      item.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if (key !== activeTf) {
+          latestMeta.timeframe = key;
+          timeframeBtn.textContent = formatSelectedTimeframeLabel(key);
+          onTimeframeChange?.(key);
+        }
+        closeMenus();
+      });
+      timeframeMenu.appendChild(item);
+    });
   };
 
   const updatePeriodText = () => {
@@ -1053,8 +1110,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const compactControls = width < 640;
     const tighterControls = width < 560;
 
-    timeframeLabel.style.display = 'inline';
-    timeframeLabel.style.maxWidth = width < 760 ? '110px' : 'none';
+    timeframeBtn.style.display = 'inline-flex';
+    timeframeBtn.style.alignItems = 'center';
+    timeframeBtn.style.justifyContent = 'center';
+    timeframeBtn.style.maxWidth = width < 760 ? '56px' : 'none';
 
     periodBtn.style.maxWidth = 'none';
     periodText.style.display = 'inline-block';
@@ -1073,6 +1132,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     applyMenuSize(periodMenu, maxMenuWidth);
     applyMenuSize(widgetMenu, Math.min(maxMenuWidth, 240));
     applyMenuSize(settingsMenu, Math.min(maxMenuWidth, 240));
+    applyMenuSize(timeframeMenu, Math.min(maxMenuWidth, 160));
   };
 
   const updateTabStyles = () => {
@@ -1693,7 +1753,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
     applyResponsiveLayout();
     updatePeriodText();
-    timeframeLabel.textContent = `캔들: ${formatTimeframeLabel(latestMeta.timeframe)}`;
+    timeframeBtn.textContent = formatSelectedTimeframeLabel(latestMeta.timeframe);
     applyRefreshButtonStyle(false);
     setChartLayoutByMode();
     updateTabStyles();
@@ -1723,8 +1783,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
 
   const applyExpandedHeight = (nextHeight: number) => {
-    const minExpandedHeight = Math.max(220, Math.floor(app.clientHeight * 0.28));
-    const maxExpandedHeight = Math.max(minExpandedHeight, Math.floor(app.clientHeight * 0.72));
+    const splitBaseHeight = getExpandedSplitBaseHeight();
+    const minExpandedHeight = Math.max(220, Math.floor(splitBaseHeight * 0.28));
+    const maxExpandedHeight = Math.max(minExpandedHeight, Math.floor(splitBaseHeight * 0.72));
     expandedHeight = Math.max(minExpandedHeight, Math.min(maxExpandedHeight, Math.floor(nextHeight)));
     if (panelMode === 'expanded') {
       panel.style.height = `${expandedHeight}px`;
@@ -1739,10 +1800,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     panelMode = mode;
 
     if (mode === 'expanded') {
-      const minExpandedHeight = Math.max(220, Math.floor(app.clientHeight * 0.28));
-      const maxExpandedHeight = Math.max(minExpandedHeight, Math.floor(app.clientHeight * 0.72));
-      // Expanded mode uses a 50:50 split baseline between main chart area and strategy report.
-      expandedHeight = Math.max(minExpandedHeight, Math.min(maxExpandedHeight, Math.floor(app.clientHeight * 0.5)));
+      const splitBaseHeight = getExpandedSplitBaseHeight();
+      const minExpandedHeight = Math.max(220, Math.floor(splitBaseHeight * 0.28));
+      const maxExpandedHeight = Math.max(minExpandedHeight, Math.floor(splitBaseHeight * 0.72));
+      // Expanded mode uses a 50:50 split of the chart+report area, excluding top/bottom chrome.
+      expandedHeight = Math.max(minExpandedHeight, Math.min(maxExpandedHeight, Math.floor(splitBaseHeight * 0.5)));
       panel.style.top = '';
       panel.style.bottom = '0';
       panel.style.height = `${expandedHeight}px`;
@@ -2066,7 +2128,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   backBtn.addEventListener('click', (e) => { e.stopPropagation(); showListPanel(); });
 
   // Prevent internal taps from bubbling to document click → closeMenus
-  [periodMenu, widgetMenu, settingsMenu].forEach((m) =>
+  [periodMenu, widgetMenu, settingsMenu, timeframeMenu].forEach((m) =>
     m.addEventListener('click', (e) => e.stopPropagation()),
   );
 
@@ -2120,6 +2182,15 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       if (periodStartSec != null) periodStartInput.value = secToLocalInput(periodStartSec);
       if (periodEndSec != null) periodEndInput.value = secToLocalInput(periodEndSec);
       openPeriodMenu();
+    }
+  });
+  timeframeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = timeframeMenu.style.display === 'block';
+    closeMenus();
+    if (!open) {
+      renderTimeframeMenu();
+      openTimeframeMenu();
     }
   });
   widgetBtn.addEventListener('click', (e) => {
@@ -2202,7 +2273,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   window.addEventListener('resize', () => {
     if (!panelVisible) return;
     if (panelMode === 'expanded') {
-      applyExpandedHeight(Math.floor(app.clientHeight * 0.5));
+      applyExpandedHeight(Math.floor(getExpandedSplitBaseHeight() * 0.5));
       return;
     }
     applyNormalHeight(normalHeight);
