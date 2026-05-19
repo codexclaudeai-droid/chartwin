@@ -583,6 +583,13 @@ export class SimpleChart {
     return { side, axisPad, chartLeft, chartRight, chartWidth, axisLeft, axisRight, axisCenter };
   }
 
+  private alignLatestCandleToAxisStart(realVisibleCount: number): void {
+    const realCount = Math.max(1, Math.min(this.data.length, Math.floor(realVisibleCount)));
+    const futureSlots = this.getFutureSlotsForLatestAtAxisStart(realCount);
+    this.startIndex = Math.max(0, this.data.length - realCount);
+    this.endIndex = this.data.length + futureSlots;
+  }
+
   // 활성 보조 패널(설정 순서 기준)
   public get activePanels(): string[] {
     if (!this.indicatorsVisible) return [];
@@ -4084,11 +4091,9 @@ export class SimpleChart {
     this.clearConfirmedPatternBoxes();
 
     if (!prevData.length) {
-      this.endIndex = data.length;
-      this.startIndex = Math.max(0, data.length - 80);
+      this.alignLatestCandleToAxisStart(Math.min(80, data.length));
     } else if (prevWasNearLatest) {
-      this.endIndex = data.length;
-      this.startIndex = Math.max(0, this.endIndex - prevVisible);
+      this.alignLatestCandleToAxisStart(Math.min(prevVisible, data.length));
     } else {
       const findNearestIndexByTime = (targetTime: number): number => {
         if (!Number.isFinite(targetTime) || !this.data.length) return -1;
@@ -4362,7 +4367,14 @@ export class SimpleChart {
     if (geometry.side !== 'right') return 0;
     const realCount = Math.max(1, Math.min(this.data.length || 1, Math.floor(realVisibleCount)));
     const chartW = Math.max(1, geometry.chartWidth);
-    const targetX = geometry.axisLeft;
+    const opaqueChartW = Math.max(1, geometry.axisLeft - geometry.chartLeft);
+    const opaqueGapBars = Math.min(
+      Math.max(0, this.config.layout.rightGapBars ?? 0),
+      50 / Math.max(1, opaqueChartW / Math.max(1, realCount)),
+    );
+    const opaqueTotalSp = opaqueChartW / Math.max(1, realCount + opaqueGapBars);
+    const opaqueCandleW = Math.max(opaqueTotalSp * 0.8, 1);
+    const targetX = geometry.chartLeft + (realCount - 1) * opaqueTotalSp + opaqueCandleW;
     const maxSlots = Math.max(8, Math.min(500, Math.ceil(realCount * 0.35)));
     let bestSlots = 0;
     let bestDelta = Number.POSITIVE_INFINITY;
@@ -4374,13 +4386,13 @@ export class SimpleChart {
       );
       const totalSp = chartW / Math.max(1, visibleSlots + gapBars);
       const candleW = Math.max(totalSp * 0.8, 1);
-      const latestCenterX = geometry.chartLeft + (realCount - 1) * totalSp + candleW / 2;
-      const delta = Math.abs(latestCenterX - targetX);
+      const latestRightX = geometry.chartLeft + (realCount - 1) * totalSp + candleW;
+      const delta = Math.abs(latestRightX - targetX);
       if (delta < bestDelta) {
         bestDelta = delta;
         bestSlots = futureSlots;
       }
-      if (latestCenterX <= targetX) break;
+      if (latestRightX <= targetX) break;
     }
     return bestSlots;
   }
@@ -7313,8 +7325,7 @@ export class SimpleChart {
     const leftGap = this.lastDrawMeta.leftGap ?? 0;
     const range = this.lastDrawMeta.maxP - this.lastDrawMeta.minP || 1;
     const effectiveChartLeft = geometry.chartLeft + leftGap * totalSp;
-    const yAxisTransparent = this.isYAxisBackgroundTransparent();
-    const contentRight = yAxisTransparent ? width : geometry.chartRight;
+    const contentRight = this.isYAxisBackgroundTransparent() ? width : geometry.chartRight;
     return {
       chartLeft: geometry.chartLeft,
       effectiveChartLeft,
@@ -11103,7 +11114,7 @@ export class SimpleChart {
     const dx = e.clientX - this.dragStartX;
     const dy = e.clientY - this.dragStartY;
     const visibleCount = Math.max(1, this.endIndex - this.startIndex);
-    const chartW = this.viewportWidth - this.config.layout.rightPadding;
+    const chartW = this.getChartGeometry(this.viewportWidth, this.lastDrawMeta?.axisPad).chartWidth;
     const cpw = chartW / (visibleCount + Math.max(0, this.config.layout.rightGapBars ?? 0));
     let changed = false;
     if (cpw > 0) {
@@ -11876,7 +11887,7 @@ export class SimpleChart {
         const dx = pos.x - this.touchStartX;
         const dy = pos.y - this.touchStartY;
         const visibleCount = Math.max(1, this.endIndex - this.startIndex);
-        const chartW = this.viewportWidth - this.config.layout.rightPadding;
+        const chartW = this.getChartGeometry(this.viewportWidth, this.lastDrawMeta?.axisPad).chartWidth;
         const cpw    = chartW / (visibleCount + Math.max(0, this.config.layout.rightGapBars ?? 0));
         let changed = false;
         if (cpw > 0) {
