@@ -242,6 +242,7 @@ export class SimpleChart {
   private doubleBreakConfig: DoubleBreakConfig = { ...DOUBLE_BREAK_DEFAULT_CONFIG };
   private doubleBreakConfigSymbolKey = '';
   private doubleBreakEnvelopeVisibilityBackup: boolean | null = null;
+  private doubleBreakEnvelopeAutoVisible = false;
   private bollingerRiskConfig: BollingerRiskConfig = { ...BOLLINGER_RISK_DEFAULT_CONFIG };
   private signalHitAreas: Array<{
     x: number;
@@ -2399,6 +2400,7 @@ export class SimpleChart {
       indicators.envelope.period = this.doubleBreakConfig.envPeriod;
       indicators.envelope.pct = this.doubleBreakConfig.envPct;
       indicators.envelope.show = true;
+      this.doubleBreakEnvelopeAutoVisible = true;
     }
     if (indicators.dmi) {
       indicators.dmi.period = this.doubleBreakConfig.adxPeriod;
@@ -2411,6 +2413,7 @@ export class SimpleChart {
       indicators.envelope.show = this.doubleBreakEnvelopeVisibilityBackup;
     }
     this.doubleBreakEnvelopeVisibilityBackup = null;
+    this.doubleBreakEnvelopeAutoVisible = false;
   }
 
   private clearInitialDoubleBreakEnvelopeDisplay(): void {
@@ -2419,6 +2422,26 @@ export class SimpleChart {
       indicators.envelope.show = false;
     }
     this.doubleBreakEnvelopeVisibilityBackup = null;
+    this.doubleBreakEnvelopeAutoVisible = false;
+  }
+
+  private shouldRenderEnvelope(): boolean {
+    const indicators = this.config.indicators as any;
+    return Boolean(
+      indicators.envelope?.show
+      && (!this.doubleBreakEnvelopeAutoVisible || this.activeStrategyId === DOUBLE_BREAK_STRATEGY_ID),
+    );
+  }
+
+  public syncActiveStrategyIndicators(): void {
+    if (this.activeStrategyId === DOUBLE_BREAK_STRATEGY_ID) {
+      this.syncDoubleBreakConfigFromParams(true);
+      return;
+    }
+    if (this.doubleBreakEnvelopeAutoVisible || this.doubleBreakEnvelopeVisibilityBackup !== null) {
+      this.restoreDoubleBreakIndicators();
+      this.draw();
+    }
   }
 
   private syncDoubleBreakConfigFromParams(force = false): void {
@@ -5615,7 +5638,8 @@ export class SimpleChart {
         newTrail: [] as boolean[],
       };
     const ichiD  = indicatorLayerOn && ind.ichimoku.show ? this.calcIchimoku(ind.ichimoku.tenkan, ind.ichimoku.kijun, ind.ichimoku.senkou) : null;
-    const envD   = indicatorLayerOn && ind.envelope.show ? this.calcEnvelope(ind.envelope.period, ind.envelope.pct) : null;
+    const envelopeVisible = indicatorLayerOn && this.shouldRenderEnvelope();
+    const envD   = envelopeVisible ? this.calcEnvelope(ind.envelope.period, ind.envelope.pct) : null;
     const doubleBreakResult = this.getDoubleBreakResult();
     const doubleBreakExitLevels = new Map<number, number[]>();
     if (doubleBreakResult) {
@@ -5870,7 +5894,7 @@ export class SimpleChart {
     });
 
     // 4) 엔벨로프 배경
-    if (envD && ind.envelope.show) {
+    if (envD && envelopeVisible) {
       ctx.save();
       ctx.fillStyle = 'rgba(255,200,50,0.05)';
       ctx.beginPath(); let first = true;

@@ -1493,6 +1493,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           const canonical = canonicalizeUiSymbol(selectedSymbol);
           chart.config.symbol = canonical;
           syncSrouterPresetForSymbol(chart, canonical);
+          chart.syncActiveStrategyIndicators();
           saveSymbol(canonical);
           await applyDefaultQuoteCurrencyForSymbol(canonical);
           ohlcHeaderDisplay.innerHTML = '';
