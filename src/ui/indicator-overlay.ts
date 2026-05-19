@@ -826,18 +826,13 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     // 표시할 지표가 있는지 미리 파악
     let hasAnyIndicators = false;
     allKeys.forEach(key => {
-      const enabled = typeof (chart as any).isIndicatorEffectivelyVisible === 'function'
-        ? Boolean((chart as any).isIndicatorEffectivelyVisible(key))
-        : Boolean((ind as any)[key]?.show);
-      if (enabled && !collapsedPanels.has(key)) hasAnyIndicators = true;
+      if (Boolean((ind as any)[key]?.show) && !collapsedPanels.has(key)) hasAnyIndicators = true;
     });
     if (activeStrategy && devVariant) hasAnyIndicators = true;
 
     if (!allTagsCollapsed) {
       allKeys.forEach(key => {
-        const enabled = typeof (chart as any).isIndicatorEffectivelyVisible === 'function'
-          ? Boolean((chart as any).isIndicatorEffectivelyVisible(key))
-          : Boolean((ind as any)[key]?.show);
+        const enabled = Boolean((ind as any)[key]?.show);
         if (enabled && !collapsedPanels.has(key)) {
           try {
             const tag = getMainIndicatorTag(key);

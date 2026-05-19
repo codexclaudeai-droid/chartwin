@@ -241,8 +241,6 @@ export class SimpleChart {
   private strategyRiskLinesVisible = loadStrategyRiskLinesVisiblePreference();
   private doubleBreakConfig: DoubleBreakConfig = { ...DOUBLE_BREAK_DEFAULT_CONFIG };
   private doubleBreakConfigSymbolKey = '';
-  private doubleBreakEnvelopeVisibilityBackup: boolean | null = null;
-  private doubleBreakEnvelopeAutoVisible = false;
   private bollingerRiskConfig: BollingerRiskConfig = { ...BOLLINGER_RISK_DEFAULT_CONFIG };
   private signalHitAreas: Array<{
     x: number;
@@ -1188,16 +1186,10 @@ export class SimpleChart {
   public getEnabledIndicatorCount(): number {
     const indicators = this.config.indicators as Record<string, { show?: boolean }>;
     let count = 0;
-    Object.entries(indicators).forEach(([key, config]) => {
-      if (config && typeof config.show === 'boolean' && this.isIndicatorEffectivelyVisible(key)) count += 1;
+    Object.values(indicators).forEach((config) => {
+      if (config && typeof config.show === 'boolean' && config.show) count += 1;
     });
     return count;
-  }
-
-  public isIndicatorEffectivelyVisible(key: string): boolean {
-    const indicators = this.config.indicators as Record<string, { show?: boolean }>;
-    if (key === 'envelope') return this.shouldRenderEnvelope();
-    return indicators[key]?.show === true;
   }
 
   public clearAllDrawings(includeLocked = true): number {
@@ -2393,69 +2385,11 @@ export class SimpleChart {
     });
   }
 
-  private syncDoubleBreakIndicators(): void {
-    const indicators = this.config.indicators as any;
-    if (indicators.bb) {
-      indicators.bb.period = this.doubleBreakConfig.bbPeriod;
-      indicators.bb.stdDev = this.doubleBreakConfig.bbStd;
-    }
-    if (indicators.envelope) {
-      if (this.doubleBreakEnvelopeVisibilityBackup === null) {
-        this.doubleBreakEnvelopeVisibilityBackup = indicators.envelope.show === true;
-      }
-      indicators.envelope.period = this.doubleBreakConfig.envPeriod;
-      indicators.envelope.pct = this.doubleBreakConfig.envPct;
-      indicators.envelope.show = true;
-      this.doubleBreakEnvelopeAutoVisible = true;
-    }
-    if (indicators.dmi) {
-      indicators.dmi.period = this.doubleBreakConfig.adxPeriod;
-    }
-  }
-
-  private restoreDoubleBreakIndicators(): void {
-    const indicators = this.config.indicators as any;
-    if (indicators.envelope && this.doubleBreakEnvelopeVisibilityBackup !== null) {
-      indicators.envelope.show = this.doubleBreakEnvelopeVisibilityBackup;
-    }
-    this.doubleBreakEnvelopeVisibilityBackup = null;
-    this.doubleBreakEnvelopeAutoVisible = false;
-  }
-
-  private clearInitialDoubleBreakEnvelopeDisplay(): void {
-    const indicators = this.config.indicators as any;
-    if (indicators.envelope) {
-      indicators.envelope.show = false;
-    }
-    this.doubleBreakEnvelopeVisibilityBackup = null;
-    this.doubleBreakEnvelopeAutoVisible = false;
-  }
-
-  private shouldRenderEnvelope(): boolean {
-    const indicators = this.config.indicators as any;
-    return Boolean(
-      indicators.envelope?.show
-      && (!this.doubleBreakEnvelopeAutoVisible || this.activeStrategyId === DOUBLE_BREAK_STRATEGY_ID),
-    );
-  }
-
-  public syncActiveStrategyIndicators(): void {
-    if (this.activeStrategyId === DOUBLE_BREAK_STRATEGY_ID) {
-      this.syncDoubleBreakConfigFromParams(true);
-      return;
-    }
-    if (this.doubleBreakEnvelopeAutoVisible || this.doubleBreakEnvelopeVisibilityBackup !== null) {
-      this.restoreDoubleBreakIndicators();
-      this.draw();
-    }
-  }
-
   private syncDoubleBreakConfigFromParams(force = false): void {
     const symbolKey = this.getStrategySymbolParamSuffix(this.config.symbol);
     if (!force && this.doubleBreakConfigSymbolKey === symbolKey) return;
     this.doubleBreakConfig = this.readDoubleBreakConfigFromParams(this.config.symbol);
     this.doubleBreakConfigSymbolKey = symbolKey;
-    this.syncDoubleBreakIndicators();
   }
 
   public getDoubleBreakConfig(): DoubleBreakConfig {
@@ -2468,7 +2402,6 @@ export class SimpleChart {
     const next = this.normalizeDoubleBreakConfig({ ...this.doubleBreakConfig, ...patch });
     this.doubleBreakConfig = next;
     this.doubleBreakConfigSymbolKey = this.getStrategySymbolParamSuffix(this.config.symbol);
-    this.syncDoubleBreakIndicators();
     this.setStrategyParams(DOUBLE_BREAK_STRATEGY_ID, {
       [DOUBLE_BREAK_PARAM_DEFAULT_KEY]: JSON.stringify(next),
       [this.getDoubleBreakConfigParamKey(this.config.symbol)]: JSON.stringify(next),
@@ -2543,26 +2476,7 @@ export class SimpleChart {
     this.requestStrategyCompute(0);
   }
 
-  public setActiveStrategy(
-    strategyId: string | null,
-    options: { clearDoubleBreakEnvelope?: boolean } = {},
-  ): void {
-    const initializingNonDoubleBreak =
-      this.activeStrategyId === null
-      && strategyId !== null
-      && strategyId !== DOUBLE_BREAK_STRATEGY_ID;
-    const shouldClearDoubleBreakEnvelope =
-      options.clearDoubleBreakEnvelope === true
-      && strategyId !== null
-      && strategyId !== DOUBLE_BREAK_STRATEGY_ID;
-    const leavingDoubleBreak =
-      this.activeStrategyId === DOUBLE_BREAK_STRATEGY_ID
-      && strategyId !== DOUBLE_BREAK_STRATEGY_ID;
-    if (leavingDoubleBreak) {
-      this.restoreDoubleBreakIndicators();
-    } else if (initializingNonDoubleBreak || shouldClearDoubleBreakEnvelope) {
-      this.clearInitialDoubleBreakEnvelopeDisplay();
-    }
+  public setActiveStrategy(strategyId: string | null): void {
     this.activeStrategyId = strategyId;
     if (strategyId === DOUBLE_BREAK_STRATEGY_ID) {
       this.syncDoubleBreakConfigFromParams(true);
@@ -2574,9 +2488,6 @@ export class SimpleChart {
       this.setBollingerRiskConfig({});
     }
     this.requestStrategyCompute(0);
-    if (leavingDoubleBreak || initializingNonDoubleBreak || shouldClearDoubleBreakEnvelope) {
-      this.draw();
-    }
   }
 
   private getActiveStrategy(): StrategyDefinition | null {
@@ -5644,8 +5555,7 @@ export class SimpleChart {
         newTrail: [] as boolean[],
       };
     const ichiD  = indicatorLayerOn && ind.ichimoku.show ? this.calcIchimoku(ind.ichimoku.tenkan, ind.ichimoku.kijun, ind.ichimoku.senkou) : null;
-    const envelopeVisible = indicatorLayerOn && this.shouldRenderEnvelope();
-    const envD   = envelopeVisible ? this.calcEnvelope(ind.envelope.period, ind.envelope.pct) : null;
+    const envD   = indicatorLayerOn && ind.envelope.show ? this.calcEnvelope(ind.envelope.period, ind.envelope.pct) : null;
     const doubleBreakResult = this.getDoubleBreakResult();
     const doubleBreakExitLevels = new Map<number, number[]>();
     if (doubleBreakResult) {
@@ -5900,7 +5810,7 @@ export class SimpleChart {
     });
 
     // 4) 엔벨로프 배경
-    if (envD && envelopeVisible) {
+    if (envD && ind.envelope.show) {
       ctx.save();
       ctx.fillStyle = 'rgba(255,200,50,0.05)';
       ctx.beginPath(); let first = true;

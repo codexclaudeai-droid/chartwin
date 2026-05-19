@@ -793,17 +793,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   const applyUserFacingStrategy = (chart: {
     getActiveStrategyId?: () => string | null;
     getStrategies: () => StrategyDefinition[];
-    setActiveStrategy: (strategyId: string | null, options?: { clearDoubleBreakEnvelope?: boolean }) => void;
+    setActiveStrategy: (strategyId: string | null) => void;
   }): boolean => {
     if (!isBetaApp) return false;
     const nextStrategyId = resolveBetaStrategyId(chart);
     if (!nextStrategyId) return false;
-    const clearDoubleBreakEnvelope = nextStrategyId !== 'strategy_js_double_break';
-    if (chart.getActiveStrategyId?.() === nextStrategyId) {
-      if (clearDoubleBreakEnvelope) chart.setActiveStrategy(nextStrategyId, { clearDoubleBreakEnvelope: true });
-      return clearDoubleBreakEnvelope;
-    }
-    chart.setActiveStrategy(nextStrategyId, { clearDoubleBreakEnvelope });
+    if (chart.getActiveStrategyId?.() === nextStrategyId) return false;
+    chart.setActiveStrategy(nextStrategyId);
     return true;
   };
 
@@ -1493,7 +1489,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           const canonical = canonicalizeUiSymbol(selectedSymbol);
           chart.config.symbol = canonical;
           syncSrouterPresetForSymbol(chart, canonical);
-          chart.syncActiveStrategyIndicators();
           saveSymbol(canonical);
           await applyDefaultQuoteCurrencyForSymbol(canonical);
           ohlcHeaderDisplay.innerHTML = '';
