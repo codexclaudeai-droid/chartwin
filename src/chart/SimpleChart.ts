@@ -2545,7 +2545,7 @@ export class SimpleChart {
       this.setBollingerRiskConfig({});
     }
     this.requestStrategyCompute(0);
-    if (leavingDoubleBreak) {
+    if (leavingDoubleBreak || initializingNonDoubleBreak || shouldClearDoubleBreakEnvelope) {
       this.draw();
     }
   }
