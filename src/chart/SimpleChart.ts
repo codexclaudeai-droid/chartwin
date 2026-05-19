@@ -241,6 +241,7 @@ export class SimpleChart {
   private strategyRiskLinesVisible = loadStrategyRiskLinesVisiblePreference();
   private doubleBreakConfig: DoubleBreakConfig = { ...DOUBLE_BREAK_DEFAULT_CONFIG };
   private doubleBreakConfigSymbolKey = '';
+  private doubleBreakEnvelopeVisibilityBackup: boolean | null = null;
   private bollingerRiskConfig: BollingerRiskConfig = { ...BOLLINGER_RISK_DEFAULT_CONFIG };
   private signalHitAreas: Array<{
     x: number;
@@ -2392,6 +2393,9 @@ export class SimpleChart {
       indicators.bb.stdDev = this.doubleBreakConfig.bbStd;
     }
     if (indicators.envelope) {
+      if (this.doubleBreakEnvelopeVisibilityBackup === null) {
+        this.doubleBreakEnvelopeVisibilityBackup = indicators.envelope.show === true;
+      }
       indicators.envelope.period = this.doubleBreakConfig.envPeriod;
       indicators.envelope.pct = this.doubleBreakConfig.envPct;
       indicators.envelope.show = true;
@@ -2399,6 +2403,22 @@ export class SimpleChart {
     if (indicators.dmi) {
       indicators.dmi.period = this.doubleBreakConfig.adxPeriod;
     }
+  }
+
+  private restoreDoubleBreakIndicators(): void {
+    const indicators = this.config.indicators as any;
+    if (indicators.envelope && this.doubleBreakEnvelopeVisibilityBackup !== null) {
+      indicators.envelope.show = this.doubleBreakEnvelopeVisibilityBackup;
+    }
+    this.doubleBreakEnvelopeVisibilityBackup = null;
+  }
+
+  private clearInitialDoubleBreakEnvelopeDisplay(): void {
+    const indicators = this.config.indicators as any;
+    if (indicators.envelope) {
+      indicators.envelope.show = false;
+    }
+    this.doubleBreakEnvelopeVisibilityBackup = null;
   }
 
   private syncDoubleBreakConfigFromParams(force = false): void {
@@ -2495,6 +2515,18 @@ export class SimpleChart {
   }
 
   public setActiveStrategy(strategyId: string | null): void {
+    const initializingNonDoubleBreak =
+      this.activeStrategyId === null
+      && strategyId !== null
+      && strategyId !== DOUBLE_BREAK_STRATEGY_ID;
+    const leavingDoubleBreak =
+      this.activeStrategyId === DOUBLE_BREAK_STRATEGY_ID
+      && strategyId !== DOUBLE_BREAK_STRATEGY_ID;
+    if (leavingDoubleBreak) {
+      this.restoreDoubleBreakIndicators();
+    } else if (initializingNonDoubleBreak) {
+      this.clearInitialDoubleBreakEnvelopeDisplay();
+    }
     this.activeStrategyId = strategyId;
     if (strategyId === DOUBLE_BREAK_STRATEGY_ID) {
       this.syncDoubleBreakConfigFromParams(true);
@@ -2506,6 +2538,9 @@ export class SimpleChart {
       this.setBollingerRiskConfig({});
     }
     this.requestStrategyCompute(0);
+    if (leavingDoubleBreak) {
+      this.draw();
+    }
   }
 
   private getActiveStrategy(): StrategyDefinition | null {

@@ -645,6 +645,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   let refreshStrategyReportOnNewSignal = (_paneId: number) => {};
   let setTopBarSignalNotification = (_count: number) => {};
   let onSignalNotificationClick = () => {};
+  const strategyReportOpenByPane = new Map<number, boolean>();
+  const prevStrategyActiveByPane = new Map<number, boolean>();
+  const pendingStrategyReportRefreshByPane = new Map<number, boolean>();
   const acknowledgedSignalCountByPane = new Map<number, number>();
   const openEconomicCalendarModal = () => {
     const existing = document.querySelector('[data-economic-calendar-modal="true"]');
@@ -883,7 +886,20 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         });
       }
     };
-    chart.onStrategyComputed = () => markStrategyReportStale();
+    chart.onStrategyComputed = () => {
+      const shouldRefreshPendingReport = pendingStrategyReportRefreshByPane.get(paneId) === true;
+      if (shouldRefreshPendingReport) {
+        pendingStrategyReportRefreshByPane.delete(paneId);
+        if (
+          paneId === paneState.activePaneId
+          && chart.getActiveStrategyName()
+        ) {
+          forceRefreshStrategyReport();
+          return;
+        }
+      }
+      markStrategyReportStale();
+    };
     if (persistedSymbol) {
       chart.config.symbol = persistedSymbol;
     }
@@ -1491,11 +1507,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         chart.setTimeframe(timeframe);
         saveTimeframe(timeframe);
         ohlcHeaderDisplay.innerHTML = '';
+        pendingStrategyReportRefreshByPane.set(paneId, true);
         void reloadLiveData().then(() => {
           const hasStoredTarget = restoreCurrentChartDrawings({ clearWhenMissing: false });
           if (hasStoredTarget) {
             persistCurrentChartDrawings();
-            forceRefreshStrategyReport();
             return;
           }
           const remapped = remapTemporalDrawingSnapshot(beforeSnapshot, rawCandles);
@@ -1503,7 +1519,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           chart.setDrawingsVisible(remapped.drawingsVisible);
           persistCurrentChartDrawings();
           refreshChartUi();
-          forceRefreshStrategyReport();
         });
       },
       onIndicatorClick: () => openIndicatorModal(chart, refreshChartUi),
@@ -2272,8 +2287,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       },
     });
     forceRefreshStrategyReport = () => strategyReport.refresh();
-    const strategyReportOpenByPane = new Map<number, boolean>();
-    const prevStrategyActiveByPane = new Map<number, boolean>();
     const announcedSignalKeys = new Set<string>();
     const getSignalNoticeHost = (): HTMLDivElement => {
       const w = window as typeof window & { __signalNoticeHost__?: HTMLDivElement };
@@ -2525,9 +2538,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     if (nextTimeframe && pane.chart.config.timeframe !== nextTimeframe) {
       pane.chart.setTimeframe(nextTimeframe);
       saveTimeframe(nextTimeframe);
+      pendingStrategyReportRefreshByPane.set(paneState.activePaneId, true);
       void pane.reloadLiveData().finally(() => {
         applyRangeToChart(pane.chart, label);
-        forceRefreshStrategyReport();
       });
       return;
     }
@@ -2594,7 +2607,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           strategyReport.setVisible(true);
         }
         prevStrategyActiveByPane.set(activePaneId, true);
-        strategyReport.syncContext({ clearResult: paneChanged, stale: true });
+        if (!wasActive) {
+          strategyReport.refresh();
+          pendingStrategyReportRefreshByPane.set(activePaneId, true);
+        } else {
+          strategyReport.syncContext({ clearResult: paneChanged, stale: true });
+        }
       }
       refreshSignalNotification();
     };
