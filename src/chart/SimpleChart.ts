@@ -1188,10 +1188,16 @@ export class SimpleChart {
   public getEnabledIndicatorCount(): number {
     const indicators = this.config.indicators as Record<string, { show?: boolean }>;
     let count = 0;
-    Object.values(indicators).forEach((config) => {
-      if (config && typeof config.show === 'boolean' && config.show) count += 1;
+    Object.entries(indicators).forEach(([key, config]) => {
+      if (config && typeof config.show === 'boolean' && this.isIndicatorEffectivelyVisible(key)) count += 1;
     });
     return count;
+  }
+
+  public isIndicatorEffectivelyVisible(key: string): boolean {
+    const indicators = this.config.indicators as Record<string, { show?: boolean }>;
+    if (key === 'envelope') return this.shouldRenderEnvelope();
+    return indicators[key]?.show === true;
   }
 
   public clearAllDrawings(includeLocked = true): number {
