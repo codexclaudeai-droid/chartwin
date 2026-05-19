@@ -2514,9 +2514,16 @@ export class SimpleChart {
     this.requestStrategyCompute(0);
   }
 
-  public setActiveStrategy(strategyId: string | null): void {
+  public setActiveStrategy(
+    strategyId: string | null,
+    options: { clearDoubleBreakEnvelope?: boolean } = {},
+  ): void {
     const initializingNonDoubleBreak =
       this.activeStrategyId === null
+      && strategyId !== null
+      && strategyId !== DOUBLE_BREAK_STRATEGY_ID;
+    const shouldClearDoubleBreakEnvelope =
+      options.clearDoubleBreakEnvelope === true
       && strategyId !== null
       && strategyId !== DOUBLE_BREAK_STRATEGY_ID;
     const leavingDoubleBreak =
@@ -2524,7 +2531,7 @@ export class SimpleChart {
       && strategyId !== DOUBLE_BREAK_STRATEGY_ID;
     if (leavingDoubleBreak) {
       this.restoreDoubleBreakIndicators();
-    } else if (initializingNonDoubleBreak) {
+    } else if (initializingNonDoubleBreak || shouldClearDoubleBreakEnvelope) {
       this.clearInitialDoubleBreakEnvelopeDisplay();
     }
     this.activeStrategyId = strategyId;
