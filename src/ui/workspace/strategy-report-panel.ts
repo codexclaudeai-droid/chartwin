@@ -525,17 +525,35 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   ensurePeriodPickerStyle();
   ensureStrategyReportScrollbarStyle();
   const headerHeight = 34;
-  const getMinNormalHeight = () => (window.matchMedia('(max-width: 760px)').matches ? 204 : 430);
   const maxNormalHeightRatio = 0.85;
-  const defaultHeight = window.matchMedia('(max-width: 760px)').matches ? 264 : Math.max(height, 360);
   const getExpandedSplitBaseHeight = () => {
     const provided = Number(getExpandedAvailableHeight?.());
     return Number.isFinite(provided) && provided > 0 ? provided : app.clientHeight;
   };
+  const isCompactHeightDesktop = () => !window.matchMedia('(max-width: 760px)').matches && getExpandedSplitBaseHeight() <= 720;
+  const getMinNormalHeight = () => {
+    if (window.matchMedia('(max-width: 760px)').matches) return 204;
+    if (isCompactHeightDesktop()) return Math.max(220, Math.floor(getExpandedSplitBaseHeight() * 0.3));
+    return 430;
+  };
+  const getMaxNormalHeight = () => {
+    const minHeight = getMinNormalHeight();
+    if (window.matchMedia('(max-width: 760px)').matches) {
+      return Math.max(minHeight, Math.floor(app.clientHeight * maxNormalHeightRatio));
+    }
+    const splitBaseHeight = getExpandedSplitBaseHeight();
+    if (splitBaseHeight <= 720) {
+      return Math.max(minHeight, Math.floor(splitBaseHeight * 0.6));
+    }
+    return Math.max(minHeight, Math.floor(app.clientHeight * maxNormalHeightRatio));
+  };
+  const defaultHeight = window.matchMedia('(max-width: 760px)').matches
+    ? 264
+    : Math.min(Math.max(height, 360), getMaxNormalHeight());
 
   let panelMode: 'normal' | 'expanded' | 'collapsed' = 'normal';
   let panelVisible = true;
-  let normalHeight = Math.max(defaultHeight, getMinNormalHeight());
+  let normalHeight = Math.max(getMinNormalHeight(), Math.min(getMaxNormalHeight(), defaultHeight));
   let expandedHeight = Math.max(220, Math.floor(getExpandedSplitBaseHeight() * 0.5));
   let autoExpandedHeight = 0;
   let mobileSummarySnapLocked = false;
@@ -1772,7 +1790,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
   const applyNormalHeight = (nextHeight: number) => {
     const minNormalHeight = getMinNormalHeight();
-    const maxAllowed = Math.max(minNormalHeight, Math.floor(app.clientHeight * maxNormalHeightRatio));
+    const maxAllowed = getMaxNormalHeight();
     normalHeight = Math.max(minNormalHeight, Math.min(maxAllowed, Math.floor(nextHeight)));
     if (panelMode === 'normal') {
       const effectiveHeight = Math.max(minNormalHeight, Math.min(maxAllowed, Math.floor(normalHeight + autoExpandedHeight)));
@@ -1784,8 +1802,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
   const applyExpandedHeight = (nextHeight: number) => {
     const splitBaseHeight = getExpandedSplitBaseHeight();
-    const minExpandedHeight = Math.max(220, Math.floor(splitBaseHeight * 0.28));
-    const maxExpandedHeight = Math.max(minExpandedHeight, Math.floor(splitBaseHeight * 0.72));
+    const minExpandedHeight = Math.max(220, Math.floor(splitBaseHeight * 0.3));
+    const maxExpandedHeight = Math.max(minExpandedHeight, Math.floor(splitBaseHeight * 0.6));
     expandedHeight = Math.max(minExpandedHeight, Math.min(maxExpandedHeight, Math.floor(nextHeight)));
     if (panelMode === 'expanded') {
       panel.style.height = `${expandedHeight}px`;
@@ -1801,8 +1819,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
     if (mode === 'expanded') {
       const splitBaseHeight = getExpandedSplitBaseHeight();
-      const minExpandedHeight = Math.max(220, Math.floor(splitBaseHeight * 0.28));
-      const maxExpandedHeight = Math.max(minExpandedHeight, Math.floor(splitBaseHeight * 0.72));
+      const minExpandedHeight = Math.max(220, Math.floor(splitBaseHeight * 0.3));
+      const maxExpandedHeight = Math.max(minExpandedHeight, Math.floor(splitBaseHeight * 0.6));
       // Expanded mode uses a 50:50 split of the chart+report area, excluding top/bottom chrome.
       expandedHeight = Math.max(minExpandedHeight, Math.min(maxExpandedHeight, Math.floor(splitBaseHeight * 0.5)));
       panel.style.top = '';
@@ -1816,7 +1834,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       onHeightChange?.(expandedHeight);
     } else {
       const minNormalHeight = getMinNormalHeight();
-      const maxAllowed = Math.max(minNormalHeight, Math.floor(app.clientHeight * maxNormalHeightRatio));
+      const maxAllowed = getMaxNormalHeight();
       const effectiveNormalHeight = Math.max(minNormalHeight, Math.min(maxAllowed, Math.floor(normalHeight + autoExpandedHeight)));
       panel.style.top = '';
       panel.style.bottom = '0';
@@ -2295,7 +2313,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       if (!panelVisible) return;
       if (panelMode === 'normal') {
         const minNormalHeight = getMinNormalHeight();
-        const maxAllowed = Math.max(minNormalHeight, Math.floor(app.clientHeight * maxNormalHeightRatio));
+        const maxAllowed = getMaxNormalHeight();
         const effectiveHeight = Math.max(minNormalHeight, Math.min(maxAllowed, Math.floor(normalHeight + autoExpandedHeight)));
         panel.style.height = `${effectiveHeight}px`;
         onHeightChange?.(effectiveHeight);
