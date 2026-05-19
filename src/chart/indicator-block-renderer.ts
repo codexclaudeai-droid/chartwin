@@ -58,6 +58,7 @@ export function renderIndicatorBlocks(this: any, params: any): void {
     hiddenPanels,
     subAxisStart,
     geometry,
+    yAxisTransparent = true,
     width,
     subChartW,
     subChartRight,
@@ -609,17 +610,18 @@ export function renderIndicatorBlocks(this: any, params: any): void {
       ctx.rect(-1, top - 1, width + 2, pH + 2);
       ctx.clip();
 
-      // Keep sub-indicator Y-axis area fixed on the right side in both modes.
-      ctx.save();
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(subAxisStart, top, geometry.axisPad, pH);
-      ctx.strokeStyle = '#2a3142';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(subAxisStart - 0.5, top);
-      ctx.lineTo(subAxisStart - 0.5, top + pH);
-      ctx.stroke();
-      ctx.restore();
+      if (!yAxisTransparent) {
+        ctx.save();
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(subAxisStart, top, geometry.axisPad, pH);
+        ctx.strokeStyle = '#2a3142';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(subAxisStart - 0.5, top);
+        ctx.lineTo(subAxisStart - 0.5, top + pH);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       if (id === 'volume') {
         subLabel('Volume', top);

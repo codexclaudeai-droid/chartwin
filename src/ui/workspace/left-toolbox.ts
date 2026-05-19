@@ -438,6 +438,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   let trashCounts = { drawings: 0, indicators: 0 };
   let trashDeleteLocked = false;
   let pointerLongPressTooltip = true;
+  let railToggleTopPx = 0;
   const toolButtonMap = new Map<string, HTMLButtonElement>();
   const toolIconWrapMap = new Map<string, HTMLSpanElement>();
   const selectedToolIconMap = new Map<string, string>();
@@ -460,8 +461,13 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   };
 
   const syncRailToggleButton = () => {
+    const trashBtn = rail.querySelector<HTMLButtonElement>('button[data-tool="trash"]');
+    if (trashBtn && rail.style.display !== 'none') {
+      railToggleTopPx = trashBtn.offsetTop + trashBtn.offsetHeight + 8 + (railToggleBtn.offsetHeight / 2);
+    }
     railToggleBtn.innerHTML = `<span style="display:inline-flex;align-items:center;justify-content:center;">${toolboxHidden ? '&#8250;' : '&#8249;'}</span>`;
     railToggleBtn.title = toolboxHidden ? '드로잉툴바 펼치기' : '드로잉툴바 감추기';
+    railToggleBtn.style.top = railToggleTopPx > 0 ? `${railToggleTopPx}px` : '62%';
     railToggleBtn.style.left = toolboxHidden
       ? '0px'
       : `${Math.max(0, currentDockCollapsedWidth - 8)}px`;
@@ -541,6 +547,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     renderMenu(null);
   };
   const applyToolboxVisibility = () => {
+    syncRailToggleButton();
     if (toolboxHidden) {
       closeSubmenu();
       rail.style.display = 'none';
@@ -550,7 +557,6 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       rail.style.display = 'flex';
       submenu.style.display = 'block';
     }
-    syncRailToggleButton();
     saveToolboxHidden(toolboxHidden);
     window.dispatchEvent(new CustomEvent('chart-toolbox-visibility-changed', {
       detail: { hidden: toolboxHidden },
