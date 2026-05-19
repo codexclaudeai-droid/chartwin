@@ -1465,6 +1465,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         refreshChartUi();
       }
     };
+    const refreshStrategyReportAfterFreshStrategyCompute = () => {
+      const activeStrategyId = chart.getActiveStrategyId();
+      if (!activeStrategyId) return;
+      pendingStrategyReportRefreshByPane.set(paneId, true);
+      chart.setActiveStrategy(activeStrategyId);
+    };
     currencySelect.addEventListener('change', () => {
       void applyCurrencySelection();
     });
@@ -1492,9 +1498,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           saveSymbol(canonical);
           await applyDefaultQuoteCurrencyForSymbol(canonical);
           ohlcHeaderDisplay.innerHTML = '';
-          pendingStrategyReportRefreshByPane.set(paneId, true);
           void reloadLiveData().then(() => {
             restoreCurrentChartDrawings();
+            refreshStrategyReportAfterFreshStrategyCompute();
           });
         });
       },
@@ -2188,8 +2194,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           syncSrouterPresetForSymbol(pane.chart, canonical);
           saveSymbol(canonical);
           void pane.applyDefaultQuoteCurrencyForSymbol(canonical).then(() => {
-            pendingStrategyReportRefreshByPane.set(paneState.activePaneId, true);
-            void pane.reloadLiveData();
+            void pane.reloadLiveData().then(() => {
+              const activeStrategyId = pane.chart.getActiveStrategyId();
+              if (!activeStrategyId) return;
+              pendingStrategyReportRefreshByPane.set(paneState.activePaneId, true);
+              pane.chart.setActiveStrategy(activeStrategyId);
+            });
           });
         },
       });
