@@ -11482,22 +11482,9 @@ export class SimpleChart {
         this.updateChartCursor();
         return;
       }
-      if (!this.drawingTool && hitDrawing && hitDrawing.shape.kind === 'measure') {
-        this.drawings = this.drawings.filter((shape) => shape.id !== hitDrawing.shape.id);
-        if (this.selectedDrawingId === hitDrawing.shape.id) {
-          this.selectedDrawingId = null;
-          this.selectedDrawingPart = 'line';
-          this.drawingMoveState = null;
-        }
-        this.syncDrawingToolbar();
-        this.requestOverlayDraw();
-        this.updateChartCursor();
-        return;
-      }
       if (!this.drawingTool && !this.drawingDraft) {
         const hasMeasure = this.drawings.some((shape) => shape.kind === 'measure');
-        const touchedMeasure = Boolean(hitDrawing && hitDrawing.shape.kind === 'measure');
-        if (hasMeasure && !touchedMeasure) {
+        if (hasMeasure && !hitDrawing) {
           this.drawings = this.drawings.filter((shape) => shape.kind !== 'measure');
           if (this.selectedDrawingId) {
             const selected = this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null;
