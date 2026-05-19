@@ -1492,6 +1492,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           saveSymbol(canonical);
           await applyDefaultQuoteCurrencyForSymbol(canonical);
           ohlcHeaderDisplay.innerHTML = '';
+          pendingStrategyReportRefreshByPane.set(paneId, true);
           void reloadLiveData().then(() => {
             restoreCurrentChartDrawings();
           });
@@ -2187,6 +2188,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           syncSrouterPresetForSymbol(pane.chart, canonical);
           saveSymbol(canonical);
           void pane.applyDefaultQuoteCurrencyForSymbol(canonical).then(() => {
+            pendingStrategyReportRefreshByPane.set(paneState.activePaneId, true);
             void pane.reloadLiveData();
           });
         },
