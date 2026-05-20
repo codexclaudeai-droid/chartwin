@@ -8,6 +8,7 @@ const magnetStrongIcon = `<svg viewBox="0 0 512 512" width="22" height="22" fill
 const magnetSoftIcon = `<svg viewBox="0 0 512 512" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="21"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="21"></path><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="21"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="21"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="21"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="21"></line></g></svg>`;
 const magnetOffIcon = `<svg viewBox="0 0 512 512" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="21"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="21"></path><line x1="192" y1="464" x2="192" y2="416" stroke-width="21"></line><line x1="90.18" y1="421.82" x2="124.12" y2="387.88" stroke-width="21"></line><line x1="48" y1="320" x2="96" y2="320" stroke-width="21"></line><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="21"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="21"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="21"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="21"></line></g><line x1="80" y1="432" x2="432" y2="80" stroke-width="21"></line></svg>`;
 const eraserIcon = `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="${iconStroke}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>`;
+const fibRetracementIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="14" x2="17.5" y2="14"></line><line x1="20.5" y1="14" x2="21" y2="14"></line><line x1="3" y1="19" x2="3.3" y2="19"></line><line x1="6.7" y1="19" x2="21" y2="19"></line><line x1="6.8" y1="18.4" x2="17.2" y2="14.6" stroke-dasharray="4 3"></line><circle cx="5" cy="19" r="1.7" fill="none"></circle><circle cx="19" cy="14" r="1.7" fill="none"></circle></svg>`;
 
 type ToolboxItem = {
   id: string;
@@ -36,7 +37,7 @@ type ToolboxTool = {
 const tools: ToolboxTool[] = [
   {
     id: 'pointer',
-    label: '마우스 포인터',
+    label: '커서',
     icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><line x1="12" y1="4" x2="12" y2="10"></line><line x1="12" y1="14" x2="12" y2="20"></line><line x1="4" y1="12" x2="10" y2="12"></line><line x1="14" y1="12" x2="20" y2="12"></line></svg>`,
     menu: {
       title: '마우스 포인터',
@@ -61,7 +62,7 @@ const tools: ToolboxTool[] = [
   },
   {
     id: 'trend',
-    label: '추세선',
+    label: '추세',
     icon: trendToolDefaultIcon,
     menu: {
       title: '추세선',
@@ -109,7 +110,7 @@ const tools: ToolboxTool[] = [
   {
     id: 'fibonacci',
     label: '피보나치',
-    icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="14" x2="17.5" y2="14"></line><line x1="20.5" y1="14" x2="21" y2="14"></line><line x1="3" y1="19" x2="3.3" y2="19"></line><line x1="6.7" y1="19" x2="21" y2="19"></line><line x1="5" y1="19" x2="19" y2="14" stroke-dasharray="4 3"></line><circle cx="5" cy="19" r="1.7" fill="none"></circle><circle cx="19" cy="14" r="1.7" fill="none"></circle></svg>`,
+    icon: fibRetracementIcon,
     menu: {
       title: '피보나치',
       sections: [
@@ -119,7 +120,8 @@ const tools: ToolboxTool[] = [
             {
               id: 'fib-retracement',
               label: '피보나치 되돌림',
-              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="14" x2="17.5" y2="14"></line><line x1="20.5" y1="14" x2="21" y2="14"></line><line x1="3" y1="19" x2="3.3" y2="19"></line><line x1="6.7" y1="19" x2="21" y2="19"></line><line x1="5" y1="19" x2="19" y2="14" stroke-dasharray="4 3"></line><circle cx="5" cy="19" r="1.7" fill="none"></circle><circle cx="19" cy="14" r="1.7" fill="none"></circle></svg>`,
+              icon: fibRetracementIcon,
+              shortcut: 'Alt + F',
             },
             {
               id: 'fib-trend',
@@ -168,7 +170,7 @@ const tools: ToolboxTool[] = [
   },
   {
     id: 'draw',
-    label: '그리기',
+    label: '그리기/도형',
     icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19l5-1 9-9-4-4-9 9-1 5z"></path><path d="M13 6l4 4"></path></svg>`,
     menu: {
       title: '그리기',
@@ -190,6 +192,7 @@ const tools: ToolboxTool[] = [
               id: 'draw-box',
               label: '박스',
               icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="16.3" y2="6"></line><line x1="19.7" y1="6" x2="20" y2="6"></line><line x1="20" y1="6" x2="20" y2="16.3"></line><line x1="20" y1="19.7" x2="20" y2="20"></line><line x1="20" y1="20" x2="9.7" y2="20"></line><line x1="6.3" y1="20" x2="6" y2="20"></line><line x1="6" y1="20" x2="6" y2="9.7"></line><line x1="6" y1="6.3" x2="6" y2="6"></line><circle cx="6" cy="6" r="1.7" fill="none"></circle><circle cx="20" cy="6" r="1.7" fill="none"></circle><circle cx="20" cy="20" r="1.7" fill="none"></circle><circle cx="6" cy="20" r="1.7" fill="none"></circle></svg>`,
+              shortcut: 'Alt + Shift + R',
             },
           ],
         },
@@ -198,7 +201,7 @@ const tools: ToolboxTool[] = [
   },
   {
     id: 'text',
-    label: '텍스트입력',
+    label: '메모',
     icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="6" x2="19" y2="6"></line><line x1="12" y1="6" x2="12" y2="19"></line></svg>`,
   },
   {
@@ -263,7 +266,7 @@ const tools: ToolboxTool[] = [
   },
   {
     id: 'lock-drawings',
-    label: '전체 잠금',
+    label: '잠금',
     icon: lockClosedIcon,
   },
   {
@@ -302,6 +305,15 @@ const tools: ToolboxTool[] = [
     },
   },
 ];
+
+const toolboxItemLookup = new Map<string, ToolboxItem>();
+tools.forEach((tool) => {
+  tool.menu?.sections.forEach((section) => {
+    section.items.forEach((item) => {
+      toolboxItemLookup.set(item.id, item);
+    });
+  });
+});
 
 export function createLeftToolbox(workspace: HTMLElement): void {
   const normalizeDrawingTool = (toolId: string): string => (
@@ -414,6 +426,12 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     'box-shadow:0 6px 16px rgba(0,0,0,0.32)',
     'transform:translateY(-50%)',
   ].join(';');
+  bindTooltipBadge(railToggleBtn, {
+    placement: 'right',
+    getContent: () => ({
+      title: toolboxHidden ? '드로잉툴바 펼치기' : '드로잉툴바 감추기',
+    }),
+  });
   railToggleBtn.addEventListener('mouseenter', () => {
     const glyph = railToggleBtn.querySelector('span');
     if (glyph) {
@@ -459,14 +477,42 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   const toolButtonMap = new Map<string, HTMLButtonElement>();
   const toolIconWrapMap = new Map<string, HTMLSpanElement>();
   const selectedToolIconMap = new Map<string, string>();
-  const selectedMenuItemMap = new Map<string, { id: string; label: string }>([
+  const selectedMenuItemMap = new Map<string, { id: string; label: string; shortcut?: string }>([
     ['pointer', { id: 'cursor-cross', label: '크로스' }],
-    ['trend', { id: 'trendline', label: '추세선' }],
-    ['fibonacci', { id: 'fib-retracement', label: '피보나치 되돌림' }],
+    ['trend', { id: 'trendline', label: '추세선', shortcut: 'Alt + T' }],
+    ['fibonacci', { id: 'fib-retracement', label: '피보나치 되돌림', shortcut: 'Alt + F' }],
     ['forecast', { id: 'long-position', label: '매수 포지션' }],
     ['draw', { id: 'draw-pencil', label: '연필' }],
   ]);
   const toolChevronMap = new Map<string, HTMLSpanElement>();
+  const getTooltipBoundaryOffset = (rect: DOMRect) => (
+    workspace.getBoundingClientRect().left + currentDockCollapsedWidth - rect.right
+  );
+
+  const resolveToolButtonTooltip = (tool: ToolboxTool): { title: string; shortcut?: string; description?: string } => {
+    if (tool.id === 'measure') {
+      return { title: '재기', shortcut: 'Shift', description: '+ 차트위 클릭' };
+    }
+    if (tool.id === 'magnet') {
+      return {
+        title: magnetMode === 'off' ? '자석 끄기' : magnetMode === 'strong' ? '자석 강하게' : '자석 약하게',
+      };
+    }
+    if (tool.id === 'hide') {
+      return { title: getHideDrawingsAction().label };
+    }
+    if (tool.id === 'lock-drawings') {
+      return { title: getLockDrawingsAction().label };
+    }
+    const selected = selectedMenuItemMap.get(tool.id);
+    if (selected) {
+      return {
+        title: selected.label,
+        shortcut: selected.shortcut,
+      };
+    }
+    return { title: tool.label };
+  };
 
   const emitLayoutWidth = () => {
     const effectiveWidth = toolboxHidden ? TOOLBOX_HIDDEN_HANDLE_WIDTH : currentDockCollapsedWidth;
@@ -619,6 +665,24 @@ export function createLeftToolbox(workspace: HTMLElement): void {
     submenu.style.top = `${Math.round(top)}px`;
   };
 
+  const openToolSubmenu = (tool: ToolboxTool, btn: HTMLButtonElement) => {
+    if (!tool.menu) return;
+    activeToolId = tool.id;
+    clearActiveStyles();
+    applyToolButtonActiveStyle(btn, true);
+    const chevron = toolChevronMap.get(tool.id);
+    if (chevron) {
+      chevron.style.opacity = '1';
+      chevron.style.transform = 'rotate(180deg)';
+    }
+    positionSubmenu(btn.offsetTop - 2);
+    if (tool.id === 'trash') {
+      window.dispatchEvent(new CustomEvent('chart-toolbox-trash-refresh'));
+    }
+    renderMenu(tool);
+    updateRailVisibility();
+  };
+
   const renderMenu = (tool: ToolboxTool | null) => {
     if (!tool?.menu) {
       submenu.innerHTML = '';
@@ -735,8 +799,8 @@ export function createLeftToolbox(workspace: HTMLElement): void {
             patternBoxesVisible = !patternBoxesVisible;
             syncHideToolIcon();
           } else if (tool.id !== 'trash' && item.icon) {
-            if (tool.id === 'trend' || tool.id === 'fibonacci' || tool.id === 'forecast' || tool.id === 'draw') {
-              selectedMenuItemMap.set(tool.id, { id: item.id, label: resolvedLabel });
+            if (tool.id === 'trend' || tool.id === 'fibonacci' || tool.id === 'forecast' || tool.id === 'draw' || tool.id === 'pointer') {
+              selectedMenuItemMap.set(tool.id, { id: item.id, label: resolvedLabel, shortcut: item.shortcut });
             }
             selectedToolIconMap.set(tool.id, item.icon);
             const iconWrap = toolIconWrapMap.get(tool.id);
@@ -918,6 +982,11 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       ].join(';');
       btn.appendChild(chevron);
       toolChevronMap.set(tool.id, chevron);
+      bindTooltipBadge(chevron, {
+        placement: 'right',
+        offset: getTooltipBoundaryOffset,
+        getContent: () => ({ title: tool.label }),
+      });
       const chevronSvg = chevron.querySelector('svg') as SVGElement | null;
       const startChevronWiggle = () => {
         if (!chevronSvg) return;
@@ -946,6 +1015,16 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       btn.addEventListener('mouseleave', stopChevronWiggle);
     }
 
+    bindTooltipBadge(btn, {
+      placement: 'right',
+      offset: getTooltipBoundaryOffset,
+      getContent: () => {
+        const chevronEl = toolChevronMap.get(tool.id);
+        if (chevronEl?.matches(':hover')) return null;
+        return resolveToolButtonTooltip(tool);
+      },
+    });
+
     const setActiveStyle = (active: boolean) => {
       applyToolButtonActiveStyle(btn, active);
     };
@@ -972,14 +1051,6 @@ export function createLeftToolbox(workspace: HTMLElement): void {
         measureHint.style.display = 'none';
       }
     });
-
-    if (tool.id === 'measure') {
-      btn.addEventListener('mouseenter', () => {
-        measureHint.style.display = 'block';
-        measureHint.style.left = `${currentDockCollapsedWidth + 8}px`;
-        measureHint.style.top = `${Math.max(6, btn.offsetTop - 1)}px`;
-      });
-    }
 
     btn.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -1045,52 +1116,17 @@ export function createLeftToolbox(workspace: HTMLElement): void {
         updateRailVisibility();
         return;
       }
-      if (!clickedChevron && tool.menu && (tool.id === 'trend' || tool.id === 'fibonacci' || tool.id === 'forecast' || tool.id === 'draw')) {
-        const selected = selectedMenuItemMap.get(tool.id);
-        const defaultItemId = selected?.id
-          ?? (tool.id === 'trend' ? 'trendline'
-            : tool.id === 'fibonacci' ? 'fib-retracement'
-              : tool.id === 'forecast' ? 'long-position'
-                : 'draw-pencil');
-        const defaultItem = tool.menu.sections
-          .flatMap((section) => section.items)
-          .find((item) => item.id === defaultItemId);
-        if (defaultItem?.icon) {
-          selectedToolIconMap.set(tool.id, defaultItem.icon);
-          const iconWrap = toolIconWrapMap.get(tool.id);
-          if (iconWrap) iconWrap.innerHTML = defaultItem.icon;
+      if (tool.menu) {
+        if (activeToolId === tool.id) {
+          closeSubmenu();
+        } else {
+          openToolSubmenu(tool, btn);
         }
-        activeToolId = null;
-        clearActiveStyles();
-        renderMenu(null);
-        window.dispatchEvent(new CustomEvent('chart-toolbox-select', {
-          detail: {
-            toolId: tool.id,
-            itemId: defaultItemId,
-            drawingTool: normalizeDrawingTool(defaultItemId),
-            label: defaultItem?.label ?? tool.label,
-            includeLocked: trashDeleteLocked,
-          },
-        }));
-        updateRailVisibility();
         return;
       }
       activeToolId = activeToolId === tool.id ? null : tool.id;
       clearActiveStyles();
       setActiveStyle(activeToolId === tool.id);
-      if (tool.menu) {
-        const c = toolChevronMap.get(tool.id);
-        if (c && activeToolId === tool.id) {
-          c.style.opacity = '1';
-          c.style.transform = 'rotate(180deg)';
-        }
-      }
-      if (activeToolId === tool.id) {
-        positionSubmenu(btn.offsetTop - 2);
-        if (tool.id === 'trash') {
-          window.dispatchEvent(new CustomEvent('chart-toolbox-trash-refresh'));
-        }
-      }
       renderMenu(tools.find((t) => t.id === activeToolId) ?? null);
       updateRailVisibility();
     });
@@ -1122,9 +1158,17 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       return b;
     };
 
-    const zoomInBtn  = makeZBtn(zoomInSvg,  '박스 확대');
-    const zoomOutBtn = makeZBtn(zoomOutSvg, '축소');
+    const zoomInBtn  = makeZBtn(zoomInSvg,  '확대/축소');
+    const zoomOutBtn = makeZBtn(zoomOutSvg, '확대 되돌리기');
     zoomOutBtn.style.display = 'none';
+    bindTooltipBadge(zoomInBtn, {
+      placement: 'right',
+      getContent: () => ({ title: '확대/축소' }),
+    });
+    bindTooltipBadge(zoomOutBtn, {
+      placement: 'right',
+      getContent: () => ({ title: '확대 되돌리기' }),
+    });
 
     const setZoomInActive = (on: boolean) => {
       zoomInBtn.style.background   = on ? '#2a3f6a' : '#1a2336';
@@ -1261,8 +1305,14 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       forecastBtn.insertAdjacentElement('afterend', zoomOutBtn);
       forecastBtn.insertAdjacentElement('afterend', zoomInBtn);
     } else {
+    const drawBtn = toolButtonMap.get('draw') ?? null;
+    if (drawBtn) {
+      rail.insertBefore(zoomInBtn, drawBtn);
+      rail.insertBefore(zoomOutBtn, drawBtn);
+    } else {
       rail.appendChild(zoomInBtn);
       rail.appendChild(zoomOutBtn);
+    }
     }
 
     window.addEventListener('chart-zoom-history-updated', (event: Event) => {
@@ -1380,3 +1430,4 @@ export function createLeftToolbox(workspace: HTMLElement): void {
 
 
 
+import { bindTooltipBadge } from './tooltip-badge';
