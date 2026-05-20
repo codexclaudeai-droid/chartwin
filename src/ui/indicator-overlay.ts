@@ -6,6 +6,8 @@ import { bindTooltipBadge } from './workspace/tooltip-badge';
 import type { StrategyDefinition } from '../strategy/strategy-service';
 import { isBetaAppVariant, isDevAppVariant } from '../app/runtime';
 
+const OVERLAY_ICON_TOOLTIP = { placement: 'top' as const, align: 'center' as const, offset: 8 };
+
 const X_AXIS_HEIGHT = 22;
 const CHART_FONT_STACK = `'Inter','Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif`;
 
@@ -546,7 +548,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         <path d="M19 17v-4"></path><path d="M17 15l2-2 2 2"></path>
       </svg>`;
       bindTooltipBadge(reportBtn, {
-        placement: 'top',
+        ...OVERLAY_ICON_TOOLTIP,
         getContent: () => ({ title: '전략리포트' }),
       });
       reportBtn.addEventListener('mouseenter', () => { reportBtn.style.borderColor = '#9aa3b3'; });

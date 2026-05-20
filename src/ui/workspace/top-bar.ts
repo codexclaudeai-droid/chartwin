@@ -1,5 +1,7 @@
 import { bindTooltipBadge } from './tooltip-badge';
 
+const TOP_ICON_TOOLTIP = { placement: 'bottom' as const, align: 'center' as const, offset: 8 };
+
 type MonitorMode = 'single' | 'multi';
 
 type CreateTopBarArgs = {
@@ -394,7 +396,7 @@ export function createTopBar({
   });
   signalBtn.style.color = '#9ba5b7';
   bindTooltipBadge(signalBtn, {
-    placement: 'bottom',
+    ...TOP_ICON_TOOLTIP,
     getContent: () => ({ title: '알림벨' }),
   });
 
@@ -436,7 +438,7 @@ export function createTopBar({
     });
     btn.addEventListener('click', onClick);
     bindTooltipBadge(btn, {
-      placement: 'bottom',
+      ...TOP_ICON_TOOLTIP,
       getContent: () => ({ title: btn.dataset.tooltipTitle ?? title }),
     });
     return btn;
@@ -466,7 +468,7 @@ export function createTopBar({
     splitBtn.style.color = topIconRestColor;
   };
   bindTooltipBadge(splitBtn, {
-    placement: 'bottom',
+    ...TOP_ICON_TOOLTIP,
     getContent: () => ({ title: '레이아웃' }),
   });
 
@@ -556,7 +558,7 @@ export function createTopBar({
   document.addEventListener('click', () => {
     if (splitMenuOpen) closeSplitMenu();
   });
-  rightArea.appendChild(iconBtn(calendarSvgIcon, '경제 캘린더', onOpenEconomicCalendar));
+  rightArea.appendChild(iconBtn(calendarSvgIcon, '경제달력', onOpenEconomicCalendar));
   rightArea.appendChild(signalBtn);
   rightArea.appendChild(splitWrap);
 
@@ -567,16 +569,16 @@ export function createTopBar({
   rightArea.appendChild(restoreViewBtn);
   rightArea.appendChild(exitMaxBtn);
 
-  rightArea.appendChild(iconBtn(screenshotSvgIcon, '활성 패널 이미지 저장 (Ctrl+S)', onSaveScreenshot));
-  const fullscreenBtn = iconBtn(fullscreenSvgIcon, '전체화면 (F)', onToggleFullscreen);
+  rightArea.appendChild(iconBtn(screenshotSvgIcon, '스크린샷', onSaveScreenshot));
+  const fullscreenBtn = iconBtn(fullscreenSvgIcon, '풀스크린 (F)', onToggleFullscreen);
   rightArea.appendChild(fullscreenBtn);
-  rightArea.appendChild(iconBtn(settingsSvgIcon, '활성 패널 설정', onOpenSettings));
+  rightArea.appendChild(iconBtn(settingsSvgIcon, '설정', onOpenSettings));
   topBar.appendChild(rightArea);
 
   const syncFullscreenIcon = () => {
     const inFS = Boolean(document.fullscreenElement);
     fullscreenBtn.innerHTML = inFS ? exitFullscreenSvgIcon : fullscreenSvgIcon;
-    fullscreenBtn.dataset.tooltipTitle = inFS ? '전체화면 종료 (F)' : '전체화면 (F)';
+    fullscreenBtn.dataset.tooltipTitle = inFS ? '풀스크린 종료 (F)' : '풀스크린 (F)';
     fullscreenBtn.setAttribute('aria-label', fullscreenBtn.dataset.tooltipTitle);
   };
 

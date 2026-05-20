@@ -4,6 +4,8 @@ import { isBetaAppVariant } from '../../app/runtime';
 import { getSymbolPricePrecision } from '../../data/market-data-sources';
 import type { DisplayCurrency } from '../../types/market';
 
+const REPORT_ICON_TOOLTIP = { placement: 'top' as const, align: 'center' as const, offset: 8 };
+
 type CandleLike = {
   time?: number;
   close: number;
@@ -374,7 +376,7 @@ function mkIconBtn(title: string, svg: string): HTMLButtonElement {
     btn.style.color = '#dce4f5';
   });
   bindTooltipBadge(btn, {
-    placement: 'top',
+    ...REPORT_ICON_TOOLTIP,
     getContent: () => ({ title: btn.dataset.tooltipTitle ?? title }),
   });
   return btn;
@@ -703,7 +705,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   timeframeBtn.dataset.tooltipTitle = '시간프레임 선택';
   timeframeBtn.style.cssText = 'height:22px;background:#1f2e4a;color:#d1d4dc;border:1px solid #38507b;border-radius:4px;padding:0 8px;font-size:11px;cursor:pointer;white-space:nowrap;line-height:1;min-width:32px;flex:0 0 auto;';
   bindTooltipBadge(timeframeBtn, {
-    placement: 'top',
+    ...REPORT_ICON_TOOLTIP,
     getContent: () => ({ title: timeframeBtn.dataset.tooltipTitle ?? '시간프레임 선택' }),
   });
   const tabRight = document.createElement('div');

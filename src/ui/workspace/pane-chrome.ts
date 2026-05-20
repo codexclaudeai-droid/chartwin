@@ -74,6 +74,7 @@ const signalIconFilter = 'brightness(0) invert(1)';
 const headerActionBg = '#1f2533';
 const headerActionHoverBg = '#2b3448';
 const LIVE_STATUS_STYLE_ID = 'tc-live-status-style';
+const HEADER_ICON_TOOLTIP = { placement: 'bottom' as const, align: 'center' as const, offset: 8 };
 
 const bindHeaderActionHover = (btn: HTMLButtonElement) => {
   btn.addEventListener('mouseenter', () => {
@@ -403,7 +404,7 @@ export function createPaneChrome<TKey extends string>({
   setIndicatorButtonIcon(17);
   bindHeaderActionHover(indBtn);
   bindTooltipBadge(indBtn, {
-    placement: 'bottom',
+    ...HEADER_ICON_TOOLTIP,
     getContent: () => ({ title: '보조지표' }),
   });
   paneHeader.appendChild(indBtn);
@@ -419,7 +420,7 @@ export function createPaneChrome<TKey extends string>({
   };
   setStrategyButtonIcon(18);
   bindTooltipBadge(strategyBtn, {
-    placement: 'bottom',
+    ...HEADER_ICON_TOOLTIP,
     getContent: () => ({ title: '전략시그널' }),
   });
   paneHeader.appendChild(strategyBtn);

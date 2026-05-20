@@ -14,3 +14,14 @@ test('right-placed tooltip badges compensate for the arrow width so the tip can 
     /left = placement === 'right'[\s\S]*rect\.right \+ resolvedOffset \+ 4/,
   );
 });
+
+test('tooltip arrows center on the hovered icon for every placement axis', () => {
+  assert.match(
+    tooltipBadgeSource,
+    /rect\.top \+ \(rect\.height \/ 2\)\) - top - 4/,
+  );
+  assert.match(
+    tooltipBadgeSource,
+    /rect\.left \+ \(rect\.width \/ 2\)\) - left - 4/,
+  );
+});

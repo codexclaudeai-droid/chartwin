@@ -234,7 +234,7 @@ export const bindTooltipBadge = (
         ? rect.right + resolvedOffset + 4
         : rect.left - tipRect.width - resolvedOffset - 4;
       left = clamp(left, margin, viewportW - tipRect.width - margin);
-      arrowInset = clamp((rect.top + (rect.height / 2)) - top - 6, 10, Math.max(10, tipRect.height - 18));
+      arrowInset = clamp((rect.top + (rect.height / 2)) - top - 4, 10, Math.max(10, tipRect.height - 18));
     } else {
       left = align === 'start'
         ? rect.left
@@ -246,7 +246,7 @@ export const bindTooltipBadge = (
         ? rect.bottom + resolvedOffset
         : rect.top - tipRect.height - resolvedOffset;
       top = clamp(top, margin, viewportH - tipRect.height - margin);
-      arrowInset = clamp((rect.left + (rect.width / 2)) - left - 6, 12, Math.max(12, tipRect.width - 18));
+      arrowInset = clamp((rect.left + (rect.width / 2)) - left - 4, 12, Math.max(12, tipRect.width - 18));
     }
 
     els.root.style.left = `${Math.round(left)}px`;
