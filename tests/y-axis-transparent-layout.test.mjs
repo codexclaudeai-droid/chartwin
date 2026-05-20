@@ -47,3 +47,16 @@ test('latest candle alignment targets the same initial position as opaque Y-axis
     'transparent initial anchor should match the opaque-mode latest-candle position',
   );
 });
+
+test('transparent Y-axis renders readable price labels with local backplates', () => {
+  assert.match(
+    source,
+    /function drawReadableAxisLabel\(/,
+    'transparent Y-axis should have a dedicated readable label helper',
+  );
+  assert.match(
+    source,
+    /if \(yAxisTransparent\) \{\s*drawReadableAxisLabel\(/s,
+    'transparent Y-axis tick labels should render with a local backdrop instead of bare text over candles',
+  );
+});

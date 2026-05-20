@@ -125,6 +125,52 @@ function getPriceArrowTextAnchor(
   return { align: 'center', x: x + (w / 2) };
 }
 
+function drawReadableAxisLabel(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  options: {
+    align: CanvasTextAlign;
+    textColor: string;
+    font: string;
+    background: string;
+    border: string;
+    padX?: number;
+    padY?: number;
+    radius?: number;
+  },
+): void {
+  const padX = options.padX ?? 6;
+  const padY = options.padY ?? 3;
+  const radius = options.radius ?? 6;
+  ctx.save();
+  ctx.font = options.font;
+  const metrics = ctx.measureText(text);
+  const textWidth = Math.ceil(metrics.width);
+  const ascent = Math.max(8, Math.ceil(metrics.actualBoundingBoxAscent || 8));
+  const descent = Math.max(3, Math.ceil(metrics.actualBoundingBoxDescent || 3));
+  const boxW = textWidth + (padX * 2);
+  const boxH = ascent + descent + (padY * 2);
+  const boxY = Math.round(y - ascent - padY);
+  let boxX = x - boxW / 2;
+  if (options.align === 'right') boxX = x - boxW;
+  else if (options.align === 'left') boxX = x;
+
+  ctx.beginPath();
+  ctx.roundRect(boxX, boxY, boxW, boxH, radius);
+  ctx.fillStyle = options.background;
+  ctx.fill();
+  ctx.strokeStyle = options.border;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = options.textColor;
+  ctx.textAlign = options.align;
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
 // ── 모바일 전용 상수 ──────────────────────────────────────────────────────────
 export const MOBILE_BOTTOM_BAR_HEIGHT = 44;
 
@@ -5751,7 +5797,21 @@ export class SimpleChart {
       const axisTextX = geometry.side === 'left'
         ? (geometry.axisPad * 0.5)
         : (chartRight + (geometry.axisPad * 0.5));
-      ctx.fillText(formatWithComma(Number(p.toFixed(axisDigits)), symbolPriceDigits), axisTextX, y + 4);
+      const axisText = formatWithComma(Number(p.toFixed(axisDigits)), symbolPriceDigits);
+      if (yAxisTransparent) {
+        drawReadableAxisLabel(ctx, axisText, axisTextX, y + 4, {
+          align: 'center',
+          textColor: CHART_TEXT_SECONDARY,
+          font: `400 11px ${CHART_FONT_STACK}`,
+          background: 'rgba(15, 23, 42, 0.82)',
+          border: 'rgba(96, 116, 148, 0.42)',
+          padX: 7,
+          padY: 3,
+          radius: 6,
+        });
+      } else {
+        ctx.fillText(axisText, axisTextX, y + 4);
+      }
     }
     ctx.restore();
 
@@ -6325,7 +6385,21 @@ export class SimpleChart {
         if (p < minP - mainAxisStep * 0.5) break;
         const y = getYLinear(p);
         if (y >= mainH - axisBottomPadding) continue;
-        ctx.fillText(formatWithComma(Number(p.toFixed(axisDigits)), symbolPriceDigits), geometry.axisPad - 6, y + 4);
+        const axisText = formatWithComma(Number(p.toFixed(axisDigits)), symbolPriceDigits);
+        if (yAxisTransparent) {
+          drawReadableAxisLabel(ctx, axisText, geometry.axisPad - 6, y + 4, {
+            align: 'right',
+            textColor: CHART_TEXT_SECONDARY,
+            font: `400 11px ${CHART_FONT_STACK}`,
+            background: 'rgba(15, 23, 42, 0.82)',
+            border: 'rgba(96, 116, 148, 0.42)',
+            padX: 6,
+            padY: 3,
+            radius: 6,
+          });
+        } else {
+          ctx.fillText(axisText, geometry.axisPad - 6, y + 4);
+        }
       }
       ctx.restore();
     }
