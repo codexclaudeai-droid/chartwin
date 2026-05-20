@@ -48,15 +48,15 @@ test('latest candle alignment targets the same initial position as opaque Y-axis
   );
 });
 
-test('transparent Y-axis renders readable price labels with local backplates', () => {
+test('transparent Y-axis redraws price labels as the final overlay layer', () => {
   assert.match(
     source,
-    /function drawReadableAxisLabel\(/,
-    'transparent Y-axis should have a dedicated readable label helper',
+    /if \(yAxisTransparent\) \{\s*ctx\.save\(\);\s*ctx\.fillStyle = CHART_TEXT_SECONDARY;/s,
+    'transparent Y-axis should redraw price labels in a dedicated late pass',
   );
   assert.match(
     source,
-    /if \(yAxisTransparent\) \{\s*drawReadableAxisLabel\(/s,
-    'transparent Y-axis tick labels should render with a local backdrop instead of bare text over candles',
+    /const transparentAxisTextX = geometry\.side === 'left' \? geometry\.axisPad - 6 : chartRight \+ 4;/,
+    'transparent Y-axis should place labels directly inside the axis strip like the indicator panels do',
   );
 });
