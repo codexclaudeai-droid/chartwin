@@ -32,6 +32,88 @@ export function isCmeEquityFuturesOpen(now: Date): boolean {
   return !isMaintenance;
 }
 
+function formatDurationMinutes(totalMinutes: number): string {
+  const safe = Math.max(0, Math.floor(totalMinutes));
+  const hours = Math.floor(safe / 60);
+  const minutes = safe % 60;
+  if (hours <= 0) return `${minutes}분`;
+  if (minutes <= 0) return `${hours}시간`;
+  return `${hours}시간 ${minutes}분`;
+}
+
+export function getCmeEquityFuturesSessionInfo(now: Date): {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  progress: number;
+  leftLabel: string;
+  rightLabel: string;
+  timezoneLabel: string;
+} {
+  const { weekday, hour, minute } = getChicagoWeekdayHourMinute(now);
+  const minuteOfDay = hour * 60 + minute;
+  const maintenanceStart = 16 * 60;
+  const maintenanceEnd = 17 * 60;
+  const weekdayLabel = ({ Sun: '일', Mon: '월', Tue: '화', Wed: '수', Thu: '목', Fri: '금', Sat: '토' } as Record<string, string>)[weekday] ?? weekday;
+  const timezoneLabel = '거래소 시간대: 시카고 (UTC-5, 서머타임 기준)';
+  const isOpen = isCmeEquityFuturesOpen(now);
+
+  if (isOpen) {
+    let elapsed = 0;
+    let remaining = 0;
+    if (weekday === 'Sun') {
+      elapsed = minuteOfDay - maintenanceEnd;
+      remaining = (24 * 60 - minuteOfDay) + maintenanceStart;
+    } else if (minuteOfDay < maintenanceStart) {
+      elapsed = (24 * 60 - maintenanceEnd) + minuteOfDay;
+      remaining = maintenanceStart - minuteOfDay;
+    } else {
+      elapsed = minuteOfDay - maintenanceEnd;
+      remaining = (24 * 60 - minuteOfDay) + maintenanceStart;
+    }
+    const total = Math.max(1, elapsed + remaining);
+    return {
+      isOpen: true,
+      title: '마켓 오픈',
+      message: `마켓이 오픈되었습니다. ${formatDurationMinutes(remaining)} 후 16:00에 마감합니다.`,
+      progress: Math.max(0, Math.min(1, elapsed / total)),
+      leftLabel: weekdayLabel,
+      rightLabel: '16:00',
+      timezoneLabel,
+    };
+  }
+
+  if (weekday !== 'Sat' && weekday !== 'Sun' && minuteOfDay >= maintenanceStart && minuteOfDay < maintenanceEnd) {
+    const elapsed = minuteOfDay - maintenanceStart;
+    const remaining = maintenanceEnd - minuteOfDay;
+    return {
+      isOpen: false,
+      title: '마켓 마감',
+      message: `정산/점검 시간입니다. ${formatDurationMinutes(remaining)} 후 17:00에 다시 열립니다.`,
+      progress: Math.max(0, Math.min(1, elapsed / 60)),
+      leftLabel: weekdayLabel,
+      rightLabel: '17:00',
+      timezoneLabel,
+    };
+  }
+
+  let remainingToOpen = 0;
+  if (weekday === 'Fri') remainingToOpen = (24 * 60 - minuteOfDay) + 24 * 60 + maintenanceEnd;
+  else if (weekday === 'Sat') remainingToOpen = (24 * 60 - minuteOfDay) + maintenanceEnd;
+  else if (weekday === 'Sun') remainingToOpen = maintenanceEnd - minuteOfDay;
+  else remainingToOpen = maintenanceEnd - minuteOfDay;
+
+  return {
+    isOpen: false,
+    title: '마켓 마감',
+    message: `마켓이 마감되었습니다. ${formatDurationMinutes(remainingToOpen)} 후 17:00에 다시 열립니다.`,
+    progress: 0,
+    leftLabel: weekdayLabel,
+    rightLabel: '17:00',
+    timezoneLabel,
+  };
+}
+
 export function getSeoulWeekdayHourMinute(now: Date): { weekday: string; hour: number; minute: number } {
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Seoul',

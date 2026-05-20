@@ -77,6 +77,7 @@ import { getUsdtToDisplayRate } from '../utils/currency';
 import {
   canonicalizeUiSymbol,
   getDefaultQuoteCurrencyForSymbol,
+  getCmeEquityFuturesSessionInfo,
   isKrxEquityMarketOpen,
   isKrxIndexLikeSymbol,
   isNasdaqFuturesLikeSymbol,
@@ -877,6 +878,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       indBtn,
       strategyBtn,
       marketSessionBadge,
+      delayedDataBadge,
+      updateDelayedDataInfo,
       headerTitle,
       ohlcHeaderDisplay,
       winCtrlWrap,
@@ -1202,6 +1205,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       marketSessionBadge.style.background = sessionOpen ? '#1fbf75' : '#e24a4a';
       marketSessionBadge.style.borderColor = sessionOpen ? '#2f8f66' : '#9d3c3c';
       marketSessionBadge.title = sessionOpen ? '장오픈' : '장마감';
+      const delayedData = cmeSessionSymbol;
+      delayedDataBadge.style.display = delayedData ? 'inline-flex' : 'none';
+      delayedDataBadge.title = '거래소 데이터 지연';
+      if (delayedData) {
+        updateDelayedDataInfo(getCmeEquityFuturesSessionInfo(new Date()));
+      }
 
       let baseClose24h = NaN;
       if (Number.isFinite(lastTs) && candles.length) {

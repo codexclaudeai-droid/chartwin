@@ -34,6 +34,7 @@ export type PaneChrome = {
   indBtn: HTMLButtonElement;
   strategyBtn: HTMLButtonElement;
   marketSessionBadge: HTMLSpanElement;
+  delayedDataBadge: HTMLSpanElement;
   headerTitle: HTMLDivElement;
   ohlcHeaderDisplay: HTMLDivElement;
   winCtrlWrap: HTMLDivElement;
@@ -41,6 +42,15 @@ export type PaneChrome = {
   maxBtn: HTMLButtonElement;
   closeBtn: HTMLButtonElement;
   refreshSymbolVisual: (symbol: string) => void;
+  updateDelayedDataInfo: (info: {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    progress: number;
+    leftLabel: string;
+    rightLabel: string;
+    timezoneLabel: string;
+  }) => void;
 };
 
 const makeHeaderCtrlBtn = (label: string, title: string): HTMLButtonElement => {
@@ -97,6 +107,51 @@ const ensureLiveStatusStyle = () => {
         filter:brightness(1.11);
       }
     }
+    .tc-delayed-data-badge {
+      display:none;
+      align-items:center;
+      justify-content:center;
+      width:16px;
+      height:16px;
+      border-radius:50%;
+      border:1px solid #f2b34a;
+      background:#fff2d8;
+      color:#f27600;
+      font-size:10px;
+      font-weight:900;
+      line-height:1;
+      flex-shrink:0;
+      cursor:help;
+      box-shadow:0 0 0 1px rgba(242,118,0,0.1), 0 0 8px rgba(242,118,0,0.18);
+    }
+    .tc-delayed-data-popover {
+      position:absolute;
+      top:36px;
+      z-index:260;
+      width:min(430px, calc(100% - 18px));
+      border:1px solid rgba(15,23,42,0.12);
+      border-radius:8px;
+      background:#fff;
+      color:#172033;
+      box-shadow:0 14px 36px rgba(0,0,0,0.34);
+      font-family:'Segoe UI',Arial,sans-serif;
+      overflow:hidden;
+    }
+    .tc-delayed-data-popover[data-open="true"] { display:block; }
+    .tc-delayed-data-popover[data-open="false"] { display:none; }
+    .tc-delayed-data-section { padding:18px 20px; }
+    .tc-delayed-data-section + .tc-delayed-data-section { border-top:1px solid #edf0f5; }
+    .tc-delayed-data-heading { display:flex;align-items:center;gap:9px;font-size:18px;font-weight:800;letter-spacing:-0.02em; }
+    .tc-delayed-data-dot { width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .tc-delayed-data-dot.market { background:#dff7ee;color:#0f8a70; }
+    .tc-delayed-data-dot.delay { background:#fff2d8;color:#f27600;font-size:12px;font-weight:900; }
+    .tc-delayed-data-copy { margin-top:10px;font-size:15px;line-height:1.55;color:#202736; }
+    .tc-delayed-data-copy strong { font-weight:800; }
+    .tc-delayed-data-muted { margin-top:10px;font-size:12px;color:#7b8494;text-align:center; }
+    .tc-delayed-data-timeline { margin-top:14px;display:flex;align-items:center;gap:8px;color:#4b5565;font-size:12px; }
+    .tc-delayed-data-progress { position:relative;height:8px;border-radius:999px;background:#d9dee8;flex:1;overflow:hidden; }
+    .tc-delayed-data-progress-fill { position:absolute;inset:0 auto 0 0;width:0%;border-radius:999px;background:#08715c;transition:width 0.25s ease; }
+    .tc-delayed-data-note { display:inline-flex;margin-top:12px;border-radius:8px;background:#f3f4f6;color:#303846;font-weight:700;font-size:14px;padding:8px 13px; }
   `;
   document.head.appendChild(style);
 };
@@ -371,6 +426,96 @@ export function createPaneChrome<TKey extends string>({
   marketSessionBadge.title = '장상태';
   paneHeader.appendChild(marketSessionBadge);
 
+  const delayedDataBadge = document.createElement('span');
+  delayedDataBadge.className = 'tc-delayed-data-badge';
+  delayedDataBadge.textContent = 'D';
+  delayedDataBadge.title = '거래소 데이터 지연';
+  delayedDataBadge.setAttribute('aria-label', '거래소 데이터 지연 안내');
+  delayedDataBadge.tabIndex = 0;
+  paneHeader.appendChild(delayedDataBadge);
+
+  const delayedDataPopover = document.createElement('div');
+  delayedDataPopover.className = 'tc-delayed-data-popover';
+  delayedDataPopover.dataset.open = 'false';
+  delayedDataPopover.innerHTML = `
+      <div class="tc-delayed-data-section">
+      <div class="tc-delayed-data-heading" data-delayed-session-heading style="color:#08715c;">
+        <span class="tc-delayed-data-dot market" data-delayed-session-dot>●</span>
+        <span data-delayed-session-title>마켓 오픈</span>
+      </div>
+      <div class="tc-delayed-data-copy" data-delayed-session-message>마켓이 오픈되었습니다.</div>
+      <div class="tc-delayed-data-timeline">
+        <span data-delayed-left-label>수</span>
+        <span class="tc-delayed-data-progress"><span class="tc-delayed-data-progress-fill" data-delayed-progress></span></span>
+        <span data-delayed-right-label>16:00</span>
+      </div>
+      <div class="tc-delayed-data-muted" data-delayed-timezone>거래소 시간대: 시카고 (UTC-5, 서머타임 기준)</div>
+    </div>
+    <div class="tc-delayed-data-section">
+      <div class="tc-delayed-data-heading" style="color:#f27600;">
+        <span class="tc-delayed-data-dot delay">D</span>
+        <span>지연 데이터입니다</span>
+      </div>
+      <div class="tc-delayed-data-copy">
+        <strong>NQ1!</strong> 데이터가 거래소 요구 사항으로 인해 약 <strong>10분</strong> 지연될 수 있습니다.
+      </div>
+    </div>
+  `;
+  paneRoot.appendChild(delayedDataPopover);
+
+  const updateDelayedDataInfo: PaneChrome['updateDelayedDataInfo'] = (info) => {
+    const heading = delayedDataPopover.querySelector<HTMLElement>('[data-delayed-session-heading]');
+    const dot = delayedDataPopover.querySelector<HTMLElement>('[data-delayed-session-dot]');
+    const title = delayedDataPopover.querySelector<HTMLElement>('[data-delayed-session-title]');
+    const message = delayedDataPopover.querySelector<HTMLElement>('[data-delayed-session-message]');
+    const leftLabel = delayedDataPopover.querySelector<HTMLElement>('[data-delayed-left-label]');
+    const rightLabel = delayedDataPopover.querySelector<HTMLElement>('[data-delayed-right-label]');
+    const progress = delayedDataPopover.querySelector<HTMLElement>('[data-delayed-progress]');
+    const timezone = delayedDataPopover.querySelector<HTMLElement>('[data-delayed-timezone]');
+    if (heading) heading.style.color = info.isOpen ? '#08715c' : '#d6472f';
+    if (dot) {
+      dot.className = `tc-delayed-data-dot ${info.isOpen ? 'market' : 'delay'}`;
+      dot.textContent = info.isOpen ? '●' : '×';
+    }
+    if (title) title.textContent = info.title;
+    if (message) message.textContent = info.message;
+    if (leftLabel) leftLabel.textContent = info.leftLabel;
+    if (rightLabel) rightLabel.textContent = info.rightLabel;
+    if (progress) progress.style.width = `${Math.max(0, Math.min(100, info.progress * 100)).toFixed(1)}%`;
+    if (timezone) timezone.textContent = info.timezoneLabel;
+  };
+
+  let delayedDataPopoverTimer: number | null = null;
+  const closeDelayedPopover = () => {
+    delayedDataPopover.dataset.open = 'false';
+  };
+  const scheduleDelayedPopoverClose = () => {
+    if (delayedDataPopoverTimer != null) window.clearTimeout(delayedDataPopoverTimer);
+    delayedDataPopoverTimer = window.setTimeout(closeDelayedPopover, 140);
+  };
+  const openDelayedPopover = () => {
+    if (delayedDataPopoverTimer != null) window.clearTimeout(delayedDataPopoverTimer);
+    delayedDataPopover.dataset.open = 'true';
+    const rootRect = paneRoot.getBoundingClientRect();
+    const badgeRect = delayedDataBadge.getBoundingClientRect();
+    const popoverWidth = delayedDataPopover.offsetWidth || 430;
+    const centered = badgeRect.left - rootRect.left + (badgeRect.width / 2) - (popoverWidth / 2);
+    const maxLeft = Math.max(8, rootRect.width - popoverWidth - 8);
+    delayedDataPopover.style.left = `${Math.max(8, Math.min(centered, maxLeft))}px`;
+  };
+  delayedDataBadge.addEventListener('mouseenter', openDelayedPopover);
+  delayedDataBadge.addEventListener('mouseleave', scheduleDelayedPopoverClose);
+  delayedDataBadge.addEventListener('focus', openDelayedPopover);
+  delayedDataBadge.addEventListener('blur', scheduleDelayedPopoverClose);
+  delayedDataBadge.addEventListener('click', (event) => {
+    event.stopPropagation();
+    delayedDataPopover.dataset.open === 'true' ? closeDelayedPopover() : openDelayedPopover();
+  });
+  delayedDataPopover.addEventListener('mouseenter', () => {
+    if (delayedDataPopoverTimer != null) window.clearTimeout(delayedDataPopoverTimer);
+  });
+  delayedDataPopover.addEventListener('mouseleave', scheduleDelayedPopoverClose);
+
   const ohlcHeaderDisplay = document.createElement('div');
   ohlcHeaderDisplay.style.cssText = 'display:flex;align-items:center;gap:6px;margin-left:auto;font-size:11px;font-family:"Segoe UI",Arial,sans-serif;white-space:nowrap;flex-shrink:0;line-height:1;';
   paneHeader.appendChild(ohlcHeaderDisplay);
@@ -492,6 +637,7 @@ export function createPaneChrome<TKey extends string>({
     indBtn,
     strategyBtn,
     marketSessionBadge,
+    delayedDataBadge,
     headerTitle,
     ohlcHeaderDisplay,
     winCtrlWrap,
@@ -499,5 +645,6 @@ export function createPaneChrome<TKey extends string>({
     maxBtn,
     closeBtn,
     refreshSymbolVisual,
+    updateDelayedDataInfo,
   };
 }
