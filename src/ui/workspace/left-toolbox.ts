@@ -2,6 +2,8 @@
 const trendToolDefaultIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5.2" y1="16.8" x2="16.8" y2="5.2"></line><circle cx="4" cy="18" r="1.7" fill="none"></circle><circle cx="18" cy="4" r="1.7" fill="none"></circle></svg>`;
 const eyeHideIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.7"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`;
 const eyeShowIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.7"></circle></svg>`;
+const lockClosedIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 1 1 8 0v3"></path></svg>`;
+const lockOpenIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M16 11V8a4 4 0 1 0-8 0"></path></svg>`;
 const magnetStrongIcon = `<svg viewBox="0 0 512 512" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="21"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="21"></path><line x1="192" y1="464" x2="192" y2="416" stroke-width="21"></line><line x1="90.18" y1="421.82" x2="124.12" y2="387.88" stroke-width="21"></line><line x1="48" y1="320" x2="96" y2="320" stroke-width="21"></line><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="21"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="21"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="21"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="21"></line></g></svg>`;
 const magnetSoftIcon = `<svg viewBox="0 0 512 512" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="21"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="21"></path><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="21"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="21"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="21"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="21"></line></g></svg>`;
 const magnetOffIcon = `<svg viewBox="0 0 512 512" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(512,0) scale(-1,1)"><path d="M421.83,293.82A144,144,0,0,0,218.18,90.17" stroke-width="21"></path><path d="M353.94,225.94a48,48,0,0,0-67.88-67.88" stroke-width="21"></path><line x1="192" y1="464" x2="192" y2="416" stroke-width="21"></line><line x1="90.18" y1="421.82" x2="124.12" y2="387.88" stroke-width="21"></line><line x1="48" y1="320" x2="96" y2="320" stroke-width="21"></line><path d="M286.06,158.06,172.92,271.19a32,32,0,0,1-45.25,0L105,248.57a32,32,0,0,1,0-45.26L218.18,90.17" stroke-width="21"></path><path d="M421.83,293.82,308.69,407a32,32,0,0,1-45.26,0l-22.62-22.63a32,32,0,0,1,0-45.26L353.94,225.94" stroke-width="21"></path><line x1="139.6" y1="169.98" x2="207.48" y2="237.87" stroke-width="21"></line><line x1="275.36" y1="305.75" x2="343.25" y2="373.63" stroke-width="21"></line></g><line x1="80" y1="432" x2="432" y2="80" stroke-width="21"></line></svg>`;
@@ -70,13 +72,23 @@ const tools: ToolboxTool[] = [
             {
               id: 'trendline',
               label: '추세선',
-              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><line x1="5.2" y1="16.8" x2="16.8" y2="5.2"></line><circle cx="4" cy="18" r="1.7" fill="none"></circle><circle cx="18" cy="4" r="1.7" fill="none"></circle></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5.2" y1="16.8" x2="16.8" y2="5.2"></line><circle cx="4" cy="18" r="1.7" fill="none"></circle><circle cx="18" cy="4" r="1.7" fill="none"></circle></svg>`,
               shortcut: 'Alt + T',
+            },
+            {
+              id: 'extended-trendline',
+              label: '양방향 추세선',
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="2.8" y1="21.2" x2="5.9" y2="18.1"></line><line x1="8.1" y1="15.9" x2="15.9" y2="8.1"></line><line x1="18.1" y1="5.9" x2="21.2" y2="2.8"></line><circle cx="7" cy="17" r="1.5" fill="none"></circle><circle cx="17" cy="7" r="1.5" fill="none"></circle></svg>`,
+            },
+            {
+              id: 'ray-trendline',
+              label: '단방향 추세선',
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5.2" y1="16.8" x2="11.7" y2="10.3"></line><line x1="13.9" y1="8.1" x2="21.2" y2="0.8"></line><circle cx="4" cy="18" r="1.7" fill="none"></circle><circle cx="12.8" cy="9.2" r="1.5" fill="none"></circle></svg>`,
             },
             {
               id: 'hline',
               label: '수평선',
-              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="10.3" y2="12"></line><line x1="13.7" y1="12" x2="21" y2="12"></line><circle cx="12" cy="12" r="1.7" fill="none"></circle></svg>`,
               shortcut: 'Alt + H',
             },
           ],
@@ -87,7 +99,7 @@ const tools: ToolboxTool[] = [
             {
               id: 'channel',
               label: '평행채널',
-              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><line x1="5" y1="8" x2="19" y2="3"></line><line x1="5" y1="16" x2="19" y2="11"></line></svg>`,
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5.4" y1="8.7" x2="16.2" y2="4.8"></line><line x1="7.8" y1="16.6" x2="18.6" y2="12.7"></line><circle cx="4" cy="9.2" r="1.5" fill="none"></circle><circle cx="17.6" cy="4.3" r="1.5" fill="none"></circle><circle cx="6.4" cy="17.1" r="1.5" fill="none"></circle><circle cx="20" cy="12.2" r="1.5" fill="none"></circle></svg>`,
             },
           ],
         },
@@ -248,6 +260,11 @@ const tools: ToolboxTool[] = [
         },
       ],
     },
+  },
+  {
+    id: 'lock-drawings',
+    label: '전체 잠금',
+    icon: lockClosedIcon,
   },
   {
     id: 'delete-selected-drawing',
@@ -534,12 +551,24 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       : { label: '패턴 보이기', icon: eyeShowIcon }
   );
   const getHideToolStateIcon = () => (drawingsVisible ? eyeShowIcon : eyeHideIcon);
+  let allDrawingsLocked = false;
+  const getLockDrawingsAction = () => (
+    allDrawingsLocked
+      ? { label: '드로잉 전체 잠금해제', icon: lockOpenIcon }
+      : { label: '드로잉 전체 잠금', icon: lockClosedIcon }
+  );
 
   const syncHideToolIcon = () => {
     const hideStateIcon = getHideToolStateIcon();
     selectedToolIconMap.set('hide', hideStateIcon);
     const hideIconWrap = toolIconWrapMap.get('hide');
     if (hideIconWrap) hideIconWrap.innerHTML = hideStateIcon;
+  };
+  const syncLockToolIcon = () => {
+    const lockStateIcon = getLockDrawingsAction().icon;
+    selectedToolIconMap.set('lock-drawings', lockStateIcon);
+    const lockIconWrap = toolIconWrapMap.get('lock-drawings');
+    if (lockIconWrap) lockIconWrap.innerHTML = lockStateIcon;
   };
   const closeSubmenu = () => {
     activeToolId = null;
@@ -961,18 +990,22 @@ export function createLeftToolbox(workspace: HTMLElement): void {
         if (tool.id === 'delete-selected-drawing') {
           eraserModeActive = !eraserModeActive;
           syncEraserButtonStyle();
+        } else if (tool.id === 'lock-drawings') {
+          allDrawingsLocked = !allDrawingsLocked;
+          syncLockToolIcon();
         } else {
           eraserModeActive = false;
         }
         activeToolId = null;
         clearActiveStyles();
         renderMenu(null);
+        const actionLabel = tool.id === 'lock-drawings' ? getLockDrawingsAction().label : tool.label;
         window.dispatchEvent(new CustomEvent('chart-toolbox-select', {
           detail: {
             toolId: tool.id,
             itemId: tool.id,
             drawingTool: normalizeDrawingTool(tool.id),
-            label: tool.label,
+            label: actionLabel,
           },
         }));
         updateRailVisibility();
@@ -1289,6 +1322,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   });
   syncMagnetToolIcon();
   syncMagnetButtonStyle();
+  syncLockToolIcon();
 
   workspace.addEventListener('click', (event) => {
     const target = event.target as Node;
@@ -1340,6 +1374,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
   applyMobileLayout();
   syncTrendToolIconForViewport();
   syncHideToolIcon();
+  syncLockToolIcon();
   applyToolboxVisibility();
 }
 

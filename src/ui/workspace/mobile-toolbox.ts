@@ -9,6 +9,8 @@ type MobileChartLike = {
   drawingTool: string | null;
   setDrawingsVisible: (visible: boolean) => void;
   isDrawingsVisible: () => boolean;
+  areAllDrawingsLocked: () => boolean;
+  setAllDrawingsLocked: (locked: boolean) => number;
   setIndicatorsVisible: (visible: boolean) => void;
   isIndicatorsVisible: () => boolean;
   setPatternBoxesVisible: (visible: boolean) => void;
@@ -39,9 +41,11 @@ const MOBILE_DRAWING_TOOLS: MobileDrawingTool[] = [
   { id: 'cursor-dot', title: '점', isAction: true, svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="2.2"></circle></svg>' },
   { id: 'cursor-arrow', title: '화살표', isAction: true, svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l12 9-5 1 2 7-2 1-3-7-4 4z"></path></svg>' },
   { id: 'cursor-demo', title: '데모', isAction: true, svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.0"><circle cx="12" cy="12" r="8" fill="rgba(47,108,255,0.35)" stroke="none"></circle></svg>' },
-  { id: 'trendline', title: '추세선', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round"><line x1="5.2" y1="16.8" x2="16.8" y2="5.2"></line><circle cx="4" cy="18" r="1.7" fill="none"></circle><circle cx="18" cy="4" r="1.7" fill="none"></circle></svg>' },
-  { id: 'hline', title: '수평선', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line></svg>' },
-  { id: 'channel', title: '채널', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round"><line x1="5" y1="8" x2="19" y2="3"></line><line x1="5" y1="16" x2="19" y2="11"></line></svg>' },
+  { id: 'trendline', title: '추세선', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5.2" y1="16.8" x2="16.8" y2="5.2"></line><circle cx="4" cy="18" r="1.7" fill="none"></circle><circle cx="18" cy="4" r="1.7" fill="none"></circle></svg>' },
+  { id: 'extended-trendline', title: '양방향 추세선', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="2.8" y1="21.2" x2="5.9" y2="18.1"></line><line x1="8.1" y1="15.9" x2="15.9" y2="8.1"></line><line x1="18.1" y1="5.9" x2="21.2" y2="2.8"></line><circle cx="7" cy="17" r="1.5" fill="none"></circle><circle cx="17" cy="7" r="1.5" fill="none"></circle></svg>' },
+  { id: 'ray-trendline', title: '단방향 추세선', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5.2" y1="16.8" x2="11.7" y2="10.3"></line><line x1="13.9" y1="8.1" x2="21.2" y2="0.8"></line><circle cx="4" cy="18" r="1.7" fill="none"></circle><circle cx="12.8" cy="9.2" r="1.5" fill="none"></circle></svg>' },
+  { id: 'hline', title: '수평선', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="10.3" y2="12"></line><line x1="13.7" y1="12" x2="21" y2="12"></line><circle cx="12" cy="12" r="1.7" fill="none"></circle></svg>' },
+  { id: 'channel', title: '채널', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5.4" y1="8.7" x2="16.2" y2="4.8"></line><line x1="7.8" y1="16.6" x2="18.6" y2="12.7"></line><circle cx="4" cy="9.2" r="1.5" fill="none"></circle><circle cx="17.6" cy="4.3" r="1.5" fill="none"></circle><circle cx="6.4" cy="17.1" r="1.5" fill="none"></circle><circle cx="20" cy="12.2" r="1.5" fill="none"></circle></svg>' },
   { id: 'fib-retracement', title: '피보나치', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="14" x2="17.5" y2="14"></line><line x1="20.5" y1="14" x2="21" y2="14"></line><line x1="3" y1="19" x2="3.3" y2="19"></line><line x1="6.7" y1="19" x2="21" y2="19"></line><line x1="5" y1="19" x2="19" y2="14" stroke-dasharray="4 3"></line><circle cx="5" cy="19" r="1.7" fill="none"></circle><circle cx="19" cy="14" r="1.7" fill="none"></circle></svg>' },
   { id: 'fib-trend', title: '추세 피보나치', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"></line><line x1="3" y1="9" x2="10.3" y2="9"></line><line x1="13.7" y1="9" x2="21" y2="9"></line><line x1="3" y1="14" x2="17.5" y2="14"></line><line x1="20.5" y1="14" x2="21" y2="14"></line><line x1="6.3" y1="21.0" x2="10.8" y2="10.2" stroke-dasharray="4 3"></line><line x1="13.5" y1="9.9" x2="17.5" y2="13.1" stroke-dasharray="4 3"></line><circle cx="5" cy="22" r="1.7" fill="none"></circle><circle cx="12" cy="9" r="1.7" fill="none"></circle><circle cx="19" cy="14" r="1.7" fill="none"></circle></svg>' },
   { id: 'measure', title: '재기', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16.5 16.5 4l3.5 3.5L7.5 20z"></path><path d="M8.2 12.3l2.5 2.5M11.1 9.4l2.5 2.5M14 6.5l2.5 2.5"></path></svg>' },
@@ -50,6 +54,7 @@ const MOBILE_DRAWING_TOOLS: MobileDrawingTool[] = [
   { id: 'anchored-vwap', title: '앵커드 VWAP', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.2" cy="16.8" r="1.7"></circle><path d="M5.2 16.8c2.1-3.5 4.9-5.5 8.1-5.5 2.7 0 4.6 1.2 5.5 3.1 0 0 .7 1.2 1.2 3.1"></path></svg>' },
   { id: 'text-note', title: '텍스트', svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="13" y2="13"/></svg>' },
   { id: '__hide_drawings__', title: '드로잉 감추기', isAction: true, svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/><line x1="4" y1="20" x2="20" y2="4"/></svg>' },
+  { id: '__lock_drawings__', title: '드로잉 전체 잠금/잠금해제', isAction: true, svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 1 1 8 0v3"></path></svg>' },
   { id: '__hide_indicators__', title: '지표 감추기', isAction: true, svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="5" y1="17" x2="9" y2="11"></line><line x1="10" y1="14" x2="14" y2="8"></line><line x1="15" y1="12" x2="19" y2="6"></line><line x1="4" y1="20" x2="20" y2="4"></line></svg>' },
   { id: '__hide_all__', title: '모두 감추기', isAction: true, svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"></rect><line x1="4" y1="20" x2="20" y2="4"></line></svg>' },
   { id: '__magnet_off__', title: '자석 끄기', isAction: true, svg: MAGNET_OFF_SVG },
@@ -81,11 +86,11 @@ export function createMobileDrawingToolPanel({
   closePanel,
 }: CreateMobileDrawingPanelArgs): void {
   const categories = [
-    { key: 'trend', label: '추세', ids: ['trendline', 'hline', 'channel'] },
+    { key: 'trend', label: '추세', ids: ['trendline', 'extended-trendline', 'ray-trendline', 'hline', 'channel'] },
     { key: 'fibonacci', label: '피보나치', ids: ['fib-retracement', 'fib-trend'] },
     { key: 'position', label: '예측', ids: ['long-position', 'short-position', 'anchored-vwap'] },
     { key: 'magnet', label: '자석', ids: ['__magnet_off__', '__magnet_soft__', '__magnet_strong__'] },
-    { key: 'hide', label: '감추기', ids: ['__hide_drawings__', '__hide_indicators__', '__hide_all__'] },
+    { key: 'hide', label: '감추기', ids: ['__hide_drawings__', '__lock_drawings__', '__hide_indicators__', '__hide_all__'] },
   ] as const;
   const quickToolIds: Array<string> = ['measure', 'text-note', '__trash_drawings__', 'eraser'];
   type CategoryKey = (typeof categories)[number]['key'];
@@ -162,6 +167,12 @@ export function createMobileDrawingToolPanel({
       displaySvg = visible
         ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/><line x1="4" y1="20" x2="20" y2="4"/></svg>'
         : '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+    } else if (id === '__lock_drawings__') {
+      const locked = pane.chart.areAllDrawingsLocked();
+      displayTitle = locked ? '드로잉 전체 잠금해제' : '드로잉 전체 잠금';
+      displaySvg = locked
+        ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M16 11V8a4 4 0 1 0-8 0"></path></svg>'
+        : '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 1 1 8 0v3"></path></svg>';
     } else if (id === '__hide_indicators__') {
       const visible = pane.chart.isIndicatorsVisible();
       displayTitle = visible ? '지표 감추기' : '지표 보기';
@@ -212,6 +223,12 @@ export function createMobileDrawingToolPanel({
     cell.addEventListener('click', () => {
       if (id === '__hide_drawings__') {
         pane.chart.setDrawingsVisible(!pane.chart.isDrawingsVisible());
+        pane.refreshChartUi();
+        renderTools(activeCategory, 1);
+        return;
+      }
+      if (id === '__lock_drawings__') {
+        pane.chart.setAllDrawingsLocked(!pane.chart.areAllDrawingsLocked());
         pane.refreshChartUi();
         renderTools(activeCategory, 1);
         return;

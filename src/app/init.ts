@@ -197,6 +197,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   const DRAWING_STORAGE_KEY = 'my-chart-lib.drawings.v1';
   const DRAWING_KIND_SET = new Set<string>([
     'trendline',
+    'extended-trendline',
+    'ray-trendline',
     'hline',
     'channel',
     'fib-retracement',
@@ -1207,7 +1209,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       marketSessionBadge.title = sessionOpen ? '장오픈' : '장마감';
       const delayedData = cmeSessionSymbol;
       delayedDataBadge.style.display = delayedData ? 'inline-flex' : 'none';
-      delayedDataBadge.title = '거래소 데이터 지연';
       if (delayedData) {
         updateDelayedDataInfo(getCmeEquityFuturesSessionInfo(new Date()));
       }
@@ -2717,6 +2718,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const pane = getActivePane();
       if (rawToolId === 'hide-drawings') {
         pane.chart.setDrawingsVisible(!pane.chart.isDrawingsVisible());
+        pane.refreshChartUi();
+        emitToolboxTrashCounts();
+        return;
+      }
+      if (rawToolId === 'lock-drawings') {
+        pane.chart.setAllDrawingsLocked(!pane.chart.areAllDrawingsLocked());
         pane.refreshChartUi();
         emitToolboxTrashCounts();
         return;

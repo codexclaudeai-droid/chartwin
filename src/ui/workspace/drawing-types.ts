@@ -1,5 +1,10 @@
-﻿export type DrawingToolId =
+export type TrendlineDrawingToolId =
   | 'trendline'
+  | 'extended-trendline'
+  | 'ray-trendline';
+
+export type DrawingToolId =
+  | TrendlineDrawingToolId
   | 'hline'
   | 'channel'
   | 'fib-retracement'
