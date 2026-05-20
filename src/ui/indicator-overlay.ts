@@ -2,6 +2,7 @@
 import { INDICATOR_CATALOG } from '../catalog/indicators';
 import { INDICATOR_STYLE_TARGETS } from '../indicator-panel-module';
 import { openSettingsPopup } from './modal-handlers';
+import { bindTooltipBadge } from './workspace/tooltip-badge';
 import type { StrategyDefinition } from '../strategy/strategy-service';
 import { isBetaAppVariant, isDevAppVariant } from '../app/runtime';
 
@@ -544,6 +545,10 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         <path d="M5 4v4"></path><path d="M3 7l2 2 2-2"></path>
         <path d="M19 17v-4"></path><path d="M17 15l2-2 2 2"></path>
       </svg>`;
+      bindTooltipBadge(reportBtn, {
+        placement: 'top',
+        getContent: () => ({ title: '전략리포트' }),
+      });
       reportBtn.addEventListener('mouseenter', () => { reportBtn.style.borderColor = '#9aa3b3'; });
       reportBtn.addEventListener('mouseleave', () => { reportBtn.style.borderColor = '#3a4158'; });
       reportBtn.addEventListener('click', (event) => {

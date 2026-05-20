@@ -402,6 +402,10 @@ export function createPaneChrome<TKey extends string>({
   };
   setIndicatorButtonIcon(17);
   bindHeaderActionHover(indBtn);
+  bindTooltipBadge(indBtn, {
+    placement: 'bottom',
+    getContent: () => ({ title: '보조지표' }),
+  });
   paneHeader.appendChild(indBtn);
 
   const strategyBtn = document.createElement('button');
@@ -414,6 +418,10 @@ export function createPaneChrome<TKey extends string>({
     strategyBtn.innerHTML = `<img src="/icon-signal.svg" alt="" aria-hidden="true" style="width:${size}px;height:${size}px;display:block;filter:${signalIconFilter};">`;
   };
   setStrategyButtonIcon(18);
+  bindTooltipBadge(strategyBtn, {
+    placement: 'bottom',
+    getContent: () => ({ title: '전략시그널' }),
+  });
   paneHeader.appendChild(strategyBtn);
 
   const headerTitle = document.createElement('div');
@@ -648,3 +656,4 @@ export function createPaneChrome<TKey extends string>({
     updateDelayedDataInfo,
   };
 }
+import { bindTooltipBadge } from './tooltip-badge';

@@ -362,6 +362,7 @@ function mkIconBtn(title: string, svg: string): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.title = title;
+  btn.dataset.tooltipTitle = title;
   btn.innerHTML = svg;
   btn.style.cssText = 'height:24px;min-width:24px;padding:0 6px;border:1px solid #34435f;background:#1b2438;color:#dce4f5;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;white-space:nowrap;';
   btn.addEventListener('mouseenter', () => {
@@ -371,6 +372,10 @@ function mkIconBtn(title: string, svg: string): HTMLButtonElement {
   btn.addEventListener('mouseleave', () => {
     btn.style.background = '#1b2438';
     btn.style.color = '#dce4f5';
+  });
+  bindTooltipBadge(btn, {
+    placement: 'top',
+    getContent: () => ({ title: btn.dataset.tooltipTitle ?? title }),
   });
   return btn;
 }
@@ -664,6 +669,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   titleControls.appendChild(manualRefreshBtn);
   const applyRefreshButtonStyle = (hovered = false) => {
     manualRefreshBtn.title = reportStale ? '리포트 새로고침 (데이터 변경됨)' : '리포트 새로고침';
+    manualRefreshBtn.dataset.tooltipTitle = manualRefreshBtn.title;
     manualRefreshBtn.style.borderColor = reportStale ? '#7a5a20' : '#34435f';
     manualRefreshBtn.style.background = reportStale
       ? (hovered ? '#3a2c12' : '#2a2112')
@@ -694,7 +700,12 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const timeframeBtn = document.createElement('button');
   timeframeBtn.type = 'button';
   timeframeBtn.title = '시간프레임 선택';
+  timeframeBtn.dataset.tooltipTitle = '시간프레임 선택';
   timeframeBtn.style.cssText = 'height:22px;background:#1f2e4a;color:#d1d4dc;border:1px solid #38507b;border-radius:4px;padding:0 8px;font-size:11px;cursor:pointer;white-space:nowrap;line-height:1;min-width:32px;flex:0 0 auto;';
+  bindTooltipBadge(timeframeBtn, {
+    placement: 'top',
+    getContent: () => ({ title: timeframeBtn.dataset.tooltipTitle ?? '시간프레임 선택' }),
+  });
   const tabRight = document.createElement('div');
   tabRight.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0;flex:1;justify-content:flex-end;';
   tabRow.appendChild(tabRight);
@@ -1829,8 +1840,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       panel.style.zIndex = '1010';
       resizeHandle.style.display = 'flex';
       expandBtn.innerHTML = icon.restore;
+      expandBtn.dataset.tooltipTitle = '기본 높이로 복원';
       collapseBtn.innerHTML = icon.fold;
       collapseBtn.title = '접기';
+      collapseBtn.dataset.tooltipTitle = '접기';
       onHeightChange?.(expandedHeight);
     } else {
       const minNormalHeight = getMinNormalHeight();
@@ -1842,8 +1855,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       panel.style.zIndex = mode === 'collapsed' ? '1600' : '1010';
       resizeHandle.style.display = mode === 'collapsed' ? 'none' : 'flex';
       expandBtn.innerHTML = icon.maximize;
+      expandBtn.dataset.tooltipTitle = '전체화면';
       collapseBtn.innerHTML = mode === 'collapsed' ? icon.unfold : icon.fold;
       collapseBtn.title = mode === 'collapsed' ? '펼치기' : '접기';
+      collapseBtn.dataset.tooltipTitle = collapseBtn.title;
       onHeightChange?.(mode === 'collapsed' ? headerHeight : effectiveNormalHeight);
     }
 
@@ -2342,3 +2357,4 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     },
   };
 }
+import { bindTooltipBadge } from './tooltip-badge';

@@ -1,3 +1,5 @@
+import { bindTooltipBadge } from './tooltip-badge';
+
 type MonitorMode = 'single' | 'multi';
 
 type CreateTopBarArgs = {
@@ -391,6 +393,10 @@ export function createTopBar({
     onClickSignalNotification();
   });
   signalBtn.style.color = '#9ba5b7';
+  bindTooltipBadge(signalBtn, {
+    placement: 'bottom',
+    getContent: () => ({ title: '알림벨' }),
+  });
 
   const logo = document.createElement('div');
   logo.className = 'tc-brand-logo';
@@ -415,6 +421,7 @@ export function createTopBar({
   const iconBtn = (iconHtml: string, title: string, onClick: () => void) => {
     const btn = document.createElement('button');
     btn.title = title;
+    btn.dataset.tooltipTitle = title;
     btn.innerHTML = iconHtml;
     btn.style.cssText = `background:transparent;color:${topIconRestColor};border:none;cursor:pointer;
       font-size:16px;padding:4px 8px;border-radius:4px;transition:color 0.15s,background 0.15s;
@@ -428,6 +435,10 @@ export function createTopBar({
       btn.style.color = topIconRestColor;
     });
     btn.addEventListener('click', onClick);
+    bindTooltipBadge(btn, {
+      placement: 'bottom',
+      getContent: () => ({ title: btn.dataset.tooltipTitle ?? title }),
+    });
     return btn;
   };
 
@@ -435,7 +446,7 @@ export function createTopBar({
   splitWrap.style.cssText = 'position:relative;';
   const splitBtn = document.createElement('button');
   splitBtn.type = 'button';
-  splitBtn.title = '분할/모니터 메뉴';
+  splitBtn.title = '레이아웃';
   splitBtn.style.cssText = `height:28px;min-width:38px;padding:4px 8px;background:transparent;color:${topIconRestColor};
     border:none;border-radius:4px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px;
     transition:color 0.15s,background 0.15s;`;
@@ -454,6 +465,10 @@ export function createTopBar({
     splitBtn.style.background = 'transparent';
     splitBtn.style.color = topIconRestColor;
   };
+  bindTooltipBadge(splitBtn, {
+    placement: 'bottom',
+    getContent: () => ({ title: '레이아웃' }),
+  });
 
   const splitIconGrid = document.createElement('div');
   splitIconGrid.style.cssText = 'display:grid;grid-template-columns:repeat(6,1fr);gap:6px;';
@@ -561,7 +576,8 @@ export function createTopBar({
   const syncFullscreenIcon = () => {
     const inFS = Boolean(document.fullscreenElement);
     fullscreenBtn.innerHTML = inFS ? exitFullscreenSvgIcon : fullscreenSvgIcon;
-    fullscreenBtn.title = inFS ? '전체화면 종료 (F)' : '전체화면 (F)';
+    fullscreenBtn.dataset.tooltipTitle = inFS ? '전체화면 종료 (F)' : '전체화면 (F)';
+    fullscreenBtn.setAttribute('aria-label', fullscreenBtn.dataset.tooltipTitle);
   };
 
   const refreshTopControlIcons = () => {
