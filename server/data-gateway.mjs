@@ -20,17 +20,7 @@ const DEFAULT_PROVIDER_BY_MARKET = {
   commodity: 'webhook',
   fx: 'webhook',
 };
-const DEFAULT_SYMBOL_PROVIDER_BY_MARKET = {
-  index: {
-    KOSPI: 'kis',
-    KOSPI200: 'kis',
-    KOSDAQ: 'kis',
-    NDX: 'kis',
-    NASDAQ: 'kis',
-    IXIC: 'kis',
-    'NQ1!': 'kis',
-  },
-};
+const DEFAULT_SYMBOL_PROVIDER_BY_MARKET = {};
 
 /** @typedef {{time:number,open:number,high:number,low:number,close:number,volume:number}} Candle */
 

@@ -17,6 +17,42 @@ function canonicalize(market, symbol) {
   return s;
 }
 
+function shouldFillTimeGaps(market, symbol) {
+  return market === 'index' && symbol === 'NQ1!';
+}
+
+function fillMissingCandles(rows, timeframe, maxGapBars = 240) {
+  if (!Array.isArray(rows) || rows.length < 2) return rows;
+  const tfSec = TF_SECONDS[timeframe];
+  if (!tfSec || tfSec <= 0 || timeframe === '1w' || timeframe === '1M') return rows;
+
+  const sorted = [...rows].sort((a, b) => a.time - b.time);
+  const out = [sorted[0]];
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = out[out.length - 1];
+    const next = sorted[i];
+    if (!prev || !next) continue;
+    const gapSec = next.time - prev.time;
+    if (gapSec > tfSec) {
+      const missingBars = Math.floor(gapSec / tfSec) - 1;
+      if (missingBars > 0 && missingBars <= maxGapBars) {
+        for (let j = 1; j <= missingBars; j += 1) {
+          out.push({
+            time: prev.time + tfSec * j,
+            open: prev.close,
+            high: prev.close,
+            low: prev.close,
+            close: prev.close,
+            volume: 0,
+          });
+        }
+      }
+    }
+    out.push(next);
+  }
+  return out;
+}
+
 function aggregateFrom1m(candles1m, targetTfSec) {
   const map = new Map();
   for (const c of candles1m) {
@@ -67,7 +103,8 @@ export async function onRequestGet({ request, env }) {
         const key1m = `${market}:${symbol}:1m`;
         const raw1m = await env.CANDLES_KV.get(key1m, { type: 'json' });
         if (Array.isArray(raw1m) && raw1m.length > 0) {
-          candles = aggregateFrom1m(raw1m, tfSec);
+          const base1m = shouldFillTimeGaps(market, symbol) ? fillMissingCandles(raw1m, '1m') : raw1m;
+          candles = aggregateFrom1m(base1m, tfSec);
           source = 'aggregated_from_1m';
         }
       }
@@ -81,8 +118,13 @@ export async function onRequestGet({ request, env }) {
     }
   } catch {}
 
+  const gapFilled = shouldFillTimeGaps(market, symbol);
+  if (gapFilled) {
+    candles = fillMissingCandles(candles, timeframe);
+  }
+
   return Response.json(
-    { ok: true, market, symbol, timeframe, source, candles: candles.slice(-limit) },
+    { ok: true, market, symbol, timeframe, source, gapFilled, candles: candles.slice(-limit) },
     { headers: CORS },
   );
 }

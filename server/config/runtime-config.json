@@ -7,5 +7,10 @@
     "index": "webhook",
     "commodity": "webhook",
     "fx": "webhook"
+  },
+  "symbolProviders": {
+    "index": {
+      "NQ1!": "webhook"
+    }
   }
 }

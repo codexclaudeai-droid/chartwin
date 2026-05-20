@@ -136,7 +136,7 @@ function resolveGatewayBaseUrl(): string {
   if (fromWindow) return fromWindow.replace(/\/+$/, '');
   if (fromStorage) return fromStorage.replace(/\/+$/, '');
   if (fromEnv) return fromEnv.replace(/\/+$/, '');
-  // 로컬 개발 환경은 로컬 게이트웨이, 그 외(Netlify 등)는 같은 오리진의 Functions 사용
+  // 로컬 개발 환경은 로컬 게이트웨이, 그 외 배포 환경은 같은 오리진을 사용
   const hostname = window.location.hostname;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://127.0.0.1:8787';
