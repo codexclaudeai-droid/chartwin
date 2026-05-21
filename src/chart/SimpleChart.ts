@@ -515,7 +515,7 @@ export class SimpleChart {
   private isTouchPinching = false;
 
   // ── 롱프레스 십자선 상태 ──────────────────────
-  private static readonly LONG_PRESS_MS = 400;
+  private static readonly LONG_PRESS_MS = 300;
   private static readonly LONG_PRESS_MOVE_THRESHOLD = 18;
   private static readonly TEXT_NOTE_TOUCH_TAP_MOVE_THRESHOLD = 16;
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -10118,7 +10118,7 @@ export class SimpleChart {
         const tBoxW = tPadX * 2 + tLabelW + tValueW + 6;
         const tHeaderH = tLineH;
         const tBoxH = tPadY * 2 + tHeaderH + tooltipRows.length * tLineH;
-        const gap = 14;
+        const gap = 26;
         const fitsRight = solidX + gap + tBoxW <= chartRight - 2;
         const tBoxX = fitsRight ? solidX + gap : solidX - gap - tBoxW;
         const tBoxY = Math.max(R.top + 2, Math.min(this.mouseY - tBoxH / 2, mainH - tBoxH - 4));
