@@ -75,7 +75,6 @@ export function formatCrosshairTimelineLabel(epochSec: number, tz: string): stri
   const d = new Date(epochSec * 1000);
   const weekday = formatDateWithTimezone(d, tz, { weekday: 'short' });
   const dateTime = formatDateWithTimezone(d, tz, {
-    year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',

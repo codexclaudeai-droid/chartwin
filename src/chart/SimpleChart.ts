@@ -12499,8 +12499,6 @@ export class SimpleChart {
               return;
             }
           }
-          // + 버튼 외 어디든 탭 → 십자선 해제
-          this.exitCrosshairMode();
         }
         this.isTouchPanning  = false;
         this.isTouchPinching = false;
