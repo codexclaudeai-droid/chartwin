@@ -589,6 +589,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let netProfitPctBase: number | null = null;
   let latestMeta = { symbol: '', timeframe: '', strategyName: '전략 없음' };
   let tradeViewAlertActive = false;
+  let lastRenderedTradesResult: ReportResult | null = null;
+  let lastRenderedTradesPhoneWidth = false;
+  let lastRenderedTradesPriceDigits = -1;
   let reportStale = false;
   let lastRefreshSignature = '';
   const sectionOpen: Record<Exclude<WidgetKey, 'equity'>, boolean> = {
@@ -1610,9 +1613,19 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     window.dispatchEvent(new CustomEvent('chart-signal-trade-viewed'));
   };
 
+  const syncTradeViewAlertButtons = () => {
+    const buttons = tradesView.querySelectorAll<HTMLButtonElement>('button[data-role="trade-signal-button"]');
+    buttons.forEach((button) => {
+      button.classList.toggle('strategy-trade-view-alert', tradeViewAlertActive);
+    });
+  };
+
   const renderTradesTable = () => {
     const r = latestResult;
     if (!r || !r.trades.length) {
+      lastRenderedTradesResult = null;
+      lastRenderedTradesPhoneWidth = false;
+      lastRenderedTradesPriceDigits = -1;
       tradesView.innerHTML = '<div style="padding:8px;color:#93a5c4;">표시할 거래가 없습니다.</div>';
       return;
     }
@@ -1624,6 +1637,15 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const baseColumns = isPhoneWidth ? '14px 30px 1.18fr 1.45fr 0.95fr 64px' : '32px 64px 1fr 1fr 1.1fr 96px';
     const fullColumns = isPhoneWidth ? '14px 30px 1.18fr 1.45fr 0.95fr 64px 32px' : '32px 64px 1fr 1fr 1.1fr 96px 44px';
     const priceDigits = getCurrentPriceDigits();
+    if (
+      lastRenderedTradesResult === r
+      && lastRenderedTradesPhoneWidth === isPhoneWidth
+      && lastRenderedTradesPriceDigits === priceDigits
+      && tradesView.firstElementChild
+    ) {
+      syncTradeViewAlertButtons();
+      return;
+    }
     const rowArrowSvg = '<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;opacity:.95;"><path d="M2 8h9"></path><path d="M8 4l4 4-4 4"></path></svg>';
 
     const headerRow = `<div style="display:grid;grid-template-columns:${baseColumns};gap:${gridGap};align-items:center;padding:${headerPadding};border-bottom:1px solid #2b3d5d;background:#17243a;color:#9fb3d5;font-size:11px;font-weight:700;text-align:center;">
@@ -1686,14 +1708,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
     rowEls.slice(1).forEach((rowEl, idx) => {
       rowEl.style.gridTemplateColumns = fullColumns;
-      rowEl.style.cursor = 'pointer';
-      rowEl.addEventListener('click', () => {
-        const trade = displayedTrades[idx];
-        if (!trade) return;
-        moveToTradeSignal(trade);
-      });
+      rowEl.style.cursor = 'default';
       const moveBtn = document.createElement('button');
       moveBtn.type = 'button';
+      moveBtn.dataset.role = 'trade-signal-button';
       moveBtn.textContent = '확인';
       moveBtn.style.cssText = isPhoneWidth
         ? 'height:20px;min-width:0;width:max-content;padding:0 5px;justify-self:center;background:#1b2a43;border:1px solid #39527f;color:#dce8ff;border-radius:5px;font-size:10px;line-height:18px;cursor:pointer;'
@@ -1707,6 +1725,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       });
       rowEl.appendChild(moveBtn);
     });
+    lastRenderedTradesResult = r;
+    lastRenderedTradesPhoneWidth = isPhoneWidth;
+    lastRenderedTradesPriceDigits = priceDigits;
   };
 
   const updateWidgetMenu = () => {
@@ -1803,16 +1824,20 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     applyRefreshButtonStyle(false);
     setChartLayoutByMode();
     updateTabStyles();
-    renderKpi();
-    applyMobileSummarySnapHeight();
-    renderLegend();
-    drawChart();
-    renderTradesTable();
-
-    if (panelMode === 'expanded') {
-      renderExpandedSections();
+    if (activeTab === 'metrics') {
+      renderKpi();
+      applyMobileSummarySnapHeight();
+      renderLegend();
+      drawChart();
+      if (panelMode === 'expanded') {
+        renderExpandedSections();
+      } else {
+        expandedSections.innerHTML = '';
+      }
     } else {
+      legendRow.innerHTML = '';
       expandedSections.innerHTML = '';
+      renderTradesTable();
     }
   };
 
@@ -2369,8 +2394,12 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     markStale,
     syncContext,
     setTradeViewAlertActive: (active: boolean) => {
-      tradeViewAlertActive = Boolean(active);
-      if (activeTab === 'trades') renderTradesTable();
+      const nextActive = Boolean(active);
+      if (tradeViewAlertActive === nextActive) return;
+      tradeViewAlertActive = nextActive;
+      if (activeTab === 'trades' && tradesView.firstElementChild) {
+        syncTradeViewAlertButtons();
+      }
     },
   };
 }

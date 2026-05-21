@@ -2453,7 +2453,7 @@ export class SimpleChart {
   }
 
   private updateSignalAnimationLoop(): void {
-    const shouldAnimate = this.strategySignalVisible && this.latestStrategySignalIndex >= 0;
+    const shouldAnimate = this.strategySignalVisible && this.latestStrategySignalIndex >= 0 && this.focusedTradeRange == null;
     if (shouldAnimate) {
       if (!this.signalAnimationActive) {
         this.signalAnimationActive = true;
@@ -3881,7 +3881,7 @@ export class SimpleChart {
       });
     };
 
-    const latestSignalIndex = this.latestStrategySignalIndex;
+    const latestSignalIndex = this.focusedTradeRange ? -1 : this.latestStrategySignalIndex;
 
     ctx.save();
     ctx.beginPath();
@@ -4322,6 +4322,15 @@ export class SimpleChart {
     this.focusVisualTimer = null;
   }
 
+  private clearTradeFocusVisual(): void {
+    this.focusedTradeRange = null;
+    this.focusedSignalCandleIndex = null;
+    this.focusVisualStartedAt = 0;
+    this.clearFocusVisualTimer();
+    this.updateSignalAnimationLoop();
+    this.drawSignalLayer(this.lastDrawMeta);
+  }
+
   private shouldHideLivePriceOverlay(): boolean {
     return this.focusedTradeRange != null;
   }
@@ -4378,9 +4387,7 @@ export class SimpleChart {
 
     this.clearFocusVisualTimer();
     this.focusVisualTimer = setTimeout(() => {
-      this.focusedSignalCandleIndex = null;
-      this.focusedTradeRange = null;
-      this.focusVisualStartedAt = 0;
+      this.clearTradeFocusVisual();
       this.focusVisualTimer = null;
       this.requestOverlayDraw();
     }, SimpleChart.FOCUS_VISUAL_DURATION_MS);
@@ -4419,6 +4426,7 @@ export class SimpleChart {
       exitPrice: options?.exitPrice,
       isProfit: options?.isProfit,
     };
+    this.updateSignalAnimationLoop();
     this.draw();
     this.focusSignalVisual(this.focusedTradeRange.startIndex, options);
   }
@@ -9922,7 +9930,9 @@ export class SimpleChart {
           ctx.strokeRect(x1 + 0.5, boxTop + 0.5, Math.max(1, rangeW - 1), Math.max(1, rangeH - 1));
           ctx.restore();
         }
-        this.requestOverlayDraw();
+        if (!this.isMouseOver && this.focusedTradeRange.type !== 'connector') {
+          this.requestOverlayDraw();
+        }
       }
     }
 
@@ -11388,6 +11398,9 @@ export class SimpleChart {
   private handleMouseMove(e: MouseEvent) {
     const rect = this.canvas.getBoundingClientRect();
     this.mouseX = e.clientX - rect.left; this.mouseY = e.clientY - rect.top;
+    if (this.focusedTradeRange && !this.drawingMoveState && !this.drawingTool) {
+      this.clearTradeFocusVisual();
+    }
     if (this.drawingMoveState) {
       const movingShape = this.selectedDrawingId
         ? this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null

@@ -87,3 +87,96 @@ test('open trades preserve the previous visible candle count instead of zooming 
     'strategy report should request visible-count preservation for open trades',
   );
 });
+
+test('trade focus overlay does not keep reanimating while crosshair interaction is active', () => {
+  assert.match(
+    source,
+    /if \(!this\.isMouseOver && this\.focusedTradeRange\.type !== 'connector'\) \{\s*this\.requestOverlayDraw\(\);\s*\}/s,
+    'focused trade overlay should only self-schedule while passive box highlighting is active',
+  );
+  assert.doesNotMatch(
+    source,
+    /\n\s*this\.requestOverlayDraw\(\);\s*\n\s*}\s*\n\s*}\s*\n\s*if \(this\.gotoDateMarker && mainScale\)/s,
+    'focused trade overlay should not unconditionally reschedule every overlay frame',
+  );
+});
+
+test('trade rows do not trigger chart focus until the explicit confirm button is pressed', () => {
+  assert.doesNotMatch(
+    panelSource,
+    /rowEl\.addEventListener\('click', \(\) => \{\s*const trade = displayedTrades\[idx\];\s*if \(!trade\) return;\s*moveToTradeSignal\(trade\);\s*\}\);/s,
+    'trade table row clicks should not immediately trigger chart focus',
+  );
+  assert.match(
+    panelSource,
+    /moveBtn\.addEventListener\('click', \(event\) => \{\s*event\.stopPropagation\(\);\s*const trade = displayedTrades\[idx\];\s*if \(!trade\) return;\s*moveToTradeSignal\(trade\);\s*\}\);/s,
+    'explicit confirm button should remain the trigger for chart focus',
+  );
+});
+
+test('chart mouse movement clears trade focus overlays before crosshair interaction continues', () => {
+  assert.match(
+    source,
+    /private clearTradeFocusVisual\(\): void \{[\s\S]*?this\.focusedTradeRange = null;[\s\S]*?this\.focusedSignalCandleIndex = null;[\s\S]*?this\.focusVisualStartedAt = 0;[\s\S]*?this\.clearFocusVisualTimer\(\);[\s\S]*?\}/s,
+    'trade focus should expose a single reset helper for interaction handoff',
+  );
+  assert.match(
+    source,
+    /private handleMouseMove\(e: MouseEvent\) \{[\s\S]*?if \(this\.focusedTradeRange && !this\.drawingMoveState && !this\.drawingTool\) \{\s*this\.clearTradeFocusVisual\(\);\s*\}[\s\S]*?this\.isMouseOver = true;/s,
+    'chart mouse movement should clear trade focus overlays before continuing normal crosshair updates',
+  );
+});
+
+test('trade focus disables latest signal animation until the focus is cleared', () => {
+  assert.match(
+    source,
+    /const shouldAnimate = this\.strategySignalVisible && this\.latestStrategySignalIndex >= 0 && this\.focusedTradeRange == null;/,
+    'latest signal animation should pause while a trade focus overlay is active',
+  );
+  assert.match(
+    source,
+    /private clearTradeFocusVisual\(\): void \{[\s\S]*?this\.clearFocusVisualTimer\(\);[\s\S]*?this\.updateSignalAnimationLoop\(\);[\s\S]*?\}/s,
+    'clearing trade focus should resume the normal latest-signal animation loop',
+  );
+  assert.match(
+    source,
+    /private clearTradeFocusVisual\(\): void \{[\s\S]*?this\.drawSignalLayer\(this\.lastDrawMeta\);[\s\S]*?\}/s,
+    'clearing trade focus should immediately redraw the signal layer without focused visuals',
+  );
+  assert.match(
+    source,
+    /this\.focusedTradeRange = \{[\s\S]*?\};\s*this\.updateSignalAnimationLoop\(\);\s*this\.draw\(\);\s*this\.focusSignalVisual\(this\.focusedTradeRange\.startIndex, options\);/s,
+    'entering trade focus should immediately pause latest signal animation before drawing the focused range',
+  );
+  assert.match(
+    source,
+    /const latestSignalIndex = this\.focusedTradeRange \? -1 : this\.latestStrategySignalIndex;/,
+    'trade focus should suppress latest-signal pulse rendering even on non-animated signal redraws',
+  );
+});
+
+test('trades tab render path skips hidden metrics chart work', () => {
+  assert.match(
+    panelSource,
+    /if \(activeTab === 'metrics'\) \{[\s\S]*?renderKpi\(\);[\s\S]*?renderLegend\(\);[\s\S]*?drawChart\(\);[\s\S]*?if \(panelMode === 'expanded'\) \{[\s\S]*?renderExpandedSections\(\);[\s\S]*?\} else \{[\s\S]*?expandedSections\.innerHTML = '';\s*\}[\s\S]*?\} else \{[\s\S]*?legendRow\.innerHTML = '';\s*expandedSections\.innerHTML = '';\s*renderTradesTable\(\);[\s\S]*?\}/s,
+    'renderAll should avoid hidden metrics rendering work while the trades tab is active',
+  );
+});
+
+test('trade alert updates do not rebuild the entire trades table once it is already rendered', () => {
+  assert.match(
+    panelSource,
+    /const syncTradeViewAlertButtons = \(\) => \{[\s\S]*?classList\.toggle\('strategy-trade-view-alert', tradeViewAlertActive\);[\s\S]*?\}/s,
+    'trade alert state changes should update existing confirm buttons in place',
+  );
+  assert.match(
+    panelSource,
+    /if \(\s*lastRenderedTradesResult === r[\s\S]*?tradesView\.firstElementChild\s*\) \{\s*syncTradeViewAlertButtons\(\);\s*return;\s*\}/s,
+    'trade table rendering should reuse the existing table when the result and layout are unchanged',
+  );
+  assert.match(
+    panelSource,
+    /setTradeViewAlertActive: \(active: boolean\) => \{\s*const nextActive = Boolean\(active\);\s*if \(tradeViewAlertActive === nextActive\) return;\s*tradeViewAlertActive = nextActive;\s*if \(activeTab === 'trades' && tradesView\.firstElementChild\) \{\s*syncTradeViewAlertButtons\(\);\s*\}\s*\}/s,
+    'trade alert toggles should avoid forcing a full trades table rerender',
+  );
+});
