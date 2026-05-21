@@ -11398,9 +11398,6 @@ export class SimpleChart {
   private handleMouseMove(e: MouseEvent) {
     const rect = this.canvas.getBoundingClientRect();
     this.mouseX = e.clientX - rect.left; this.mouseY = e.clientY - rect.top;
-    if (this.focusedTradeRange && !this.drawingMoveState && !this.drawingTool) {
-      this.clearTradeFocusVisual();
-    }
     if (this.drawingMoveState) {
       const movingShape = this.selectedDrawingId
         ? this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null

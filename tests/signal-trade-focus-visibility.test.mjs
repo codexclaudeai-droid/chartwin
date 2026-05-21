@@ -88,6 +88,14 @@ test('open trades preserve the previous visible candle count instead of zooming 
   );
 });
 
+test('mouse hover alone does not clear an active trade focus on desktop', () => {
+  assert.doesNotMatch(
+    source,
+    /private handleMouseMove\(e: MouseEvent\) \{[\s\S]*if \(this\.focusedTradeRange && !this\.drawingMoveState && !this\.drawingTool\) \{\s*this\.clearTradeFocusVisual\(\);\s*\}/s,
+    'desktop mouse move should not immediately clear trade focus overlays',
+  );
+});
+
 test('trade focus overlay does not keep reanimating while crosshair interaction is active', () => {
   assert.match(
     source,
@@ -114,16 +122,16 @@ test('trade rows do not trigger chart focus until the explicit confirm button is
   );
 });
 
-test('chart mouse movement clears trade focus overlays before crosshair interaction continues', () => {
+test('trade focus remains active during normal desktop mouse movement', () => {
   assert.match(
     source,
     /private clearTradeFocusVisual\(\): void \{[\s\S]*?this\.focusedTradeRange = null;[\s\S]*?this\.focusedSignalCandleIndex = null;[\s\S]*?this\.focusVisualStartedAt = 0;[\s\S]*?this\.clearFocusVisualTimer\(\);[\s\S]*?\}/s,
-    'trade focus should expose a single reset helper for interaction handoff',
+    'trade focus should still expose a single reset helper for explicit dismissal paths',
   );
-  assert.match(
+  assert.doesNotMatch(
     source,
     /private handleMouseMove\(e: MouseEvent\) \{[\s\S]*?if \(this\.focusedTradeRange && !this\.drawingMoveState && !this\.drawingTool\) \{\s*this\.clearTradeFocusVisual\(\);\s*\}[\s\S]*?this\.isMouseOver = true;/s,
-    'chart mouse movement should clear trade focus overlays before continuing normal crosshair updates',
+    'normal desktop mouse movement should not clear trade focus overlays before crosshair updates',
   );
 });
 
