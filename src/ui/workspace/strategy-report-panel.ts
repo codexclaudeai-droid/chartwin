@@ -1871,22 +1871,17 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     panelMode = mode;
 
     if (mode === 'expanded') {
-      const splitBaseHeight = getExpandedSplitBaseHeight();
-      const minExpandedHeight = Math.max(220, Math.floor(splitBaseHeight * 0.3));
-      const maxExpandedHeight = Math.max(minExpandedHeight, Math.floor(splitBaseHeight * 0.6));
-      // Expanded mode uses a 50:50 split of the chart+report area, excluding top/bottom chrome.
-      expandedHeight = Math.max(minExpandedHeight, Math.min(maxExpandedHeight, Math.floor(splitBaseHeight * 0.5)));
-      panel.style.top = '';
+      panel.style.top = '0';
       panel.style.bottom = '0';
-      panel.style.height = `${expandedHeight}px`;
-      panel.style.zIndex = '1010';
-      resizeHandle.style.display = 'flex';
+      panel.style.height = 'auto';
+      panel.style.zIndex = '2400';
+      resizeHandle.style.display = 'none';
       expandBtn.innerHTML = icon.restore;
       expandBtn.dataset.tooltipTitle = '기본 높이로 복원';
       collapseBtn.innerHTML = icon.fold;
       collapseBtn.title = '접기';
       collapseBtn.dataset.tooltipTitle = '접기';
-      onHeightChange?.(expandedHeight);
+      onHeightChange?.(app.clientHeight);
     } else {
       const minNormalHeight = getMinNormalHeight();
       const maxAllowed = getMaxNormalHeight();
@@ -2348,7 +2343,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   window.addEventListener('resize', () => {
     if (!panelVisible) return;
     if (panelMode === 'expanded') {
-      applyExpandedHeight(Math.floor(getExpandedSplitBaseHeight() * 0.5));
+      applyPanelMode('expanded');
       return;
     }
     applyNormalHeight(normalHeight);
@@ -2377,9 +2372,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       } else if (panelMode === 'collapsed') {
         onHeightChange?.(headerHeight);
       } else {
-        // Expanded mode is controlled by its own 50:50 baseline + drag height.
-        panel.style.height = `${expandedHeight}px`;
-        onHeightChange?.(expandedHeight);
+        onHeightChange?.(app.clientHeight);
       }
       renderAll();
     },
