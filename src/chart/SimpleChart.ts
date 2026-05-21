@@ -10118,7 +10118,7 @@ export class SimpleChart {
         const tBoxW = tPadX * 2 + tLabelW + tValueW + 6;
         const tHeaderH = tLineH;
         const tBoxH = tPadY * 2 + tHeaderH + tooltipRows.length * tLineH;
-        const gap = 26;
+        const gap = 52;
         const fitsRight = solidX + gap + tBoxW <= chartRight - 2;
         const tBoxX = fitsRight ? solidX + gap : solidX - gap - tBoxW;
         const tBoxY = Math.max(R.top + 2, Math.min(this.mouseY - tBoxH / 2, mainH - tBoxH - 4));
@@ -11712,11 +11712,8 @@ export class SimpleChart {
   private crosshair_reset_auto_hide() {
     if (this.crosshairAutoHideTimer !== null) {
       clearTimeout(this.crosshairAutoHideTimer);
-    }
-    this.crosshairAutoHideTimer = setTimeout(() => {
       this.crosshairAutoHideTimer = null;
-      this.exitCrosshairMode();
-    }, SimpleChart.CROSSHAIR_AUTO_HIDE_MS);
+    }
   }
 
   /** 드로잉 드래프트 초기화 (터치 또는 마우스) */
@@ -12019,17 +12016,9 @@ export class SimpleChart {
         return;
       }
 
-      // 이미 십자선 모드라면 → 터치 위치 업데이트 (이동 가능), 탭이면 해제
+      // 이미 십자선 모드라면 다음 터치에서 즉시 해제
       if (this.isCrosshairMode) {
-        // 십자선 이동: 터치 위치로 업데이트
-        this.touchCrosshairX = pos.x;
-        this.touchCrosshairY = pos.y;
-        this.mouseX = pos.x;
-        this.mouseY = pos.y;
-        this.isMouseOver = true;
-        // 이동 중에는 자동 숨김 타이머 재시작
-        this.crosshair_reset_auto_hide();
-        this.requestOverlayDraw();
+        this.exitCrosshairMode();
         this.isTouchPanning = false;
         this.isTouchPinching = false;
         return;
