@@ -9,6 +9,7 @@ import {
   createSymbolIconElement,
   findSymbolItem,
   getSymbolIconUrl,
+  getSymbolKind,
   loadAdminConfig,
 } from '../catalog/symbols';
 import { isBetaAppVariant, isDevAppVariant } from './runtime';
@@ -1031,6 +1032,27 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     let patternScope: PatternAnalysisScope = loadPatternAnalysisScope();
     let patternAlertEnabled = loadPatternAlertEnabled();
     let currencyRate = 1;
+    const syncCurrencySelectPresentation = (symbol: string): void => {
+      const defaultLabels = new Map<string, string>([
+        ['USD', 'USD'],
+        ['EUR', 'EURO'],
+        ['JPY', 'JPN'],
+        ['USDT', 'USDT'],
+        ['KRW', 'KRW'],
+        ['BTC', 'BTC'],
+      ]);
+      Array.from(currencySelect.options).forEach((option) => {
+        option.textContent = defaultLabels.get(option.value) ?? option.value;
+      });
+      const isIndexSymbol = getSymbolKind(symbol) === 'index';
+      currencySelect.disabled = isIndexSymbol;
+      currencySelect.style.cursor = isIndexSymbol ? 'default' : 'pointer';
+      currencySelect.style.opacity = isIndexSymbol ? '0.95' : '1';
+      currencySelect.title = isIndexSymbol ? 'Point' : '';
+      if (!isIndexSymbol) return;
+      const selectedOption = Array.from(currencySelect.options).find((option) => option.value === currencySelect.value);
+      if (selectedOption) selectedOption.textContent = 'Point';
+    };
     const isNoFxIndexSymbol = (symbol: string): boolean => {
       const normalized = canonicalizeUiSymbol(symbol).replace(/\.P$/, '');
       return NO_FX_INDEX_SYMBOLS.has(normalized);
@@ -1052,6 +1074,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     chart.config.quoteCurrency = loadSavedQuoteCurrencyForSymbol(chart.config.symbol)
       ?? getDefaultQuoteCurrencyForSymbol(chart.config.symbol);
     currencySelect.value = chart.config.quoteCurrency;
+    syncCurrencySelectPresentation(chart.config.symbol);
     chart.setGapMode(gapMode);
     chart.setPatternAnalysisScope(patternScope);
     chart.setPatternAlertEnabled(patternAlertEnabled);
@@ -1485,6 +1508,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (currencySelect.value !== nextCurrency) {
         currencySelect.value = nextCurrency;
       }
+      syncCurrencySelectPresentation(symbol);
       if (chart.config.quoteCurrency !== nextCurrency) {
         chart.config.quoteCurrency = nextCurrency;
         saveQuoteCurrencyForSymbol(symbol, nextCurrency);

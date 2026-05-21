@@ -289,10 +289,7 @@ export function findSymbolItem(symbolId: string): SymbolCatalogItem | undefined 
 
 export function getSymbolIconSvg(symbolId: string): string {
   const normalized = normalizeCatalogSymbolId(symbolId);
-  const kind = SYMBOL_ICON_CATEGORY[normalized] ??
-    (normalized.includes('USDT') ? 'crypto' :
-      normalized.startsWith('X') ? 'commodity' :
-        'index');
+  const kind = getSymbolKind(symbolId);
   switch (kind) {
     case 'crypto':
       return `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -313,6 +310,14 @@ export function getSymbolIconSvg(symbolId: string): string {
         <rect x="11" y="8" width="2" height="3" rx="1" fill="#42a5f5" />
       </svg>`;
   }
+}
+
+export function getSymbolKind(symbolId: string): 'crypto' | 'commodity' | 'index' {
+  const normalized = normalizeCatalogSymbolId(symbolId);
+  return (SYMBOL_ICON_CATEGORY[normalized] ??
+    (normalized.includes('USDT') ? 'crypto' :
+      normalized.startsWith('X') ? 'commodity' :
+        'index')) as 'crypto' | 'commodity' | 'index';
 }
 
 export function createSymbolIconElement(symbolId: string, iconUrl?: string): HTMLElement {
