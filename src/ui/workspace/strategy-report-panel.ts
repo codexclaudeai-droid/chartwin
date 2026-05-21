@@ -24,7 +24,15 @@ type StrategyReportChartLike = {
     startIndex: number,
     endIndex: number,
     paddingBars?: number,
-    options?: { showCrosshair?: boolean; focusStyle?: 'range' | 'candle' },
+    options?: {
+      showCrosshair?: boolean;
+      focusStyle?: 'range' | 'candle';
+      focusType?: 'box' | 'connector';
+      preserveVisibleCount?: boolean;
+      entryPrice?: number;
+      exitPrice?: number;
+      isProfit?: boolean;
+    },
   ) => void;
   buildStrategyReport?: (args: {
     feeBps: number;
@@ -1586,11 +1594,18 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     }
     const chart = getActiveChart();
     if (typeof chart.focusRangeByIndex !== 'function') return;
-    const padding = panelMode === 'expanded' ? 10 : 6;
+    const padding = trade.status === 'OPEN'
+      ? (panelMode === 'expanded' ? 12 : 10)
+      : (panelMode === 'expanded' ? 16 : 12);
     const focusEndIndex = trade.status === 'OPEN' ? trade.entryIndex : trade.exitIndex;
     chart.focusRangeByIndex(trade.entryIndex, focusEndIndex, padding, {
       showCrosshair: false,
       focusStyle: trade.status === 'OPEN' ? 'candle' : 'range',
+      focusType: trade.status === 'OPEN' ? 'box' : 'connector',
+      preserveVisibleCount: trade.status === 'OPEN',
+      entryPrice: trade.entry,
+      exitPrice: trade.exit,
+      isProfit: trade.pnl >= 0,
     });
     window.dispatchEvent(new CustomEvent('chart-signal-trade-viewed'));
   };

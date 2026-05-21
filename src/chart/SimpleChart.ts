@@ -128,6 +128,106 @@ function getPriceArrowTextAnchor(
   return { align: 'center', x: x + (w / 2) };
 }
 
+function drawPriceLineOverlay(
+  ctx: CanvasRenderingContext2D,
+  args: {
+    chartLeft: number;
+    chartRight: number;
+    axisPad: number;
+    axisSide: 'left' | 'right';
+    totalSp: number;
+    mainH: number;
+    minP: number;
+    maxP: number;
+    getY: (p: number) => number;
+    fromX: number;
+    price: number;
+    label: string;
+    color: string;
+    dash: number[];
+    alpha?: number;
+    fontStack?: string;
+    priceDigits: number;
+  },
+): void {
+  const {
+    chartLeft,
+    chartRight,
+    axisPad,
+    axisSide,
+    totalSp,
+    mainH,
+    minP,
+    maxP,
+    getY,
+    fromX,
+    price,
+    label,
+    color,
+    dash,
+    alpha = 0.92,
+    fontStack = CHART_FONT_STACK,
+    priceDigits,
+  } = args;
+  if (price < minP || price > maxP) return;
+  const y = getY(price);
+  if (y < 0 || y > mainH) return;
+  const priceText = formatWithComma(price, priceDigits);
+  const boxH = 20;
+  const boxW = axisSide === 'left'
+    ? Math.max(46, axisPad - 10)
+    : Math.max(46, axisPad - 2);
+  const boxX = axisSide === 'left' ? 6 : chartRight;
+  const labelPadX = 6;
+  ctx.font = `700 9px ${fontStack}`;
+  const labelTextW = Math.ceil(ctx.measureText(label).width);
+  const labelW = Math.max(24, labelTextW + labelPadX * 2);
+  const labelH = 16;
+  const labelGap = 4;
+  const labelX = axisSide === 'left'
+    ? boxX + boxW + labelGap
+    : boxX - labelW - labelGap;
+  const x2 = axisSide === 'right'
+    ? Math.max(fromX + 10, labelX - 6)
+    : Math.max(fromX + totalSp * 2, chartRight - 6);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(chartLeft, 0, Math.max(1, chartRight - chartLeft), Math.max(1, mainH));
+  ctx.clip();
+  ctx.strokeStyle = toRgba(color, alpha, color);
+  ctx.lineWidth = 1.1;
+  ctx.setLineDash(dash);
+  ctx.beginPath();
+  ctx.moveTo(fromX, Math.round(y) + 0.5);
+  ctx.lineTo(x2, Math.round(y) + 0.5);
+  ctx.stroke();
+  ctx.restore();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#111a2b';
+  ctx.strokeStyle = toRgba(color, 0.9, color);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(labelX, y - labelH / 2, labelW, labelH, 6);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.font = `700 9px ${fontStack}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, labelX + labelW / 2, y + 0.5);
+  ctx.fillStyle = toRgba(color, 0.95, color);
+  drawPriceArrowBox(ctx, boxX, y, boxW, boxH, axisSide, 5);
+  ctx.fill();
+  ctx.strokeStyle = toRgba(color, 1, color);
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  const textAnchor = getPriceArrowTextAnchor(boxX, boxW, axisSide, 5);
+  ctx.textAlign = textAnchor.align;
+  ctx.fillStyle = getContrastTextColor(color);
+  ctx.font = `700 10px ${fontStack}`;
+  ctx.fillText(priceText, textAnchor.x, y + 0.5);
+}
+
 // ── 모바일 전용 상수 ──────────────────────────────────────────────────────────
 export const MOBILE_BOTTOM_BAR_HEIGHT = 44;
 
@@ -369,7 +469,15 @@ export class SimpleChart {
   private isMouseOver = false;
   private focusedSignalCandleIndex: number | null = null;
   private hoveredSignalCandleIndex: number | null = null;
-  private focusedTradeRange: { startIndex: number; endIndex: number; style?: 'range' | 'candle' } | null = null;
+  private focusedTradeRange: {
+    startIndex: number;
+    endIndex: number;
+    style?: 'range' | 'candle';
+    type: 'box' | 'connector';
+    entryPrice?: number;
+    exitPrice?: number;
+    isProfit?: boolean;
+  } | null = null;
   private focusVisualTimer: ReturnType<typeof setTimeout> | null = null;
   private focusVisualStartedAt = 0;
   private gotoDateMarker: { candleIndex: number; label: string } | null = null;
@@ -3753,63 +3861,24 @@ export class SimpleChart {
       dash: number[],
       alpha = 0.92,
     ) => {
-      if (price < meta.minP || price > meta.maxP) return;
-      const y = meta.getY(price);
-      if (y < 0 || y > meta.mainH) return;
-      const priceText = formatWithComma(price, symbolPriceDigits);
-      const boxH = 20;
-      const boxW = meta.axisSide === 'left'
-        ? Math.max(46, meta.axisPad - 10)
-        : Math.max(46, meta.axisPad - 2);
-      const boxX = meta.axisSide === 'left' ? 6 : meta.chartRight;
-      const labelPadX = 6;
-      const labelTextW = Math.ceil(ctx.measureText(label).width);
-      const labelW = Math.max(24, labelTextW + labelPadX * 2);
-      const labelH = 16;
-      const labelGap = 4;
-      const labelX = meta.axisSide === 'left'
-        ? boxX + boxW + labelGap
-        : boxX - labelW - labelGap;
-      const x2 = meta.axisSide === 'right'
-        ? Math.max(x1 + 10, labelX - 6)
-        : Math.max(x1 + meta.totalSp * 2, meta.chartRight - 6);
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(meta.chartLeft, 0, Math.max(1, meta.chartRight - meta.chartLeft), Math.max(1, meta.mainH));
-      ctx.clip();
-      ctx.strokeStyle = toRgba(color, alpha, color);
-      ctx.lineWidth = 1.1;
-      ctx.setLineDash(dash);
-      ctx.beginPath();
-      ctx.moveTo(x1, Math.round(y) + 0.5);
-      ctx.lineTo(x2, Math.round(y) + 0.5);
-      ctx.stroke();
-      ctx.restore();
-      ctx.setLineDash([]);
-      ctx.fillStyle = '#111a2b';
-      ctx.strokeStyle = toRgba(color, 0.9, color);
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(labelX, y - labelH / 2, labelW, labelH, 6);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = color;
-      ctx.font = `700 9px ${CHART_FONT_STACK}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, labelX + labelW / 2, y + 0.5);
-      ctx.fillStyle = toRgba(color, 0.95, color);
-      drawPriceArrowBox(ctx, boxX, y, boxW, boxH, meta.axisSide, 5);
-      ctx.fill();
-      ctx.strokeStyle = toRgba(color, 1, color);
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      const textAnchor = getPriceArrowTextAnchor(boxX, boxW, meta.axisSide, 5);
-      ctx.textAlign = textAnchor.align;
-      ctx.fillStyle = getContrastTextColor(color);
-      ctx.font = `700 10px ${CHART_FONT_STACK}`;
-      ctx.fillText(priceText, textAnchor.x, y + 0.5);
-      ctx.restore();
+      drawPriceLineOverlay(ctx, {
+        chartLeft: meta.chartLeft,
+        chartRight: meta.chartRight,
+        axisPad: meta.axisPad,
+        axisSide: meta.axisSide,
+        totalSp: meta.totalSp,
+        mainH: meta.mainH,
+        minP: meta.minP,
+        maxP: meta.maxP,
+        getY: meta.getY,
+        fromX: x1,
+        price,
+        label,
+        color,
+        dash,
+        alpha,
+        priceDigits: symbolPriceDigits,
+      });
     };
 
     const latestSignalIndex = this.latestStrategySignalIndex;
@@ -4321,20 +4390,70 @@ export class SimpleChart {
     startIndex: number,
     endIndex: number,
     paddingBars = 8,
-    options?: { showCrosshair?: boolean; focusStyle?: 'range' | 'candle' },
+    options?: {
+      showCrosshair?: boolean;
+      focusStyle?: 'range' | 'candle';
+      focusType?: 'box' | 'connector';
+      preserveVisibleCount?: boolean;
+      entryPrice?: number;
+      exitPrice?: number;
+      isProfit?: boolean;
+    },
   ): void {
     if (!this.data.length) return;
 
-    const normalizedRange = this.moveViewportToRange(startIndex, endIndex, paddingBars);
+    let normalizedRange;
+    if (options?.preserveVisibleCount) {
+      normalizedRange = this.moveViewportToIndexWithVisibleCount(startIndex, paddingBars);
+    } else {
+      normalizedRange = this.moveViewportToRange(startIndex, endIndex, paddingBars);
+    }
     if (!normalizedRange) return;
     const lastIndex = this.data.length - 1;
     this.focusedTradeRange = {
       startIndex: Math.max(0, Math.min(lastIndex, normalizedRange.startIndex)),
       endIndex: Math.max(0, Math.min(lastIndex, normalizedRange.endIndex)),
       style: options?.focusStyle ?? 'range',
+      type: options?.focusType ?? 'box',
+      entryPrice: options?.entryPrice,
+      exitPrice: options?.exitPrice,
+      isProfit: options?.isProfit,
     };
     this.draw();
     this.focusSignalVisual(this.focusedTradeRange.startIndex, options);
+  }
+
+  private moveViewportToIndexWithVisibleCount(
+    targetIndex: number,
+    paddingBars = 0,
+  ): { startIndex: number; endIndex: number } | null {
+    if (!this.data.length) return null;
+    const lastIndex = this.data.length - 1;
+    const clampedTarget = Math.max(0, Math.min(lastIndex, Math.floor(targetIndex)));
+    const currentVisibleCount = Math.max(1, Math.min(this.data.length, this.endIndex - this.startIndex));
+    const pad = Math.max(0, Math.floor(paddingBars));
+    const desiredVisibleCount = Math.max(24, currentVisibleCount);
+    const centerIndex = clampedTarget + pad;
+    let lo = Math.round(centerIndex - desiredVisibleCount / 2);
+    let hi = lo + desiredVisibleCount - 1;
+    if (lo < 0) {
+      hi = Math.min(lastIndex, hi - lo);
+      lo = 0;
+    }
+    if (hi > lastIndex) {
+      lo = Math.max(0, lo - (hi - lastIndex));
+      hi = lastIndex;
+    }
+    this.startIndex = lo;
+    this.endIndex = Math.max(this.startIndex + 1, hi + 1);
+    this.focusedTradeRange = null;
+    this.focusedSignalCandleIndex = null;
+    this.focusVisualStartedAt = 0;
+    this.clearFocusVisualTimer();
+    return {
+      startIndex: clampedTarget,
+      endIndex: clampedTarget,
+    };
   }
 
   private moveViewportToRange(
@@ -4354,7 +4473,7 @@ export class SimpleChart {
     lo = Math.max(0, lo - pad);
     hi = Math.min(lastIndex, hi + pad);
 
-    const minVisible = 12;
+    const minVisible = 24;
     let visibleCount = hi - lo + 1;
     if (visibleCount < minVisible) {
       const deficit = minVisible - visibleCount;
@@ -9718,30 +9837,91 @@ export class SimpleChart {
         const endLocal = drawEnd - this.startIndex;
         const x1 = effectiveChartLeft + startLocal * totalSp;
         const x2 = effectiveChartLeft + endLocal * totalSp + candleW;
-        const elapsed = this.focusVisualStartedAt > 0 ? (Date.now() - this.focusVisualStartedAt) : 0;
-        const pulse = 0.5 + 0.5 * Math.sin(elapsed / 170);
-        const fillAlpha = 0.18 + pulse * 0.14;
-        const strokeAlpha = 0.5 + pulse * 0.38;
-        const glowAlpha = 0.14 + pulse * 0.22;
-        const rangeW = Math.max(2, x2 - x1);
-        const candleFocus = this.focusedTradeRange.style === 'candle' && mainScale && drawStart === drawEnd;
-        const candle = candleFocus ? this.data[drawStart] : null;
-        const boxTop = candle && mainScale
-          ? Math.max(R.top, Math.min(mainH, Math.min(mainScale.toY(candle.high), mainScale.toY(candle.low)) - 6 - pulse * 3))
-          : R.top;
-        const boxBottom = candle && mainScale
-          ? Math.max(R.top, Math.min(mainH, Math.max(mainScale.toY(candle.high), mainScale.toY(candle.low)) + 6 + pulse * 3))
-          : mainH;
-        const rangeH = Math.max(2, boxBottom - boxTop);
-        ctx.save();
-        ctx.fillStyle = `rgba(72,118,255,${fillAlpha.toFixed(3)})`;
-        ctx.strokeStyle = `rgba(145,188,255,${strokeAlpha.toFixed(3)})`;
-        ctx.shadowColor = `rgba(96,154,255,${glowAlpha.toFixed(3)})`;
-        ctx.shadowBlur = 16 + pulse * 10;
-        ctx.lineWidth = 1.3 + pulse * 0.7;
-        ctx.fillRect(x1, boxTop, rangeW, rangeH);
-        ctx.strokeRect(x1 + 0.5, boxTop + 0.5, Math.max(1, rangeW - 1), Math.max(1, rangeH - 1));
-        ctx.restore();
+        const lineStartX = x1 + candleW / 2;
+        const lineEndX = x2 - candleW / 2;
+        if (this.focusedTradeRange.type === 'connector' && mainScale) {
+          const entryPrice = this.focusedTradeRange.entryPrice;
+          const exitPrice = this.focusedTradeRange.exitPrice;
+          if (Number.isFinite(entryPrice) && Number.isFinite(exitPrice)) {
+            const entryY = mainScale.toY(entryPrice as number);
+            const exitY = mainScale.toY(exitPrice as number);
+            const lineColor = this.focusedTradeRange.isProfit ? 'rgba(34,171,148,0.9)' : 'rgba(242,54,69,0.9)';
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(chartLeft, R.top, Math.max(1, chartRight - chartLeft), Math.max(1, mainH - R.top));
+            ctx.clip();
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([1, 2]);
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(lineStartX, entryY + 0.5);
+            ctx.lineTo(lineEndX, exitY + 0.5);
+            ctx.stroke();
+            ctx.restore();
+            drawPriceLineOverlay(ctx, {
+              chartLeft,
+              chartRight,
+              axisPad: geometry.axisPad,
+              axisSide: geometry.side,
+              totalSp,
+              mainH,
+              minP: mainScale.lo,
+              maxP: mainScale.hi,
+              getY: mainScale.toY,
+              fromX: lineStartX,
+              price: entryPrice as number,
+              label: 'ENTRY',
+              color: '#6ea8ff',
+              dash: [6, 3],
+              alpha: 0.9,
+              priceDigits: symbolPriceDigits,
+            });
+            drawPriceLineOverlay(ctx, {
+              chartLeft,
+              chartRight,
+              axisPad: geometry.axisPad,
+              axisSide: geometry.side,
+              totalSp,
+              mainH,
+              minP: mainScale.lo,
+              maxP: mainScale.hi,
+              getY: mainScale.toY,
+              fromX: lineEndX,
+              price: exitPrice as number,
+              label: 'EXIT',
+              color: this.focusedTradeRange.isProfit ? '#39d98a' : '#ff6b6b',
+              dash: [6, 3],
+              alpha: 0.9,
+              priceDigits: symbolPriceDigits,
+            });
+          }
+        } else {
+          const elapsed = this.focusVisualStartedAt > 0 ? (Date.now() - this.focusVisualStartedAt) : 0;
+          const pulse = 0.5 + 0.5 * Math.sin(elapsed / 170);
+          const fillAlpha = 0.18 + pulse * 0.14;
+          const strokeAlpha = 0.5 + pulse * 0.38;
+          const glowAlpha = 0.14 + pulse * 0.22;
+          const rangeW = Math.max(2, x2 - x1);
+          const candleFocus = this.focusedTradeRange.style === 'candle' && mainScale && drawStart === drawEnd;
+          const candle = candleFocus ? this.data[drawStart] : null;
+          const boxTop = candle && mainScale
+            ? Math.max(R.top, Math.min(mainH, Math.min(mainScale.toY(candle.high), mainScale.toY(candle.low)) - 6 - pulse * 3))
+            : R.top;
+          const boxBottom = candle && mainScale
+            ? Math.max(R.top, Math.min(mainH, Math.max(mainScale.toY(candle.high), mainScale.toY(candle.low)) + 6 + pulse * 3))
+            : mainH;
+          const rangeH = Math.max(2, boxBottom - boxTop);
+          ctx.save();
+          ctx.fillStyle = `rgba(72,118,255,${fillAlpha.toFixed(3)})`;
+          ctx.strokeStyle = `rgba(145,188,255,${strokeAlpha.toFixed(3)})`;
+          ctx.shadowColor = `rgba(96,154,255,${glowAlpha.toFixed(3)})`;
+          ctx.shadowBlur = 16 + pulse * 10;
+          ctx.lineWidth = 1.3 + pulse * 0.7;
+          ctx.fillRect(x1, boxTop, rangeW, rangeH);
+          ctx.strokeRect(x1 + 0.5, boxTop + 0.5, Math.max(1, rangeW - 1), Math.max(1, rangeH - 1));
+          ctx.restore();
+        }
         this.requestOverlayDraw();
       }
     }
