@@ -222,6 +222,7 @@ type StrategyReportResult = {
 // SimpleChart 클래스
 
 export class SimpleChart {
+  private static readonly FOCUS_VISUAL_DURATION_MS = 24000;
   private containerEl: HTMLElement;
   canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -4252,6 +4253,10 @@ export class SimpleChart {
     this.focusVisualTimer = null;
   }
 
+  private shouldHideLivePriceOverlay(): boolean {
+    return this.focusedTradeRange != null;
+  }
+
   private getCandleCenterX(candleIndex: number): number | null {
     const visibleCount = Math.max(1, this.endIndex - this.startIndex);
     const geometry = this.getChartGeometry(this.viewportWidth, this.lastDrawMeta?.axisPad);
@@ -4309,7 +4314,7 @@ export class SimpleChart {
       this.focusVisualStartedAt = 0;
       this.focusVisualTimer = null;
       this.requestOverlayDraw();
-    }, 6000);
+    }, SimpleChart.FOCUS_VISUAL_DURATION_MS);
   }
 
   public focusRangeByIndex(
@@ -9528,7 +9533,8 @@ export class SimpleChart {
     const linearToY = this.lastDrawMeta?.getYLinear ?? null;
 
     // 현재가 라인: draw()에서 계산된 캐시 스케일 재사용 (linear Y - log 전환 시 위치 유지)
-    if (this.data.length && mainScale && linearToY) {
+    const hideLivePriceOverlay = this.shouldHideLivePriceOverlay();
+    if (this.data.length && mainScale && linearToY && !hideLivePriceOverlay) {
       const rawPriceIdx = Number.isFinite(this.endIndex) ? this.endIndex - 1 : this.data.length - 1;
       const priceIdx = Math.max(0, Math.min(this.data.length - 1, rawPriceIdx));
       const priceCandle = this.data[priceIdx];
