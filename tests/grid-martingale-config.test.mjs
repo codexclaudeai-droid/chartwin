@@ -10,6 +10,7 @@ import {
 } from '../src/strategy/strategies/grid-martingale-presets.js';
 
 const strategySource = fs.readFileSync(new URL('../src/strategy/strategies/grid-martingale-js.ts', import.meta.url), 'utf8');
+const runtimeSource = fs.readFileSync(new URL('../src/strategy/strategies/grid-martingale-runtime.js', import.meta.url), 'utf8');
 const modalSource = fs.readFileSync(new URL('../src/ui/modal-handlers.ts', import.meta.url), 'utf8');
 
 test('grid martingale infers NASDAQ and GOLD presets from symbol', () => {
@@ -43,7 +44,7 @@ test('grid martingale sourceCode executes standalone with embedded config logic'
     __strategyParams: { gridStep: 40, takeProfitSteps: 1.8, maxLevel: 7, equityStopPct: 12 },
   };
   assert.doesNotThrow(() => strategyFn(ctx, 1));
-  assert.equal(strategyFn(ctx, 1), 1);
+  assert.notEqual(strategyFn(ctx, 1), 0);
 });
 
 test('strategy modal exposes configurable grid martingale fields', () => {
@@ -51,4 +52,24 @@ test('strategy modal exposes configurable grid martingale fields', () => {
   assert.match(modalSource, /TP Step/);
   assert.match(modalSource, /Max Level/);
   assert.match(modalSource, /Stop Loss %/);
+});
+
+test('grid martingale source implements independent long and short baskets', () => {
+  assert.match(runtimeSource, /longBasket/);
+  assert.match(runtimeSource, /shortBasket/);
+  assert.match(runtimeSource, /shortOpenPnl/);
+  assert.match(runtimeSource, /price >= worstShortEntry \+ gridStep/);
+});
+
+test('grid martingale can emit both buy and sell entries in a standalone worker context', () => {
+  const strategyFn = vm.runInNewContext(gridMartingaleJs.sourceCode, {});
+  const prices = [100, 100, 100.5, 101, 101.5, 101.1, 100.7, 100.2, 99.8, 100.4, 101.2];
+  const ctx = {
+    close: prices,
+    __symbol: 'NQ1!',
+    __strategyParams: { gridStep: 2, takeProfitSteps: 1, maxLevel: 4, equityStopPct: 50 },
+  };
+  const signals = prices.map((_, index) => strategyFn(ctx, index));
+  assert.ok(signals.some((value) => value > 0));
+  assert.ok(signals.some((value) => value < 0));
 });
