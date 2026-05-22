@@ -27,7 +27,16 @@ export function inferGridMartingalePreset(symbol) {
 }
 
 export function resolveGridMartingaleConfig(symbol, rawParams = {}) {
-  const preset = GRID_MARTINGALE_PRESETS[inferGridMartingalePreset(symbol)] || GRID_MARTINGALE_PRESETS.DEFAULT;
+  const presets = {
+    DEFAULT: { gridStep: 120, takeProfitSteps: 2.2, maxLevel: 8, equityStopPct: 14 },
+    NASDAQ: { gridStep: 40, takeProfitSteps: 1.8, maxLevel: 7, equityStopPct: 12 },
+    GOLD: { gridStep: 25, takeProfitSteps: 1.6, maxLevel: 6, equityStopPct: 10 },
+  };
+  const upper = String(symbol || '').trim().toUpperCase();
+  const presetKey = upper.includes('XAU') || upper.includes('GOLD')
+    ? 'GOLD'
+    : (upper.includes('NQ') || upper.includes('NAS') || upper.includes('IXIC') ? 'NASDAQ' : 'DEFAULT');
+  const preset = presets[presetKey] || presets.DEFAULT;
   const gridStep = Number(rawParams.gridStep);
   const takeProfitSteps = Number(rawParams.takeProfitSteps);
   const maxLevel = Number(rawParams.maxLevel);

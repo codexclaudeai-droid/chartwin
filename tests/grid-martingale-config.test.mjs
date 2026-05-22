@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
+import { gridMartingaleJs } from '../src/strategy/strategies/grid-martingale-js.ts';
 import {
   GRID_MARTINGALE_PRESETS,
   inferGridMartingalePreset,
@@ -31,6 +33,17 @@ test('grid martingale strategy source uses shared runtime config helper', () => 
   assert.match(strategySource, /resolveGridMartingaleConfig/);
   assert.match(strategySource, /takeProfitSteps/);
   assert.match(strategySource, /equityStopPct/);
+});
+
+test('grid martingale sourceCode executes standalone with embedded config logic', () => {
+  const strategyFn = vm.runInNewContext(gridMartingaleJs.sourceCode, {});
+  const ctx = {
+    close: [100, 100, 100, 100],
+    __symbol: 'NQ1!',
+    __strategyParams: { gridStep: 40, takeProfitSteps: 1.8, maxLevel: 7, equityStopPct: 12 },
+  };
+  assert.doesNotThrow(() => strategyFn(ctx, 1));
+  assert.equal(strategyFn(ctx, 1), 1);
 });
 
 test('strategy modal exposes configurable grid martingale fields', () => {
