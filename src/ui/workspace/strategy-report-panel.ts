@@ -96,6 +96,21 @@ type ReportResult = {
   closedTradeCount: number;
   openPositionCount: number;
   trades: ReportTrade[];
+  strategyMeta?: {
+    kind: 'xau-grid-long';
+    ownedCount: number;
+    avgEntry: number | null;
+    deployedCapital: number;
+    openQty: number;
+    openPnl: number;
+    buyLevels: number[];
+    sellLevels: number[];
+    lastEventType: 'buy' | 'sell' | 'mixed' | 'none';
+    highPrice: number;
+    lowPrice: number;
+    nLevels: number;
+    gridMode: string;
+  };
 };
 
 const REPORT_WORKER_SOURCE = `
@@ -1210,6 +1225,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     return `<span>${r.winRate.toFixed(2)}%</span><span style="margin-left:10pt;">${winCount}/${r.tradeCount}</span>`;
   };
 
+  const formatLevelList = (levels: number[]): string => {
+    if (!levels.length) return '없음';
+    return levels.map((level) => `L${level}`).join(', ');
+  };
+
   const applyCapitalBasedRatios = (result: ReportResult): ReportResult => {
     const normalized: ReportResult = {
       ...result,
@@ -1265,6 +1285,34 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const kpiLabelFs = isMobileKpi ? '10px' : '11px';
     const kpiValueFs = isMobileKpi ? '12px' : '14px';
     const kpiTitleMb = isMobileKpi ? '6px' : '8px';
+    const priceDigits = getCurrentPriceDigits();
+    const xauMeta = r.strategyMeta?.kind === 'xau-grid-long' ? r.strategyMeta : null;
+    const xauMetaHtml = xauMeta ? `
+      <div style="grid-column:1 / -1;padding:${kpiPad};border:1px solid #55602a;background:#161d10;border-radius:8px;margin-top:${kpiGap};">
+        <div style="font-size:12px;color:#e6efbf;font-weight:700;margin-bottom:${kpiTitleMb};">XAU Grid Status</div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:${kpiGap};">
+          <div>
+            <div style="font-size:${kpiLabelFs};color:#b9c88b;">Owned Slots</div>
+            <div style="font-size:${kpiValueFs};font-weight:700;color:#eef6c8;margin-top:2px;">${xauMeta.ownedCount} / ${xauMeta.nLevels}</div>
+          </div>
+          <div>
+            <div style="font-size:${kpiLabelFs};color:#b9c88b;">Avg Entry</div>
+            <div style="font-size:${kpiValueFs};font-weight:700;color:#f7d774;margin-top:2px;">${xauMeta.avgEntry == null ? '—' : formatPriceValue(xauMeta.avgEntry, priceDigits)}</div>
+          </div>
+          <div>
+            <div style="font-size:${kpiLabelFs};color:#b9c88b;">Open PnL</div>
+            <div style="font-size:${kpiValueFs};font-weight:700;color:${xauMeta.openPnl >= 0 ? '#7ed9a4' : '#ff9b9b'};margin-top:2px;">${formatAmount2(xauMeta.openPnl)}</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:${kpiGap};margin-top:${kpiTitleMb};padding-top:${kpiTitleMb};border-top:1px solid #2d3a1d;color:#cfd9a4;font-size:${kpiLabelFs};">
+          <span>Range ${formatPriceValue(xauMeta.highPrice, priceDigits)} ↔ ${formatPriceValue(xauMeta.lowPrice, priceDigits)}</span>
+          <span>Mode ${String(xauMeta.gridMode).toUpperCase()}</span>
+          <span>Deployed ${formatAmount2(xauMeta.deployedCapital)}</span>
+          <span>Buy Levels ${formatLevelList(xauMeta.buyLevels)}</span>
+          <span>Sell Levels ${formatLevelList(xauMeta.sellLevels)}</span>
+        </div>
+      </div>
+    ` : '';
     kpiRow.innerHTML = `
       <div style="grid-column:1 / -1;padding:${kpiPad};border:1px solid #2a3a58;background:#141f33;border-radius:8px;">
         <div style="font-size:12px;color:#c9d6ee;font-weight:700;margin-bottom:${kpiTitleMb};">핵심 성과 요약</div>
@@ -1294,6 +1342,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
           <span>미청산 ${r.openPositionCount}</span>
         </div>
       </div>
+      ${xauMetaHtml}
     `;
   };
 

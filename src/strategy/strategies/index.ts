@@ -5,6 +5,7 @@ export { doubleBreakJs }           from './double-break-js';
 export { shayhuangVwapJs }         from './shayhuang-vwap-js';
 export { gridMartingaleJs }        from './grid-martingale-js';
 export { gridAtrBnfSrouterV1 }    from './grid-atr-bnf-srouter-v1';
+export { xauGridLongJs }          from './xau-grid-long-js';
 
 import { smaCrossJs }              from './sma-cross-js';
 import { smaCrossPine }            from './sma-cross-pine';
@@ -13,6 +14,7 @@ import { doubleBreakJs }           from './double-break-js';
 import { shayhuangVwapJs }         from './shayhuang-vwap-js';
 import { gridMartingaleJs }        from './grid-martingale-js';
 import { gridAtrBnfSrouterV1 }    from './grid-atr-bnf-srouter-v1';
+import { xauGridLongJs }          from './xau-grid-long-js';
 
 export const ALL_STRATEGIES = [
   smaCrossJs,
@@ -22,4 +24,5 @@ export const ALL_STRATEGIES = [
   shayhuangVwapJs,
   gridMartingaleJs,
   gridAtrBnfSrouterV1,
+  xauGridLongJs,
 ] as const;

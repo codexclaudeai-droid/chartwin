@@ -103,6 +103,7 @@ function createModal(title: string, options: { anchorTop?: boolean } = {}) {
 export function openStrategyModal(chart: any, onApply: () => void, options?: { mode?: 'admin' | 'frontend' }) {
   const GRID_ATR_BNF_SROUTER_ID = 'strategy_js_grid_atr_bnf_srouter_v1';
   const GRID_MARTINGALE_ID = 'strategy_js_grid_martingale';
+  const XAU_GRID_LONG_ID = 'strategy_js_xau_grid_long';
   const resolveSrouterPresetForSymbol = () => inferGridAtrBnfSrouterPreset(String(chart.config?.symbol ?? ''));
   const resolveGridMartingalePresetForSymbol = () => inferGridMartingalePreset(String(chart.config?.symbol ?? ''));
   const buildSrouterPresetPatch = (preset: keyof typeof GRID_ATR_BNF_SROUTER_PRESETS) => ({
@@ -544,6 +545,71 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     equityStopPct: createGridMartingaleField('equityStopPct', 'Stop Loss %', '0.1', '0.1'),
   };
 
+  const xauGridLongBox = document.createElement('div');
+  xauGridLongBox.style.cssText = 'display:none;margin-top:12px;padding:12px;border:1px solid #55602a;border-radius:8px;background:#171b0d;';
+  const xauTitle = document.createElement('div');
+  xauTitle.textContent = 'XAU Grid Long 설정';
+  xauTitle.style.cssText = 'font-size:13px;font-weight:700;color:#eef6c8;margin-bottom:6px;';
+  xauGridLongBox.appendChild(xauTitle);
+  const xauHint = document.createElement('div');
+  xauHint.style.cssText = 'font-size:11px;color:#cfd9a4;line-height:1.5;margin-bottom:8px;';
+  xauGridLongBox.appendChild(xauHint);
+  const xauGrid = document.createElement('div');
+  xauGrid.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(140px,1fr));gap:8px;';
+  xauGridLongBox.appendChild(xauGrid);
+  listPanel.appendChild(xauGridLongBox);
+
+  const createXauGridLongField = (key: string, labelText: string, step = '1', min = '0') => {
+    const wrap = document.createElement('label');
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+    const label = document.createElement('span');
+    label.textContent = labelText;
+    label.style.cssText = 'font-size:11px;color:#cfd9a4;';
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = step;
+    input.min = min;
+    input.style.cssText = 'background:#111508;border:1px solid #6e7a39;border-radius:6px;padding:7px;color:white;font-size:12px;';
+    input.addEventListener('change', () => {
+      const activeId = chart.getActiveStrategyId?.();
+      const value = Number(input.value);
+      if (activeId !== XAU_GRID_LONG_ID || !Number.isFinite(value)) return;
+      chart.setStrategyParams?.(activeId, { [key]: value });
+      onApply();
+      render();
+    });
+    wrap.appendChild(label);
+    wrap.appendChild(input);
+    xauGrid.appendChild(wrap);
+    return input;
+  };
+
+  const xauModeWrap = document.createElement('label');
+  xauModeWrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+  const xauModeLabel = document.createElement('span');
+  xauModeLabel.textContent = 'Spacing Mode';
+  xauModeLabel.style.cssText = 'font-size:11px;color:#cfd9a4;';
+  const xauModeSel = document.createElement('select');
+  xauModeSel.style.cssText = 'background:#111508;border:1px solid #6e7a39;border-radius:6px;padding:7px;color:white;font-size:12px;';
+  xauModeSel.innerHTML = '<option value="geometric">Geometric</option><option value="arithmetic">Arithmetic</option>';
+  xauModeSel.addEventListener('change', () => {
+    const activeId = chart.getActiveStrategyId?.();
+    if (activeId !== XAU_GRID_LONG_ID) return;
+    chart.setStrategyParams?.(activeId, { gridMode: xauModeSel.value });
+    onApply();
+    render();
+  });
+  xauModeWrap.appendChild(xauModeLabel);
+  xauModeWrap.appendChild(xauModeSel);
+  xauGrid.appendChild(xauModeWrap);
+
+  const xauInputs = {
+    highPrice: createXauGridLongField('highPrice', 'High Price', '0.01', '0'),
+    lowPrice: createXauGridLongField('lowPrice', 'Low Price', '0.01', '0'),
+    nLevels: createXauGridLongField('nLevels', 'Grid Levels', '1', '5'),
+    investment: createXauGridLongField('investment', 'Total Investment', '1', '0'),
+  };
+
   const err = document.createElement('div');
   err.style.cssText = 'color:#ef5350;font-size:11px;min-height:16px;margin-top:8px;';
   registerPanel.appendChild(err);
@@ -624,6 +690,7 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     const activeIsBollinger = activeId === 'strategy_pine_bbands_directed';
     const activeIsSrouter = activeId === GRID_ATR_BNF_SROUTER_ID;
     const activeIsGridMartingale = activeId === GRID_MARTINGALE_ID;
+    const activeIsXauGridLong = activeId === XAU_GRID_LONG_ID;
     const activeSupportsRiskLines = activeIsDoubleBreak || (activeIsBollinger && chart.getBollingerRiskConfig?.().enabled);
 
     listWrap.innerHTML = '';
@@ -757,6 +824,22 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
       Object.entries(gmInputs).forEach(([key, input]) => {
         input.value = String(cfg[key] ?? '');
       });
+    }
+    xauGridLongBox.style.display = activeIsXauGridLong ? 'block' : 'none';
+    if (activeIsXauGridLong && chart.getStrategyParams) {
+      const cfg = {
+        highPrice: 4857.27,
+        lowPrice: 3568.69,
+        nLevels: 48,
+        gridMode: 'geometric',
+        investment: 2000,
+        ...chart.getStrategyParams(activeId),
+      };
+      xauHint.textContent = `사용자가 직접 범위를 정하는 고정형 그리드입니다. High/Low 범위 안에서 ${cfg.nLevels}개 레벨을 ${String(cfg.gridMode).toUpperCase()} 방식으로 나눕니다.`;
+      Object.entries(xauInputs).forEach(([key, input]) => {
+        input.value = String(cfg[key] ?? '');
+      });
+      xauModeSel.value = String(cfg.gridMode ?? 'geometric').toLowerCase() === 'arithmetic' ? 'arithmetic' : 'geometric';
     }
     applyViewState();
     scheduleStrategyListWrapHeightSync();

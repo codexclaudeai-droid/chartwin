@@ -63,6 +63,7 @@ import {
 } from './axis-utils';
 import { getSymbolPricePrecision } from '../data/market-data-sources';
 import { simulateGridMartingale } from '../strategy/strategies/grid-martingale-runtime.js';
+import { simulateXauGridLong } from '../strategy/strategies/xau-grid-long-runtime.ts';
 import {
   detectPatternCandidates,
   getPatternSignalRange,
@@ -317,6 +318,21 @@ type StrategyReportResult = {
   closedTradeCount: number;
   openPositionCount: number;
   trades: StrategyReportTrade[];
+  strategyMeta?: {
+    kind: 'xau-grid-long';
+    ownedCount: number;
+    avgEntry: number | null;
+    deployedCapital: number;
+    openQty: number;
+    openPnl: number;
+    buyLevels: number[];
+    sellLevels: number[];
+    lastEventType: 'buy' | 'sell' | 'mixed' | 'none';
+    highPrice: number;
+    lowPrice: number;
+    nLevels: number;
+    gridMode: string;
+  };
 };
 
 // -----------------------------------------------------------------------------
@@ -2846,7 +2862,10 @@ export class SimpleChart {
     openPositionCount: number,
     start: number,
     end: number,
-    extras: { adxFilteredSignalCount?: number } = {},
+    extras: {
+      adxFilteredSignalCount?: number;
+      strategyMeta?: StrategyReportResult['strategyMeta'];
+    } = {},
   ): StrategyReportResult {
     const equity: number[] = [];
     const buyHold: number[] = [];
@@ -2920,6 +2939,7 @@ export class SimpleChart {
       closedTradeCount: tradeCount,
       openPositionCount,
       trades: trades.slice().sort((a, b) => a.entryIndex - b.entryIndex).slice(-350),
+      strategyMeta: extras.strategyMeta,
     };
   }
 
@@ -2995,6 +3015,119 @@ export class SimpleChart {
       ...(args.sideFilter === 'all' || args.sideFilter === 'short' ? simulation.openShortEntries : []),
     ].filter((leg) => leg.entryIndex >= start && leg.entryIndex < end).length;
     return this.buildSummaryReport(args, trades, signalCount, openPositionCount, start, end);
+  }
+
+  private buildXauGridLongReport(args: StrategyReportArgs): StrategyReportResult | null {
+    if (this.activeStrategyId !== 'strategy_js_xau_grid_long' || !this.data.length || !this.strategySignals.length) return null;
+    const range = this.resolveStrategyReportRange(args);
+    if (!range) return null;
+    const { start, end } = range;
+    const feeRate = (args.feeBps + args.slippageBps) / 10000;
+    const simulation = simulateXauGridLong(
+      this.data.map((candle) => Number(candle.close)),
+      this.getStrategyParams('strategy_js_xau_grid_long'),
+    );
+    const trades: StrategyReportTrade[] = [];
+    const openByLevel = new Map<number, Array<{ entry: number; entryIndex: number; entryTime: number | null }>>();
+    const signalCount = simulation.signals.slice(start, end).reduce((count, signal) => count + (signal === 0 ? 0 : 1), 0);
+
+    for (let barIndex = 0; barIndex < simulation.bars.length; barIndex += 1) {
+      const bar = simulation.bars[barIndex];
+      const candle = this.data[barIndex];
+      const barTime = Number.isFinite(Number(candle?.time)) ? Number(candle?.time) : null;
+
+      bar.buyLevels.forEach((levelIndex) => {
+        const entryPrice = simulation.levels[levelIndex];
+        const bucket = openByLevel.get(levelIndex) ?? [];
+        bucket.push({
+          entry: entryPrice,
+          entryIndex: barIndex,
+          entryTime: barTime,
+        });
+        openByLevel.set(levelIndex, bucket);
+      });
+
+      bar.sellLevels.forEach((levelIndex) => {
+        const bucket = openByLevel.get(levelIndex);
+        const leg = bucket?.shift();
+        if (!leg) return;
+        const exitPrice = simulation.levels[Math.max(0, levelIndex - 1)];
+        if (args.sideFilter === 'all' || args.sideFilter === 'long') {
+          if (leg.entryIndex >= start && barIndex < end) {
+            trades.push({
+              side: 'LONG',
+              status: 'CLOSED',
+              entry: leg.entry,
+              exit: exitPrice,
+              pnl: (exitPrice - leg.entry) - (leg.entry + exitPrice) * feeRate,
+              stopLoss: null,
+              takeProfits: [exitPrice],
+              entryIndex: leg.entryIndex,
+              exitIndex: barIndex,
+              entryTime: leg.entryTime,
+              exitTime: barTime,
+            });
+          }
+        }
+      });
+    }
+
+    const lastIndex = Math.max(start, end - 1);
+    const lastCandle = this.data[lastIndex];
+    openByLevel.forEach((legs) => {
+      legs.forEach((leg) => {
+        if (!lastCandle) return;
+        if (!(args.sideFilter === 'all' || args.sideFilter === 'long')) return;
+        if (leg.entryIndex < start || leg.entryIndex >= end) return;
+        const mark = Number(lastCandle.close);
+        trades.push({
+          side: 'LONG',
+          status: 'OPEN',
+          entry: leg.entry,
+          exit: mark,
+          pnl: (mark - leg.entry) - (leg.entry + mark) * feeRate,
+          stopLoss: null,
+          takeProfits: [],
+          entryIndex: leg.entryIndex,
+          exitIndex: lastIndex,
+          entryTime: leg.entryTime,
+          exitTime: null,
+        });
+      });
+    });
+
+    let latestEventBar = simulation.bars[lastIndex];
+    for (let i = lastIndex; i >= start; i -= 1) {
+      const candidate = simulation.bars[i];
+      if (candidate.buyLevels.length || candidate.sellLevels.length) {
+        latestEventBar = candidate;
+        break;
+      }
+    }
+    const latestBar = simulation.bars[lastIndex];
+    const strategyMeta: StrategyReportResult['strategyMeta'] = {
+      kind: 'xau-grid-long',
+      ownedCount: latestBar.ownedCount,
+      avgEntry: latestBar.avgEntry,
+      deployedCapital: latestBar.deployedCapital,
+      openQty: latestBar.openQty,
+      openPnl: latestBar.openPnl,
+      buyLevels: [...latestEventBar.buyLevels],
+      sellLevels: [...latestEventBar.sellLevels],
+      lastEventType: latestEventBar.eventType,
+      highPrice: simulation.config.highPrice,
+      lowPrice: simulation.config.lowPrice,
+      nLevels: simulation.config.nLevels,
+      gridMode: simulation.config.gridMode,
+    };
+
+    const openPositionCount = Array.from(openByLevel.values()).reduce((count, legs) => (
+      count + legs.filter((leg) => leg.entryIndex >= start && leg.entryIndex < end).length
+    ), 0);
+
+    return this.buildSummaryReport(args, trades, signalCount, openPositionCount, start, end, {
+      strategyMeta,
+    });
   }
 
   private buildSrouterReport(args: StrategyReportArgs): StrategyReportResult | null {
@@ -3358,6 +3491,9 @@ export class SimpleChart {
   public buildStrategyReport(args: StrategyReportArgs): StrategyReportResult | null {
     const gridMartingale = this.buildGridMartingaleReport(args);
     if (gridMartingale) return gridMartingale;
+
+    const xauGridLong = this.buildXauGridLongReport(args);
+    if (xauGridLong) return xauGridLong;
 
     const srouter = this.buildSrouterReport(args);
     if (srouter) return srouter;
