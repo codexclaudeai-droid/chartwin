@@ -54,29 +54,24 @@ export function getCmeEquityFuturesSessionInfo(now: Date): {
   const minuteOfDay = hour * 60 + minute;
   const maintenanceStart = 16 * 60;
   const maintenanceEnd = 17 * 60;
+  const sessionMinutes = 24 * 60;
+  const openMinutes = 23 * 60;
   const weekdayLabel = ({ Sun: '일', Mon: '월', Tue: '화', Wed: '수', Thu: '목', Fri: '금', Sat: '토' } as Record<string, string>)[weekday] ?? weekday;
   const timezoneLabel = '거래소 시간대: 시카고 (UTC-5, 서머타임 기준)';
   const isOpen = isCmeEquityFuturesOpen(now);
 
   if (isOpen) {
-    let elapsed = 0;
-    let remaining = 0;
-    if (weekday === 'Sun') {
-      elapsed = minuteOfDay - maintenanceEnd;
-      remaining = (24 * 60 - minuteOfDay) + maintenanceStart;
-    } else if (minuteOfDay < maintenanceStart) {
-      elapsed = (24 * 60 - maintenanceEnd) + minuteOfDay;
-      remaining = maintenanceStart - minuteOfDay;
-    } else {
-      elapsed = minuteOfDay - maintenanceEnd;
-      remaining = (24 * 60 - minuteOfDay) + maintenanceStart;
-    }
-    const total = Math.max(1, elapsed + remaining);
+    const elapsed = weekday === 'Sun'
+      ? minuteOfDay - maintenanceEnd
+      : minuteOfDay < maintenanceStart
+        ? (24 * 60 - maintenanceEnd) + minuteOfDay
+        : minuteOfDay - maintenanceEnd;
+    const remaining = Math.max(0, openMinutes - elapsed);
     return {
       isOpen: true,
       title: '마켓 오픈',
-      message: `마켓이 오픈되었습니다. ${formatDurationMinutes(remaining)} 후 16:00에 마감합니다.`,
-      progress: Math.max(0, Math.min(1, elapsed / total)),
+      message: `마켓이 오픈되었습니다. ${formatDurationMinutes(remaining)} 후에 마감합니다.`,
+      progress: Math.max(0, Math.min(1, elapsed / sessionMinutes)),
       leftLabel: weekdayLabel,
       rightLabel: '16:00',
       timezoneLabel,
@@ -84,13 +79,13 @@ export function getCmeEquityFuturesSessionInfo(now: Date): {
   }
 
   if (weekday !== 'Sat' && weekday !== 'Sun' && minuteOfDay >= maintenanceStart && minuteOfDay < maintenanceEnd) {
-    const elapsed = minuteOfDay - maintenanceStart;
+    const elapsed = openMinutes + (minuteOfDay - maintenanceStart);
     const remaining = maintenanceEnd - minuteOfDay;
     return {
       isOpen: false,
       title: '마켓 마감',
       message: `정산/점검 시간입니다. ${formatDurationMinutes(remaining)} 후 17:00에 다시 열립니다.`,
-      progress: Math.max(0, Math.min(1, elapsed / 60)),
+      progress: Math.max(0, Math.min(1, elapsed / sessionMinutes)),
       leftLabel: weekdayLabel,
       rightLabel: '17:00',
       timezoneLabel,
@@ -107,7 +102,7 @@ export function getCmeEquityFuturesSessionInfo(now: Date): {
     isOpen: false,
     title: '마켓 마감',
     message: `마켓이 마감되었습니다. ${formatDurationMinutes(remainingToOpen)} 후 17:00에 다시 열립니다.`,
-    progress: 0,
+    progress: 1,
     leftLabel: weekdayLabel,
     rightLabel: '17:00',
     timezoneLabel,

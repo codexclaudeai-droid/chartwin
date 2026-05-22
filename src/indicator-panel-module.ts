@@ -1,4 +1,4 @@
-﻿export type SubPanelId = 'volume' | 'rsi' | 'dmi' | 'macd' | 'stochF' | 'stochS' | 'cci' | 'obv' | 'cvd';
+﻿export type SubPanelId = 'volume' | 'rsi' | 'dmi' | 'macd' | 'stochF' | 'stochS' | 'cci' | 'obv' | 'cvd' | 'atr';
 
 export interface LineStyle {
   color: string;
@@ -13,7 +13,7 @@ export interface IndicatorPanelState {
   lineVisibility: Record<string, boolean>;
 }
 
-export const SUB_PANEL_IDS: SubPanelId[] = ['volume', 'rsi', 'dmi', 'macd', 'stochF', 'stochS', 'cci', 'obv', 'cvd'];
+export const SUB_PANEL_IDS: SubPanelId[] = ['volume', 'rsi', 'dmi', 'macd', 'stochF', 'stochS', 'cci', 'obv', 'cvd', 'atr'];
 
 const MIN_PANEL_RATIO = 0.035;
 const MIN_COLLAPSED_PANEL_RATIO = 0.008;
@@ -33,6 +33,7 @@ const DEFAULT_LINE_STYLES: Record<string, LineStyle> = {
   ma60: { color: '#4caf50', width: 1.5, dash: [] },
   ma120: { color: '#9c27b0', width: 1.5, dash: [] },
   ma200: { color: '#ff5722', width: 1.5, dash: [] },
+  hma: { color: '#00bcd4', width: 1.7, dash: [] },
   bb1Upper: { color: 'rgba(100,149,237,0.8)', width: 1, dash: [] },
   bb1Middle: { color: 'rgba(100,149,237,0.5)', width: 1, dash: [4, 4] },
   bb1Lower: { color: 'rgba(100,149,237,0.8)', width: 1, dash: [] },
@@ -40,6 +41,8 @@ const DEFAULT_LINE_STYLES: Record<string, LineStyle> = {
   bbMiddle: { color: 'rgba(100,149,237,0.5)', width: 1, dash: [4, 4] },
   bbLower: { color: 'rgba(100,149,237,0.8)', width: 1, dash: [] },
   vwap: { color: '#ff9800', width: 1.5, dash: [] },
+  williamsFractalHigh: { color: '#ef5350', width: 1.5, dash: [] },
+  williamsFractalLow: { color: '#26a69a', width: 1.5, dash: [] },
   volumeBars: { color: 'rgba(34,171,148,0.35)', width: 1, dash: [] },
   ichimokuTenkan: { color: '#f23645', width: 1, dash: [] },
   ichimokuKijun: { color: '#2962ff', width: 1, dash: [] },
@@ -82,6 +85,7 @@ const DEFAULT_LINE_STYLES: Record<string, LineStyle> = {
   cvd: { color: '#7b68ee', width: 1.5, dash: [] },
   cvdSignal9: { color: '#ffa726', width: 1.5, dash: [4, 2] },
   cvdBaseline: { color: '#999999', width: 1, dash: [4, 4] },
+  atr: { color: '#00bcd4', width: 1.5, dash: [] },
 };
 
 export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: string }[]> = {
@@ -92,12 +96,17 @@ export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: strin
   ma60: [{ key: 'ma60', label: 'Line' }],
   ma120: [{ key: 'ma120', label: 'Line' }],
   ma200: [{ key: 'ma200', label: 'Line' }],
+  hma: [{ key: 'hma', label: 'Line' }],
   bb: [
     { key: 'bbUpper', label: 'Upper' },
     { key: 'bbMiddle', label: 'Middle' },
     { key: 'bbLower', label: 'Lower' },
   ],
   vwap: [{ key: 'vwap', label: 'Line' }],
+  williamsFractal: [
+    { key: 'williamsFractalHigh', label: 'High' },
+    { key: 'williamsFractalLow', label: 'Low' },
+  ],
   volume: [{ key: 'volumeBars', label: 'Bars' }],
   volumeProfile: [
     { key: 'volumeProfileUp', label: 'Bull Volume' },
@@ -167,6 +176,7 @@ export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: strin
     { key: 'cvdSignal9', label: 'Signal 9' },
     { key: 'cvdBaseline', label: 'Baseline' },
   ],
+  atr: [{ key: 'atr', label: 'Line' }],
 };
 
 export function createDefaultPanelState(): IndicatorPanelState {
@@ -188,6 +198,7 @@ export function createDefaultPanelState(): IndicatorPanelState {
       cci: 0.12,
       obv: 0.12,
       cvd: 0.12,
+      atr: 0.12,
     },
     lineStyles,
     lineVisibility,

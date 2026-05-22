@@ -5,6 +5,7 @@ import path from 'node:path';
 
 const sourcePath = path.resolve('src/chart/SimpleChart.ts');
 const source = fs.readFileSync(sourcePath, 'utf8');
+const axisOverlaySource = fs.readFileSync(path.resolve('src/chart/renderers/axis-overlay-renderer.ts'), 'utf8');
 
 test('transparent Y-axis can still use the full visible width after the initial render', () => {
   assert.match(
@@ -51,11 +52,11 @@ test('latest candle alignment targets the same initial position as opaque Y-axis
 test('transparent Y-axis redraws price labels as the final overlay layer', () => {
   assert.match(
     source,
-    /if \(yAxisTransparent\) \{\s*ctx\.save\(\);\s*ctx\.fillStyle = CHART_TEXT_SECONDARY;/s,
+    /if \(yAxisTransparent\) \{\s*renderTransparentYAxisLabels\(\{/s,
     'transparent Y-axis should redraw price labels in a dedicated late pass',
   );
   assert.match(
-    source,
+    axisOverlaySource,
     /const transparentAxisTextX = geometry\.side === 'left' \? geometry\.axisPad - 6 : chartRight \+ 4;/,
     'transparent Y-axis should place labels directly inside the axis strip like the indicator panels do',
   );

@@ -2184,6 +2184,12 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
       ? 'ZLMA - Zero-Lag MA Trend Levels'
     : popupKey === 'bb'
       ? 'Bollinger Band'
+    : popupKey === 'hma'
+      ? 'HMA - Hull Moving Average'
+    : popupKey === 'williamsFractal'
+      ? 'Williams Fractal'
+    : popupKey === 'atr'
+      ? 'ATR - Average True Range'
     : popupKey === 'cvd'
       ? 'CVD - Cumulative Volume Delta'
       : popupKey.toUpperCase();
@@ -2195,13 +2201,14 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
   hdr.appendChild(xb); popup.appendChild(hdr);
 
   const FIELDS: Record<string, string[]> = {
-    maShort: ['value'], maLong: ['value'], ma60: ['value'], ma120: ['value'], ma200: ['value'], ma: [], ema: [], bb: [],
+    maShort: ['value'], maLong: ['value'], ma60: ['value'], ma120: ['value'], ma200: ['value'], ma: [], ema: [], hma: ['period'], bb: [],
     supertrend: ['period', 'factor'],
     statisticalTrailingStop: ['dataLength', 'distributionLength', 'baseLevel'],
     zeroLagMaTrendLevels: ['length'],
+    williamsFractal: ['span'],
     rsi: ['period'], dmi: ['period'], macd: ['fast','slow','signal'],
     stochF: ['kPeriod','dPeriod'], stochS: ['kPeriod','dPeriod'],
-    cci: ['period'], ichimoku: ['tenkan','kijun','senkou'],
+    cci: ['period'], atr: ['period'], ichimoku: ['tenkan','kijun','senkou'],
     envelope: ['period','pct'], vwap: [], volumeProfile: ['rows', 'widthPct'], vpvr: [], obv: [], cvd: [], volume: [],
   };
   const LABELS: Record<string, string> = {
@@ -2211,6 +2218,7 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     distributionLength: 'Distribution Length',
     baseLevel: 'Base Level',
     length: 'Length',
+    span: '기간',
     fast: 'Fast', slow: 'Slow', signal: 'Signal',
     kPeriod: 'K 기간', dPeriod: 'D 기간',
     tenkan: '전환선', kijun: '기준선', senkou: '선행스팬 B', pct: '편차 (%)',
@@ -2665,6 +2673,10 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     } else if (popupKey === 'zeroLagMaTrendLevels' && field === 'length') {
       inp.min = '1';
       inp.step = '1';
+    } else if (popupKey === 'williamsFractal' && field === 'span') {
+      inp.min = '1';
+      inp.max = '20';
+      inp.step = '1';
     }
     inp.style.cssText = 'width:64px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:3px 7px;text-align:right;font-size:12px;';
     inp.addEventListener('change', () => {
@@ -2675,6 +2687,8 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
         if (field === 'baseLevel') next = Math.max(0, Math.min(3, Math.floor(Number(next) || 2)));
       } else if (popupKey === 'zeroLagMaTrendLevels' && field === 'length') {
         next = Math.max(1, Math.floor(Number(next) || 15));
+      } else if (popupKey === 'williamsFractal' && field === 'span') {
+        next = Math.max(1, Math.min(20, Math.floor(Number(next) || 2)));
       }
       ind[field] = next;
       inp.value = String(ind[field]);

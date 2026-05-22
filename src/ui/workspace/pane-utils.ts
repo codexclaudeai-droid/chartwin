@@ -6,6 +6,7 @@ export type MainIndicatorsLike = {
     ma60: { show: boolean };
     ma120: { show: boolean };
     ma200: { show: boolean };
+    hma?: { show: boolean };
     bb: { show: boolean };
     vwap: { show: boolean };
     supertrend: { show: boolean };
@@ -27,6 +28,7 @@ export function collectMainIndicatorNames(config: MainIndicatorsLike): string[] 
     config.indicators.ma200.show
   ) names.push('MA');
   if (config.indicators.bb.show) names.push('BB');
+  if (config.indicators.hma?.show) names.push('HMA');
   if (config.indicators.vwap.show) names.push('VWAP');
   if (config.indicators.supertrend.show) names.push('ST');
   if (config.indicators.statisticalTrailingStop.show) names.push('STS');

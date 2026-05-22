@@ -1,0 +1,274 @@
+import type {
+  AnchoredVwapSettings,
+  DrawingDraft,
+  DrawingShape,
+  DrawingHitPart,
+} from '../../ui/workspace/drawing-types.ts';
+import type { TrendlineRenderLine, TrendlineTextLayout } from './drawing-hit-test.ts';
+import { renderDrawingAnchoredVwap, type AnchoredVwapPlotPoint } from './drawing-anchored-vwap-renderer.ts';
+import { renderDrawingBox } from './drawing-box-renderer.ts';
+import { renderDrawingChannel } from './drawing-channel-renderer.ts';
+import { renderDrawingFib } from './drawing-fib-renderer.ts';
+import { renderDrawingHline } from './drawing-hline-renderer.ts';
+import { renderDrawingLine } from './drawing-line-renderer.ts';
+import { renderDrawingMeasure } from './drawing-measure-renderer.ts';
+import { renderDrawingPosition } from './drawing-position-renderer.ts';
+import { renderDrawingTextNote } from './drawing-text-note-renderer.ts';
+import type {
+  DrawingAxisMetrics,
+  DrawingChartBounds,
+  DrawingLineStyle,
+  DrawingViewportMetrics,
+} from './drawing-renderer-utils.ts';
+
+export type DrawingShapeRenderMetrics = DrawingViewportMetrics & DrawingChartBounds & DrawingAxisMetrics & {
+  top: number;
+  mainH: number;
+};
+
+export interface RenderDrawingShapeParams {
+  ctx: CanvasRenderingContext2D;
+  shape: DrawingShape | DrawingDraft;
+  isDraft: boolean;
+  metrics: DrawingShapeRenderMetrics | null;
+  selectedDrawingId: string | null;
+  hoveredDrawingId: string | null;
+  hoveredDrawingPart: DrawingHitPart | null;
+  editingTextShapeId: string | null;
+  symbol: string;
+  upColor: string;
+  downColor: string;
+  viewportHeight: number;
+  xAxisHeight: number;
+  fontStack: string;
+  formatPrice: (value: number) => string;
+  xForIndex: (index: number, totalSp: number, candleW: number) => number;
+  getAnchoredVwapSettings: (shape: DrawingShape) => AnchoredVwapSettings;
+  getAnchoredVwapPlot: (shape: DrawingShape) => AnchoredVwapPlotPoint[];
+  getTrendlineRenderLine: (shape: DrawingShape | DrawingDraft, metrics: DrawingViewportMetrics) => TrendlineRenderLine;
+  getTrendlineTextLayout: (shape: DrawingShape, metrics: DrawingViewportMetrics, placeholder: string) => TrendlineTextLayout;
+}
+
+function getDrawingStyle(shape: DrawingShape | DrawingDraft): {
+  alphaColor: string;
+  width: number;
+  lineStyle: DrawingLineStyle;
+} {
+  return {
+    alphaColor: ('color' in shape && shape.color) ? shape.color : '#2f6cff',
+    width: ('width' in shape && shape.width) ? shape.width : 2,
+    lineStyle: ('lineStyle' in shape && shape.lineStyle) ? shape.lineStyle : 'solid',
+  };
+}
+
+export function renderDrawingShape(params: RenderDrawingShapeParams): void {
+  const {
+    ctx,
+    shape,
+    isDraft,
+    metrics,
+    selectedDrawingId,
+    hoveredDrawingId,
+    hoveredDrawingPart,
+    editingTextShapeId,
+    symbol,
+    upColor,
+    downColor,
+    viewportHeight,
+    xAxisHeight,
+    fontStack,
+    formatPrice,
+    xForIndex,
+    getAnchoredVwapSettings,
+    getAnchoredVwapPlot,
+    getTrendlineRenderLine,
+    getTrendlineTextLayout,
+  } = params;
+  if (!metrics) return;
+  if ('hidden' in shape && shape.hidden) return;
+
+  const alpha = isDraft ? 0.72 : 1;
+  const style = getDrawingStyle(shape);
+  const shouldClipToChart = shape.kind !== 'hline' && shape.kind !== 'anchored-vwap';
+  if (shouldClipToChart) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(
+      metrics.chartLeft,
+      metrics.top,
+      Math.max(1, metrics.chartRight - metrics.chartLeft),
+      Math.max(1, metrics.mainH - metrics.top),
+    );
+    ctx.clip();
+  }
+
+  switch (shape.kind) {
+    case 'anchored-vwap': {
+      const anchoredShape = shape as DrawingShape;
+      renderDrawingAnchoredVwap({
+        ctx,
+        shape,
+        isDraft,
+        metrics,
+        plot: getAnchoredVwapPlot(anchoredShape),
+        settings: getAnchoredVwapSettings(anchoredShape),
+        alpha,
+        strokeColor: style.alphaColor,
+        strokeWidth: style.width,
+        lineStyle: style.lineStyle,
+        selectedDrawingId,
+        hoveredDrawingId,
+        fontStack,
+        formatPrice,
+        xForIndex,
+      });
+      break;
+    }
+    case 'trendline':
+    case 'extended-trendline':
+    case 'ray-trendline':
+    case 'draw-pencil':
+    case 'draw-highlighter': {
+      renderDrawingLine({
+        ctx,
+        shape,
+        isDraft,
+        metrics,
+        alpha,
+        strokeColor: style.alphaColor,
+        strokeWidth: style.width,
+        lineStyle: style.lineStyle,
+        selectedDrawingId,
+        hoveredDrawingId,
+        hoveredDrawingPart,
+        editingTextShapeId,
+        fontStack,
+        xForIndex,
+        getTrendlineRenderLine,
+        getTrendlineTextLayout,
+      });
+      break;
+    }
+    case 'draw-box': {
+      renderDrawingBox({
+        ctx,
+        shape,
+        isDraft,
+        metrics,
+        alpha,
+        strokeColor: style.alphaColor,
+        strokeWidth: style.width,
+        lineStyle: style.lineStyle,
+        selectedDrawingId,
+        hoveredDrawingId,
+        xForIndex,
+      });
+      break;
+    }
+    case 'hline': {
+      renderDrawingHline({
+        ctx,
+        shape,
+        isDraft,
+        metrics,
+        alpha,
+        strokeColor: style.alphaColor,
+        strokeWidth: style.width,
+        lineStyle: style.lineStyle,
+        selectedDrawingId,
+        hoveredDrawingId,
+        fontStack,
+        formatPrice,
+      });
+      break;
+    }
+    case 'channel': {
+      renderDrawingChannel({
+        ctx,
+        shape,
+        isDraft,
+        metrics,
+        alpha,
+        strokeColor: style.alphaColor,
+        strokeWidth: style.width,
+        lineStyle: style.lineStyle,
+        selectedDrawingId,
+        hoveredDrawingId,
+        xForIndex,
+      });
+      break;
+    }
+    case 'fib-retracement':
+    case 'fib-trend': {
+      renderDrawingFib({
+        ctx,
+        shape,
+        isDraft,
+        metrics,
+        alpha,
+        strokeWidth: style.width,
+        lineStyle: style.lineStyle,
+        selectedDrawingId,
+        hoveredDrawingId,
+        fontStack,
+        xForIndex,
+      });
+      break;
+    }
+    case 'long-position':
+    case 'short-position': {
+      renderDrawingPosition({
+        ctx,
+        shape,
+        isDraft,
+        metrics,
+        alpha,
+        strokeWidth: style.width,
+        lineStyle: style.lineStyle,
+        selectedDrawingId,
+        hoveredDrawingId,
+        symbol,
+        fontStack,
+        xForIndex,
+      });
+      break;
+    }
+    case 'text-note': {
+      renderDrawingTextNote({
+        ctx,
+        shape,
+        metrics,
+        alpha,
+        fontStack,
+        xForIndex,
+      });
+      break;
+    }
+    case 'measure': {
+      renderDrawingMeasure({
+        ctx,
+        shape,
+        isDraft,
+        metrics,
+        alpha,
+        selectedDrawingId,
+        hoveredDrawingId,
+        upColor,
+        downColor,
+        viewportHeight,
+        xAxisHeight,
+        fontStack,
+        xForIndex,
+      });
+      break;
+    }
+    default:
+      break;
+  }
+
+  if (shouldClipToChart) {
+    ctx.restore();
+  }
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+}

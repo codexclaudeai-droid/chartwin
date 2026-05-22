@@ -10,7 +10,6 @@
   setLineVisible,
   updateLineStyle,
 } from '../indicator-panel-module';
-import { BollingerBands, RSI, SMA } from 'technicalindicators';
 import {
   TIMEFRAME_SECONDS,
   type TimeframeKey,
@@ -48,11 +47,91 @@ import {
 import { getContrastTextColor, toRgba } from './color-utils';
 import {
   buildZeroLagTrendStates,
-  drawZeroLagAreaUnderCandles,
 } from './indicator-render-engine';
 import { renderIndicatorBlocks } from './indicator-block-renderer';
 import {
-  formatAxisTime,
+  clearDrawings,
+  cloneDrawingsSnapshot,
+  deleteDrawingById,
+  deleteDrawingsByKind,
+  findDrawingById,
+  hasDrawing,
+  setDrawingsLocked,
+  upsertDrawingShape,
+} from './drawings/drawing-state.ts';
+import { renderDrawingSelectionOverlay } from './drawings/drawing-selection-renderer.ts';
+import {
+  findDrawingAt as findDrawingAtPoint,
+  hitTestDrawing as hitTestDrawingShape,
+} from './drawings/drawing-hit-test.ts';
+import { updateDrawingDraftAnchor } from './drawings/drawing-draft-update.ts';
+import { renderDrawingLayer } from './drawings/drawing-layer-renderer.ts';
+import { renderDrawingShape } from './drawings/drawing-shape-renderer.ts';
+import { moveDrawingByDelta } from './drawings/drawing-transform.ts';
+import {
+  createAnchoredVwapDrawing,
+  createFibTrendDrawing,
+  createHlineDrawing,
+  createPositionDrawing,
+  createTextNoteDrawing,
+  finishDrawingDraft,
+  resolveMeasureDraftClick,
+} from './drawings/factories/index.ts';
+import {
+  calculateBb,
+  calculateCci,
+  calculateCvd,
+  calculateDmi,
+  calculateEma,
+  calculateEnvelope,
+  calculateAtr,
+  calculateHma,
+  calculateIchimoku,
+  calculateMacd,
+  calculateMa,
+  calculateObv,
+  calculateRsi,
+  calculateStochastic,
+  calculateVwap,
+  calculateWilliamsFractals,
+} from './indicators/index.ts';
+import { resolveChartCursor } from './interaction/chart-cursor-resolver.ts';
+import { isHoveringCandleBody } from './interaction/candle-hover-hit-test.ts';
+import { resolveMouseDownAxisInteraction } from './interaction/mouse-down-axis-interaction.ts';
+import { isPointInCircle } from './interaction/pointer-hit-test.ts';
+import {
+  constrainPositionDrawingPointer,
+  normalizePositionDrawingHitPart,
+} from './interaction/position-drawing-hit-normalizer.ts';
+import { resolveSubIndicatorAlertMouseDown } from './interaction/sub-indicator-alert-interaction.ts';
+import { resolveWheelInteraction } from './interaction/wheel-interaction.ts';
+import { renderCandles } from './renderers/candle-renderer.ts';
+import {
+  buildIndicatorRenderInput,
+  buildIndicatorRenderParams,
+  type IndicatorRenderGroupedInput,
+} from './renderers/indicator-render-params.ts';
+import type { SubPanelHostChart } from './renderers/subpanel-render-orchestrator.ts';
+import {
+  renderLeftYAxisOverlay,
+  renderPanelTimeSeparator,
+  renderTransparentYAxisLabels,
+} from './renderers/axis-overlay-renderer.ts';
+import { renderCrosshairGuide } from './renderers/crosshair-guide-renderer.ts';
+import { renderCrosshairPriceAxis } from './renderers/crosshair-price-axis-renderer.ts';
+import { renderCrosshairTooltip, type CrosshairTooltipRow } from './renderers/crosshair-tooltip-renderer.ts';
+import { renderDrawingTouchCrosshair } from './renderers/drawing-touch-crosshair-renderer.ts';
+import { renderGotoDateMarker } from './renderers/goto-date-marker-renderer.ts';
+import { renderLivePriceOverlay } from './renderers/live-price-overlay-renderer.ts';
+import { drawPriceLineOverlay } from './renderers/price-line-overlay-renderer.ts';
+import { renderTradeFocusOverlay } from './renderers/trade-focus-overlay-renderer.ts';
+import { renderMainBackgroundLayers } from './renderers/main-background-layer-orchestrator.ts';
+import { getMainGridAxisMetrics, renderMainGrid } from './renderers/main-grid-renderer.ts';
+import { renderSignalHoverOverlay, selectSignalHoverArea } from './renderers/signal-hover-overlay-renderer.ts';
+import { renderSubPanelCrosshairAxis } from './renderers/subpanel-crosshair-axis-renderer.ts';
+import { resolveSubPanelCrosshairValue } from './renderers/subpanel-crosshair-value.ts';
+import { renderTimeAxisLabels } from './renderers/time-axis-renderer.ts';
+import {
   formatCrosshairTimelineLabel,
   formatWithComma,
   getBucketStartSec,
@@ -62,6 +141,21 @@ import {
   shiftBucketSec,
 } from './axis-utils';
 import { getSymbolPricePrecision } from '../data/market-data-sources';
+import {
+  resolveMainYAxisDragScale,
+  resolveSubYAxisDragScale,
+  resolveXAxisDragRange,
+} from './interaction/axis-drag-interaction.ts';
+import {
+  resolveHorizontalPanVirtualStart,
+  resolveVerticalPanOffset,
+} from './interaction/chart-pan-interaction.ts';
+import { resolveCrosshairHlineAction } from './interaction/crosshair-hline-interaction.ts';
+import {
+  resolveDrawingDoubleClickAction,
+  resolveDrawingMouseDownEditAction,
+} from './interaction/drawing-edit-action.ts';
+import { applyDrawingMove, resolveDrawingMoveEnd } from './interaction/drawing-move-interaction.ts';
 import { simulateGridMartingale } from '../strategy/strategies/grid-martingale-runtime.js';
 import { simulateXauGridLong } from '../strategy/strategies/xau-grid-long-runtime.ts';
 import {
@@ -128,106 +222,6 @@ function getPriceArrowTextAnchor(
   arrowDepth: number,
 ): { align: CanvasTextAlign; x: number } {
   return { align: 'center', x: x + (w / 2) };
-}
-
-function drawPriceLineOverlay(
-  ctx: CanvasRenderingContext2D,
-  args: {
-    chartLeft: number;
-    chartRight: number;
-    axisPad: number;
-    axisSide: 'left' | 'right';
-    totalSp: number;
-    mainH: number;
-    minP: number;
-    maxP: number;
-    getY: (p: number) => number;
-    fromX: number;
-    price: number;
-    label: string;
-    color: string;
-    dash: number[];
-    alpha?: number;
-    fontStack?: string;
-    priceDigits: number;
-  },
-): void {
-  const {
-    chartLeft,
-    chartRight,
-    axisPad,
-    axisSide,
-    totalSp,
-    mainH,
-    minP,
-    maxP,
-    getY,
-    fromX,
-    price,
-    label,
-    color,
-    dash,
-    alpha = 0.92,
-    fontStack = CHART_FONT_STACK,
-    priceDigits,
-  } = args;
-  if (price < minP || price > maxP) return;
-  const y = getY(price);
-  if (y < 0 || y > mainH) return;
-  const priceText = formatWithComma(price, priceDigits);
-  const boxH = 20;
-  const boxW = axisSide === 'left'
-    ? Math.max(46, axisPad - 10)
-    : Math.max(46, axisPad - 2);
-  const boxX = axisSide === 'left' ? 6 : chartRight;
-  const labelPadX = 6;
-  ctx.font = `700 9px ${fontStack}`;
-  const labelTextW = Math.ceil(ctx.measureText(label).width);
-  const labelW = Math.max(24, labelTextW + labelPadX * 2);
-  const labelH = 16;
-  const labelGap = 4;
-  const labelX = axisSide === 'left'
-    ? boxX + boxW + labelGap
-    : boxX - labelW - labelGap;
-  const x2 = axisSide === 'right'
-    ? Math.max(fromX + 10, labelX - 6)
-    : Math.max(fromX + totalSp * 2, chartRight - 6);
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(chartLeft, 0, Math.max(1, chartRight - chartLeft), Math.max(1, mainH));
-  ctx.clip();
-  ctx.strokeStyle = toRgba(color, alpha, color);
-  ctx.lineWidth = 1.1;
-  ctx.setLineDash(dash);
-  ctx.beginPath();
-  ctx.moveTo(fromX, Math.round(y) + 0.5);
-  ctx.lineTo(x2, Math.round(y) + 0.5);
-  ctx.stroke();
-  ctx.restore();
-  ctx.setLineDash([]);
-  ctx.fillStyle = '#111a2b';
-  ctx.strokeStyle = toRgba(color, 0.9, color);
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(labelX, y - labelH / 2, labelW, labelH, 6);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = color;
-  ctx.font = `700 9px ${fontStack}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(label, labelX + labelW / 2, y + 0.5);
-  ctx.fillStyle = toRgba(color, 0.95, color);
-  drawPriceArrowBox(ctx, boxX, y, boxW, boxH, axisSide, 5);
-  ctx.fill();
-  ctx.strokeStyle = toRgba(color, 1, color);
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  const textAnchor = getPriceArrowTextAnchor(boxX, boxW, axisSide, 5);
-  ctx.textAlign = textAnchor.align;
-  ctx.fillStyle = getContrastTextColor(color);
-  ctx.font = `700 10px ${fontStack}`;
-  ctx.fillText(priceText, textAnchor.x, y + 0.5);
 }
 
 // ── 모바일 전용 상수 ──────────────────────────────────────────────────────────
@@ -585,6 +579,7 @@ export class SimpleChart {
           { id: 'ema4', period: 120 },
         ],
       },
+      hma:      { show: false, period: 55 },
       bb:       { show: false, period: 20, stdDev: 2 },
       rsi:      { show: false, period: 14 },
       macd:     { show: false, fast: 12, slow: 26, signal: 9 },
@@ -592,9 +587,11 @@ export class SimpleChart {
       stochF:   { show: false, kPeriod: 5,  dPeriod: 3 },
       stochS:   { show: false, kPeriod: 14, dPeriod: 3 },
       cci:      { show: false, period: 20 },
+      atr:      { show: false, period: 14 },
       obv:      { show: false },
       cvd:      { show: false, barMode: true },
       vwap:     { show: false },
+      williamsFractal: { show: false, span: 2 },
       volumeProfile: { show: false, rows: 24, widthPct: 22, upOpacity: 45, downOpacity: 45, pocOpacity: 95 },
       vpvr: {
         show: false,
@@ -729,6 +726,25 @@ export class SimpleChart {
 
   public getPanelRatio(id: string): number {
     return getPanelRatio(this.config.panelState, id);
+  }
+
+  private createIndicatorSubPanelHost(): SubPanelHostChart {
+    const chart = this;
+    return {
+      startIndex: chart.startIndex,
+      endIndex: chart.endIndex,
+      get dmiScaleRange() {
+        return chart.dmiScaleRange;
+      },
+      set dmiScaleRange(value: { lo: number; hi: number } | null) {
+        chart.dmiScaleRange = value;
+      },
+      subIndicatorAlerts: chart.subIndicatorAlerts,
+      subIndicatorAlertHitAreas: chart.subIndicatorAlertHitAreas,
+      config: chart.config,
+      getPanelRatio: (id: string) => chart.getPanelRatio(id),
+      getSubPanelScaledRange: (id: string, lo: number, hi: number) => chart.getSubPanelScaledRange(id, lo, hi),
+    };
   }
 
   public shiftPanelOrder(panelId: string, direction: -1 | 1) {
@@ -1051,6 +1067,15 @@ export class SimpleChart {
         values: [{ text: fmt(cci, 2), color: s.color }],
       };
     }
+    if (panelId === 'atr') {
+      const s = this.resolveStyle('atr', '#00bcd4');
+      const atr = lastFinite(this.calcATR(ind.atr?.period ?? 14));
+      return {
+        title: 'ATR',
+        settings: [{ text: String(ind.atr?.period ?? 14), hint: 'ATR 기간' }],
+        values: [{ text: fmt(atr, 2), color: s.color }],
+      };
+    }
     if (panelId === 'obv') {
       const s = this.resolveStyle('obv', '#22ab94');
       const obv = lastFinite(this.calcOBV().map((v) => v as number | null));
@@ -1311,16 +1336,9 @@ export class SimpleChart {
 
   public setAllDrawingsLocked(locked: boolean): number {
     if (!this.drawings.length) return 0;
-    let changed = 0;
-    this.drawings = this.drawings.map((shape) => {
-      if (Boolean(shape.locked) === locked) return shape;
-      changed += 1;
-      return {
-        ...shape,
-        locked,
-      };
-    });
+    const { drawings, changed } = setDrawingsLocked(this.drawings, locked);
     if (!changed) return 0;
+    this.drawings = drawings;
     this.syncDrawingToolbar();
     this.requestOverlayDraw();
     this.emitDrawingsChanged();
@@ -1328,11 +1346,11 @@ export class SimpleChart {
   }
 
   public getDrawingsSnapshot(): DrawingShape[] {
-    return this.drawings.map((shape) => this.cloneShape(shape));
+    return cloneDrawingsSnapshot(this.drawings);
   }
 
   public setDrawingsSnapshot(drawings: DrawingShape[]): void {
-    this.drawings = drawings.map((shape) => this.cloneShape(shape));
+    this.drawings = cloneDrawingsSnapshot(drawings);
     this.selectedDrawingId = null;
     this.selectedDrawingPart = 'line';
     this.drawingMoveState = null;
@@ -1355,16 +1373,12 @@ export class SimpleChart {
   }
 
   public clearAllDrawings(includeLocked = true): number {
-    const before = this.drawings.length;
-    if (before === 0) return 0;
-    if (includeLocked) {
-      this.drawings = [];
-    } else {
-      this.drawings = this.drawings.filter((shape) => shape.locked);
-    }
-    const removed = before - this.drawings.length;
+    if (this.drawings.length === 0) return 0;
+    const result = clearDrawings(this.drawings, includeLocked);
+    this.drawings = result.drawings;
+    const removed = result.removed;
     if (removed <= 0) return 0;
-    if (this.selectedDrawingId && !this.drawings.some((shape) => shape.id === this.selectedDrawingId)) {
+    if (this.selectedDrawingId && !hasDrawing(this.drawings, this.selectedDrawingId)) {
       this.clearDrawingSelection();
     } else {
       this.requestOverlayDraw();
@@ -1422,7 +1436,7 @@ export class SimpleChart {
   public deleteSelectedDrawing(): void {
     if (!this.selectedDrawingId) return;
     this.closeAnchoredVwapSettingsModal(false);
-    this.drawings = this.drawings.filter((shape) => shape.id !== this.selectedDrawingId);
+    this.drawings = deleteDrawingById(this.drawings, this.selectedDrawingId);
     this.selectedDrawingId = null;
     this.selectedDrawingPart = 'line';
     this.drawingMoveState = null;
@@ -1457,7 +1471,7 @@ export class SimpleChart {
       b: base.b ? moveAnchor(base.b) : undefined,
       alert: base.alert ? { ...base.alert, lastTriggerBar: undefined } : undefined,
     };
-    this.drawings.push(pasted);
+    this.drawings = upsertDrawingShape(this.drawings, pasted);
     this.selectedDrawingId = pasted.id;
     this.selectedDrawingPart = 'line';
     this.syncDrawingToolbar();
@@ -1481,14 +1495,11 @@ export class SimpleChart {
   }
 
   private getSelectedDrawing(): DrawingShape | null {
-    if (!this.selectedDrawingId) return null;
-    return this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null;
+    return findDrawingById(this.drawings, this.selectedDrawingId);
   }
 
   private upsertDrawing(next: DrawingShape): void {
-    const idx = this.drawings.findIndex((shape) => shape.id === next.id);
-    if (idx >= 0) this.drawings[idx] = next;
-    else this.drawings.push(next);
+    this.drawings = upsertDrawingShape(this.drawings, next);
     this.emitDrawingsChanged();
   }
 
@@ -2617,7 +2628,7 @@ export class SimpleChart {
   }
 
   private deleteDrawing(id: string): void {
-    this.drawings = this.drawings.filter((shape) => shape.id !== id);
+    this.drawings = deleteDrawingById(this.drawings, id);
     if (this.selectedDrawingId === id) {
       this.closePositionSettingsPopup();
       this.selectedDrawingId = null;
@@ -4002,7 +4013,8 @@ export class SimpleChart {
       dash: number[],
       alpha = 0.92,
     ) => {
-      drawPriceLineOverlay(ctx, {
+      drawPriceLineOverlay({
+        ctx,
         chartLeft: meta.chartLeft,
         chartRight: meta.chartRight,
         axisPad: meta.axisPad,
@@ -4018,6 +4030,7 @@ export class SimpleChart {
         color,
         dash,
         alpha,
+        fontStack: CHART_FONT_STACK,
         priceDigits: symbolPriceDigits,
       });
     };
@@ -4113,7 +4126,7 @@ export class SimpleChart {
 
       // unified callout path (box + pointer as one shape)
       const r = 3;
-      const pb = 3; // pointer half-base width (4 * 0.7 ≈ 3)
+      const pb = 3; // pointer half-base width (4 * 0.7 ? 3)
       ctx.beginPath();
       if (isLong) {
         // pointer at top edge, pointing up
@@ -4972,116 +4985,35 @@ export class SimpleChart {
   // 지표 계산 함수
 
   private calcMA(period: number): (number | null)[] {
-    const source = this.getIndicatorSourceData();
-    const closes = source.map((d) => d.close);
-    const values = SMA.calculate({ period, values: closes });
-    const out: (number | null)[] = new Array(source.length).fill(null);
-    for (let i = period - 1; i < source.length; i += 1) {
-      out[i] = values[i - (period - 1)] ?? null;
-    }
-    return out;
+    return calculateMa(this.getIndicatorSourceData(), period);
   }
 
   private calcEMA(period: number): (number | null)[] {
-    const source = this.getIndicatorSourceData();
-    const closes = source.map((d) => d.close);
-    return this.calcEmaSeries(closes, period);
+    return calculateEma(this.getIndicatorSourceData(), period);
+  }
+
+  private calcHMA(period: number): (number | null)[] {
+    return calculateHma(this.getIndicatorSourceData(), period);
+  }
+
+  private calcATR(period: number): (number | null)[] {
+    return calculateAtr(this.getIndicatorSourceData(), period);
   }
 
   private calcRSI(period: number): (number | null)[] {
-    const source = this.getIndicatorSourceData();
-    const closes = source.map((d) => d.close);
-    const values = RSI.calculate({ period, values: closes });
-    const out: (number | null)[] = new Array(source.length).fill(null);
-    for (let i = period; i < source.length; i += 1) {
-      out[i] = values[i - period] ?? null;
-    }
-    return out;
+    return calculateRsi(this.getIndicatorSourceData(), period);
   }
 
   private calcBB(period: number, mult: number) {
-    const source = this.getIndicatorSourceData();
-    const closes = source.map((d) => d.close);
-    const values = BollingerBands.calculate({ period, stdDev: mult, values: closes });
-    const middle: (number | null)[] = new Array(source.length).fill(null);
-    const upper: (number | null)[] = new Array(source.length).fill(null);
-    const lower: (number | null)[] = new Array(source.length).fill(null);
-    for (let i = period - 1; i < source.length; i += 1) {
-      const item = values[i - (period - 1)];
-      if (!item) continue;
-      middle[i] = item.middle;
-      upper[i] = item.upper;
-      lower[i] = item.lower;
-    }
-    return { middle, upper, lower };
+    return calculateBb(this.getIndicatorSourceData(), period, mult);
   }
 
   private calcDMI(period: number) {
-    const source = this.getIndicatorSourceData();
-    const pDI: (number | null)[] = [], mDI: (number | null)[] = [], adxArr: (number | null)[] = [];
-    let sTR = 0, sPDM = 0, sMDM = 0, adxSum = 0, adxCnt = 0, prevADX: number | null = null;
-    for (let i = 0; i < source.length; i++) {
-      if (i === 0) { pDI.push(null); mDI.push(null); adxArr.push(null); continue; }
-      const h = source[i].high, l = source[i].low;
-      const ph = source[i-1].high, pl = source[i-1].low, pc = source[i-1].close;
-      const tr = Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc));
-      const up = h - ph, dn = pl - l;
-      const pdm = up > dn && up > 0 ? up : 0;
-      const mdm = dn > up && dn > 0 ? dn : 0;
-      if (i < period) {
-        sTR += tr; sPDM += pdm; sMDM += mdm;
-        pDI.push(null); mDI.push(null); adxArr.push(null);
-      } else if (i === period) {
-        sTR += tr; sPDM += pdm; sMDM += mdm;
-        const p = sTR > 0 ? sPDM / sTR * 100 : 0, m = sTR > 0 ? sMDM / sTR * 100 : 0;
-        pDI.push(p); mDI.push(m);
-        adxSum += (p + m) > 0 ? Math.abs(p - m) / (p + m) * 100 : 0;
-        adxCnt++; adxArr.push(null);
-      } else {
-        sTR = sTR - sTR / period + tr;
-        sPDM = sPDM - sPDM / period + pdm;
-        sMDM = sMDM - sMDM / period + mdm;
-        const p = sTR > 0 ? sPDM / sTR * 100 : 0, m = sTR > 0 ? sMDM / sTR * 100 : 0;
-        pDI.push(p); mDI.push(m);
-        const dx = (p + m) > 0 ? Math.abs(p - m) / (p + m) * 100 : 0;
-        if (adxCnt < period) {
-          adxSum += dx; adxCnt++;
-          if (adxCnt === period) { prevADX = adxSum / period; adxArr.push(prevADX); }
-          else adxArr.push(null);
-        } else {
-          prevADX = (prevADX! * (period - 1) + dx) / period;
-          adxArr.push(prevADX);
-        }
-      }
-    }
-    return { plusDI: pDI, minusDI: mDI, adx: adxArr };
+    return calculateDmi(this.getIndicatorSourceData(), period);
   }
 
   private calcMACD(fast: number, slow: number, sig: number) {
-    const ema = (arr: number[], p: number): (number | null)[] => {
-      if (arr.length < p) return new Array(arr.length).fill(null);
-      const k = 2 / (p + 1);
-      const out: (number | null)[] = new Array(p - 1).fill(null);
-      let e = arr.slice(0, p).reduce((a, b) => a + b) / p;
-      out.push(e);
-      for (let i = p; i < arr.length; i++) { e = arr[i] * k + e * (1 - k); out.push(e); }
-      return out;
-    };
-    const source = this.getIndicatorSourceData();
-    const closes = source.map((d) => d.close);
-    const fe = ema(closes, fast), se = ema(closes, slow);
-    const macdLine: (number | null)[] = fe.map((f, i) => f != null && se[i] != null ? f - se[i]! : null);
-    const valid = macdLine.filter(v => v != null) as number[];
-    const sigLine: (number | null)[] = [];
-    let cnt = 0;
-    for (const v of macdLine) {
-      if (v == null) { sigLine.push(null); continue; }
-      cnt++;
-      sigLine.push(cnt >= sig ? (ema(valid, sig)[cnt - 1] ?? null) : null);
-    }
-    const hist: (number | null)[] = macdLine.map((m, i) =>
-      m != null && sigLine[i] != null ? m - sigLine[i]! : null);
-    return { macdLine, sigLine, hist };
+    return calculateMacd(this.getIndicatorSourceData(), fast, slow, sig);
   }
 
   private sma(src: (number | null)[], p: number): (number | null)[] {
@@ -5092,58 +5024,23 @@ export class SimpleChart {
   }
 
   private calcStoch(kp: number, dp: number) {
-    const source = this.getIndicatorSourceData();
-    const kRaw: (number | null)[] = source.map((d, i) => {
-      if (i < kp - 1) return null;
-      const sl = source.slice(i - kp + 1, i + 1);
-      const hi = Math.max(...sl.map(x => x.high)), lo = Math.min(...sl.map(x => x.low));
-      return hi === lo ? 50 : (d.close - lo) / (hi - lo) * 100;
-    });
-    return { k: this.sma(kRaw, 3), d: this.sma(this.sma(kRaw, 3), dp) };
+    return calculateStochastic(this.getIndicatorSourceData(), kp, dp);
   }
 
   private calcCCI(period: number): (number | null)[] {
-    const source = this.getIndicatorSourceData();
-    return source.map((d, i) => {
-      if (i < period - 1) return null;
-      const tp = (d.high + d.low + d.close) / 3;
-      const sl = source.slice(i - period + 1, i + 1).map((x) => (x.high + x.low + x.close) / 3);
-      const mean = sl.reduce((a, b) => a + b) / period;
-      const md   = sl.reduce((a, b) => a + Math.abs(b - mean), 0) / period;
-      return md === 0 ? 0 : (tp - mean) / (0.015 * md);
-    });
+    return calculateCci(this.getIndicatorSourceData(), period);
   }
 
   private calcCVD(): number[] {
-    const source = this.getIndicatorSourceData();
-    const cvd = [0];
-    for (let i = 1; i < source.length; i++) {
-      const d = source[i].close > source[i].open ? source[i].volume
-              : source[i].close < source[i].open ? -source[i].volume : 0;
-      cvd.push(cvd[i - 1] + d);
-    }
-    return cvd;
+    return calculateCvd(this.getIndicatorSourceData());
   }
 
   private calcOBV(): number[] {
-    const source = this.getIndicatorSourceData();
-    const obv = [0];
-    for (let i = 1; i < source.length; i++) {
-      const p = obv[i - 1];
-      obv.push(source[i].close > source[i-1].close ? p + source[i].volume
-              : source[i].close < source[i-1].close ? p - source[i].volume : p);
-    }
-    return obv;
+    return calculateObv(this.getIndicatorSourceData());
   }
 
   private calcVWAP(): (number | null)[] {
-    const source = this.getIndicatorSourceData();
-    let cpv = 0, cv = 0;
-    return source.map((d) => {
-      cpv += (d.high + d.low + d.close) / 3 * d.volume;
-      cv  += d.volume;
-      return cv === 0 ? null : cpv / cv;
-    });
+    return calculateVwap(this.getIndicatorSourceData());
   }
 
   private getAnchoredVwapSeries(anchorIndex: number): Array<{ index: number; price: number }> {
@@ -5240,39 +5137,18 @@ export class SimpleChart {
   }
 
   private createAnchoredVwapDrawing(anchor: DrawingAnchor): DrawingShape {
-    return {
-      id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      kind: 'anchored-vwap',
-      a: { index: Math.round(anchor.index), price: anchor.price },
-      color: '#2f6cff',
-      width: 1,
-      lineStyle: 'solid',
-      avwap: this.getDefaultAnchoredVwapSettings(),
-    };
+    return createAnchoredVwapDrawing({
+      anchor,
+      settings: this.getDefaultAnchoredVwapSettings(),
+    });
   }
 
   private calcIchimoku(tenkan: number, kijun: number, senkou: number) {
-    const source = this.getIndicatorSourceData();
-    const mid = (i: number, p: number) => {
-      if (i < p - 1) return null;
-      const sl = source.slice(i - p + 1, i + 1);
-      return (Math.max(...sl.map(d => d.high)) + Math.min(...sl.map(d => d.low))) / 2;
-    };
-    const tLine = source.map((_, i) => mid(i, tenkan));
-    const kLine = source.map((_, i) => mid(i, kijun));
-    const sA    = tLine.map((t, i) => t != null && kLine[i] != null ? (t + kLine[i]!) / 2 : null);
-    const sB    = source.map((_, i) => mid(i, senkou));
-    const chikouSpan = source.map((c) => c.close);
-    return { tenkanLine: tLine, kijunLine: kLine, senkouA: sA, senkouB: sB, chikouSpan };
+    return calculateIchimoku(this.getIndicatorSourceData(), tenkan, kijun, senkou);
   }
 
   private calcEnvelope(period: number, pct: number) {
-    const mid = this.calcMA(period);
-    return {
-      mid,
-      upper: mid.map(v => v != null ? v * (1 + pct / 100) : null),
-      lower: mid.map(v => v != null ? v * (1 - pct / 100) : null),
-    };
+    return calculateEnvelope(this.getIndicatorSourceData(), period, pct);
   }
 
   private calcEmaSeries(values: (number | null)[], period: number): (number | null)[] {
@@ -5738,6 +5614,9 @@ export class SimpleChart {
     const ma60 = indicatorLayerOn && ind.ma60.show     ? this.calcMA(ind.ma60.value)    : [];
     const ma120 = indicatorLayerOn && ind.ma120.show   ? this.calcMA(ind.ma120.value)   : [];
     const ma200 = indicatorLayerOn && ind.ma200.show   ? this.calcMA(ind.ma200.value)   : [];
+    if (!ind.hma) ind.hma = { show: false, period: 55 };
+    if (!Number.isFinite(Number(ind.hma.period)) || Number(ind.hma.period) < 1) ind.hma.period = 55;
+    const hmaD = indicatorLayerOn && ind.hma.show ? this.calcHMA(ind.hma.period) : [];
     const bbLines = indicatorLayerOn ? this.getBbLines() : [];
     const bbSeries = bbLines.map((bbLine) => ({
       ...bbLine,
@@ -5751,11 +5630,21 @@ export class SimpleChart {
     const stFD   = indicatorLayerOn && ind.stochF.show ? this.calcStoch(ind.stochF.kPeriod, ind.stochF.dPeriod) : null;
     const stSD   = indicatorLayerOn && ind.stochS.show ? this.calcStoch(ind.stochS.kPeriod, ind.stochS.dPeriod) : null;
     const cciD   = indicatorLayerOn && ind.cci.show    ? this.calcCCI(ind.cci.period)   : [];
+    if (!ind.atr) ind.atr = { show: false, period: 14 };
+    if (!Number.isFinite(Number(ind.atr.period)) || Number(ind.atr.period) < 1) ind.atr.period = 14;
+    const atrD   = indicatorLayerOn && ind.atr.show    ? this.calcATR(ind.atr.period)   : [];
     const obvD   = indicatorLayerOn && ind.obv.show    ? this.calcOBV()                  : [];
     const obvSignal9 = indicatorLayerOn && ind.obv.show ? this.sma(obvD.map(v => v as number | null), 9) : [];
     const cvdD   = indicatorLayerOn && ind.cvd.show    ? this.calcCVD()                  : [];
     const cvdSignal9 = indicatorLayerOn && ind.cvd.show ? this.sma(cvdD.map(v => v as number | null), 9) : [];
     const vwapD  = indicatorLayerOn && ind.vwap.show   ? this.calcVWAP()                 : [];
+    if (!ind.williamsFractal) ind.williamsFractal = { show: false, span: 2 };
+    if (!Number.isFinite(Number(ind.williamsFractal.span)) || Number(ind.williamsFractal.span) < 1) {
+      ind.williamsFractal.span = 2;
+    }
+    const williamsFractalD = indicatorLayerOn && ind.williamsFractal.show
+      ? calculateWilliamsFractals(this.data, ind.williamsFractal.span)
+      : { highs: [] as Array<number | null>, lows: [] as Array<number | null>, span: 2 };
     if (!ind.zeroLagMaTrendLevels) {
       ind.zeroLagMaTrendLevels = {
         show: false,
@@ -5891,6 +5780,7 @@ export class SimpleChart {
         ma60[gi],
         ma120[gi],
         ma200[gi],
+        hmaD[gi],
         vwapD[gi],
         zeroLagMaTrendLevelsD.zlma[gi],
         zeroLagMaTrendLevelsD.emaValue[gi],
@@ -6034,43 +5924,34 @@ export class SimpleChart {
     };
     const showLine = (styleKey: string) => this.isIndicatorLineVisible(styleKey);
 
-    // 1) 메인 가로 격자/가격축
-    ctx.save();
-    ctx.strokeStyle = '#1e2230'; ctx.fillStyle = CHART_TEXT_SECONDARY;
-    ctx.font = `400 11px ${CHART_FONT_STACK}`;
-    ctx.textAlign = 'center';
-    const axisDigits = Math.max(0, Math.ceil(-Math.log10(mainAxisStep)) + 2);
-    const tickCount = Math.max(1, Math.floor((maxP - minP) / mainAxisStep) + 1);
-    const axisBottomPadding = 14;
-    const axisLineLeft = yAxisTransparent && geometry.side === 'left' ? 0 : chartLeft;
-    const axisLineRight = yAxisTransparent && geometry.side === 'right' ? width : chartRight;
-    for (let i = 0; i < tickCount; i += 1) {
-      const p = maxP - i * mainAxisStep;
-      if (p < minP - mainAxisStep * 0.5) break;
-      const y = getYLinear(p);
-      if (y >= mainH - axisBottomPadding) continue;
-      ctx.beginPath(); ctx.moveTo(axisLineLeft, y); ctx.lineTo(axisLineRight, y); ctx.stroke();
-      const axisTextX = geometry.side === 'left'
-        ? (geometry.axisPad * 0.5)
-        : (chartRight + (geometry.axisPad * 0.5));
-      if (!yAxisTransparent) ctx.fillText(formatWithComma(Number(p.toFixed(axisDigits)), symbolPriceDigits), axisTextX, y + 4);
-    }
-    ctx.restore();
-
-    // 1-2) 세로 격자: 투명 축 모드에서는 시세영역까지 이어 그린다.
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(yAxisTransparent ? 0 : chartLeft, 0, yAxisTransparent ? width : chartW, plotHeight);
-    ctx.clip();
-    ctx.strokeStyle = '#1e2230';
-    tickIndices.forEach((i) => {
-      const x = effectiveChartLeft + i * totalSp + candleW / 2;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, plotHeight);
-      ctx.stroke();
+    const axisOverlayMetrics = getMainGridAxisMetrics({
+      minPrice: minP,
+      maxPrice: maxP,
+      mainAxisStep,
     });
-    ctx.restore();
+    renderMainGrid({
+      ctx,
+      chartLeft,
+      chartRight,
+      chartWidth: chartW,
+      width,
+      mainHeight: mainH,
+      plotHeight,
+      yAxisTransparent,
+      geometry,
+      minPrice: minP,
+      maxPrice: maxP,
+      mainAxisStep,
+      getYLinear,
+      symbolPriceDigits,
+      chartTextSecondary: CHART_TEXT_SECONDARY,
+      fontStack: CHART_FONT_STACK,
+      formatPrice: formatWithComma,
+      tickIndices,
+      effectiveChartLeft,
+      totalSpacing: totalSp,
+      candleWidth: candleW,
+    });
 
     // 메인 패널(가격 영역) 밖으로 캔들/메인지표가 침범하지 않도록 클리핑.
     ctx.save();
@@ -6078,437 +5959,47 @@ export class SimpleChart {
     ctx.rect(chartLeft, 0, chartW, mainH);
     ctx.clip();
 
-    // 2) 일목구름
-    if (ichiD && ind.ichimoku.show) {
-      ctx.save();
-      visData.forEach((_, i) => {
-        const gi = this.startIndex + i;
-        const a = ichiD.senkouA[gi], b = ichiD.senkouB[gi];
-        if (a == null || b == null) return;
-        ctx.fillStyle = a >= b ? 'rgba(34,171,148,0.1)' : 'rgba(242,54,69,0.1)';
-        ctx.fillRect(effectiveChartLeft + i * totalSp, Math.min(getY(a), getY(b)), totalSp, Math.abs(getY(a) - getY(b)));
-      });
-      ctx.restore();
-      const tenkanStyle = this.resolveStyle('ichimokuTenkan', '#f23645', 1);
-      const kijunStyle = this.resolveStyle('ichimokuKijun', '#2962ff', 1);
-      const senkouAStyle = this.resolveStyle('ichimokuSenkouA', 'rgba(34,171,148,0.6)', 1, [4, 4]);
-      const senkouBStyle = this.resolveStyle('ichimokuSenkouB', 'rgba(242,54,69,0.6)', 1, [4, 4]);
-      const chikouStyle = this.resolveStyle('ichimokuChikou', '#43a047', 1);
-      if (showLine('ichimokuTenkan')) line(ichiD.tenkanLine, tenkanStyle.color, tenkanStyle.width, tenkanStyle.dash);
-      if (showLine('ichimokuKijun')) line(ichiD.kijunLine, kijunStyle.color, kijunStyle.width, kijunStyle.dash);
-      if (showLine('ichimokuSenkouA')) line(ichiD.senkouA, senkouAStyle.color, senkouAStyle.width, senkouAStyle.dash);
-      if (showLine('ichimokuSenkouB')) line(ichiD.senkouB, senkouBStyle.color, senkouBStyle.width, senkouBStyle.dash);
-      if (showLine('ichimokuChikou')) line(ichiD.chikouSpan, chikouStyle.color, chikouStyle.width, chikouStyle.dash, -ind.ichimoku.kijun);
-    }
-
-    // 3) 볼린저 밴드 배경
-    bbSeries.forEach((bbLine, index) => {
-      const upKey = `${bbLine.id}Upper`;
-      const loKey = `${bbLine.id}Lower`;
-      if (!showLine(upKey) || !showLine(loKey)) return;
-      ctx.save();
-      ctx.fillStyle = index === 0 ? 'rgba(100,100,255,0.05)' : 'rgba(255,255,255,0.025)';
-      ctx.beginPath(); let first = true;
-      visData.forEach((_, i) => {
-        const v = bbLine.data.upper[this.startIndex + i];
-        if (v == null) return;
-        if (first) { ctx.moveTo(effectiveChartLeft + i * totalSp + candleW/2, getY(v)); first = false; }
-        else ctx.lineTo(effectiveChartLeft + i * totalSp + candleW/2, getY(v));
-      });
-      for (let i = visData.length - 1; i >= 0; i--) {
-        const v = bbLine.data.lower[this.startIndex + i];
-        if (v == null) continue;
-        ctx.lineTo(effectiveChartLeft + i * totalSp + candleW/2, getY(v));
-      }
-      ctx.closePath(); ctx.fill(); ctx.restore();
-    });
-
-    // 4) 엔벨로프 배경
-    if (envD && ind.envelope.show) {
-      ctx.save();
-      ctx.fillStyle = 'rgba(255,200,50,0.05)';
-      ctx.beginPath(); let first = true;
-      visData.forEach((_, i) => {
-        const v = envD.upper[this.startIndex + i];
-        if (v == null) return;
-        if (first) { ctx.moveTo(effectiveChartLeft + i * totalSp + candleW/2, getY(v)); first = false; }
-        else ctx.lineTo(effectiveChartLeft + i * totalSp + candleW/2, getY(v));
-      });
-      for (let i = visData.length - 1; i >= 0; i--) {
-        const v = envD.lower[this.startIndex + i];
-        if (v == null) continue;
-        ctx.lineTo(effectiveChartLeft + i * totalSp + candleW/2, getY(v));
-      }
-      ctx.closePath(); ctx.fill(); ctx.restore();
-    }
-
-    // 4-2) 메인지표 매물대(Visible Range Volume Profile)
-    if (indicatorLayerOn && volumeProfileEnabled && volumeProfileRows > 0) {
-      const bucketSpan = (maxP - minP) / volumeProfileRows;
-      if (bucketSpan > 0) {
-        const profile = Array.from({ length: volumeProfileRows }, () => ({
-          up: 0,
-          down: 0,
-          total: 0,
-        }));
-        visData.forEach((c) => {
-          const candleLow = Math.max(minP, Math.min(c.low, c.high));
-          const candleHigh = Math.min(maxP, Math.max(c.low, c.high));
-          const candleVol = Number(c.volume);
-          if (!Number.isFinite(candleVol) || candleVol <= 0 || candleHigh < candleLow) return;
-
-          const startBin = Math.max(0, Math.min(volumeProfileRows - 1, Math.floor((candleLow - minP) / bucketSpan)));
-          const endBin = Math.max(0, Math.min(volumeProfileRows - 1, Math.floor((candleHigh - minP) / bucketSpan)));
-          const from = Math.min(startBin, endBin);
-          const to = Math.max(startBin, endBin);
-          const touched = Math.max(1, to - from + 1);
-          const allocated = candleVol / touched;
-          const isUp = c.close >= c.open;
-
-          for (let bi = from; bi <= to; bi += 1) {
-            const bucket = profile[bi];
-            if (isUp) bucket.up += allocated;
-            else bucket.down += allocated;
-            bucket.total += allocated;
-          }
-        });
-
-        const maxBucketVolume = Math.max(...profile.map((bucket) => bucket.total), 0);
-        if (maxBucketVolume > 0) {
-          const profileMaxWidth = chartW * volumeProfileWidthRatio;
-          const upStyle = this.resolveStyle('volumeProfileUp', 'rgba(38,166,154,0.45)', 1);
-          const downStyle = this.resolveStyle('volumeProfileDown', 'rgba(239,83,80,0.45)', 1);
-          const pocStyle = this.resolveStyle('volumeProfilePoc', 'rgba(255,193,7,0.95)', 1.2, [4, 3]);
-          const upFillColor = toRgba(upStyle.color, volumeProfileUpOpacity);
-          const downFillColor = toRgba(downStyle.color, volumeProfileDownOpacity);
-          const pocStrokeColor = toRgba(pocStyle.color, volumeProfilePocOpacity);
-          const showUp = showLine('volumeProfileUp');
-          const showDown = showLine('volumeProfileDown');
-
-          let pocIndex = 0;
-          let pocValue = -1;
-          profile.forEach((bucket, index) => {
-            if (bucket.total > pocValue) {
-              pocValue = bucket.total;
-              pocIndex = index;
-            }
-          });
-
-          ctx.save();
-          ctx.beginPath();
-          ctx.rect(chartLeft, R.top, chartW, Math.max(1, mainH - R.top));
-          ctx.clip();
-
-          for (let bi = 0; bi < volumeProfileRows; bi += 1) {
-            const bucket = profile[bi];
-            if (bucket.total <= 0) continue;
-
-            const low = minP + bi * bucketSpan;
-            const high = low + bucketSpan;
-            const yTop = getY(high);
-            const yBottom = getY(low);
-            const y = Math.min(yTop, yBottom);
-            const h = Math.max(1, Math.abs(yBottom - yTop) - 1);
-
-            const totalWidth = (bucket.total / maxBucketVolume) * profileMaxWidth;
-            if (totalWidth <= 0) continue;
-            const downWidth = totalWidth * (bucket.down / bucket.total);
-            const upWidth = Math.max(0, totalWidth - downWidth);
-            let xCursor = chartRight - totalWidth;
-
-            if (showDown && downWidth > 0.5) {
-              ctx.fillStyle = downFillColor;
-              ctx.fillRect(xCursor, y, downWidth, h);
-            }
-            xCursor += downWidth;
-            if (showUp && upWidth > 0.5) {
-              ctx.fillStyle = upFillColor;
-              ctx.fillRect(xCursor, y, upWidth, h);
-            }
-          }
-
-          if (showLine('volumeProfilePoc')) {
-            const pocLow = minP + pocIndex * bucketSpan;
-            const pocHigh = pocLow + bucketSpan;
-            const pocY = (getY(pocLow) + getY(pocHigh)) * 0.5;
-            ctx.strokeStyle = pocStrokeColor;
-            ctx.lineWidth = pocStyle.width;
-            ctx.setLineDash(pocStyle.dash);
-            ctx.beginPath();
-            ctx.moveTo(chartRight - profileMaxWidth, pocY);
-            ctx.lineTo(chartRight, pocY);
-            ctx.stroke();
-            ctx.setLineDash([]);
-          }
-
-          ctx.restore();
-        }
-      }
-    }
-
-    // 4-3) VPVR (Volume Profile Visible Range)
-    if (indicatorLayerOn && ind.vpvr.show) {
-      const vp = ind.vpvr;
-      const vpRowLayout = (vp.rowsLayout === 'ticks_per_row' ? 'ticks_per_row' : 'number_of_rows') as 'number_of_rows' | 'ticks_per_row';
-      const vpRowSize = Math.max(1, Math.floor(Number(vp.rowSize ?? 50) || 50));
-      const vpVolumeMode = ((vp.volumeMode === 'total' || vp.volumeMode === 'delta') ? vp.volumeMode : 'up_down') as 'total' | 'up_down' | 'delta';
-      const vpValueAreaVolume = Math.max(1, Math.min(100, Number(vp.valueAreaVolume ?? 70) || 70));
-      const vpPlacement = vp.placement === 'left' ? 'left' : 'right';
-      const vpWidthRatio = Math.max(0.05, Math.min(0.45, (Number(vp.widthPct ?? 22) || 22) / 100));
-      const tickSize = Math.max(10 ** -symbolPriceDigits, 1e-12);
-      const totalRange = Math.max(1e-12, maxP - minP);
-      const vpBucketSpan = vpRowLayout === 'ticks_per_row'
-        ? Math.max(tickSize * vpRowSize, tickSize)
-        : Math.max(totalRange / Math.max(1, vpRowSize), tickSize);
-      const vpRows = Math.max(1, Math.min(450, Math.ceil(totalRange / vpBucketSpan)));
-      const vpEffectiveBucketSpan = totalRange / vpRows;
-
-      const vpProfile = Array.from({ length: vpRows }, () => ({ up: 0, down: 0, total: 0, delta: 0 }));
-      visData.forEach((c) => {
-        const candleLow = Math.max(minP, Math.min(c.low, c.high));
-        const candleHigh = Math.min(maxP, Math.max(c.low, c.high));
-        const candleVol = Number(c.volume);
-        if (!Number.isFinite(candleVol) || candleVol <= 0 || candleHigh < candleLow) return;
-        const startBin = Math.max(0, Math.min(vpRows - 1, Math.floor((candleLow - minP) / vpEffectiveBucketSpan)));
-        const endBin = Math.max(0, Math.min(vpRows - 1, Math.floor((candleHigh - minP) / vpEffectiveBucketSpan)));
-        const from = Math.min(startBin, endBin);
-        const to = Math.max(startBin, endBin);
-        const touched = Math.max(1, to - from + 1);
-        const allocated = candleVol / touched;
-        const isUp = c.close >= c.open;
-        for (let bi = from; bi <= to; bi += 1) {
-          const bucket = vpProfile[bi];
-          if (isUp) bucket.up += allocated;
-          else bucket.down += allocated;
-          bucket.total += allocated;
-          bucket.delta = bucket.up - bucket.down;
-        }
-      });
-
-      const vpMaxTotal = Math.max(...vpProfile.map((bucket) => bucket.total), 0);
-      const vpMaxAbsDelta = Math.max(...vpProfile.map((bucket) => Math.abs(bucket.delta)), 0);
-      const vpTotalVolume = vpProfile.reduce((sum, bucket) => sum + bucket.total, 0);
-      if ((vpVolumeMode !== 'delta' && vpMaxTotal > 0) || (vpVolumeMode === 'delta' && vpMaxAbsDelta > 0)) {
-        const vpRegionWidth = chartW * vpWidthRatio;
-        const vpRegionStart = vpPlacement === 'left' ? chartLeft : (chartRight - vpRegionWidth);
-        const vpRegionEnd = vpPlacement === 'left' ? (chartLeft + vpRegionWidth) : chartRight;
-        const vpCenterX = (vpRegionStart + vpRegionEnd) / 2;
-        const vpDashByMode = (mode: string): number[] => {
-          if (mode === 'dotted') return [2, 3];
-          if (mode === 'dashed') return [6, 4];
-          return [];
-        };
-        const vpUpColor = toRgba(String(vp.upColor ?? '#26a69a'), Math.max(0, Math.min(1, (Number(vp.upOpacity ?? 45) || 0) / 100)));
-        const vpDownColor = toRgba(String(vp.downColor ?? '#ef5350'), Math.max(0, Math.min(1, (Number(vp.downOpacity ?? 45) || 0) / 100)));
-        const vpTotalColor = toRgba(String(vp.totalColor ?? '#7f8aa3'), Math.max(0, Math.min(1, (Number(vp.totalOpacity ?? 40) || 0) / 100)));
-        const vpDeltaPosColor = toRgba(String(vp.deltaPosColor ?? '#26a69a'), Math.max(0, Math.min(1, (Number(vp.deltaOpacity ?? 50) || 0) / 100)));
-        const vpDeltaNegColor = toRgba(String(vp.deltaNegColor ?? '#ef5350'), Math.max(0, Math.min(1, (Number(vp.deltaOpacity ?? 50) || 0) / 100)));
-        let vpPocY: number | null = null;
-        let vpVahY: number | null = null;
-        let vpValY: number | null = null;
-
-        let pocIndex = 0;
-        let pocVolume = -1;
-        vpProfile.forEach((bucket, index) => {
-          if (bucket.total > pocVolume) {
-            pocVolume = bucket.total;
-            pocIndex = index;
-          }
-        });
-
-        let vaLow = pocIndex;
-        let vaHigh = pocIndex;
-        let vaAccum = vpProfile[pocIndex]?.total ?? 0;
-        const vaTarget = vpTotalVolume * (vpValueAreaVolume / 100);
-        while (vaAccum < vaTarget && (vaLow > 0 || vaHigh < vpRows - 1)) {
-          const nextLowVol = vaLow > 0 ? vpProfile[vaLow - 1].total : -1;
-          const nextHighVol = vaHigh < vpRows - 1 ? vpProfile[vaHigh + 1].total : -1;
-          if (nextHighVol >= nextLowVol && vaHigh < vpRows - 1) {
-            vaHigh += 1;
-            vaAccum += Math.max(0, nextHighVol);
-          } else if (vaLow > 0) {
-            vaLow -= 1;
-            vaAccum += Math.max(0, nextLowVol);
-          } else {
-            break;
-          }
-        }
-        const valPrice = minP + vaLow * vpEffectiveBucketSpan;
-        const vahPrice = minP + (vaHigh + 1) * vpEffectiveBucketSpan;
-        const pocLow = minP + pocIndex * vpEffectiveBucketSpan;
-        const pocHigh = pocLow + vpEffectiveBucketSpan;
-        const pocPrice = (pocLow + pocHigh) * 0.5;
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(chartLeft, R.top, chartW, Math.max(1, mainH - R.top));
-        ctx.clip();
-
-        if (vp.showVaBackground !== false) {
-          const vaBg = toRgba(String(vp.vaBgColor ?? '#3a5f94'), Math.max(0, Math.min(1, (Number(vp.vaBgOpacity ?? 18) || 0) / 100)));
-          const yTop = getY(vahPrice);
-          const yBottom = getY(valPrice);
-          ctx.fillStyle = vaBg;
-          ctx.fillRect(chartLeft, Math.min(yTop, yBottom), chartW, Math.max(1, Math.abs(yBottom - yTop)));
-        }
-
-        for (let bi = 0; bi < vpRows; bi += 1) {
-          const bucket = vpProfile[bi];
-          if (bucket.total <= 0) continue;
-          const low = minP + bi * vpEffectiveBucketSpan;
-          const high = low + vpEffectiveBucketSpan;
-          const yTop = getY(high);
-          const yBottom = getY(low);
-          const y = Math.min(yTop, yBottom);
-          const h = Math.max(1, Math.abs(yBottom - yTop) - 1);
-
-          if (vpVolumeMode === 'total') {
-            const w = (bucket.total / vpMaxTotal) * vpRegionWidth;
-            if (w <= 0.5) continue;
-            const x = vpPlacement === 'left' ? vpRegionStart : (vpRegionEnd - w);
-            ctx.fillStyle = vpTotalColor;
-            ctx.fillRect(x, y, w, h);
-          } else if (vpVolumeMode === 'up_down') {
-            const totalWidth = (bucket.total / vpMaxTotal) * vpRegionWidth;
-            if (totalWidth <= 0.5) continue;
-            const downWidth = totalWidth * (bucket.down / Math.max(bucket.total, 1e-12));
-            const upWidth = Math.max(0, totalWidth - downWidth);
-            if (vpPlacement === 'left') {
-              let xCursor = vpRegionStart;
-              if (downWidth > 0.5) {
-                ctx.fillStyle = vpDownColor;
-                ctx.fillRect(xCursor, y, downWidth, h);
-              }
-              xCursor += downWidth;
-              if (upWidth > 0.5) {
-                ctx.fillStyle = vpUpColor;
-                ctx.fillRect(xCursor, y, upWidth, h);
-              }
-            } else {
-              let xCursor = vpRegionEnd - totalWidth;
-              if (downWidth > 0.5) {
-                ctx.fillStyle = vpDownColor;
-                ctx.fillRect(xCursor, y, downWidth, h);
-              }
-              xCursor += downWidth;
-              if (upWidth > 0.5) {
-                ctx.fillStyle = vpUpColor;
-                ctx.fillRect(xCursor, y, upWidth, h);
-              }
-            }
-          } else {
-            const d = bucket.delta;
-            const w = (Math.abs(d) / vpMaxAbsDelta) * (vpRegionWidth * 0.5);
-            if (w <= 0.5) continue;
-            if (d >= 0) {
-              ctx.fillStyle = vpDeltaPosColor;
-              ctx.fillRect(vpCenterX, y, w, h);
-            } else {
-              ctx.fillStyle = vpDeltaNegColor;
-              ctx.fillRect(vpCenterX - w, y, w, h);
-            }
-          }
-
-          if (vp.valuesVisible === true && h >= 10) {
-            const value = vpVolumeMode === 'delta' ? bucket.delta : bucket.total;
-            const text = formatThousandAdaptive(value, 0);
-            if (text !== '-') {
-              ctx.fillStyle = String(vp.valuesTextColor ?? '#cfd8ea');
-              ctx.font = `10px ${CHART_FONT_STACK}`;
-              ctx.textAlign = vpPlacement === 'left' ? 'left' : 'right';
-              const textX = vpPlacement === 'left' ? (vpRegionStart + 2) : (vpRegionEnd - 2);
-              ctx.fillText(text, textX, y + Math.max(9, h * 0.75));
-            }
-          }
-        }
-
-        if (vp.showPoc !== false) {
-          ctx.strokeStyle = String(vp.pocColor ?? '#ffc107');
-          ctx.lineWidth = Math.max(0.5, Number(vp.pocWidth ?? 1.2) || 1.2);
-          ctx.setLineDash(vpDashByMode(String(vp.pocLineStyle ?? 'dashed')));
-          const y = getY(pocPrice);
-          vpPocY = y;
-          ctx.beginPath();
-          ctx.moveTo(vpRegionStart, y);
-          ctx.lineTo(vpRegionEnd, y);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
-
-        if (vp.showVahVal !== false) {
-          ctx.strokeStyle = String(vp.vahValColor ?? '#8ab4ff');
-          ctx.lineWidth = Math.max(0.5, Number(vp.vahValWidth ?? 1) || 1);
-          ctx.setLineDash(vpDashByMode(String(vp.vahValLineStyle ?? 'dashed')));
-          const yVah = getY(vahPrice);
-          const yVal = getY(valPrice);
-          vpVahY = yVah;
-          vpValY = yVal;
-          ctx.beginPath();
-          ctx.moveTo(vpRegionStart, yVah);
-          ctx.lineTo(vpRegionEnd, yVah);
-          ctx.moveTo(vpRegionStart, yVal);
-          ctx.lineTo(vpRegionEnd, yVal);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
-
-        ctx.restore();
-
-        const drawLevelTag = (y: number, price: number, suffix: string, bgColor: string, textColor: string) => {
-          const label = `${formatWithComma(price, symbolPriceDigits)} ${suffix}`;
-          ctx.save();
-          ctx.font = `600 10px ${CHART_FONT_STACK}`;
-          const padX = 6;
-          const h = 16;
-          const w = Math.ceil(ctx.measureText(label).width) + padX * 2;
-          const clampedY = Math.max(h * 0.5 + 2, Math.min(mainH - h * 0.5 - 2, y));
-          const yTop = Math.round(clampedY - h * 0.5);
-          const x = vpPlacement === 'right'
-            ? Math.max(chartLeft + 2, vpRegionEnd - w - 2)
-            : Math.min(chartRight - w - 2, vpRegionStart + 2);
-          ctx.fillStyle = bgColor;
-          ctx.fillRect(x, yTop, w, h);
-          ctx.fillStyle = textColor;
-          ctx.textAlign = 'left';
-          ctx.fillText(label, x + padX, yTop + 11);
-          ctx.restore();
-        };
-
-        if (vpPocY != null && vp.showPoc !== false) {
-          drawLevelTag(vpPocY, pocPrice, 'POC', String(vp.pocColor ?? '#ffc107'), '#111827');
-        }
-        if (vpVahY != null && vp.showVahVal !== false) {
-          drawLevelTag(vpVahY, vahPrice, 'VAH', String(vp.vahValColor ?? '#8ab4ff'), '#0b1220');
-        }
-        if (vpValY != null && vp.showVahVal !== false) {
-          drawLevelTag(vpValY, valPrice, 'VAL', String(vp.vahValColor ?? '#8ab4ff'), '#0b1220');
-        }
-      }
-    }
-
-    // 5) 캔들/거래량
-    // ZLMA area fill is rendered before candles so candles stay visually on top.
-    drawZeroLagAreaUnderCandles({
-      enabled:
-        indicatorLayerOn
-        && ind.zeroLagMaTrendLevels.show
-        && showLine('zeroLagMaTrendLevelsZlma')
-        && showLine('zeroLagMaTrendLevelsEma'),
+    renderMainBackgroundLayers({
       ctx,
-      data: zeroLagMaTrendLevelsD,
-      states: zeroLagStates,
+      indicatorLayerOn,
+      indicators: ind,
+      candles: visData,
       startIndex: this.startIndex,
-      visLength: visData.length,
+      bbSeries,
+      ichimokuData: ichiD,
+      envelopeData: envD,
+      zeroLagMaTrendLevelsData: zeroLagMaTrendLevelsD,
+      zeroLagStates,
+      volumeProfile: {
+        enabled: volumeProfileEnabled,
+        rows: volumeProfileRows,
+        widthRatio: volumeProfileWidthRatio,
+        upOpacity: volumeProfileUpOpacity,
+        downOpacity: volumeProfileDownOpacity,
+        pocOpacity: volumeProfilePocOpacity,
+      },
+      minPrice: minP,
+      maxPrice: maxP,
       chartLeft,
       chartRight,
+      chartWidth: chartW,
+      plotTop: R.top,
+      plotBottom: mainH,
+      effectiveChartLeft,
       totalSp,
       candleW,
-      getY,
-      upColor: String(ind.zeroLagMaTrendLevels.upColor || '#30d453'),
-      downColor: String(ind.zeroLagMaTrendLevels.downColor || '#4043f1'),
+      symbolPriceDigits,
       fontStack: CHART_FONT_STACK,
-      alpha: 0.22,
+      showLine,
+      resolveStyle: (styleKey, fallbackColor, fallbackWidth, fallbackDash) => (
+        this.resolveStyle(styleKey, fallbackColor, fallbackWidth, fallbackDash)
+      ),
+      drawLine: line,
+      getY,
+      formatPrice: formatWithComma,
+      formatVolume: formatThousandAdaptive,
     });
+    // 5) 캔들/거래량
 
     const vMax = ind.volume.show ? Math.max(...visRawData.map((d) => d.volume), 1) : 1;
     const volumeTopPaddingRatio = 0.14;
@@ -6516,166 +6007,160 @@ export class SimpleChart {
     const volH   = ind.volume.show && !hiddenPanels.has('volume') ? plotHeight * this.getPanelRatio('volume') : 0;
     const volTop = panelTops['volume'] ?? Math.max(0, mainH - volH);
 
-    visData.forEach((c, i) => {
-      const x = effectiveChartLeft + i * totalSp, isUp = c.close >= c.open;
-      const upColor = this.config.candleStyle?.upColor ?? '#22ab94';
-      const downColor = this.config.candleStyle?.downColor ?? '#f23645';
-      const candleColor = isUp ? upColor : downColor;
-      ctx.fillStyle = candleColor;
-      ctx.strokeStyle = candleColor;
-      const wickLineWidth = 1;
-      ctx.lineWidth = wickLineWidth;
-      const wickX = this.snapStrokeCenter(x + candleW / 2, wickLineWidth);
-      const wickLowY = this.snapStrokeCenter(getY(c.low), wickLineWidth);
-      const wickHighY = this.snapStrokeCenter(getY(c.high), wickLineWidth);
-      ctx.beginPath();
-      ctx.moveTo(wickX, wickLowY);
-      ctx.lineTo(wickX, wickHighY);
-      ctx.stroke();
-      const bodyX = this.snapToDevice(x);
-      const bodyY = this.snapToDevice(Math.min(getY(c.open), getY(c.close)));
-      const bodyW = this.snapSize(Math.max(2, candleW), 2);
-      const bodyH = this.snapSize(Math.max(2, Math.abs(getY(c.close) - getY(c.open))), 2);
-      ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
-    });
-
-    renderIndicatorBlocks.call(this, {
+    renderCandles({
       ctx,
-      ind,
-      indicatorLayerOn,
-      maSeries,
-      emaSeries,
-      maS,
-      maL,
-      ma60,
-      ma120,
-      ma200,
-      bbSeries,
-      vwapD,
-      zeroLagMaTrendLevelsD,
-      zeroLagStates,
-      supertrendD,
-      statisticalTrailingStopD,
-      envD,
-      rsiD,
-      dmiD,
-      macdD,
-      stFD,
-      stSD,
-      cciD,
-      obvD,
-      obvSignal9,
-      cvdD,
-      cvdSignal9,
-      line,
-      showLine,
-      chartLeft,
+      candles: visData,
       effectiveChartLeft,
-      chartRight,
-      totalSp,
-      candleW,
+      totalSpacing: totalSp,
+      candleWidth: candleW,
       getY,
-      visData,
-      displayData,
-      R,
-      mainH,
-      fontStack: CHART_FONT_STACK,
-      vMax,
-      vScaleMax,
-      volH,
-      volTop,
-      chartW,
-      visRawData,
-      panels,
-      panelTops,
-      plotHeight,
-      hiddenPanels,
-      subAxisStart,
-      geometry,
-      yAxisTransparent,
-      width,
-      subChartW,
-      subChartRight,
-      subLine,
-      subHorizontalLine,
-      getSubPlotBounds,
-      formatKUnit,
-      formatWithComma,
-      chartTextSecondary: CHART_TEXT_SECONDARY,
+      snapToDevice: (value) => this.snapToDevice(value),
+      snapStrokeCenter: (value, lineWidth) => this.snapStrokeCenter(value, lineWidth),
+      snapSize: (value, minCssPx) => this.snapSize(value, minCssPx),
+      upColor: this.config.candleStyle?.upColor ?? '#22ab94',
+      downColor: this.config.candleStyle?.downColor ?? '#f23645',
     });
-    if (geometry.side === 'left') {
-      // Draw left-axis text without filling a separate background strip.
-      ctx.save();
-      if (!yAxisTransparent) {
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(0, 0, geometry.axisPad, mainH);
-        ctx.strokeStyle = '#2a3142';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(geometry.axisPad - 0.5, 0);
-        ctx.lineTo(geometry.axisPad - 0.5, mainH);
-        ctx.stroke();
-      }
-      ctx.fillStyle = CHART_TEXT_SECONDARY;
-      ctx.font = `400 11px ${CHART_FONT_STACK}`;
-      ctx.textAlign = 'right';
-      const axisDigits = Math.max(0, Math.ceil(-Math.log10(mainAxisStep)) + 2);
-      const tickCount = Math.max(1, Math.floor((maxP - minP) / mainAxisStep) + 1);
-      const axisBottomPadding = 14;
-      for (let i = 0; i < tickCount; i += 1) {
-        const p = maxP - i * mainAxisStep;
-        if (p < minP - mainAxisStep * 0.5) break;
-        const y = getYLinear(p);
-        if (y >= mainH - axisBottomPadding) continue;
-        if (!yAxisTransparent) ctx.fillText(formatWithComma(Number(p.toFixed(axisDigits)), symbolPriceDigits), geometry.axisPad - 6, y + 4);
-      }
-      ctx.restore();
-    }
 
-    // 차트(패널) 영역과 시간축 영역 구분선
-    ctx.save();
-    ctx.strokeStyle = '#3a4150';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, plotHeight + 0.5);
-    ctx.lineTo(width, plotHeight + 0.5);
-    ctx.stroke();
-    ctx.restore();
+    const indicatorRenderInput: IndicatorRenderGroupedInput = {
+      shared: {
+        ctx,
+        ind,
+        showLine,
+        chartLeft,
+        effectiveChartLeft,
+        chartRight,
+        totalSp,
+        candleW,
+        visData,
+        fontStack: CHART_FONT_STACK,
+      },
+      main: {
+        indicatorLayerOn,
+        maSeries,
+        emaSeries,
+        maS,
+        maL,
+        ma60,
+        ma120,
+        ma200,
+        hmaD,
+        bbSeries,
+        vwapD,
+        williamsFractalD,
+        zeroLagMaTrendLevelsD,
+        zeroLagStates,
+        supertrendD,
+        statisticalTrailingStopD,
+        envD,
+        line,
+        getY,
+        displayData,
+        R,
+        mainH,
+      },
+      volumeOverlay: {
+        chartWidth: chartW,
+        top: volTop,
+        height: volH,
+        visRawData,
+        vScaleMax,
+      },
+      subPanels: {
+        rsiD,
+        dmiD,
+        macdD,
+        stFD,
+        stSD,
+        cciD,
+        atrD,
+        obvD,
+        obvSignal9,
+        cvdD,
+        cvdSignal9,
+        vScaleMax,
+        panels,
+        panelTops,
+        plotHeight,
+        hiddenPanels,
+        subAxisStart,
+        geometry,
+        yAxisTransparent,
+        width,
+        subChartW,
+        subChartRight,
+        subLine,
+        subHorizontalLine,
+        getSubPlotBounds,
+        formatKUnit,
+        formatWithComma,
+        chartTextSecondary: CHART_TEXT_SECONDARY,
+      },
+    };
+    const indicatorRenderContext = {
+      subPanelHost: this.createIndicatorSubPanelHost(),
+      startIndex: this.startIndex,
+      pixelRatio: this.pixelRatio,
+      resolveStyle: (styleKey: string, fallbackColor: string, fallbackWidth?: number, fallbackDash?: number[]) => (
+        this.resolveStyle(styleKey, fallbackColor, fallbackWidth, fallbackDash)
+      ),
+      getSubPanelScaledRange: (panelId: string, lo: number, hi: number) => this.getSubPanelScaledRange(panelId, lo, hi),
+      candleStyle: this.config.candleStyle,
+    };
+    renderIndicatorBlocks(buildIndicatorRenderParams(
+      buildIndicatorRenderInput(indicatorRenderInput),
+      indicatorRenderContext,
+    ));
+    renderLeftYAxisOverlay({
+      ctx,
+      geometry,
+      chartRight,
+      mainHeight: mainH,
+      minPrice: minP,
+      maxPrice: maxP,
+      mainAxisStep,
+      getYLinear,
+      symbolPriceDigits,
+      chartTextSecondary: CHART_TEXT_SECONDARY,
+      fontStack: CHART_FONT_STACK,
+      formatPrice: formatWithComma,
+      metrics: axisOverlayMetrics,
+      yAxisTransparent,
+    });
 
-    // X축 시간 + 세로 격자 (동적 간격)
-    ctx.save();
-    ctx.fillStyle = CHART_TEXT_MUTED; ctx.font = `11px ${CHART_FONT_STACK}`; ctx.textAlign = 'center';
-    let nextRightBoundary = Number.POSITIVE_INFINITY;
-    const labelGap = 10;
-    for (let ti = tickIndices.length - 1; ti >= 0; ti -= 1) {
-      const i = tickIndices[ti];
-      if (i >= count) continue; // Future bars have no candle data ? skip time label
-        const x = effectiveChartLeft + i * totalSp + candleW / 2;
-      const lbl = formatAxisTime(visData[i].time, this.config.timezone, this.config.timeframe, stepCandles);
-      const w = ctx.measureText(lbl).width;
-      const left = x - w / 2;
-      const right = x + w / 2;
-      if (right + labelGap <= nextRightBoundary) {
-        ctx.fillText(lbl, x, height - 4);
-        nextRightBoundary = left;
-      }
-    }
-    ctx.restore();
+    renderPanelTimeSeparator({ ctx, width, plotHeight });
+
+    renderTimeAxisLabels({
+      ctx,
+      candles: visData,
+      tickIndices,
+      candleCount: count,
+      effectiveChartLeft,
+      totalSpacing: totalSp,
+      candleWidth: candleW,
+      height,
+      timezone: this.config.timezone,
+      timeframe: this.config.timeframe,
+      stepCandles,
+      chartTextMuted: CHART_TEXT_MUTED,
+      fontStack: CHART_FONT_STACK,
+    });
 
     if (yAxisTransparent) {
-      ctx.save();
-      ctx.fillStyle = CHART_TEXT_SECONDARY;
-      ctx.font = `400 11px ${CHART_FONT_STACK}`;
-      ctx.textAlign = geometry.side === 'left' ? 'right' : 'left';
-      const transparentAxisTextX = geometry.side === 'left' ? geometry.axisPad - 6 : chartRight + 4;
-      for (let i = 0; i < tickCount; i += 1) {
-        const p = maxP - i * mainAxisStep;
-        if (p < minP - mainAxisStep * 0.5) break;
-        const y = getYLinear(p);
-        if (y >= mainH - axisBottomPadding) continue;
-        ctx.fillText(formatWithComma(Number(p.toFixed(axisDigits)), symbolPriceDigits), transparentAxisTextX, y + 4);
-      }
-      ctx.restore();
+      renderTransparentYAxisLabels({
+        ctx,
+        geometry,
+        chartRight,
+        mainHeight: mainH,
+        minPrice: minP,
+        maxPrice: maxP,
+        mainAxisStep,
+        getYLinear,
+        symbolPriceDigits,
+        chartTextSecondary: CHART_TEXT_SECONDARY,
+        fontStack: CHART_FONT_STACK,
+        formatPrice: formatWithComma,
+        metrics: axisOverlayMetrics,
+      });
     }
 
     this.lastDrawMeta = {
@@ -7445,7 +6930,7 @@ export class SimpleChart {
         <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 24px 12px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <div style="font-size:24px;font-weight:700;">Anchored VWAP</div>
-            <button type="button" data-k="rename" style="border:none;background:transparent;color:#6b7280;cursor:pointer;font-size:18px;line-height:1;">✎</button>
+            <button type="button" data-k="rename" style="border:none;background:transparent;color:#6b7280;cursor:pointer;font-size:18px;line-height:1;">?</button>
           </div>
           <button type="button" data-k="close" style="border:none;background:transparent;color:#111827;cursor:pointer;font-size:24px;line-height:1;">×</button>
         </div>
@@ -8079,7 +7564,7 @@ export class SimpleChart {
     if (!shape) return;
     const trimmed = rawValue.trim();
     if (!trimmed) {
-      this.drawings = this.drawings.filter((s) => s.id !== shapeId);
+      this.drawings = deleteDrawingById(this.drawings, shapeId);
       if (this.selectedDrawingId === shapeId) {
         this.selectedDrawingId = null;
         this.selectedDrawingPart = 'line';
@@ -8173,15 +7658,7 @@ export class SimpleChart {
   }
 
   private createTextNoteAt(anchor: DrawingAnchor): DrawingShape {
-    const created: DrawingShape = {
-      id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      kind: 'text-note',
-      a: anchor,
-      text: '',
-      color: '#2f6cff',
-      width: 2,
-      lineStyle: 'solid',
-    };
+    const created = createTextNoteDrawing({ anchor });
     this.upsertDrawing(created);
     this.selectedDrawingId = created.id;
     this.selectedDrawingPart = 'body';
@@ -8191,1584 +7668,89 @@ export class SimpleChart {
   }
 
   private hitTestDrawing(shape: DrawingShape, mx: number, my: number, metrics: NonNullable<ReturnType<SimpleChart['getMainViewportMetrics']>>): DrawingHitPart | null {
-    if (shape.hidden) return null;
-    const ax = this.xForIndex(shape.a.index, metrics.totalSp, metrics.candleW);
-    const ay = metrics.getY(shape.a.price);
-    const bx = shape.b ? this.xForIndex(shape.b.index, metrics.totalSp, metrics.candleW) : ax;
-    const by = shape.b ? metrics.getY(shape.b.price) : ay;
-    const pad = 8;
-    const isCoarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
-    const anchorHitPad = isCoarsePointer ? 25 : 8;
-    const pointInPolygon = (x: number, y: number, points: Array<{ x: number; y: number }>): boolean => {
-      let inside = false;
-      for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
-        const xi = points[i].x;
-        const yi = points[i].y;
-        const xj = points[j].x;
-        const yj = points[j].y;
-        const intersects = ((yi > y) !== (yj > y))
-          && (x < ((xj - xi) * (y - yi)) / Math.max(1e-6, (yj - yi)) + xi);
-        if (intersects) inside = !inside;
-      }
-      return inside;
-    };
-
-    if (this.isTrendlineShape(shape)) {
-      const trendline = this.getTrendlineRenderLine(shape, metrics);
-      const lineHitPad = isCoarsePointer ? 22 : 16;
-      const startHit = Math.hypot(mx - trendline.anchorStartX, my - trendline.anchorStartY) <= anchorHitPad;
-      if (startHit) return 'start';
-      const endHit = Math.hypot(mx - trendline.anchorEndX, my - trendline.anchorEndY) <= anchorHitPad;
-      if (endHit) return 'end';
-      const hasText = (shape.text ?? '').trim().length > 0;
-      const isHoveredGuide = shape.id === this.hoveredDrawingId
-        && (this.hoveredDrawingPart === 'line' || this.hoveredDrawingPart === 'trendline-text-guide');
-      const placeholder = !hasText && isHoveredGuide ? '텍스트 입력' : '';
-      const label = this.getTrendlineTextLayout(shape, metrics, placeholder);
-      if (label.text) {
-        const relX = mx - label.x;
-        const relY = my - label.y;
-        const c = Math.cos(-label.angle);
-        const s = Math.sin(-label.angle);
-        const lx = relX * c - relY * s;
-        const ly = relX * s + relY * c;
-        const labelPadX = label.isPlaceholder ? 42 : 8;
-        const labelPadY = label.isPlaceholder ? 24 : 8;
-        if (
-          lx >= -label.width / 2 - labelPadX &&
-          lx <= label.width / 2 + labelPadX &&
-          ly >= -label.height - labelPadY &&
-          ly <= labelPadY * 1.8
-        ) {
-          return label.isPlaceholder ? 'trendline-text-guide' : 'body';
-        }
-      }
-      if (this.pointToSegmentDistance(mx, my, trendline.lineStartX, trendline.lineStartY, trendline.lineEndX, trendline.lineEndY) <= lineHitPad) return 'line';
-      const left = Math.min(trendline.lineStartX, trendline.lineEndX) - lineHitPad;
-      const right = Math.max(trendline.lineStartX, trendline.lineEndX) + lineHitPad;
-      const top = Math.min(trendline.lineStartY, trendline.lineEndY) - lineHitPad;
-      const bottom = Math.max(trendline.lineStartY, trendline.lineEndY) + lineHitPad;
-      return (mx >= left && mx <= right && my >= top && my <= bottom) ? 'body' : null;
-    }
-    if (shape.kind === 'hline') {
-      if (mx < metrics.chartLeft || mx > metrics.chartRight) return null;
-      if (Math.abs(my - ay) <= 9) return 'line';
-      return Math.abs(my - ay) <= 16 ? 'body' : null;
-    }
-    if (shape.kind === 'anchored-vwap') {
-      const avwapPlot = this.getAnchoredVwapPlot(shape);
-      if (!avwapPlot.length) return null;
-      const anchorPoint = avwapPlot[0] ?? null;
-      const anchorY = anchorPoint ? metrics.getY(anchorPoint.vwap) : ay;
-      if (Math.hypot(mx - ax, my - anchorY) <= anchorHitPad) return 'start';
-      const lineHitPad = isCoarsePointer ? 18 : 10;
-      for (let i = 0; i < avwapPlot.length - 1; i += 1) {
-        const p1 = avwapPlot[i];
-        const p2 = avwapPlot[i + 1];
-        const x1 = this.xForIndex(p1.index, metrics.totalSp, metrics.candleW);
-        const y1 = metrics.getY(p1.vwap);
-        const x2 = this.xForIndex(p2.index, metrics.totalSp, metrics.candleW);
-        const y2 = metrics.getY(p2.vwap);
-        if (this.pointToSegmentDistance(mx, my, x1, y1, x2, y2) <= lineHitPad) return 'line';
-      }
-      const xs = avwapPlot.map((point) => this.xForIndex(point.index, metrics.totalSp, metrics.candleW));
-      const ys = avwapPlot.map((point) => metrics.getY(point.vwap));
-      const left = Math.min(...xs) - pad;
-      const right = Math.max(...xs) + pad;
-      const top = Math.min(...ys) - pad;
-      const bottom = Math.max(...ys) + pad;
-      return (mx >= left && mx <= right && my >= top && my <= bottom) ? 'body' : null;
-    }
-    if (shape.kind === 'draw-pencil' || shape.kind === 'draw-highlighter') {
-      const points = shape.points ?? [shape.a, shape.b ?? shape.a];
-      const pxy = points.map((p) => ({
-        x: this.xForIndex(p.index, metrics.totalSp, metrics.candleW),
-        y: metrics.getY(p.price),
-      }));
-      for (let i = 0; i < pxy.length - 1; i += 1) {
-        if (this.pointToSegmentDistance(mx, my, pxy[i].x, pxy[i].y, pxy[i + 1].x, pxy[i + 1].y) <= pad) return 'line';
-      }
-      const xs = pxy.map((p) => p.x);
-      const ys = pxy.map((p) => p.y);
-      if (xs.length > 0) {
-        const left = Math.min(...xs) - pad;
-        const right = Math.max(...xs) + pad;
-        const top = Math.min(...ys) - pad;
-        const bottom = Math.max(...ys) + pad;
-        return (mx >= left && mx <= right && my >= top && my <= bottom) ? 'body' : null;
-      }
-      return null;
-    }
-    if (shape.kind === 'draw-box') {
-      const left = Math.min(ax, bx);
-      const right = Math.max(ax, bx);
-      const top = Math.min(ay, by);
-      const bottom = Math.max(ay, by);
-      if (Math.hypot(mx - left, my - top) <= anchorHitPad) return 'box-tl';
-      if (Math.hypot(mx - right, my - top) <= anchorHitPad) return 'box-tr';
-      if (Math.hypot(mx - right, my - bottom) <= anchorHitPad) return 'box-br';
-      if (Math.hypot(mx - left, my - bottom) <= anchorHitPad) return 'box-bl';
-      const onEdge = (
-        (Math.abs(my - top) <= 8 && mx >= left - pad && mx <= right + pad)
-        || (Math.abs(my - bottom) <= 8 && mx >= left - pad && mx <= right + pad)
-        || (Math.abs(mx - left) <= 8 && my >= top - pad && my <= bottom + pad)
-        || (Math.abs(mx - right) <= 8 && my >= top - pad && my <= bottom + pad)
-      );
-      if (onEdge) return 'line';
-      return (mx >= left - pad && mx <= right + pad && my >= top - pad && my <= bottom + pad) ? 'body' : null;
-    }
-    if (shape.kind === 'channel') {
-      const g = this.getChannelGeometry(shape);
-      const a2x = this.xForIndex(g.a2.index, metrics.totalSp, metrics.candleW);
-      const a2y = metrics.getY(g.a2.price);
-      const b2x = this.xForIndex(g.b2.index, metrics.totalSp, metrics.candleW);
-      const b2y = metrics.getY(g.b2.price);
-      if (Math.hypot(mx - ax, my - ay) <= anchorHitPad) return 'channel-a';
-      if (Math.hypot(mx - bx, my - by) <= anchorHitPad) return 'channel-b';
-      const baseMidX = (ax + bx) / 2;
-      const baseMidY = (ay + by) / 2;
-      const paraMidX = (a2x + b2x) / 2;
-      const paraMidY = (a2y + b2y) / 2;
-      if (mx >= baseMidX - 8 && mx <= baseMidX + 8 && my >= baseMidY - 8 && my <= baseMidY + 8) return 'channel-mid-base';
-      if (mx >= paraMidX - 8 && mx <= paraMidX + 8 && my >= paraMidY - 8 && my <= paraMidY + 8) return 'channel-mid-parallel';
-      const midX = (ax + bx + a2x + b2x) / 4;
-      const midY = (ay + by + a2y + b2y) / 4;
-      if (mx >= midX - 8 && mx <= midX + 8 && my >= midY - 8 && my <= midY + 8) return 'channel-center';
-      if (Math.hypot(mx - a2x, my - a2y) <= 8 || Math.hypot(mx - b2x, my - b2y) <= 8) return 'channel-offset';
-      const lineHit = this.pointToSegmentDistance(mx, my, ax, ay, bx, by) <= 10
-        || this.pointToSegmentDistance(mx, my, a2x, a2y, b2x, b2y) <= 10;
-      if (lineHit) return 'line';
-      const insideChannel = pointInPolygon(mx, my, [
-        { x: ax, y: ay },
-        { x: bx, y: by },
-        { x: b2x, y: b2y },
-        { x: a2x, y: a2y },
-      ]);
-      if (insideChannel) return 'body';
-      const left = Math.min(ax, bx, a2x, b2x) - 10;
-      const right = Math.max(ax, bx, a2x, b2x) + 10;
-      const top = Math.min(ay, by, a2y, b2y) - 10;
-      const bottom = Math.max(ay, by, a2y, b2y) + 10;
-      return (mx >= left && mx <= right && my >= top && my <= bottom) ? 'body' : null;
-    }
-    if (shape.kind === 'fib-retracement' || shape.kind === 'fib-trend') {
-      const startHit = Math.hypot(mx - ax, my - ay) <= anchorHitPad;
-      if (startHit) return 'start';
-      const endHit = Math.hypot(mx - bx, my - by) <= anchorHitPad;
-      if (endHit) return 'end';
-      const fibRatios = [4.236, 3.618, 2.618, 1.618, 1, 0.786, 0.618, 0.5, 0.382, 0.236, 0];
-      if (shape.kind === 'fib-trend' && shape.channelOffset) {
-        const cx = this.xForIndex(shape.a.index + shape.channelOffset.index, metrics.totalSp, metrics.candleW);
-        const cy = metrics.getY(shape.a.price + shape.channelOffset.price);
-        if (Math.hypot(mx - cx, my - cy) <= anchorHitPad) return 'fib-offset';
-      }
-      if (shape.kind === 'fib-retracement') {
-        const price0 = shape.a.price;
-        const price1 = shape.b ? shape.b.price : shape.a.price;
-        const rangePrice = price1 - price0;
-        const toY = (ratio: number) => metrics.getY(price0 + rangePrice * ratio);
-        const x0 = Math.min(ax, bx);
-        const x1 = Math.max(ax, bx);
-        const yValues = fibRatios.map(toY);
-        const top = Math.min(...yValues) - pad;
-        const bottom = Math.max(...yValues) + pad;
-        if (mx < x0 - pad || mx > x1 + pad || my < top || my > bottom) return null;
-        for (const y of yValues) {
-          if (Math.abs(my - y) <= 9 && mx >= x0 - pad && mx <= x1 + pad) return 'line';
-        }
-        return 'body';
-      }
-
-      const fibOffset = shape.channelOffset ?? { index: 0, price: 0 };
-      const cPrice = shape.a.price + fibOffset.price;
-      const movePrice = (shape.b?.price ?? shape.a.price) - shape.a.price;
-      const cXRaw = this.xForIndex(shape.a.index + fibOffset.index, metrics.totalSp, metrics.candleW);
-      const xStart = Math.max(metrics.chartLeft, Math.min(metrics.chartRight - 1, Math.min(bx, cXRaw)));
-      const xEnd = Math.max(metrics.chartLeft, Math.min(metrics.chartRight - 1, Math.max(bx, cXRaw)));
-      const yValues = fibRatios.map((ratio) => metrics.getY(cPrice + movePrice * ratio));
-      const top = Math.min(...yValues) - pad;
-      const bottom = Math.max(...yValues) + pad;
-      if (xEnd - xStart > 1) {
-        if (mx >= xStart - pad && mx <= xEnd + pad && my >= top && my <= bottom) {
-          for (const y of yValues) {
-            if (Math.abs(my - y) <= 9) return 'line';
-          }
-          return 'body';
-        }
-      }
-      const guideHit = this.pointToSegmentDistance(mx, my, ax, ay, bx, by) <= 9
-        || this.pointToSegmentDistance(mx, my, bx, by, cXRaw, metrics.getY(cPrice)) <= 9;
-      return guideHit ? 'line' : null;
-    }
-    if (shape.kind === 'long-position' || shape.kind === 'short-position') {
-      const positionAnchorHitPad = isCoarsePointer ? 28 : 20;
-      const targetOffset = shape.channelOffset ?? { index: 0, price: 0 };
-      const tx = this.xForIndex(shape.a.index + targetOffset.index, metrics.totalSp, metrics.candleW);
-      const ty = metrics.getY(shape.a.price + targetOffset.price);
-      // 박스 좌우 경계 계산
-      let posLeft  = Math.min(ax, tx);
-      let posRight = Math.max(ax, tx);
-      const minBoxWidthPx = 228;
-      const currentWidth = Math.abs(posRight - posLeft);
-      if (currentWidth < minBoxWidthPx) {
-        // Match draw behavior: keep entry-side edge fixed at minimum width clamp.
-        if (tx >= ax) {
-          posLeft = ax;
-          posRight = ax + minBoxWidthPx;
-        } else {
-          posRight = ax;
-          posLeft = ax - minBoxWidthPx;
-        }
-      }
-
-      // 진입가 앵커 (원형) ? 박스 왼쪽 진입 라인
-      if (Math.hypot(mx - posLeft, my - ay) <= positionAnchorHitPad) return 'start';
-      // 손절가 앵커 (사각) ? 박스 왼쪽 손절 라인
-      if (Math.hypot(mx - posLeft, my - by) <= positionAnchorHitPad) return 'end';
-      // 목표가 앵커 (사각) ? 박스 왼쪽 목표 라인
-      if (shape.channelOffset) {
-        if (Math.hypot(mx - posLeft, my - ty) <= positionAnchorHitPad) return 'position-target';
-      }
-      // 우측 앵커 (사각) ? 박스 오른쪽 라인 · 진입가 Y
-      if (Math.hypot(mx - posRight, my - ay) <= positionAnchorHitPad) return 'position-right' as DrawingHitPart;
-      // 앵커 첫 클릭 안정화: 앵커 주변 사각 히트존 추가
-      if (mx >= posRight - (positionAnchorHitPad + 8) && mx <= posRight + (positionAnchorHitPad + 8) && my >= ay - (positionAnchorHitPad + 8) && my <= ay + (positionAnchorHitPad + 8)) {
-        return 'position-right' as DrawingHitPart;
-      }
-      if (mx >= posLeft - (positionAnchorHitPad + 6) && mx <= posLeft + (positionAnchorHitPad + 6) && my >= by - (positionAnchorHitPad + 6) && my <= by + (positionAnchorHitPad + 6)) {
-        return 'end';
-      }
-      if (shape.channelOffset) {
-        if (mx >= posLeft - (positionAnchorHitPad + 6) && mx <= posLeft + (positionAnchorHitPad + 6) && my >= ty - (positionAnchorHitPad + 6) && my <= ty + (positionAnchorHitPad + 6)) {
-          return 'position-target';
-        }
-      }
-      // 중앙 정보 배지 (앵커보다 낮은 우선순위)
-      const badgeCenterX = (posLeft + posRight) / 2;
-      const badgeW = Math.max(86, Math.abs(posRight - posLeft) * 0.62);
-      const badgeH = 20;
-      if (
-        mx >= badgeCenterX - badgeW / 2
-        && mx <= badgeCenterX + badgeW / 2
-        && my >= ay - badgeH / 2
-        && my <= ay + badgeH / 2
-      ) return 'position-entry-info';
-      // 라인 히트
-      if (Math.abs(my - ty) <= 7 && mx >= posLeft - 4 && mx <= posRight + 4) return 'position-target';
-      if (Math.abs(my - by) <= 7 && mx >= posLeft - 4 && mx <= posRight + 4) return 'end';
-      // 박스 전체
-      const boxTop    = Math.min(ay, by, ty) - pad;
-      const boxBottom = Math.max(ay, by, ty) + pad;
-      return (mx >= posLeft - pad && mx <= posRight + pad && my >= boxTop && my <= boxBottom) ? 'body' : null;
-    }
-    if (shape.kind === 'measure') {
-      if (Math.hypot(mx - ax, my - ay) <= 10) return 'start';
-      if (Math.hypot(mx - bx, my - by) <= 10) return 'end';
-      const left = Math.min(ax, bx) - pad;
-      const right = Math.max(ax, bx) + pad;
-      const top = Math.min(ay, by) - pad;
-      const bottom = Math.max(ay, by) + pad;
-      return (mx >= left && mx <= right && my >= top && my <= bottom) ? 'body' : null;
-    }
-    if (shape.kind === 'text-note') {
-      const txt = shape.text ?? '텍스트';
-      const tw = Math.max(40, txt.length * 7 + 12);
-      const th = 22;
-      return (mx >= ax - pad && mx <= ax + tw + pad && my >= ay - th - pad && my <= ay + pad) ? 'body' : null;
-    }
-    return null;
+    return hitTestDrawingShape({
+      shape,
+      mx,
+      my,
+      metrics,
+      hoveredDrawingId: this.hoveredDrawingId,
+      hoveredDrawingPart: this.hoveredDrawingPart,
+      adapters: {
+        xForIndex: (index, totalSp, candleW) => this.xForIndex(index, totalSp, candleW),
+        getTrendlineRenderLine: (item, drawingMetrics) => this.getTrendlineRenderLine(item, drawingMetrics as typeof metrics),
+        getTrendlineTextLayout: (item, drawingMetrics, placeholder) => this.getTrendlineTextLayout(item, drawingMetrics as typeof metrics, placeholder),
+        getAnchoredVwapPlot: (item) => this.getAnchoredVwapPlot(item),
+        isCoarsePointer: () => window.matchMedia?.('(pointer: coarse)').matches ?? false,
+      },
+    });
   }
 
   private findDrawingAt(mx: number, my: number): { shape: DrawingShape; part: DrawingHitPart } | null {
-    if (!this.drawingsVisible) return null;
     const metrics = this.getMainViewportMetrics();
-    if (!metrics) return null;
-    if (this.selectedDrawingId) {
-      const selected = this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null;
-      if (selected) {
-        const selectedPart = this.hitTestDrawing(selected, mx, my, metrics);
-        if (selectedPart) {
-          return { shape: selected, part: selectedPart };
-        }
-      }
-    }
-    for (let i = this.drawings.length - 1; i >= 0; i -= 1) {
-      const shape = this.drawings[i];
-      if (shape.id === this.selectedDrawingId) continue;
-      const part = this.hitTestDrawing(shape, mx, my, metrics);
-      if (part) {
-        return { shape, part };
-      }
-    }
-    return null;
+    return findDrawingAtPoint({
+      drawings: this.drawings,
+      drawingsVisible: this.drawingsVisible,
+      selectedDrawingId: this.selectedDrawingId,
+      mx,
+      my,
+      metrics,
+      hoveredDrawingId: this.hoveredDrawingId,
+      hoveredDrawingPart: this.hoveredDrawingPart,
+      adapters: {
+        xForIndex: (index, totalSp, candleW) => this.xForIndex(index, totalSp, candleW),
+        getTrendlineRenderLine: (item, drawingMetrics) => this.getTrendlineRenderLine(item, drawingMetrics as NonNullable<ReturnType<SimpleChart['getMainViewportMetrics']>>),
+        getTrendlineTextLayout: (item, drawingMetrics, placeholder) => this.getTrendlineTextLayout(item, drawingMetrics as NonNullable<ReturnType<SimpleChart['getMainViewportMetrics']>>, placeholder),
+        getAnchoredVwapPlot: (item) => this.getAnchoredVwapPlot(item),
+        isCoarsePointer: () => window.matchMedia?.('(pointer: coarse)').matches ?? false,
+      },
+    });
   }
 
   private moveShapeByDelta(base: DrawingShape, dx: number, dy: number, part: DrawingHitPart = 'line'): DrawingShape {
     const metrics = this.getMainViewportMetrics();
-    if (!metrics) return this.cloneShape(base);
-    const deltaIndex = dx / Math.max(1e-6, metrics.totalSp);
-    const deltaPrice = -(dy / Math.max(1, metrics.mainH - metrics.top)) * metrics.range;
-    // 편집 시 앵커 이동에도 자석 적용 (캔들 OHLC)
-    const moveAnchor = (a: DrawingAnchor): DrawingAnchor => {
-      const raw: DrawingAnchor = {
-        index: Math.max(0, Math.min(this.data.length - 1, a.index + deltaIndex)),
-        price: a.price + deltaPrice,
-      };
-      return this.drawing_apply_magnet(raw);
-    };
-    if (base.locked) return this.cloneShape(base);
-    if (this.isTrendlineShape(base)) {
-      if (part === 'start') {
-        return {
-          ...this.cloneShape(base),
-          a: moveAnchor(base.a),
-          b: base.b ? { ...base.b } : base.b,
-        };
-      }
-      if (part === 'end' && base.b) {
-        return {
-          ...this.cloneShape(base),
-          a: { ...base.a },
-          b: moveAnchor(base.b),
-        };
-      }
-    }
-    if (base.kind === 'anchored-vwap') {
-      if (part === 'start' || part === 'line' || part === 'body') {
-        return {
-          ...this.cloneShape(base),
-          a: moveAnchor(base.a),
-          b: undefined,
-        };
-      }
-    }
-    if (base.kind === 'fib-retracement' || base.kind === 'fib-trend') {
-      const next = this.cloneShape(base);
-      if (part === 'start') {
-        return {
-          ...next,
-          a: moveAnchor(base.a),
-          b: base.b ? { ...base.b } : base.b,
-        };
-      }
-      if (part === 'end' && base.b) {
-        return {
-          ...next,
-          a: { ...base.a },
-          b: moveAnchor(base.b),
-        };
-      }
-      if (base.kind === 'fib-trend' && part === 'fib-offset') {
-        if (!next.channelOffset) next.channelOffset = { index: 0, price: 0 };
-        next.channelOffset = {
-          index: next.channelOffset.index + deltaIndex,
-          price: next.channelOffset.price + deltaPrice,
-        };
-        return next;
-      }
-      if (part === 'line' || part === 'body') {
-        return {
-          ...next,
-          a: moveAnchor(base.a),
-          b: base.b ? moveAnchor(base.b) : base.b,
-        };
-      }
-    }
-    if (base.kind === 'long-position' || base.kind === 'short-position') {
-      const next = this.cloneShape(base);
-      if (part === 'start') {
-        // 진입가 앵커: 자유 이동
-        next.a = moveAnchor(base.a);
-        return next;
-      }
-      if (part === 'end' || part === 'position-stop') {
-        // 손절가 앵커: Y축(상하)만 이동
-        if (!base.b) return next;
-        next.b = { index: base.a.index, price: base.b.price + deltaPrice };
-        return next;
-      }
-      if (part === 'position-target') {
-        // 목표가 앵커: Y축(상하)만 이동
-        if (!next.channelOffset) next.channelOffset = { index: 0, price: 0 };
-        next.channelOffset = {
-          index: next.channelOffset.index,           // X 고정
-          price: next.channelOffset.price + deltaPrice, // Y만 변경
-        };
-        return next;
-      }
-      if (part === 'position-right') {
-        // 우측 앵커: X축(좌우)만 이동
-        if (!next.channelOffset) next.channelOffset = { index: 0, price: 0 };
-        const minBoxWidthPx = 228;
-        const minOffsetIndex = minBoxWidthPx / Math.max(1e-6, metrics.totalSp);
-        const rawNextIndex = next.channelOffset.index + deltaIndex;
-        next.channelOffset = {
-          index: rawNextIndex >= 0
-            ? Math.max(minOffsetIndex, rawNextIndex)
-            : Math.min(-minOffsetIndex, rawNextIndex), // X만 변경(최소 박스 폭 유지)
-          price: next.channelOffset.price,              // Y 고정
-        };
-        return next;
-      }
-      if (part === 'position-entry-info') {
-        return next;
-      }
-      if (part === 'line' || part === 'body') {
-        // 전체 이동
-        next.a = moveAnchor(base.a);
-        next.b = base.b ? moveAnchor(base.b) : base.b;
-        return next;
-      }
-    }
-    if (base.kind === 'measure') {
-      const next = this.cloneShape(base);
-      if (part === 'start') {
-        next.a = moveAnchor(base.a);
-        return next;
-      }
-      if (part === 'end' && base.b) {
-        next.b = moveAnchor(base.b);
-        return next;
-      }
-      if (part === 'line' || part === 'body') {
-        next.a = moveAnchor(base.a);
-        next.b = base.b ? moveAnchor(base.b) : base.b;
-        return next;
-      }
-    }
-    if (base.kind === 'draw-pencil' || base.kind === 'draw-highlighter') {
-      const next = this.cloneShape(base) as DrawingShape;
-      const pts = (base.points ?? [base.a, base.b ?? base.a]).map((p) => ({ ...p }));
-      const moveAnchorRaw = (a: DrawingAnchor): DrawingAnchor => ({
-        index: Math.max(0, Math.min(this.data.length - 1, a.index + deltaIndex)),
-        price: a.price + deltaPrice,
-      });
-      // 자유 드로잉은 재편집 시에도 경로 전체를 그대로 평행이동한다.
-      for (let i = 0; i < pts.length; i += 1) pts[i] = moveAnchorRaw(pts[i]);
-      next.points = pts;
-      next.a = pts[0] ?? next.a;
-      next.b = pts[pts.length - 1] ?? next.b;
-      return next;
-    }
-    if (base.kind === 'draw-box') {
-      const next = this.cloneShape(base);
-      const a0 = { ...base.a };
-      const b0 = base.b ? { ...base.b } : { ...base.a };
-      const left = Math.min(a0.index, b0.index);
-      const right = Math.max(a0.index, b0.index);
-      const top = Math.max(a0.price, b0.price);
-      const bottom = Math.min(a0.price, b0.price);
-      const moved = moveAnchor({ index: left, price: top });
-      const movedTR = moveAnchor({ index: right, price: top });
-      const movedBR = moveAnchor({ index: right, price: bottom });
-      const movedBL = moveAnchor({ index: left, price: bottom });
-      if (part === 'box-tl') {
-        next.a = { index: moved.index, price: moved.price };
-        next.b = { index: right, price: bottom };
-        return next;
-      }
-      if (part === 'box-tr') {
-        next.a = { index: left, price: movedTR.price };
-        next.b = { index: movedTR.index, price: bottom };
-        return next;
-      }
-      if (part === 'box-br') {
-        next.a = { index: left, price: top };
-        next.b = { index: movedBR.index, price: movedBR.price };
-        return next;
-      }
-      if (part === 'box-bl') {
-        next.a = { index: movedBL.index, price: top };
-        next.b = { index: right, price: movedBL.price };
-        return next;
-      }
-      if (part === 'start') {
-        next.a = moveAnchor(base.a);
-        return next;
-      }
-      if (part === 'end' && base.b) {
-        next.b = moveAnchor(base.b);
-        return next;
-      }
-      if (part === 'line' || part === 'body') {
-        next.a = moveAnchor(base.a);
-        next.b = base.b ? moveAnchor(base.b) : base.b;
-        return next;
-      }
-    }
-    if (base.kind === 'channel') {
-      const next = this.cloneShape(base);
-      if (!next.channelOffset) next.channelOffset = { index: 0, price: 0 };
-      if (part === 'channel-a') {
-        next.a = moveAnchor(base.a);
-        return next;
-      }
-      if (part === 'channel-b' && base.b) {
-        next.b = moveAnchor(base.b);
-        return next;
-      }
-      if (part === 'channel-offset') {
-        next.channelOffset = {
-          index: next.channelOffset.index + deltaIndex,
-          price: next.channelOffset.price + deltaPrice,
-        };
-        return next;
-      }
-      if (part === 'channel-mid-base') {
-        next.a = moveAnchor(base.a);
-        next.b = base.b ? moveAnchor(base.b) : base.b;
-        if (next.channelOffset) {
-          next.channelOffset = {
-            index: next.channelOffset.index - deltaIndex,
-            price: next.channelOffset.price - deltaPrice,
-          };
-        }
-        return next;
-      }
-      if (part === 'channel-mid-parallel') {
-        if (next.channelOffset) {
-          next.channelOffset = {
-            index: next.channelOffset.index + deltaIndex,
-            price: next.channelOffset.price + deltaPrice,
-          };
-        }
-        return next;
-      }
-      if (part === 'channel-center' || part === 'line' || part === 'body') {
-        next.a = moveAnchor(base.a);
-        next.b = base.b ? moveAnchor(base.b) : base.b;
-        return next;
-      }
-    }
-    return {
-      id: base.id,
-      kind: base.kind,
-      a: moveAnchor(base.a),
-      b: base.b ? moveAnchor(base.b) : undefined,
-      text: base.text,
-      color: base.color,
-      width: base.width,
-      lineStyle: base.lineStyle,
-      channelOffset: base.channelOffset ? { ...base.channelOffset } : undefined,
-      hidden: base.hidden,
-      locked: base.locked,
-      alert: base.alert ? { ...base.alert } : undefined,
-    };
+    return moveDrawingByDelta({
+      base,
+      dx,
+      dy,
+      part,
+      metrics,
+      dataLength: this.data.length,
+      applyMagnet: (anchor) => this.drawing_apply_magnet(anchor),
+    });
   }
 
   private drawSelectionOverlay(ctx: CanvasRenderingContext2D, shape: DrawingShape, metrics: NonNullable<ReturnType<SimpleChart['getMainViewportMetrics']>>) {
-    const ax = this.xForIndex(shape.a.index, metrics.totalSp, metrics.candleW);
-    const ay = metrics.getY(shape.a.price);
-    const bx = shape.b ? this.xForIndex(shape.b.index, metrics.totalSp, metrics.candleW) : ax;
-    const by = shape.b ? metrics.getY(shape.b.price) : ay;
-    const left = Math.min(ax, bx);
-    const right = Math.max(ax, bx);
-    const top = Math.min(ay, by);
-    const bottom = Math.max(ay, by);
-    ctx.save();
-    ctx.strokeStyle = '#ffe08a';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 3]);
-    if (shape.kind === 'hline') {
-      // hline selection overlay intentionally hidden to avoid dotted line overlap.
-    } else if (shape.kind === 'measure') {
-      // quick measure selection overlay intentionally hidden (no yellow dashed guide).
-    } else if (this.isTrendlineShape(shape)) {
-      // trendline selection box/handles are intentionally hidden here.
-    } else if (shape.kind === 'channel') {
-      // channel selection overlay is handled by custom handles in drawDrawingShape.
-    } else if (shape.kind === 'text-note') {
-      // Text notes open an inline editor; no yellow selection box or anchor.
-    } else if (shape.kind === 'long-position' || shape.kind === 'short-position') {
-      // position: 전용 앵커 핸들이 있으므로 노란 점선 박스 불필요
-    } else if (shape.kind === 'fib-retracement' || shape.kind === 'fib-trend') {
-      // 피보나치: 레벨선·수치값이 이미 표시되므로 노란 점선 박스 불필요
-    } else if (shape.kind === 'anchored-vwap') {
-      // anchored VWAP: 곡선과 시작 앵커만 사용
-    } else if (shape.kind === 'draw-box') {
-      // 박스: 전용 앵커 핸들 표시를 사용
-    } else if (shape.kind === 'draw-pencil' || shape.kind === 'draw-highlighter') {
-      // 자유 드로잉: 노란 점선 선택 박스/점 표시 제거
-    } else {
-      ctx.strokeRect(left - 4, top - 4, Math.max(8, right - left + 8), Math.max(8, bottom - top + 8));
-    }
-    ctx.setLineDash([]);
-    if (!this.isTrendlineShape(shape) && shape.kind !== 'hline' && shape.kind !== 'measure'
-        && shape.kind !== 'long-position' && shape.kind !== 'short-position'
-        && shape.kind !== 'fib-retracement' && shape.kind !== 'fib-trend'
-        && shape.kind !== 'anchored-vwap'
-        && shape.kind !== 'draw-box'
-        && shape.kind !== 'draw-pencil' && shape.kind !== 'draw-highlighter'
-        && shape.kind !== 'text-note') {
-      ctx.fillStyle = '#ffe08a';
-      ctx.beginPath();
-      ctx.arc(ax, ay, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-      if (shape.b) {
-        ctx.beginPath();
-        ctx.arc(bx, by, 4.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    ctx.restore();
+    renderDrawingSelectionOverlay({
+      ctx,
+      shape,
+      metrics,
+      xForIndex: (index, totalSp, candleW) => this.xForIndex(index, totalSp, candleW),
+    });
   }
 
   private drawDrawingShape(ctx: CanvasRenderingContext2D, shape: DrawingShape | DrawingDraft, isDraft: boolean, metrics: ReturnType<SimpleChart['getMainViewportMetrics']>) {
-    if (!metrics) return;
-    if ('hidden' in shape && shape.hidden) return;
-    const a = shape.a;
-    const b = shape.b;
-    const ax = this.xForIndex(a.index, metrics.totalSp, metrics.candleW);
-    const ay = metrics.getY(a.price);
-    const bx = b ? this.xForIndex(b.index, metrics.totalSp, metrics.candleW) : ax;
-    const by = b ? metrics.getY(b.price) : ay;
-    const alpha = isDraft ? 0.72 : 1;
-    const strokeColor = ('color' in shape && shape.color) ? shape.color : '#2f6cff';
-    const strokeWidth = ('width' in shape && shape.width) ? shape.width : 2;
-    const lineStyle = ('lineStyle' in shape && shape.lineStyle) ? shape.lineStyle : 'solid';
-    const dashByStyle: Record<'solid' | 'dash' | 'dot', number[]> = {
-      solid: [],
-      dash: [10, 6],
-      dot: [2, 5],
-    };
-    const setStroke = (color: string, width = 1.5, dash: number[] = []) => {
-      ctx.strokeStyle = color;
-      ctx.lineWidth = width;
-      ctx.setLineDash(dash);
-      ctx.globalAlpha = alpha;
-    };
-    const shouldClipToChart = shape.kind !== 'hline' && shape.kind !== 'anchored-vwap';
-    if (shouldClipToChart) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(
-        metrics.chartLeft,
-        metrics.top,
-        Math.max(1, metrics.chartRight - metrics.chartLeft),
-        Math.max(1, metrics.mainH - metrics.top),
-      );
-      ctx.clip();
-    }
-
-    switch (shape.kind) {
-      case 'anchored-vwap': {
-        const avwapShape = shape as DrawingShape;
-        const avwapSettings = this.cloneAnchoredVwapSettings(avwapShape.avwap);
-        const avwapPlot = this.getAnchoredVwapPlot(avwapShape);
-        if (!avwapPlot.length) break;
-        const drawSeries = (series: Array<{ x: number; y: number }>, color: string, width: number, dash: number[]) => {
-          if (!series.length) return;
-          setStroke(color, width, dash);
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          ctx.beginPath();
-          ctx.moveTo(series[0].x, series[0].y);
-          for (let i = 1; i < series.length; i += 1) {
-            ctx.lineTo(series[i].x, series[i].y);
-          }
-          ctx.stroke();
-        };
-        const xSeries = avwapPlot.map((point) => this.xForIndex(point.index, metrics.totalSp, metrics.candleW));
-        const centerSeries = avwapPlot.map((point, index) => ({
-          x: xSeries[index],
-          y: metrics.getY(point.vwap),
-        }));
-        const bandSeries = avwapSettings.bands.map((band) => avwapPlot.map((point, index) => ({
-          x: xSeries[index],
-          upperY: metrics.getY(point.vwap + (point.stdDev * band.multiplier)),
-          lowerY: metrics.getY(point.vwap - (point.stdDev * band.multiplier)),
-        })));
-
-        const firstEnabledBandIndex = avwapSettings.bands.findIndex((band) => band.enabled && band.visible);
-        if (avwapSettings.showBackground && firstEnabledBandIndex >= 0) {
-          const fillSeries = bandSeries[firstEnabledBandIndex];
-          if (fillSeries.length > 1) {
-            ctx.save();
-            ctx.globalAlpha = alpha * (avwapSettings.backgroundOpacity / 100);
-            ctx.fillStyle = avwapSettings.backgroundColor;
-            ctx.beginPath();
-            ctx.moveTo(fillSeries[0].x, fillSeries[0].upperY);
-            for (let i = 1; i < fillSeries.length; i += 1) {
-              ctx.lineTo(fillSeries[i].x, fillSeries[i].upperY);
-            }
-            for (let i = fillSeries.length - 1; i >= 0; i -= 1) {
-              ctx.lineTo(fillSeries[i].x, fillSeries[i].lowerY);
-            }
-            ctx.closePath();
-            ctx.fill();
-            ctx.restore();
-          }
-        }
-
-        avwapSettings.bands.forEach((band, bandIndex) => {
-          if (!band.enabled || !band.visible) return;
-          const series = bandSeries[bandIndex];
-          drawSeries(series.map((point) => ({ x: point.x, y: point.lowerY })), band.color, Math.max(1, strokeWidth * 0.9), dashByStyle[lineStyle]);
-          drawSeries(series.map((point) => ({ x: point.x, y: point.upperY })), band.color, Math.max(1, strokeWidth * 0.9), dashByStyle[lineStyle]);
-        });
-
-        if (avwapSettings.showLine) {
-          drawSeries(centerSeries, strokeColor, strokeWidth, dashByStyle[lineStyle]);
-        }
-
-        if (avwapSettings.showPriceLabels) {
-          const lastCenter = avwapPlot[avwapPlot.length - 1];
-          const labelItems: Array<{ y: number; color: string; value: number }> = [];
-          if (avwapSettings.showLine && lastCenter) {
-            labelItems.push({ y: metrics.getY(lastCenter.vwap), color: strokeColor, value: lastCenter.vwap });
-          }
-          avwapSettings.bands.forEach((band, bandIndex) => {
-            if (!band.enabled || !band.visible || !lastCenter) return;
-            const delta = lastCenter.stdDev * band.multiplier;
-            labelItems.push({ y: metrics.getY(lastCenter.vwap - delta), color: band.color, value: lastCenter.vwap - delta });
-            labelItems.push({ y: metrics.getY(lastCenter.vwap + delta), color: band.color, value: lastCenter.vwap + delta });
-          });
-          labelItems.forEach((item) => {
-            const boxW = Math.max(20, metrics.axisPad - 2);
-            const boxX = metrics.axisSide === 'left' ? 2 : metrics.axisLeft;
-            const boxH = 18;
-            ctx.save();
-            ctx.setLineDash([]);
-            ctx.fillStyle = item.color;
-            drawPriceArrowBox(ctx, boxX, item.y, boxW, boxH, metrics.axisSide, 5);
-            ctx.fill();
-            ctx.fillStyle = getContrastTextColor(item.color);
-            ctx.font = `700 11px ${CHART_FONT_STACK}`;
-            const anchorPos = getPriceArrowTextAnchor(boxX, boxW, metrics.axisSide, 5);
-            ctx.textAlign = anchorPos.align;
-            ctx.textBaseline = 'middle';
-            ctx.fillText(
-              formatWithComma(item.value, getSymbolPricePrecision(this.config.symbol, this.config.quoteCurrency)),
-              anchorPos.x,
-              item.y,
-            );
-            ctx.restore();
-          });
-        }
-
-        if (!isDraft) {
-          const shapeId = ('id' in shape) ? shape.id : null;
-          const showHandles = shapeId != null && (shapeId === this.selectedDrawingId || shapeId === this.hoveredDrawingId);
-          if (showHandles) {
-            const anchorPoint = avwapPlot[0] ?? null;
-            const anchorY = anchorPoint ? metrics.getY(anchorPoint.vwap) : ay;
-            ctx.save();
-            ctx.setLineDash([]);
-            ctx.strokeStyle = strokeColor;
-            ctx.fillStyle = '#0f172a';
-            ctx.lineWidth = Math.max(1.2, strokeWidth);
-            ctx.beginPath();
-            ctx.arc(ax, anchorY, 7.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.restore();
-          }
-        }
-        break;
-      }
-      case 'trendline':
-      case 'extended-trendline':
-      case 'ray-trendline':
-      case 'draw-pencil':
-      case 'draw-highlighter': {
-        const isPencil = shape.kind === 'draw-pencil';
-        const isHighlighter = shape.kind === 'draw-highlighter';
-        const activeStrokeColor = isPencil
-          ? (strokeColor || '#6ea8ff')
-          : (isHighlighter ? (strokeColor || 'rgba(255, 234, 86, 0.4)') : strokeColor);
-        const activeStrokeWidth = isHighlighter ? Math.max(8, strokeWidth * 3.5) : strokeWidth;
-        setStroke(activeStrokeColor, activeStrokeWidth, dashByStyle[lineStyle]);
-        ctx.lineCap = (isPencil || isHighlighter) ? 'round' : 'butt';
-        ctx.lineJoin = (isPencil || isHighlighter) ? 'round' : 'miter';
-        const pathPoints = (shape as DrawingShape).points ?? [a, b ?? a];
-        if (pathPoints.length > 0) {
-          const pts = isPencil || isHighlighter
-            ? pathPoints.map((pt) => ({
-                x: this.xForIndex(pt.index, metrics.totalSp, metrics.candleW),
-                y: metrics.getY(pt.price),
-              }))
-            : (() => {
-                const line = this.getTrendlineRenderLine(shape, metrics);
-                return [
-                  { x: line.lineStartX, y: line.lineStartY },
-                  { x: line.lineEndX, y: line.lineEndY },
-                ];
-              })();
-          ctx.beginPath();
-          ctx.moveTo(pts[0].x, pts[0].y);
-          if (pts.length === 1) {
-            ctx.lineTo(pts[0].x + 0.001, pts[0].y + 0.001);
-          } else if (pts.length === 2) {
-            ctx.lineTo(pts[1].x, pts[1].y);
-          } else {
-            // Catmull-Rom 느낌의 미드포인트 스무딩
-            for (let i = 1; i < pts.length - 1; i += 1) {
-              const xc = (pts[i].x + pts[i + 1].x) / 2;
-              const yc = (pts[i].y + pts[i + 1].y) / 2;
-              ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
-            }
-            const n = pts.length - 1;
-            ctx.quadraticCurveTo(pts[n - 1].x, pts[n - 1].y, pts[n].x, pts[n].y);
-          }
-          ctx.stroke();
-        }
-        if (!isDraft) {
-          const shapeId = ('id' in shape) ? shape.id : null;
-          const showHandles = shapeId != null && (shapeId === this.selectedDrawingId || shapeId === this.hoveredDrawingId);
-          if (showHandles) {
-            const isHovered = shapeId != null && shapeId === this.hoveredDrawingId;
-            const pulse = (Math.sin(performance.now() * 0.012) + 1) * 0.5;
-            const r = (isPencil || isHighlighter) ? 5.8 : 8.25;  // 자유 드로잉은 앵커만 작게 유지
-            ctx.strokeStyle = activeStrokeColor;
-            ctx.lineWidth = isPencil || isHighlighter ? Math.max(1, strokeWidth * 0.8) : strokeWidth;
-            ctx.setLineDash([]);
-            ctx.fillStyle = '#000000';
-            const trendline = !isPencil && !isHighlighter ? this.getTrendlineRenderLine(shape, metrics) : null;
-            ctx.beginPath();
-            ctx.arc(trendline?.anchorStartX ?? ax, trendline?.anchorStartY ?? ay, r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(trendline?.anchorEndX ?? bx, trendline?.anchorEndY ?? by, r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            if (isHovered && !(isPencil || isHighlighter)) {
-              ctx.save();
-              ctx.globalAlpha = 0.24 + pulse * 0.28;
-              ctx.strokeStyle = strokeColor;
-              ctx.lineWidth = strokeWidth;  // 드로잉 두께와 동일
-              ctx.beginPath();
-              ctx.arc(trendline?.anchorStartX ?? ax, trendline?.anchorStartY ?? ay, r + 2 + pulse * 1.5, 0, Math.PI * 2);
-              ctx.stroke();
-              ctx.beginPath();
-              ctx.arc(trendline?.anchorEndX ?? bx, trendline?.anchorEndY ?? by, r + 2 + pulse * 1.5, 0, Math.PI * 2);
-              ctx.stroke();
-              ctx.restore();
-            }
-          }
-          const hasText = this.isTrendlineShape(shape) && ((shape as DrawingShape).text ?? '').trim().length > 0;
-          const isHoveredGuide = shapeId != null
-            && shapeId === this.hoveredDrawingId
-            && this.isTrendlineShape(shape)
-            && (this.hoveredDrawingPart === 'line' || this.hoveredDrawingPart === 'trendline-text-guide');
-          const isEditingText = shapeId != null && shapeId === this.trendlineTextEditorShapeId;
-          const placeholder = !hasText && isHoveredGuide ? '텍스트 입력' : '';
-          const layout = this.isTrendlineShape(shape) ? this.getTrendlineTextLayout(shape as DrawingShape, metrics, placeholder) : null;
-          if (layout && layout.text && !isEditingText) {
-            ctx.save();
-            ctx.translate(layout.x, layout.y);
-            ctx.rotate(layout.angle);
-            ctx.fillStyle = layout.isPlaceholder ? 'rgba(214,224,242,0.86)' : '#f0f5ff';
-            ctx.font = `600 12px ${CHART_FONT_STACK}`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(layout.text, 0, 0);
-            if (layout.isPlaceholder) {
-              ctx.strokeStyle = 'rgba(214,224,242,0.35)';
-              ctx.lineWidth = 1;
-              ctx.setLineDash([4, 4]);
-              ctx.beginPath();
-              ctx.moveTo(-layout.width / 2 - 4, 2);
-              ctx.lineTo(layout.width / 2 + 4, 2);
-              ctx.stroke();
-            }
-            ctx.restore();
-          }
-        }
-        break;
-      }
-      case 'draw-box': {
-        const left = Math.min(ax, bx);
-        const right = Math.max(ax, bx);
-        const top = Math.min(ay, by);
-        const bottom = Math.max(ay, by);
-        const rawColor = strokeColor || 'rgba(126,166,255,0.2)';
-        const rgbaMatch = rawColor.match(/rgba?\(([^)]+)\)/i);
-        let sr = 126; let sg = 166; let sb = 255; let sa = 0.2;
-        if (rgbaMatch) {
-          const parts = rgbaMatch[1].split(',').map((s) => s.trim());
-          sr = Number(parts[0] ?? '126');
-          sg = Number(parts[1] ?? '166');
-          sb = Number(parts[2] ?? '255');
-          sa = parts.length >= 4 ? Number(parts[3]) : 0.2;
-        }
-        const fillColor = `rgba(${sr},${sg},${sb},${Math.max(0.05, Math.min(1, sa)).toFixed(2)})`;
-        const strokeBoxColor = `rgba(${sr},${sg},${sb},1)`;
-        setStroke(strokeBoxColor, Math.max(1.2, strokeWidth), dashByStyle[lineStyle]);
-        ctx.beginPath();
-        ctx.rect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
-        ctx.stroke();
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = fillColor;
-        ctx.fillRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
-        ctx.restore();
-        if (!isDraft) {
-          const shapeId = ('id' in shape) ? shape.id : null;
-          const showHandles = shapeId != null && (shapeId === this.selectedDrawingId || shapeId === this.hoveredDrawingId);
-          if (showHandles) {
-            ctx.save();
-            ctx.setLineDash([]);
-            ctx.strokeStyle = strokeBoxColor;
-            ctx.fillStyle = '#0f172a';
-            ctx.lineWidth = Math.max(1, strokeWidth);
-            const r = 6.5;
-            const drawAnchor = (hx: number, hy: number) => {
-              ctx.beginPath();
-              ctx.arc(hx, hy, r, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.stroke();
-            };
-            drawAnchor(left, top);
-            drawAnchor(right, top);
-            drawAnchor(right, bottom);
-            drawAnchor(left, bottom);
-            ctx.restore();
-          }
-        }
-        break;
-      }
-      case 'hline': {
-        setStroke(strokeColor, strokeWidth, dashByStyle[lineStyle]);
-        ctx.beginPath();
-        ctx.moveTo(metrics.chartLeft, ay);
-        ctx.lineTo(metrics.chartRight, ay);
-        ctx.stroke();
-
-        // Axis price box follows the hline color automatically.
-        const boxW = Math.max(20, metrics.axisPad - 2);
-        const boxX = metrics.axisSide === 'left' ? 2 : metrics.axisLeft;
-        const boxH = 20;
-        ctx.save();
-        ctx.setLineDash([]);
-        ctx.fillStyle = strokeColor;
-        drawPriceArrowBox(ctx, boxX, ay, boxW, boxH, metrics.axisSide);
-        ctx.fill();
-        ctx.fillStyle = getContrastTextColor(strokeColor);
-        ctx.font = `700 12px ${CHART_FONT_STACK}`;
-        const hlineTextAnchor = getPriceArrowTextAnchor(boxX, boxW, metrics.axisSide, 5);
-        ctx.textAlign = hlineTextAnchor.align;
-        ctx.textBaseline = 'middle';
-        ctx.fillText(
-          formatWithComma(a.price, getSymbolPricePrecision(this.config.symbol, this.config.quoteCurrency)),
-          hlineTextAnchor.x,
-          ay,
-        );
-        ctx.restore();
-
-        const text = ('text' in shape ? shape.text : '') ?? '';
-        if (text.trim()) {
-          ctx.save();
-          ctx.fillStyle = '#f0f5ff';
-          ctx.font = `600 12px ${CHART_FONT_STACK}`;
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'bottom';
-          ctx.fillText(text, 8, ay - 6);
-          ctx.restore();
-        }
-
-        if (!isDraft) {
-          const shapeId = ('id' in shape) ? shape.id : null;
-          const showHandles = shapeId != null && (shapeId === this.selectedDrawingId || shapeId === this.hoveredDrawingId);
-          if (showHandles) {
-            ctx.save();
-            ctx.setLineDash([]);
-            ctx.strokeStyle = strokeColor;
-            ctx.fillStyle = '#0f172a';
-            ctx.lineWidth = Math.max(1.2, strokeWidth);
-            const S = 10;
-            const R = 3;
-            const drawHandle = (hx: number, hy: number) => {
-              ctx.beginPath();
-              (ctx as any).roundRect(hx - S / 2, hy - S / 2, S, S, R);
-              ctx.fill();
-              ctx.stroke();
-            };
-            const handleOffset = Math.max(20, boxW * 2);
-            const handleXRaw = metrics.axisSide === 'left'
-              ? metrics.chartLeft + handleOffset
-              : metrics.axisLeft - handleOffset;
-            const handleX = Math.max(metrics.chartLeft + 12, Math.min(metrics.chartRight - 12, handleXRaw));
-            drawHandle(handleX, ay);
-            ctx.restore();
-          }
-        }
-        break;
-      }
-      case 'channel': {
-        const g = this.getChannelGeometry(shape);
-        const a2x = this.xForIndex(g.a2.index, metrics.totalSp, metrics.candleW);
-        const a2y = metrics.getY(g.a2.price);
-        const b2x = this.xForIndex(g.b2.index, metrics.totalSp, metrics.candleW);
-        const b2y = metrics.getY(g.b2.price);
-        const m1x = (ax + bx) / 2;
-        const m1y = (ay + by) / 2;
-        const m2x = (a2x + b2x) / 2;
-        const m2y = (a2y + b2y) / 2;
-        const leftMidX = (ax + a2x) / 2;
-        const leftMidY = (ay + a2y) / 2;
-        const rightMidX = (bx + b2x) / 2;
-        const rightMidY = (by + b2y) / 2;
-        const offsetPx = Math.hypot(a2x - ax, a2y - ay);
-        setStroke(strokeColor, strokeWidth, dashByStyle[lineStyle]);
-        ctx.beginPath();
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(bx, by);
-        if (offsetPx > 0.8) {
-          ctx.moveTo(a2x, a2y);
-          ctx.lineTo(b2x, b2y);
-        }
-        ctx.stroke();
-        if (offsetPx <= 0.8) {
-          if (!isDraft) {
-            const shapeId = ('id' in shape) ? shape.id : null;
-            const showHandles = shapeId != null && (shapeId === this.selectedDrawingId || shapeId === this.hoveredDrawingId);
-            if (showHandles) {
-              ctx.save();
-              ctx.setLineDash([]);
-              ctx.strokeStyle = strokeColor;
-              ctx.fillStyle = '#0f172a';
-              ctx.lineWidth = strokeWidth;  // 드로잉 두께와 동일
-              const drawCorner = (x: number, y: number) => {
-                ctx.beginPath();
-                ctx.arc(x, y, 6.75, 0, Math.PI * 2);  // 150% 확대: 4.5 → 6.75
-                ctx.fill();
-                ctx.stroke();
-              };
-              drawCorner(ax, ay);
-              drawCorner(bx, by);
-              ctx.restore();
-            }
-          }
-          break;
-        }
-        ctx.save();
-        ctx.globalAlpha = alpha * 0.14;
-        ctx.fillStyle = strokeColor;
-        ctx.beginPath();
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(bx, by);
-        ctx.lineTo(b2x, b2y);
-        ctx.lineTo(a2x, a2y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-        setStroke(strokeColor, Math.max(1, strokeWidth - 0.7), [4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(leftMidX, leftMidY);
-        ctx.lineTo(rightMidX, rightMidY);
-        ctx.stroke();
-        if (!isDraft) {
-          const shapeId = ('id' in shape) ? shape.id : null;
-          const showHandles = shapeId != null && (shapeId === this.selectedDrawingId || shapeId === this.hoveredDrawingId);
-          if (showHandles) {
-            ctx.save();
-            ctx.setLineDash([]);
-            ctx.strokeStyle = strokeColor;
-            ctx.fillStyle = '#0f172a';
-            ctx.lineWidth = strokeWidth;  // 드로잉 두께와 동일
-            const drawCorner = (x: number, y: number) => {
-              ctx.beginPath();
-              ctx.arc(x, y, 6.75, 0, Math.PI * 2);  // 150% 확대: 4.5 → 6.75
-              ctx.fill();
-              ctx.stroke();
-            };
-            drawCorner(ax, ay);
-            drawCorner(bx, by);
-            drawCorner(a2x, a2y);
-            drawCorner(b2x, b2y);
-            const w = 10;
-            const h = 8;
-            const r = 2;
-            const drawRoundedHandle = (x: number, y: number) => {
-              ctx.beginPath();
-              ctx.moveTo(x - w / 2 + r, y - h / 2);
-              ctx.lineTo(x + w / 2 - r, y - h / 2);
-              ctx.quadraticCurveTo(x + w / 2, y - h / 2, x + w / 2, y - h / 2 + r);
-              ctx.lineTo(x + w / 2, y + h / 2 - r);
-              ctx.quadraticCurveTo(x + w / 2, y + h / 2, x + w / 2 - r, y + h / 2);
-              ctx.lineTo(x - w / 2 + r, y + h / 2);
-              ctx.quadraticCurveTo(x - w / 2, y + h / 2, x - w / 2, y + h / 2 - r);
-              ctx.lineTo(x - w / 2, y - h / 2 + r);
-              ctx.quadraticCurveTo(x - w / 2, y - h / 2, x - w / 2 + r, y - h / 2);
-              ctx.closePath();
-              ctx.fill();
-              ctx.stroke();
-            };
-            drawRoundedHandle(m1x, m1y);
-            drawRoundedHandle(m2x, m2y);
-            ctx.restore();
-          }
-        }
-        break;
-      }
-      case 'fib-retracement':
-      case 'fib-trend': {
-        const price0 = a.price;
-        const price1 = b ? b.price : a.price;
-        const rangePrice = price1 - price0;
-        const isTrendBased = shape.kind === 'fib-trend';
-        const fibOffset = isTrendBased
-          ? ((shape as DrawingShape | DrawingDraft).channelOffset ?? { index: 0, price: 0 })
-          : { index: 0, price: 0 };
-        const cx = this.xForIndex(a.index + fibOffset.index, metrics.totalSp, metrics.candleW);
-        const cy = metrics.getY(a.price + fibOffset.price);
-        const levels: Array<{
-          ratio: number;
-          lineColor: string;
-          zoneColor: string;
-        }> = [
-          { ratio: 4.236, lineColor: '#ff2b74', zoneColor: 'rgba(255,43,116,0.16)' },
-          { ratio: 3.618, lineColor: '#b437ff', zoneColor: 'rgba(180,55,255,0.14)' },
-          { ratio: 2.618, lineColor: '#ff4b62', zoneColor: 'rgba(255,75,98,0.13)' },
-          { ratio: 1.618, lineColor: '#2d69ff', zoneColor: 'rgba(45,105,255,0.14)' },
-          { ratio: 1, lineColor: '#8d92a3', zoneColor: 'rgba(141,146,163,0.12)' },
-          { ratio: 0.786, lineColor: '#00e1ff', zoneColor: 'rgba(0,225,255,0.12)' },
-          { ratio: 0.618, lineColor: '#1dd6c4', zoneColor: 'rgba(29,214,196,0.11)' },
-          { ratio: 0.5, lineColor: '#2ad65f', zoneColor: 'rgba(42,214,95,0.11)' },
-          { ratio: 0.382, lineColor: '#ffa31a', zoneColor: 'rgba(255,163,26,0.12)' },
-          { ratio: 0.236, lineColor: '#ff445f', zoneColor: 'rgba(255,68,95,0.12)' },
-          { ratio: 0, lineColor: '#7d8495', zoneColor: 'rgba(125,132,149,0.10)' },
-        ];
-        const toPrice = (ratio: number) => price0 + rangePrice * ratio;
-        const toY = (ratio: number) => metrics.getY(toPrice(ratio));
-        const x0 = Math.min(ax, bx);
-        const x1 = Math.max(ax, bx);
-        const outsideLabelX = (left: number, right: number) => {
-          const leftOutside = left - 132;
-          if (leftOutside >= metrics.chartLeft + 6) return leftOutside;
-          return Math.min(metrics.chartRight - 180, right + 8);
-        };
-        const labelX = outsideLabelX(x0, x1);
-        const lineDash = dashByStyle[lineStyle];
-
-        if (!isTrendBased) {
-          // Retracement: horizontal levels
-          for (let i = 0; i < levels.length - 1; i += 1) {
-            const yA = toY(levels[i].ratio);
-            const yB = toY(levels[i + 1].ratio);
-            const top = Math.min(yA, yB);
-            const h = Math.abs(yA - yB);
-            if (h < 1) continue;
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.fillStyle = levels[i].zoneColor;
-            ctx.fillRect(x0, top, Math.max(1, x1 - x0), h);
-            ctx.restore();
-          }
-
-          levels.forEach((lv) => {
-            const y = toY(lv.ratio);
-            setStroke(lv.lineColor, Math.max(1.1, strokeWidth * 0.9), lineDash);
-            ctx.beginPath();
-            ctx.moveTo(x0, y);
-            ctx.lineTo(x1, y);
-            ctx.stroke();
-
-            const p = toPrice(lv.ratio);
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.fillStyle = lv.lineColor;
-            ctx.font = `600 13px ${CHART_FONT_STACK}`;
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            const ratioText = Number.isInteger(lv.ratio) ? `${lv.ratio}` : lv.ratio.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
-            ctx.fillText(`${ratioText} (${p.toFixed(2)})`, labelX, y);
-            ctx.restore();
-          });
-        } else {
-          // TradingView-like 3-point Trend-Based Fib Extension:
-          // A->B : base move, C : retracement anchor. Levels are projected horizontally from C.
-          const cPrice = a.price + fibOffset.price;
-          const movePrice = (b?.price ?? a.price) - a.price;
-          const bXRaw = bx;
-          const cXRaw = this.xForIndex(a.index + fibOffset.index, metrics.totalSp, metrics.candleW);
-          const xStart = Math.max(metrics.chartLeft, Math.min(metrics.chartRight - 1, Math.min(bXRaw, cXRaw)));
-          const xEnd = Math.max(metrics.chartLeft, Math.min(metrics.chartRight - 1, Math.max(bXRaw, cXRaw)));
-
-          const projLevels = [...levels]
-            .sort((l, r) => l.ratio - r.ratio)
-            .map((lv) => {
-              const p = cPrice + movePrice * lv.ratio;
-              return {
-                ratio: lv.ratio,
-                p,
-                y: metrics.getY(p),
-                lineColor: lv.lineColor,
-                zoneColor: lv.zoneColor,
-              };
-            });
-
-          if (xEnd - xStart > 1) {
-            // Zone fills between adjacent projected levels
-            for (let i = 0; i < projLevels.length - 1; i += 1) {
-              const u = projLevels[i];
-              const d = projLevels[i + 1];
-              const top = Math.min(u.y, d.y);
-              const h = Math.abs(u.y - d.y);
-              if (h < 1) continue;
-              ctx.save();
-              ctx.globalAlpha = alpha;
-              ctx.fillStyle = d.zoneColor;
-              ctx.fillRect(xStart, top, xEnd - xStart, h);
-              ctx.restore();
-            }
-
-            projLevels.forEach((lv) => {
-              setStroke(lv.lineColor, Math.max(1.1, strokeWidth * 0.9), lineDash);
-              ctx.beginPath();
-              ctx.moveTo(xStart, lv.y);
-              ctx.lineTo(xEnd, lv.y);
-              ctx.stroke();
-
-              ctx.save();
-              ctx.globalAlpha = alpha;
-              ctx.fillStyle = lv.lineColor;
-              ctx.font = `600 13px ${CHART_FONT_STACK}`;
-              ctx.textAlign = 'left';
-              ctx.textBaseline = 'middle';
-              const ratioText = Number.isInteger(lv.ratio) ? `${lv.ratio}` : lv.ratio.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
-              const lx = outsideLabelX(xStart, xEnd);
-              ctx.fillText(`${ratioText} (${lv.p.toFixed(2)})`, lx, lv.y);
-              ctx.restore();
-            });
-          }
-
-          // Keep 3-point guide always visible even after editing.
-          setStroke('rgba(190,205,233,0.78)', Math.max(1, strokeWidth * 0.85), [6, 6]);
-          ctx.beginPath();
-          ctx.moveTo(ax, ay);
-          ctx.lineTo(bx, by);
-          ctx.moveTo(bx, by);
-          ctx.lineTo(cx, cy);
-          ctx.stroke();
-        }
-
-        if (!isDraft) {
-          const shapeId = ('id' in shape) ? shape.id : null;
-          const showHandles = shapeId != null && (shapeId === this.selectedDrawingId || shapeId === this.hoveredDrawingId);
-          if (showHandles) {
-            ctx.save();
-            ctx.setLineDash([]);
-            ctx.strokeStyle = '#2f6cff';
-            ctx.fillStyle = '#0f172a';
-            ctx.lineWidth = strokeWidth;  // 드로잉 두께와 동일
-            const r = 9;  // 150% 확대: 6 → 9
-            ctx.beginPath();
-            ctx.arc(ax, ay, r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(bx, by, r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            if (isTrendBased) {
-              ctx.beginPath();
-              ctx.arc(cx, cy, r, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.stroke();
-            }
-            ctx.restore();
-          }
-        }
-        break;
-      }
-      case 'long-position':
-      case 'short-position': {
-        const isLong = shape.kind === 'long-position';
-        const entryX = ax;
-        const entryY = ay;
-        const stopY  = by;
-        const targetAnchor = ('channelOffset' in shape ? shape.channelOffset : undefined) ?? { index: 0, price: 0 };
-        const targetX = this.xForIndex(a.index + targetAnchor.index, metrics.totalSp, metrics.candleW);
-        const targetY = metrics.getY(a.price + targetAnchor.price);
-        let left  = Math.min(entryX, targetX);
-        let right = Math.max(entryX, targetX);
-        // Keep a readable default position box width even when anchors are near each other.
-        const minBoxWidthPx = 228;
-        const currentWidth = Math.abs(right - left);
-        if (currentWidth < minBoxWidthPx) {
-          // Keep entry-side edge fixed; clamp only the target-side edge at minimum width.
-          if (targetX >= entryX) {
-            left = entryX;
-            right = entryX + minBoxWidthPx;
-          } else {
-            right = entryX;
-            left = entryX - minBoxWidthPx;
-          }
-        }
-
-        const profitY       = Math.min(entryY, targetY);
-        const profitBottomY = Math.max(entryY, targetY);
-        const lossY         = Math.min(entryY, stopY);
-        const lossBottomY   = Math.max(entryY, stopY);
-
-        // ── 영역 박스 ───────────────────────────────────────────────────────
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = 'rgba(34,171,148,0.20)';
-        ctx.fillRect(left, profitY, Math.max(1, right - left), Math.max(1, profitBottomY - profitY));
-        ctx.fillStyle = 'rgba(242,54,69,0.20)';
-        ctx.fillRect(left, lossY,   Math.max(1, right - left), Math.max(1, lossBottomY - lossY));
-        ctx.restore();
-
-        // ── 가격선 ──────────────────────────────────────────────────────────
-        const entryColor  = '#c7d0e2';
-        const stopColor   = '#f23645';
-        const targetColor = '#22ab94';
-        setStroke(entryColor,  Math.max(1, strokeWidth * 0.8), []);
-        ctx.beginPath(); ctx.moveTo(left, entryY);  ctx.lineTo(right, entryY);  ctx.stroke();
-        setStroke(stopColor,   Math.max(1.1, strokeWidth * 0.9), dashByStyle[lineStyle]);
-        ctx.beginPath(); ctx.moveTo(left, stopY);   ctx.lineTo(right, stopY);   ctx.stroke();
-        setStroke(targetColor, Math.max(1.1, strokeWidth * 0.9), dashByStyle[lineStyle]);
-        ctx.beginPath(); ctx.moveTo(left, targetY); ctx.lineTo(right, targetY); ctx.stroke();
-
-        if (!isDraft) {
-          const shapeId    = ('id' in shape) ? shape.id : null;
-          const isSelected = shapeId != null && shapeId === this.selectedDrawingId;
-          const isHovered  = shapeId != null && shapeId === this.hoveredDrawingId;
-
-          // ── 정보 텍스트 ? 선택(편집) 모드에서만 표시 ───────────────────
-          if (isSelected) {
-            const entryPrice  = a.price;
-            const stopPrice   = b ? b.price : a.price;
-            const targetPrice = a.price + targetAnchor.price;
-            const risk   = Math.abs(entryPrice - stopPrice);
-            const reward = Math.abs(targetPrice - entryPrice);
-            const rr     = risk > 1e-8 ? reward / risk : 0;
-            const symbolUpper = String(this.config.symbol || '').toUpperCase();
-            const pnlCurrency = (symbolUpper === 'KOSPI' || symbolUpper === 'KOSDAQ' || symbolUpper === 'KOSPI200') ? 'KRW' : 'USD';
-            const positionCfg = ('position' in shape && shape.position)
-              ? shape.position
-              : {
-                  accountSize: 1000,
-                  riskMode: 'percent' as const,
-                  riskPercent: 25,
-                  riskAmount: 250,
-                  leverageEnabled: false,
-                  leverage: 10000,
-                };
-            const baseRiskBudget = positionCfg.riskMode === 'amount'
-              ? Math.max(0, positionCfg.riskAmount ?? 0)
-              : Math.max(0, (positionCfg.accountSize ?? 0) * ((positionCfg.riskPercent ?? 0) / 100));
-            const leverageFactor = positionCfg.leverageEnabled ? Math.max(0.1, positionCfg.leverage ?? 1) : 1;
-            const qty = risk > 1e-8 ? (baseRiskBudget / risk) * leverageFactor : 0;
-            const closePnl = qty * reward;
-            const pct    = (v: number) => entryPrice !== 0
-              ? ((v / Math.abs(entryPrice)) * 100).toFixed(2) + '%' : '';
-            const fmt    = (v: number) => v.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const fmtMoney = (v: number) => Math.round(v).toLocaleString('ko-KR');
-
-            const drawBadge = (text: string, centerX: number, y: number, fill: string) => {
-              ctx.save();
-              ctx.font = `700 12px ${CHART_FONT_STACK}`;
-              ctx.textBaseline = 'middle';
-              const w = Math.ceil(ctx.measureText(text).width) + 10;
-              const h = 18;
-              const x = centerX - w / 2;
-              ctx.fillStyle = fill;
-              ctx.beginPath();
-              (ctx as any).roundRect(x, y - h / 2, w, h, 3);
-              ctx.fill();
-              ctx.fillStyle = '#f4f8ff';
-              ctx.textAlign = 'center';
-              ctx.fillText(text, centerX, y + 0.5);
-              ctx.restore();
-            };
-            const drawDoubleLineBadge = (lineTop: string, lineBottom: string, centerX: number, centerY: number, fill: string) => {
-              ctx.save();
-              ctx.font = `700 12px ${CHART_FONT_STACK}`;
-              const w = Math.max(
-                Math.ceil(ctx.measureText(lineTop).width),
-                Math.ceil(ctx.measureText(lineBottom).width),
-              ) + 12;
-              const h = 34;
-              const x = centerX - w / 2;
-              const y = centerY - h / 2;
-              ctx.fillStyle = fill;
-              ctx.beginPath();
-              (ctx as any).roundRect(x, y, w, h, 4);
-              ctx.fill();
-              ctx.fillStyle = '#f4f8ff';
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText(lineTop, centerX, centerY - 8);
-              ctx.fillText(lineBottom, centerX, centerY + 9);
-              ctx.restore();
-            };
-
-            // 매수(Long): 목표가(위) / 손절가(아래) 배치
-            // 매도(Short): 손절가(위) / 목표가(아래) ? 방향 반전
-            // 목표는 항상 profit 영역 바깥, 손절은 항상 loss 영역 바깥
-            const tLabelY = isLong ? (profitY - 10)      : (profitBottomY + 10);
-            const sLabelY = isLong ? (lossBottomY + 10)  : (lossY - 10);
-            // 손익비: 진입가 라인 바로 옆
-            const rrLabelY = entryY;
-            const boxCenterX = (left + right) / 2;
-
-            drawBadge(`목표 ${fmt(targetPrice)}  +${pct(reward)}`, boxCenterX, tLabelY, 'rgba(31,168,141,0.90)');
-            drawBadge(`손절 ${fmt(stopPrice)}  -${pct(risk)}`,    boxCenterX, sLabelY, 'rgba(229,65,79,0.90)');
-
-            // 손익비: 소수점 1자리 (기본 1:1은 정수 표시)
-            const rrText = rr === 1.0 ? '1 : 1' : `1 : ${rr.toFixed(1)}`;
-            drawDoubleLineBadge(
-              `청산손익 +${fmtMoney(closePnl)} (${pct(reward)}) ${pnlCurrency}`,
-              `손익비 ${rrText}`,
-              boxCenterX,
-              rrLabelY,
-              'rgba(27,152,128,0.90)',
-            );
-          }
-
-          // ── 앵커 핸들 ? 선택/hover 시 표시, 라인 위에 배치 ────────────
-          if (isSelected || isHovered) {
-            ctx.save();
-            ctx.strokeStyle = '#2f6cff';
-            ctx.fillStyle   = '#0f172a';
-            ctx.lineWidth   = 1.8;
-            const S = 10; // 핸들 크기 (다른 드로잉과 동일)
-            const R = 3;  // 모서리 반경
-
-            const drawHandle = (hx: number, hy: number) => {
-              ctx.beginPath();
-              (ctx as any).roundRect(hx - S / 2, hy - S / 2, S, S, R);
-              ctx.fill();
-              ctx.stroke();
-            };
-            const drawCircle = (hx: number, hy: number) => {
-              ctx.beginPath();
-              ctx.arc(hx, hy, S / 2, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.stroke();
-            };
-
-            // 진입가 앵커: 원형, 진입 라인 왼쪽 끝
-            ctx.strokeStyle = entryColor;
-            drawCircle(left, entryY);
-
-            // 손절가 앵커: 라운드사각, 손절 라인 왼쪽 끝
-            ctx.strokeStyle = stopColor;
-            drawHandle(left, stopY);
-
-            // 목표가 앵커: 라운드사각, 목표 라인 왼쪽 끝
-            ctx.strokeStyle = targetColor;
-            drawHandle(left, targetY);
-
-            // 우측(너비) 앵커: 라운드사각, 박스 오른쪽 라인 · 진입가 Y
-            ctx.strokeStyle = '#7a9ccf';
-            drawHandle(right, entryY);
-
-            ctx.restore();
-          }
-        }
-        break;
-      }
-      case 'text-note': {
-        const txt = (shape as DrawingShape).text ?? '텍스트';
-        ctx.globalAlpha = alpha;
-        ctx.font = `12px ${CHART_FONT_STACK}`;
-        const th = 22;
-        ctx.fillStyle = (shape as DrawingShape).color ?? '#e6edf9';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(txt, ax + 6, ay - th / 2);
-        break;
-      }
-      case 'measure': {
-        const left = Math.min(ax, bx);
-        const right = Math.max(ax, bx);
-        const top = Math.min(ay, by);
-        const bottom = Math.max(ay, by);
-        const w = Math.max(1, right - left);
-        const h = Math.max(1, bottom - top);
-        const isDown = by > ay;
-        const baseColor = isDown ? this.config.candleStyle.downColor : this.config.candleStyle.upColor;
-        const lineColor = toRgba(baseColor, 0.95, isDown ? 'rgba(242,54,69,0.95)' : 'rgba(34,171,148,0.95)');
-        const fillColor = toRgba(baseColor, 0.22, isDown ? 'rgba(242,54,69,0.22)' : 'rgba(34,171,148,0.22)');
-        const priceDelta = (b?.price ?? a.price) - a.price;
-        const pct = a.price !== 0 ? (priceDelta / Math.abs(a.price)) * 100 : 0;
-        const absDelta = Math.abs(priceDelta);
-
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = fillColor;
-        ctx.fillRect(left, top, w, h);
-
-        const midX = left + w / 2;
-        const midY = top + h / 2;
-        const arrow = 7;
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = 0.6;
-        ctx.beginPath();
-        ctx.moveTo(left + 6, midY);
-        ctx.lineTo(right - 8, midY);
-        ctx.lineTo(right - 8 - arrow, midY - arrow * 0.5);
-        ctx.moveTo(right - 8, midY);
-        ctx.lineTo(right - 8 - arrow, midY + arrow * 0.5);
-        ctx.stroke();
-
-        ctx.beginPath();
-        if (isDown) {
-          ctx.moveTo(midX, top + 6);
-          ctx.lineTo(midX, bottom - 8);
-          ctx.lineTo(midX - arrow * 0.5, bottom - 8 - arrow);
-          ctx.moveTo(midX, bottom - 8);
-          ctx.lineTo(midX + arrow * 0.5, bottom - 8 - arrow);
-        } else {
-          ctx.moveTo(midX, bottom - 6);
-          ctx.lineTo(midX, top + 8);
-          ctx.lineTo(midX - arrow * 0.5, top + 8 + arrow);
-          ctx.moveTo(midX, top + 8);
-          ctx.lineTo(midX + arrow * 0.5, top + 8 + arrow);
-        }
-        ctx.stroke();
-
-        const deltaText = absDelta.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const label = `${priceDelta >= 0 ? '+' : '-'}${deltaText} (${priceDelta >= 0 ? '+' : ''}${pct.toFixed(2)}%)`;
-        ctx.font = `700 13px ${CHART_FONT_STACK}`;
-        const textW = Math.ceil(ctx.measureText(label).width);
-        const boxW = textW + 22;
-        const boxH = 30;
-        const boxX = Math.max(metrics.chartLeft + 8, Math.min(metrics.chartRight - boxW - 8, midX - boxW / 2));
-        const boxY = Math.min(this.viewportHeight - X_AXIS_HEIGHT - boxH - 6, bottom + 10);
-        ctx.fillStyle = lineColor;
-        ctx.beginPath();
-        ctx.roundRect(boxX, boxY, boxW, boxH, 6);
-        ctx.fill();
-        ctx.fillStyle = getContrastTextColor(lineColor);
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(label, boxX + boxW / 2, boxY + boxH / 2);
-        ctx.restore();
-
-        if (!isDraft) {
-          const shapeId = ('id' in shape) ? shape.id : null;
-          const showHandles = shapeId != null && (shapeId === this.selectedDrawingId || shapeId === this.hoveredDrawingId);
-          if (showHandles) {
-            ctx.save();
-            ctx.strokeStyle = '#2f6cff';
-            ctx.fillStyle = '#0f172a';
-            ctx.lineWidth = 1.4;
-            const r = 5;
-            [[ax, ay], [bx, by]].forEach(([hx, hy]) => {
-              ctx.beginPath();
-              ctx.arc(hx as number, hy as number, r, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.stroke();
-            });
-            ctx.restore();
-          }
-        }
-        break;
-      }
-      default:
-        break;
-    }
-    if (shouldClipToChart) {
-      ctx.restore();
-    }
-    ctx.setLineDash([]);
-    ctx.globalAlpha = 1;
+    renderDrawingShape({
+      ctx,
+      shape,
+      isDraft,
+      metrics,
+      selectedDrawingId: this.selectedDrawingId,
+      hoveredDrawingId: this.hoveredDrawingId,
+      hoveredDrawingPart: this.hoveredDrawingPart,
+      editingTextShapeId: this.trendlineTextEditorShapeId,
+      symbol: this.config.symbol,
+      upColor: this.config.candleStyle.upColor,
+      downColor: this.config.candleStyle.downColor,
+      viewportHeight: this.viewportHeight,
+      xAxisHeight: X_AXIS_HEIGHT,
+      fontStack: CHART_FONT_STACK,
+      formatPrice: (value) => formatWithComma(value, getSymbolPricePrecision(this.config.symbol, this.config.quoteCurrency)),
+      xForIndex: (index, totalSpacing, width) => this.xForIndex(index, totalSpacing, width),
+      getAnchoredVwapSettings: (item) => this.cloneAnchoredVwapSettings(item.avwap),
+      getAnchoredVwapPlot: (item) => this.getAnchoredVwapPlot(item),
+      getTrendlineRenderLine: (item, drawingMetrics) => this.getTrendlineRenderLine(item, drawingMetrics as NonNullable<ReturnType<SimpleChart['getMainViewportMetrics']>>),
+      getTrendlineTextLayout: (item, drawingMetrics, placeholder) => this.getTrendlineTextLayout(item, drawingMetrics as NonNullable<ReturnType<SimpleChart['getMainViewportMetrics']>>, placeholder),
+    });
   }
 
   private drawOverlay() {
@@ -9800,172 +7782,68 @@ export class SimpleChart {
       : null;
     const linearToY = this.lastDrawMeta?.getYLinear ?? null;
 
-    // 현재가 라인: draw()에서 계산된 캐시 스케일 재사용 (linear Y - log 전환 시 위치 유지)
     const hideLivePriceOverlay = this.shouldHideLivePriceOverlay();
     if (this.data.length && mainScale && linearToY && !hideLivePriceOverlay) {
-      const rawPriceIdx = Number.isFinite(this.endIndex) ? this.endIndex - 1 : this.data.length - 1;
-      const priceIdx = Math.max(0, Math.min(this.data.length - 1, rawPriceIdx));
-      const priceCandle = this.data[priceIdx];
-      if (priceCandle) {
-        const last = priceCandle.close;
-        const prev = priceIdx > 0 ? this.data[priceIdx - 1].close : last;
-        const py = linearToY(last);
-        if (py >= R.top && py <= mainH) {
-          const isUp = last >= prev;
-          const boxColor = isUp ? '#22ab94' : '#f23645';
-          ctx.strokeStyle = isUp ? 'rgba(34,171,148,0.9)' : 'rgba(242,54,69,0.9)';
-          ctx.lineWidth = 1;
-          ctx.setLineDash([1, 2]);
-          ctx.lineCap = 'round';
-          ctx.save();
-          ctx.beginPath();
-          ctx.rect(chartLeft, R.top, chartW, Math.max(0, mainH - R.top));
-          ctx.clip();
-          ctx.beginPath(); ctx.moveTo(chartLeft, py); ctx.lineTo(chartRight, py); ctx.stroke();
-          ctx.restore();
-          ctx.setLineDash([]);
-          ctx.lineCap = 'butt';
-          const boundaryPadding = 12;
-          if (py < mainH - boundaryPadding) {
-            ctx.fillStyle = boxColor;
-            const priceBoxW = geometry.side === 'left'
-              ? Math.max(20, geometry.axisPad - 10)
-              : Math.max(20, geometry.axisPad - 2);
-            const priceBoxX = geometry.side === 'left' ? 6 : chartRight;
-            drawPriceArrowBox(ctx, priceBoxX, py, priceBoxW, 20, geometry.side);
-            ctx.fill();
-            ctx.fillStyle = getContrastTextColor(boxColor);
-            const priceTextAnchor = getPriceArrowTextAnchor(priceBoxX, priceBoxW, geometry.side, 5);
-            ctx.font = `500 11px ${CHART_FONT_STACK}`; ctx.textAlign = priceTextAnchor.align;
-            ctx.fillText(formatWithComma(last, symbolPriceDigits), priceTextAnchor.x, py + 4);
-          }
-        }
-      }
+      renderLivePriceOverlay({
+        ctx,
+        data: this.data,
+        endIndex: this.endIndex,
+        mainTop: R.top,
+        mainH,
+        geometry: {
+          chartLeft,
+          chartRight,
+          chartWidth: chartW,
+          axisPad: geometry.axisPad,
+          side: geometry.side,
+        },
+        linearToY,
+        hidden: false,
+        fontStack: CHART_FONT_STACK,
+        formatPrice: (value) => formatWithComma(value, symbolPriceDigits),
+      });
     }
 
     const drawingMetrics = this.getMainViewportMetrics();
-    if (this.drawingsVisible && drawingMetrics) {
-      ctx.save();
-      this.drawings.forEach((shape) => {
-        this.drawDrawingShape(ctx, shape, false, drawingMetrics);
-        if (shape.id === this.selectedDrawingId) {
-          if (shape.kind === 'hline' || shape.kind === 'anchored-vwap') {
-            this.drawSelectionOverlay(ctx, shape, drawingMetrics);
-          } else {
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(
-              drawingMetrics.chartLeft,
-              drawingMetrics.top,
-              Math.max(1, drawingMetrics.chartRight - drawingMetrics.chartLeft),
-              Math.max(1, drawingMetrics.mainH - drawingMetrics.top),
-            );
-            ctx.clip();
-            this.drawSelectionOverlay(ctx, shape, drawingMetrics);
-            ctx.restore();
-          }
-        }
-      });
-      if (this.drawingDraft) {
-        this.drawDrawingShape(ctx, this.drawingDraft, true, drawingMetrics);
-      }
-      ctx.restore();
-    }
+    renderDrawingLayer({
+      ctx,
+      drawings: this.drawings,
+      draft: this.drawingDraft,
+      selectedDrawingId: this.selectedDrawingId,
+      drawingsVisible: this.drawingsVisible,
+      metrics: drawingMetrics,
+      renderShape: (layerCtx, shape, isDraft, layerMetrics) => this.drawDrawingShape(layerCtx, shape, isDraft, layerMetrics),
+      renderSelection: (layerCtx, shape, layerMetrics) => this.drawSelectionOverlay(layerCtx, shape, layerMetrics),
+    });
 
-    // ????????????????????????????????????????????????????????????????????????????
-    // ?? 터치 드로잉 모드: 십자선 렌더링 (TradingView 스타일)
-    // ????????????????????????????????????????????????????????????????????????????
-    const hasTouchCrosshair = this.touchDrawingCrosshairX > 0 || this.touchDrawingCrosshairY > 0;
     const isCoarsePointerDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
     const selectedShapeForDrawingCrosshair = this.selectedDrawingId
       ? this.drawings.find((s) => s.id === this.selectedDrawingId) ?? null
       : null;
-    const isSelectedPositionShape = Boolean(
-      selectedShapeForDrawingCrosshair && (selectedShapeForDrawingCrosshair.kind === 'long-position' || selectedShapeForDrawingCrosshair.kind === 'short-position'),
-    );
-    const isTextNoteTouchInteraction = Boolean(
-      selectedShapeForDrawingCrosshair?.kind === 'text-note'
-      || this.drawingMoveState?.baseShape.kind === 'text-note'
-      || this.textNoteEditorEl,
-    );
-    const shouldShowDrawingCrosshair = Boolean(
-      (isTextNoteTouchInteraction && !this.textNoteEditorEl)
-      || (!isTextNoteTouchInteraction && (this.drawingTool || this.drawingMoveState || isSelectedPositionShape)),
-    );
-    if (isCoarsePointerDevice && shouldShowDrawingCrosshair && (this.isMouseOver || hasTouchCrosshair)) {
-      ctx.save();
-      // PC는 마우스 좌표, 터치는 마지막 드로잉 십자 좌표를 사용
-      const textNoteAnchorPoint = isTextNoteTouchInteraction && selectedShapeForDrawingCrosshair?.kind === 'text-note'
-        ? this.getDrawingAnchorScreenPoint(selectedShapeForDrawingCrosshair)
-        : null;
-      const x = textNoteAnchorPoint?.x ?? (this.isMouseOver ? this.mouseX : this.touchDrawingCrosshairX);
-      const y = textNoteAnchorPoint?.y ?? (this.isMouseOver ? this.mouseY : this.touchDrawingCrosshairY);
-
-      // 얇은 파란 점선 (전체 축)
-      ctx.strokeStyle = 'rgba(64, 180, 255, 0.5)';
-      ctx.lineWidth = 0.5;
-      ctx.setLineDash([5, 4]);
-      ctx.beginPath();
-      ctx.moveTo(x, 0); ctx.lineTo(x, height);
-      ctx.moveTo(0, y); ctx.lineTo(width, y);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // 중심 십자: 작은 실선
-      ctx.strokeStyle = 'rgba(64, 180, 255, 0.8)';
-      ctx.lineWidth = 1;
-      const dotSize = 8;
-      ctx.beginPath();
-      ctx.moveTo(x - dotSize, y); ctx.lineTo(x + dotSize, y);
-      ctx.moveTo(x, y - dotSize); ctx.lineTo(x, y + dotSize);
-      ctx.stroke();
-
-      // 중심 점 (원형)
-      ctx.fillStyle = 'rgba(64, 180, 255, 0.8)';
-      ctx.beginPath();
-      ctx.arc(x, y, 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      // ── 가이드 멘트 (시간축 바로 위) ──────────────────────────────────
-      const isPositionTool = this.drawingTool === 'long-position' || this.drawingTool === 'short-position';
-      const guideY = plotHeight + 4;
-      ctx.font = `600 12px ${CHART_FONT_STACK}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-
-      if (isPositionTool) {
-        ctx.fillStyle = 'rgba(12,18,32,0.80)';
-        ctx.fillRect(0, guideY, width, X_AXIS_HEIGHT);
-        ctx.fillStyle = 'rgba(64,180,255,0.9)';
-        ctx.fillText('이동 후 손을 떼면 포지션이 생성됩니다', width / 2, guideY + 4);
-      } else if (this.drawingTool === 'fib-trend') {
-        // draft 없음=0단계, draft.stage=1이면 2단계, =2이면 3단계
-        const stage = this.drawingDraft ? ((this.drawingDraft as any).stage ?? 1) : 0;
-        const guideTexts: Record<number, string> = {
-          0: '① 첫 번째 기준점: 이동 후 손을 떼세요',
-          1: '② 두 번째 기준점: 이동 후 손을 떼세요',
-          2: '③ 세 번째 기준점: 이동 후 손을 떼세요',
-        };
-        ctx.fillStyle = 'rgba(12,18,32,0.80)';
-        ctx.fillRect(0, guideY, width, X_AXIS_HEIGHT);
-        ctx.fillStyle = 'rgba(64,180,255,0.9)';
-        ctx.fillText(guideTexts[stage] ?? '', width / 2, guideY + 4);
-      } else {
-        // 일반 드로잉 단계 표시
-        if (this.drawingDraft && this.touchDrawingTapCount >= 1) {
-          const stage = this.touchDrawingTapCount === 1 ? '두번째 포인트 선택' : '완료 또는 다른 곳 터치';
-          ctx.fillStyle = 'rgba(64, 180, 255, 0.9)';
-          ctx.textAlign = 'left';
-          ctx.fillText(`? 첫 포인트 고정 · ${stage}`, 12, 30);
-        } else {
-          ctx.fillStyle = 'rgba(64, 180, 255, 0.7)';
-          ctx.textAlign = 'left';
-          ctx.fillText('첫 포인트 선택', 12, 30);
-        }
-      }
-
-      ctx.restore();
-    }
+    const textNoteAnchorPoint = selectedShapeForDrawingCrosshair?.kind === 'text-note'
+      ? this.getDrawingAnchorScreenPoint(selectedShapeForDrawingCrosshair)
+      : null;
+    renderDrawingTouchCrosshair({
+      ctx,
+      width,
+      height,
+      plotHeight,
+      xAxisHeight: X_AXIS_HEIGHT,
+      isCoarsePointer: isCoarsePointerDevice,
+      isMouseOver: this.isMouseOver,
+      mouseX: this.mouseX,
+      mouseY: this.mouseY,
+      touchCrosshairX: this.touchDrawingCrosshairX,
+      touchCrosshairY: this.touchDrawingCrosshairY,
+      drawingTool: this.drawingTool,
+      drawingDraft: this.drawingDraft,
+      drawingMoveActive: Boolean(this.drawingMoveState),
+      selectedShape: selectedShapeForDrawingCrosshair,
+      textNoteEditorActive: Boolean(this.textNoteEditorEl || this.drawingMoveState?.baseShape.kind === 'text-note'),
+      touchDrawingTapCount: this.touchDrawingTapCount,
+      fontStack: CHART_FONT_STACK,
+      textNoteAnchorPoint,
+    });
 
     const visibleCount = Math.max(1, this.endIndex - this.startIndex);
     const gapBars = Math.min(Math.max(0, this.config.layout.rightGapBars ?? 0), 50 / Math.max(1, chartW / Math.max(1, this.endIndex - this.startIndex)));
@@ -9974,146 +7852,45 @@ export class SimpleChart {
     const effectiveChartLeft = chartLeft + leftGap * totalSp;
     const candleW = Math.max(totalSp * 0.8, 1);
 
-    if (this.focusedTradeRange) {
-      const rangeStart = Math.max(0, Math.min(this.focusedTradeRange.startIndex, this.focusedTradeRange.endIndex));
-      const rangeEnd = Math.max(0, Math.max(this.focusedTradeRange.startIndex, this.focusedTradeRange.endIndex));
-      const visibleStart = this.startIndex;
-      const visibleEnd = this.endIndex - 1;
-      const drawStart = Math.max(rangeStart, visibleStart);
-      const drawEnd = Math.min(rangeEnd, visibleEnd);
-      if (drawStart <= drawEnd) {
-        const startLocal = drawStart - this.startIndex;
-        const endLocal = drawEnd - this.startIndex;
-        const x1 = effectiveChartLeft + startLocal * totalSp;
-        const x2 = effectiveChartLeft + endLocal * totalSp + candleW;
-        const lineStartX = x1 + candleW / 2;
-        const lineEndX = x2 - candleW / 2;
-        if (this.focusedTradeRange.type === 'connector' && mainScale) {
-          const entryPrice = this.focusedTradeRange.entryPrice;
-          const exitPrice = this.focusedTradeRange.exitPrice;
-          if (Number.isFinite(entryPrice) && Number.isFinite(exitPrice)) {
-            const entryY = mainScale.toY(entryPrice as number);
-            const exitY = mainScale.toY(exitPrice as number);
-            const lineColor = this.focusedTradeRange.isProfit ? 'rgba(34,171,148,0.9)' : 'rgba(242,54,69,0.9)';
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(chartLeft, R.top, Math.max(1, chartRight - chartLeft), Math.max(1, mainH - R.top));
-            ctx.clip();
-            ctx.strokeStyle = lineColor;
-            ctx.lineWidth = 1;
-            ctx.setLineDash([1, 2]);
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(lineStartX, entryY + 0.5);
-            ctx.lineTo(lineEndX, exitY + 0.5);
-            ctx.stroke();
-            ctx.restore();
-            drawPriceLineOverlay(ctx, {
-              chartLeft,
-              chartRight,
-              axisPad: geometry.axisPad,
-              axisSide: geometry.side,
-              totalSp,
-              mainH,
-              minP: mainScale.lo,
-              maxP: mainScale.hi,
-              getY: mainScale.toY,
-              fromX: lineStartX,
-              price: entryPrice as number,
-              label: 'ENTRY',
-              color: '#6ea8ff',
-              dash: [6, 3],
-              alpha: 0.9,
-              priceDigits: symbolPriceDigits,
-            });
-            drawPriceLineOverlay(ctx, {
-              chartLeft,
-              chartRight,
-              axisPad: geometry.axisPad,
-              axisSide: geometry.side,
-              totalSp,
-              mainH,
-              minP: mainScale.lo,
-              maxP: mainScale.hi,
-              getY: mainScale.toY,
-              fromX: lineEndX,
-              price: exitPrice as number,
-              label: 'EXIT',
-              color: this.focusedTradeRange.isProfit ? '#39d98a' : '#ff6b6b',
-              dash: [6, 3],
-              alpha: 0.9,
-              priceDigits: symbolPriceDigits,
-            });
-          }
-        } else {
-          const elapsed = this.focusVisualStartedAt > 0 ? (Date.now() - this.focusVisualStartedAt) : 0;
-          const pulse = 0.5 + 0.5 * Math.sin(elapsed / 170);
-          const fillAlpha = 0.18 + pulse * 0.14;
-          const strokeAlpha = 0.5 + pulse * 0.38;
-          const glowAlpha = 0.14 + pulse * 0.22;
-          const rangeW = Math.max(2, x2 - x1);
-          const candleFocus = this.focusedTradeRange.style === 'candle' && mainScale && drawStart === drawEnd;
-          const candle = candleFocus ? this.data[drawStart] : null;
-          const boxTop = candle && mainScale
-            ? Math.max(R.top, Math.min(mainH, Math.min(mainScale.toY(candle.high), mainScale.toY(candle.low)) - 6 - pulse * 3))
-            : R.top;
-          const boxBottom = candle && mainScale
-            ? Math.max(R.top, Math.min(mainH, Math.max(mainScale.toY(candle.high), mainScale.toY(candle.low)) + 6 + pulse * 3))
-            : mainH;
-          const rangeH = Math.max(2, boxBottom - boxTop);
-          ctx.save();
-          ctx.fillStyle = `rgba(72,118,255,${fillAlpha.toFixed(3)})`;
-          ctx.strokeStyle = `rgba(145,188,255,${strokeAlpha.toFixed(3)})`;
-          ctx.shadowColor = `rgba(96,154,255,${glowAlpha.toFixed(3)})`;
-          ctx.shadowBlur = 16 + pulse * 10;
-          ctx.lineWidth = 1.3 + pulse * 0.7;
-          ctx.fillRect(x1, boxTop, rangeW, rangeH);
-          ctx.strokeRect(x1 + 0.5, boxTop + 0.5, Math.max(1, rangeW - 1), Math.max(1, rangeH - 1));
-          ctx.restore();
-        }
-        if (!this.isMouseOver && this.focusedTradeRange.type !== 'connector') {
-          this.requestOverlayDraw();
-        }
-      }
-    }
+    renderTradeFocusOverlay({
+      ctx,
+      focusedTradeRange: this.focusedTradeRange,
+      focusVisualStartedAt: this.focusVisualStartedAt,
+      data: this.data,
+      startIndex: this.startIndex,
+      endIndex: this.endIndex,
+      isMouseOver: this.isMouseOver,
+      chartLeft,
+      chartRight,
+      mainTop: R.top,
+      mainH,
+      axisPad: geometry.axisPad,
+      axisSide: geometry.side,
+      totalSp,
+      effectiveChartLeft,
+      candleW,
+      mainScale,
+      fontStack: CHART_FONT_STACK,
+      priceDigits: symbolPriceDigits,
+      requestOverlayDraw: () => this.requestOverlayDraw(),
+    });
 
-    if (this.gotoDateMarker && mainScale) {
-      const idx = this.gotoDateMarker.candleIndex;
-      if (idx >= this.startIndex && idx < this.endIndex && this.data[idx]) {
-        const markerX = this.getCandleCenterX(idx) ?? (chartLeft + (idx - this.startIndex) * totalSp + candleW / 2);
-        const markerY = Math.max(R.top + 14, Math.min(mainH - 10, mainScale.toY(this.data[idx].high) - 10));
-        const text = this.gotoDateMarker.label;
-        ctx.save();
-        ctx.font = `700 11px ${CHART_FONT_STACK}`;
-        const textW = Math.ceil(ctx.measureText(text).width);
-        const boxW = Math.max(70, textW + 12);
-        const boxH = 20;
-        const boxX = Math.max(chartLeft + 4, Math.min(chartRight - boxW - 4, markerX - boxW / 2));
-        const boxY = Math.max(R.top + 2, markerY - boxH - 12);
-
-        ctx.beginPath();
-        ctx.moveTo(markerX, markerY);
-        ctx.lineTo(markerX - 6, boxY + boxH);
-        ctx.lineTo(markerX + 6, boxY + boxH);
-        ctx.closePath();
-        ctx.fillStyle = '#111827';
-        ctx.fill();
-
-        ctx.fillStyle = '#111827';
-        ctx.strokeStyle = '#374151';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(boxX, boxY, boxW, boxH, 6);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#f9fafb';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, boxX + boxW / 2, boxY + boxH / 2 + 0.5);
-        ctx.restore();
-      }
-    }
+    renderGotoDateMarker({
+      ctx,
+      marker: this.gotoDateMarker,
+      data: this.data,
+      startIndex: this.startIndex,
+      endIndex: this.endIndex,
+      chartLeft,
+      chartRight,
+      mainTop: R.top,
+      mainH,
+      totalSp,
+      candleW,
+      fontStack: CHART_FONT_STACK,
+      getY: mainScale?.toY ?? null,
+      getCandleCenterX: (index) => this.getCandleCenterX(index),
+    });
 
     const _isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false;
 
@@ -10182,184 +7959,76 @@ export class SimpleChart {
 
     if (shouldDrawCrosshairGuides) {
       const useBlueEditGuide = isDrawingEditMode || isChannelEditMode || isHorizontalLineEditMode;
-      const guideLineColor = useBlueEditGuide ? 'rgba(47,108,255,0.90)' : 'rgba(214,219,233,0.65)';
-      const guideCenterColor = useBlueEditGuide ? 'rgba(47,108,255,0.98)' : 'rgba(255,255,255,0.92)';
-      ctx.save();
-      ctx.strokeStyle = guideLineColor;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([6, 5]);
-      ctx.beginPath();
-      ctx.moveTo(solidX, 0); ctx.lineTo(solidX, height);
-      ctx.moveTo(0, this.mouseY); ctx.lineTo(width, this.mouseY);
-      ctx.stroke();
-      ctx.restore();
-
-      ctx.save();
-      ctx.strokeStyle = guideCenterColor;
-      ctx.lineWidth = 1.4;
-      const centerLen = 10;
-      if (this.pointerMode === 'dot') {
-        ctx.fillStyle = guideCenterColor;
-        ctx.beginPath();
-        ctx.arc(solidX, this.mouseY, 2.8, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (this.pointerMode === 'demo') {
-        ctx.fillStyle = 'rgba(47,108,255,0.28)';
-        ctx.beginPath();
-        ctx.arc(solidX, this.mouseY, 18, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (this.pointerMode === 'arrow') {
-        // Arrow mode: no extra center marker.
-      } else if (this.pointerMode === 'cross') {
-        // Cross mode: keep dashed guides only, no extra center marker.
-      } else {
-        ctx.beginPath();
-        ctx.moveTo(solidX - centerLen, this.mouseY); ctx.lineTo(solidX + centerLen, this.mouseY);
-        ctx.moveTo(solidX, this.mouseY - centerLen); ctx.lineTo(solidX, this.mouseY + centerLen);
-        ctx.stroke();
-        if (useBlueEditGuide) {
-          // 드로잉 완료 전 중심 포인트 유지
-          ctx.fillStyle = '#2f6cff';
-          ctx.beginPath();
-          ctx.arc(solidX, this.mouseY, 2.6, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      ctx.restore();
+      renderCrosshairGuide({
+        ctx,
+        width,
+        height,
+        x: solidX,
+        y: this.mouseY,
+        pointerMode: this.pointerMode,
+        useBlueEditGuide,
+      });
     }
 
     if (noDrawingInteraction && !onXAxis && snappedCandleIndex >= 0 && snappedCandleIndex < this.data.length) {
       const c = this.data[snappedCandleIndex];
       const label = formatCrosshairTimelineLabel(c.time, this.config.timezone);
-      ctx.save();
-      ctx.font = `11px ${CHART_FONT_STACK}`;
-      const boxW = Math.ceil(ctx.measureText(label).width) + 16;
-      const boxH = X_AXIS_HEIGHT;
-      const boxX = Math.min(Math.max(chartLeft + 2, solidX - boxW / 2), chartRight - boxW - 2);
-      const boxY = plotHeight;
-      ctx.fillStyle = 'rgba(70,76,88,0.96)';
-      ctx.fillRect(boxX, boxY, boxW, boxH);
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, boxX + boxW / 2, boxY + boxH / 2 + 0.5);
-      ctx.restore();
-
-      // OHLCV 툴팁: 모바일=canvas floating, PC=헤더 콜백
       const isOnSignalCandle = _isTouchDevice && this.strategySignalVisible
         && (this.strategySignals[snappedCandleIndex] ?? 0) !== 0;
-      if (noDrawingInteraction && this.isMobileCrosshairTooltipEnabled() && (this.isCrosshairMode || this.mouseLongPressTooltipActive) && !isOnSignalCandle) {
-        const isUp = c.close >= c.open;
-        const closeColor = isUp ? '#ef5350' : '#26a69a';
-        const tradingValue = c.close * c.volume;
-        const d = symbolPriceDigits;
-        const tooltipRows: Array<{ label: string; value: string; color: string }> = [
-          { label: '시가', value: formatWithComma(c.open,  d), color: '#c9d4e8' },
-          { label: '고가', value: formatWithComma(c.high,  d), color: '#ef5350' },
-          { label: '저가', value: formatWithComma(c.low,   d), color: '#26a69a' },
-          { label: '종가', value: formatWithComma(c.close, d), color: closeColor },
-          { label: '거래량', value: formatKUnit(c.volume),        color: '#c9d4e8' },
-          { label: '거래대금', value: formatKUnitWithComma(tradingValue), color: '#c9d4e8' },
-        ];
-        ctx.save();
-        ctx.font = `600 11px ${CHART_FONT_STACK}`;
-        const tPadX = 9, tPadY = 6, tLineH = 17;
-        const tLabelW = 44;
-        const tValueW = Math.max(...tooltipRows.map(r => Math.ceil(ctx.measureText(r.value).width))) + 4;
-        const tBoxW = tPadX * 2 + tLabelW + tValueW + 6;
-        const tHeaderH = tLineH;
-        const tBoxH = tPadY * 2 + tHeaderH + tooltipRows.length * tLineH;
-        const gap = 52;
-        const fitsRight = solidX + gap + tBoxW <= chartRight - 2;
-        const tBoxX = fitsRight ? solidX + gap : solidX - gap - tBoxW;
-        const tBoxY = Math.max(R.top + 2, Math.min(this.mouseY - tBoxH / 2, mainH - tBoxH - 4));
-        const tRadius = 5;
-        ctx.beginPath();
-        ctx.moveTo(tBoxX + tRadius, tBoxY);
-        ctx.lineTo(tBoxX + tBoxW - tRadius, tBoxY);
-        ctx.arcTo(tBoxX + tBoxW, tBoxY, tBoxX + tBoxW, tBoxY + tRadius, tRadius);
-        ctx.lineTo(tBoxX + tBoxW, tBoxY + tBoxH - tRadius);
-        ctx.arcTo(tBoxX + tBoxW, tBoxY + tBoxH, tBoxX + tBoxW - tRadius, tBoxY + tBoxH, tRadius);
-        ctx.lineTo(tBoxX + tRadius, tBoxY + tBoxH);
-        ctx.arcTo(tBoxX, tBoxY + tBoxH, tBoxX, tBoxY + tBoxH - tRadius, tRadius);
-        ctx.lineTo(tBoxX, tBoxY + tRadius);
-        ctx.arcTo(tBoxX, tBoxY, tBoxX + tRadius, tBoxY, tRadius);
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(15, 20, 32, 0.75)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(60, 80, 110, 0.8)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.textBaseline = 'middle';
-        ctx.font = `600 11px ${CHART_FONT_STACK}`;
-        ctx.fillStyle = '#7a8aab';
-        ctx.textAlign = 'left';
-        ctx.fillText(label, tBoxX + tPadX, tBoxY + tPadY + tLineH / 2);
-        ctx.strokeStyle = 'rgba(60, 80, 110, 0.5)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(tBoxX + 4, tBoxY + tPadY + tLineH + 2);
-        ctx.lineTo(tBoxX + tBoxW - 4, tBoxY + tPadY + tLineH + 2);
-        ctx.stroke();
-        tooltipRows.forEach((row, i) => {
-          const rowY = tBoxY + tPadY + tHeaderH + i * tLineH + tLineH / 2;
-          ctx.font = `600 11px ${CHART_FONT_STACK}`;
-          ctx.fillStyle = '#4e5d78';
-          ctx.textAlign = 'left';
-          ctx.fillText(row.label, tBoxX + tPadX, rowY);
-          ctx.fillStyle = row.color;
-          ctx.textAlign = 'right';
-          ctx.fillText(row.value, tBoxX + tBoxW - tPadX, rowY);
-        });
-        ctx.restore();
-      } else if (noDrawingInteraction && this.onCrosshairOHLC && this._lastCrosshairOHLCIdx !== snappedCandleIndex) {
+      const isUp = c.close >= c.open;
+      const closeColor = isUp ? '#ef5350' : '#26a69a';
+      const tradingValue = c.close * c.volume;
+      const d = symbolPriceDigits;
+      const tooltipRows: CrosshairTooltipRow[] = [
+        { label: '시가', value: formatWithComma(c.open,  d), color: '#c9d4e8' },
+        { label: '고가', value: formatWithComma(c.high,  d), color: '#ef5350' },
+        { label: '저가', value: formatWithComma(c.low,   d), color: '#26a69a' },
+        { label: '종가', value: formatWithComma(c.close, d), color: closeColor },
+        { label: '거래량', value: formatKUnit(c.volume),        color: '#c9d4e8' },
+        { label: '거래대금', value: formatKUnitWithComma(tradingValue), color: '#c9d4e8' },
+      ];
+      const tooltipResult = renderCrosshairTooltip({
+        ctx,
+        candle: c,
+        label,
+        x: solidX,
+        y: this.mouseY,
+        chartLeft,
+        chartRight,
+        mainTop: R.top,
+        mainH,
+        plotHeight,
+        xAxisHeight: X_AXIS_HEIGHT,
+        fontStack: CHART_FONT_STACK,
+        rows: tooltipRows,
+        showMobileTooltip: this.isMobileCrosshairTooltipEnabled() && (this.isCrosshairMode || this.mouseLongPressTooltipActive) && !isOnSignalCandle,
+      });
+      if (!tooltipResult.renderedMobileTooltip && this.onCrosshairOHLC && this._lastCrosshairOHLCIdx !== snappedCandleIndex) {
         this._lastCrosshairOHLCIdx = snappedCandleIndex;
         this.onCrosshairOHLC({ open: c.open, high: c.high, low: c.low, close: c.close, time: c.time });
       }
     }
 
     if (this.mouseY < mainH && mainScale && noDrawingInteraction && !onYAxis) {
-      const lo = mainScale.lo;
-      const hi = mainScale.hi;
-      const price = hi - (this.mouseY - R.top) / (mainH - R.top || 1) * (hi - lo);
-      ctx.fillStyle = '#2a2e39';
-      const priceBoxW = geometry.side === 'left'
-        ? Math.max(20, geometry.axisPad - 10)
-        : Math.max(20, geometry.axisPad - 2);
-      const priceBoxX = geometry.side === 'left' ? 6 : chartRight;
-      drawPriceArrowBox(ctx, priceBoxX, this.mouseY, priceBoxW, 20, geometry.side);
-      ctx.fill();
-      ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
-      ctx.stroke();
-      const crossTextAnchor = getPriceArrowTextAnchor(priceBoxX, priceBoxW, geometry.side, 5);
-      ctx.fillStyle = CHART_TEXT_PRIMARY; ctx.font = `500 11px ${CHART_FONT_STACK}`; ctx.textAlign = crossTextAnchor.align;
-      ctx.fillText(formatWithComma(price, symbolPriceDigits), crossTextAnchor.x, this.mouseY + 4);
-
-      // 가격박스 왼쪽 원형 + 아이콘 (클릭 시 수평선 생성)
-      const plusR  = 9;
-      const plusX  = geometry.side === 'left'
-        ? (geometry.axisRight + plusR + 4)
-        : (geometry.axisLeft - plusR - 4);
-      const plusY  = this.mouseY;
-      const hovered = this.crosshairPlusHovered;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(plusX, plusY, plusR, 0, Math.PI * 2);
-      ctx.fillStyle = hovered ? '#2962ff' : 'rgba(41,98,255,0.75)';
-      ctx.fill();
-      ctx.strokeStyle = hovered ? '#6fa3ff' : 'rgba(130,170,255,0.6)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.8;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(plusX - 4.5, plusY); ctx.lineTo(plusX + 4.5, plusY);
-      ctx.moveTo(plusX, plusY - 4.5); ctx.lineTo(plusX, plusY + 4.5);
-      ctx.stroke();
-      ctx.restore();
-      // 히트 반경: 아이콘 직경 수준으로 확장 (plusR*2 = 18px + 여유 4px = 22px)
-      this.crosshairPlusHit = { x: plusX, y: plusY, r: plusR * 2 + 4, price };
+      this.crosshairPlusHit = renderCrosshairPriceAxis({
+        ctx,
+        mouseY: this.mouseY,
+        mainTop: R.top,
+        mainH,
+        chartRight,
+        axisPad: geometry.axisPad,
+        axisSide: geometry.side,
+        axisLeft: geometry.axisLeft,
+        axisRight: geometry.axisRight,
+        lo: mainScale.lo,
+        hi: mainScale.hi,
+        noDrawingInteraction,
+        onYAxis,
+        plusHovered: this.crosshairPlusHovered,
+        textColor: CHART_TEXT_PRIMARY,
+        fontStack: CHART_FONT_STACK,
+        formatPrice: (value) => formatWithComma(value, symbolPriceDigits),
+      });
     } else {
       this.crosshairPlusHit = null;
     }
@@ -10381,272 +8050,75 @@ export class SimpleChart {
         const plotH = availH * 0.95;
         const plotTop = panelTop + titleH + (availH - plotH) / 2;
 
-        let lo = 0;
-        let hi = 100;
-        let accentColor = '#7aa2ff';
-        let labelText = '';
-        const ind = this.config.indicators as any;
-        const visStart = this.startIndex;
-        const visEnd = this.endIndex;
-
-        if (hoveredPanelId === 'volume') {
-          const vis = this.data.slice(visStart, visEnd);
-          const vMax = Math.max(...vis.map((d) => d.volume), 1);
-          const vScaleMax = Math.max(1, vMax * 1.14);
-          ({ lo, hi } = this.getSubPanelScaledRange('volume', 0, vScaleMax));
-          accentColor = '#22ab94';
-        } else if (hoveredPanelId === 'rsi') {
-          lo = 0; hi = 100;
-          accentColor = this.resolveStyle('rsi', '#ffeb3b').color;
-        } else if (hoveredPanelId === 'dmi') {
-          const dmiD = this.calcDMI(ind.dmi.period);
-          const topThreshold = Number.isFinite(Number(ind.dmi.topThreshold)) ? Number(ind.dmi.topThreshold) : 30;
-          const bottomThreshold = Number.isFinite(Number(ind.dmi.bottomThreshold)) ? Number(ind.dmi.bottomThreshold) : 20;
-          const axisMode = ind.dmi.axisMode === 'fixed' ? 'fixed' : 'auto';
-          let dmiLo = 0;
-          let dmiHi = 60;
-          if (axisMode === 'auto') {
-            const values = [
-              ...dmiD.plusDI.slice(visStart, visEnd).filter((v): v is number => v != null && Number.isFinite(v)),
-              ...dmiD.minusDI.slice(visStart, visEnd).filter((v): v is number => v != null && Number.isFinite(v)),
-              ...dmiD.adx.slice(visStart, visEnd).filter((v): v is number => v != null && Number.isFinite(v)),
-            ];
-            let loTarget = values.length ? Math.min(...values) : 0;
-            let hiTarget = values.length ? Math.max(...values) : 60;
-            const pad = Math.max(4, (hiTarget - loTarget) * 0.12);
-            loTarget = Math.max(0, loTarget - pad);
-            hiTarget = Math.min(100, hiTarget + pad);
-            loTarget = Math.min(loTarget, 23);
-            hiTarget = Math.max(hiTarget, 27);
-            if (hiTarget - loTarget < 20) {
-              const center = (hiTarget + loTarget) / 2;
-              loTarget = Math.max(0, center - 10);
-              hiTarget = Math.min(100, center + 10);
-            }
-            if (this.dmiScaleRange) {
-              dmiLo = this.dmiScaleRange.lo;
-              dmiHi = this.dmiScaleRange.hi;
-            } else {
-              dmiLo = loTarget;
-              dmiHi = hiTarget;
-            }
-          }
-          const snapUnit = Math.abs(dmiHi - dmiLo) >= 80 ? 10 : 5;
-          dmiLo = Math.max(0, Math.floor(dmiLo / snapUnit) * snapUnit);
-          dmiHi = Math.min(100, Math.ceil(dmiHi / snapUnit) * snapUnit);
-          if (dmiHi - dmiLo < snapUnit * 2) dmiHi = Math.min(100, dmiLo + snapUnit * 2);
-          lo = Math.min(dmiLo, bottomThreshold);
-          hi = Math.max(dmiHi, topThreshold);
-          accentColor = this.resolveStyle('dmiAdx', '#ffffff').color;
-        } else if (hoveredPanelId === 'macd') {
-          const macdD = this.calcMACD(ind.macd.fast, ind.macd.slow, ind.macd.signal);
-          const vals = [
-            ...macdD.hist.slice(visStart, visEnd).filter((v): v is number => v != null),
-            ...macdD.macdLine.slice(visStart, visEnd).filter((v): v is number => v != null),
-            ...macdD.sigLine.slice(visStart, visEnd).filter((v): v is number => v != null),
-          ];
-          const mMaxBase = Math.max(...vals.map((v) => Math.abs(v)), 0.001);
-          const mMax = mMaxBase * 1.4;
-          lo = -mMax;
-          hi = mMax;
-          accentColor = this.resolveStyle('macdLine', '#2962ff').color;
-        } else if (hoveredPanelId === 'stochF' || hoveredPanelId === 'stochS') {
-          lo = 0; hi = 100;
-          accentColor = hoveredPanelId === 'stochF'
-            ? this.resolveStyle('stochFastK', '#22ab94').color
-            : this.resolveStyle('stochSlowK', '#22ab94').color;
-        } else if (hoveredPanelId === 'cci') {
-          const cciD = this.calcCCI(ind.cci.period);
-          const vis = cciD.slice(visStart, visEnd).filter((v): v is number => v != null);
-          const cMax = Math.max(...vis.map((v) => Math.abs(v)), 100);
-          lo = -cMax;
-          hi = cMax;
-          accentColor = this.resolveStyle('cci', '#22ab94').color;
-        } else if (hoveredPanelId === 'obv') {
-          const obvD = this.calcOBV();
-          const obvSignal9 = this.sma(obvD.map((v) => v as number | null), 9);
-          const rangeValues = [
-            ...obvD.slice(visStart, visEnd).filter((v): v is number => v != null),
-            ...obvSignal9.slice(visStart, visEnd).filter((v): v is number => v != null),
-          ];
-          let obvLo = rangeValues.length ? Math.min(...rangeValues) : 0;
-          let obvHi = rangeValues.length ? Math.max(...rangeValues) : 1;
-          if (obvLo === obvHi) obvHi = obvLo + 1;
-          const pad = Math.max((obvHi - obvLo) * 0.18, 1);
-          lo = obvLo - pad;
-          hi = obvHi + pad;
-          accentColor = this.resolveStyle('obv', '#22ab94').color;
-        } else if (hoveredPanelId === 'cvd') {
-          const cvdD = this.calcCVD();
-          const cvdSig9 = this.sma(cvdD.map((v) => v as number | null), 9);
-          const rangeValues = [
-            ...cvdD.slice(visStart, visEnd).filter((v): v is number => v != null),
-            ...cvdSig9.slice(visStart, visEnd).filter((v): v is number => v != null),
-          ];
-          let cvdLo = Math.min(...rangeValues, 0);
-          let cvdHi = Math.max(...rangeValues, 1);
-          if (cvdLo === cvdHi) cvdHi = cvdLo + 1;
-          const pad = Math.max((cvdHi - cvdLo) * 0.18, 1);
-          lo = cvdLo - pad;
-          hi = cvdHi + pad;
-          accentColor = this.resolveStyle('cvd', '#7b68ee').color;
-        }
-
-        const clampedY = Math.max(plotTop, Math.min(plotTop + plotH, this.mouseY));
-        const value = hi - ((clampedY - plotTop) / (plotH || 1)) * (hi - lo);
-        if (hoveredPanelId === 'volume') {
-          labelText = formatKUnit(value, 1);
-        } else {
-          labelText = value.toFixed(2);
-          if (hoveredPanelId === 'macd' || hoveredPanelId === 'cci' || hoveredPanelId === 'obv' || hoveredPanelId === 'cvd') {
-            accentColor = value >= 0 ? '#22ab94' : '#f23645';
-          }
-        }
-
-        ctx.save();
-        ctx.font = `600 12px ${CHART_FONT_STACK}`;
-        const boxW = Math.ceil(ctx.measureText(labelText).width) + 12;
-        const boxH = 18;
-        const boxX = width - boxW - 2;
-        const boxY = Math.max(panelTop + 2, Math.min(panelTop + panelHeight - boxH - 2, clampedY - boxH / 2));
-        const plusR = 9;
-        const plusCx = geometry.side === 'left'
-          ? (geometry.axisRight + plusR + 4)
-          : (geometry.axisLeft - plusR - 4);
-        const plusCy = boxY + boxH / 2;
-
-        ctx.fillStyle = toRgba(accentColor, 0.28, 'rgba(80,90,110,0.28)');
-        ctx.fillRect(boxX, boxY, boxW, boxH);
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(labelText, boxX + boxW / 2, boxY + boxH / 2 + 0.5);
-
-        ctx.beginPath();
-        ctx.fillStyle = 'rgba(14,20,31,0.96)';
-        ctx.strokeStyle = toRgba(accentColor, 0.95, '#7aa2ff');
-        ctx.lineWidth = 1.2;
-        ctx.arc(plusCx, plusCy, plusR, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.strokeStyle = '#f2f6ff';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(plusCx - 3.2, plusCy);
-        ctx.lineTo(plusCx + 3.2, plusCy);
-        ctx.moveTo(plusCx, plusCy - 3.2);
-        ctx.lineTo(plusCx, plusCy + 3.2);
-        ctx.stroke();
-        ctx.restore();
-
-        this.hoveredSubIndicatorAddButton = {
+        const crosshairValue = resolveSubPanelCrosshairValue({
           panelId: hoveredPanelId,
-          value,
-          color: accentColor,
-          x: plusCx,
-          y: plusCy,
-          r: plusR,
-        };
+          data: this.data,
+          indicators: this.config.indicators,
+          visStart: this.startIndex,
+          visEnd: this.endIndex,
+          mouseY: this.mouseY,
+          plotTop,
+          plotH,
+          dmiScaleRange: this.dmiScaleRange,
+          getSubPanelScaledRange: (panelId, lo, hi) => this.getSubPanelScaledRange(panelId, lo, hi),
+          resolveColor: (styleKey, fallbackColor) => this.resolveStyle(styleKey, fallbackColor).color,
+          calcDMI: (period) => this.calcDMI(period),
+          calcMACD: (fast, slow, signal) => this.calcMACD(fast, slow, signal),
+          calcCCI: (period) => this.calcCCI(period),
+          calcATR: (period) => this.calcATR(period),
+          calcOBV: () => this.calcOBV(),
+          calcCVD: () => this.calcCVD(),
+          sma: (source, period) => this.sma(source, period),
+          formatKUnit: (value, digits) => formatKUnit(value, digits),
+        });
+
+        this.hoveredSubIndicatorAddButton = renderSubPanelCrosshairAxis({
+          ctx,
+          panelId: hoveredPanelId,
+          value: crosshairValue.value,
+          labelText: crosshairValue.labelText,
+          accentColor: crosshairValue.accentColor,
+          width,
+          panelTop,
+          panelHeight,
+          clampedY: crosshairValue.clampedY,
+          axisSide: geometry.side,
+          axisLeft: geometry.axisLeft,
+          axisRight: geometry.axisRight,
+          fontStack: CHART_FONT_STACK,
+        });
       }
     }
 
-    // 시그널 아이콘 호버: 진입가격 툴팁
-    // Fallback: even without precise hit, show signal info when X-axis aligns with a signal candle.
-    let hoverSignal: (typeof this.signalHitAreas)[number] | null = null;
-    let minDistSq = Number.POSITIVE_INFINITY;
-    for (const area of this.signalHitAreas) {
-      const dx = this.mouseX - area.x;
-      const dy = this.mouseY - area.y;
-      const distSq = dx * dx + dy * dy;
-      const hitR = area.r + 6;
-      if (distSq <= hitR * hitR && distSq < minDistSq) {
-        minDistSq = distSq;
-        hoverSignal = area;
-      }
-    }
-
-    if (!hoverSignal && this.focusedSignalCandleIndex != null) {
-      hoverSignal = this.signalHitAreas.find((area) => area.candleIndex === this.focusedSignalCandleIndex) ?? null;
-    }
-
-    if (!hoverSignal) {
-      const axisCandleIndex = (() => {
-        if (this.mouseX < chartLeft || this.mouseX > chartRight) return -1;
-        const nearestIndex = Math.round((this.mouseX - chartLeft - candleW / 2) / totalSp);
-        const clampedIndex = Math.max(0, Math.min(visibleCount - 1, nearestIndex));
-        return this.startIndex + clampedIndex;
-      })();
-
-      if (axisCandleIndex >= 0) {
-        hoverSignal = this.signalHitAreas.find((area) => area.candleIndex === axisCandleIndex) ?? null;
-      }
-    }
+    const hoverSignal = selectSignalHoverArea({
+      areas: this.signalHitAreas,
+      mouseX: this.mouseX,
+      mouseY: this.mouseY,
+      chartLeft,
+      chartRight,
+      candleW,
+      totalSp,
+      visibleCount,
+      startIndex: this.startIndex,
+      focusedSignalCandleIndex: this.focusedSignalCandleIndex,
+    });
 
     this.hoveredSignalCandleIndex = hoverSignal?.candleIndex ?? null;
 
-    if (hoverSignal) {
-      const sideText = hoverSignal.signal > 0 ? 'BUY' : 'SELL';
-      const priceText = `진입가 ${formatWithComma(hoverSignal.entryPrice, symbolPriceDigits)}`;
-      const text = `${sideText} · ${priceText}`;
-      ctx.font = `12px ${CHART_FONT_STACK}`;
-      const textWidth = Math.ceil(ctx.measureText(text).width);
-      const boxW = textWidth + 16;
-      const boxH = 24;
-      const boxX = Math.min(
-        Math.max(chartLeft + 8, hoverSignal.x + 12),
-        chartRight - boxW - 4,
-      );
-      const boxY = Math.max(8, hoverSignal.y - boxH - 8);
-
-      ctx.save();
-      if (mainScale) {
-        const entryY = mainScale.toY(hoverSignal.entryPrice);
-        if (entryY >= R.top && entryY <= mainH) {
-          const lineColor = hoverSignal.signal > 0 ? '#2ecc71' : '#ff5252';
-          ctx.strokeStyle = lineColor;
-          ctx.lineWidth = 1;
-          ctx.setLineDash([5, 4]);
-          ctx.beginPath();
-          ctx.moveTo(chartLeft, entryY);
-          ctx.lineTo(chartRight, entryY);
-          ctx.stroke();
-          ctx.setLineDash([]);
-
-          ctx.fillStyle = lineColor;
-          const entryBoxW = geometry.side === 'left'
-            ? Math.max(20, geometry.axisPad - 10)
-            : Math.max(20, geometry.axisPad - 4);
-          const entryBoxX = geometry.side === 'left' ? 6 : (width - entryBoxW - 2);
-          ctx.fillRect(entryBoxX, entryY - 10, entryBoxW, 20);
-          ctx.fillStyle = getContrastTextColor(lineColor);
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(
-            formatWithComma(hoverSignal.entryPrice, symbolPriceDigits),
-            entryBoxX + (entryBoxW / 2),
-            entryY,
-          );
-        }
-      }
-
-      ctx.beginPath();
-      ctx.strokeStyle = hoverSignal.signal > 0 ? '#2ecc71' : '#ff5252';
-      ctx.lineWidth = 1.5;
-      ctx.arc(hoverSignal.x, hoverSignal.y, hoverSignal.r + 3, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.fillStyle = 'rgba(19,23,34,0.96)';
-      ctx.strokeStyle = '#4a5060';
-      ctx.lineWidth = 1;
-      ctx.fillRect(boxX, boxY, boxW, boxH);
-      ctx.strokeRect(boxX, boxY, boxW, boxH);
-
-      ctx.fillStyle = '#f2f4f8';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, boxX + 8, boxY + boxH / 2);
-      ctx.restore();
-    }
+    renderSignalHoverOverlay({
+      ctx,
+      hoverSignal,
+      width,
+      chartLeft,
+      chartRight,
+      mainTop: R.top,
+      mainH,
+      axisPad: geometry.axisPad,
+      axisSide: geometry.side,
+      fontStack: CHART_FONT_STACK,
+      mainScale,
+      formatPrice: (value) => formatWithComma(value, symbolPriceDigits),
+    });
 
     const hoveredTrendline = this.hoveredDrawingId
       ? this.drawings.find((shape) => shape.id === this.hoveredDrawingId && this.isTrendlineShape(shape))
@@ -10661,43 +8133,23 @@ export class SimpleChart {
   private isHoveringCandle(mx: number, my: number): boolean {
     const width = this.viewportWidth;
     const height = this.viewportHeight;
-    const plotHeight = Math.max(40, height - X_AXIS_HEIGHT);
     const geometry = this.getChartGeometry(width, this.lastDrawMeta?.axisPad);
-    const R = { top: 10 };
-    const panels = this.activePanels;
-    const subRat = panels.reduce((s, id) => s + this.getPanelRatio(id), 0);
-    const mainH = plotHeight * (1 - subRat);
-    const chartW = geometry.chartWidth;
-    if (mx < geometry.chartLeft || mx > geometry.chartRight || my < R.top || my > mainH) return false;
-
-    const visibleCount = Math.max(1, this.endIndex - this.startIndex);
-    const gapBars = Math.min(Math.max(0, this.config.layout.rightGapBars ?? 0), 50 / Math.max(1, chartW / Math.max(1, this.endIndex - this.startIndex)));
-    const totalSp = chartW / (visibleCount + gapBars);
-    const candleW = Math.max(totalSp * 0.8, 1);
-    const nearestIndex = Math.max(0, Math.min(visibleCount - 1, Math.round((mx - geometry.chartLeft - candleW / 2) / totalSp)));
-    const candleIndex = this.startIndex + nearestIndex;
-    const candle = this.data[candleIndex];
-    if (!candle) return false;
-
-    const visible = this.data.slice(this.startIndex, this.endIndex);
-    if (!visible.length) return false;
-    let lo = Infinity;
-    let hi = -Infinity;
-    visible.forEach((d) => {
-      lo = Math.min(lo, d.low);
-      hi = Math.max(hi, d.high);
+    return isHoveringCandleBody({
+      mx,
+      my,
+      data: this.data,
+      viewportWidth: width,
+      viewportHeight: height,
+      xAxisHeight: X_AXIS_HEIGHT,
+      chartLeft: geometry.chartLeft,
+      chartRight: geometry.chartRight,
+      chartWidth: geometry.chartWidth,
+      startIndex: this.startIndex,
+      endIndex: this.endIndex,
+      rightGapBars: this.config.layout.rightGapBars ?? 0,
+      activePanels: this.activePanels,
+      getPanelRatio: (panelId) => this.getPanelRatio(panelId),
     });
-    const pad = (hi - lo) * 0.08;
-    lo -= pad;
-    hi += pad;
-    const toY = (price: number) => R.top + (hi - price) / (hi - lo || 1) * (mainH - R.top);
-    const yHigh = toY(candle.high);
-    const yLow = toY(candle.low);
-    const xCenter = geometry.chartLeft + nearestIndex * totalSp + candleW / 2;
-
-    const xHit = Math.abs(mx - xCenter) <= Math.max(6, candleW * 0.7);
-    const yHit = my >= yHigh - 5 && my <= yLow + 5;
-    return xHit && yHit;
   }
 
   private isOnMainYAxis(x: number, y: number): boolean {
@@ -10769,171 +8221,64 @@ export class SimpleChart {
   }
 
   private updateChartCursor(): void {
-    if (!this.isMouseOver) {
-      this.canvas.style.cursor = 'default';
-      return;
-    }
-    // 십자선 + 아이콘 위 → pointer
-    if (this.crosshairPlusHit) {
-      const { x: hx, y: hy, r: hr } = this.crosshairPlusHit;
-      const dx = this.mouseX - hx;
-      const dy = this.mouseY - hy;
-      if (dx * dx + dy * dy <= hr * hr) {
-        this.canvas.style.cursor = 'pointer';
-        return;
-      }
-    }
     const hitDrawing = this.findDrawingAt(this.mouseX, this.mouseY);
-    if (this.drawingTool) {
-      if (this.drawingTool === 'eraser') {
-        this.canvas.style.cursor = ERASER_CURSOR;
-        return;
-      }
-      this.canvas.style.cursor = 'crosshair';
-      return;
-    }
-    if (this.yAxisDragging) {
-      this.canvas.style.cursor = NS_RESIZE_CURSOR;
-      return;
-    }
-    if (this.subYAxisDragging) {
-      this.canvas.style.cursor = NS_RESIZE_CURSOR;
-      return;
-    }
-    if (this.xAxisDragging) {
-      this.canvas.style.cursor = X_AXIS_CURSOR;
-      return;
-    }
-    if (this.isDragging) {
-      this.canvas.style.cursor = 'grabbing';
-      return;
-    }
-    if (this.drawingMoveState) {
-      const movingShape = this.selectedDrawingId
-        ? this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null
-        : null;
-      const isPositionShape = Boolean(movingShape && (movingShape.kind === 'long-position' || movingShape.kind === 'short-position'));
-      if (isPositionShape) {
-        if (this.selectedDrawingPart === 'position-target' || this.selectedDrawingPart === 'end' || this.selectedDrawingPart === 'position-stop') {
-          this.canvas.style.cursor = NS_RESIZE_CURSOR;
-          return;
-        }
-        if (this.selectedDrawingPart === 'position-right') {
-          this.canvas.style.cursor = EW_RESIZE_CURSOR;
-          return;
-        }
-      }
-      this.canvas.style.cursor = 'default';
-      return;
-    }
+    const movingShape = this.drawingMoveState && this.selectedDrawingId
+      ? this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null
+      : null;
     const hitSubAlert = this.findSubIndicatorAlertHit(this.mouseX, this.mouseY);
-    if (hitSubAlert) {
-      this.canvas.style.cursor = 'pointer';
-      return;
-    }
-    if (hitDrawing) {
-      const isPositionShape = hitDrawing.shape.kind === 'long-position' || hitDrawing.shape.kind === 'short-position';
-      if (isPositionShape) {
-        if (hitDrawing.part === 'position-target' || hitDrawing.part === 'end' || hitDrawing.part === 'position-stop') {
-          this.canvas.style.cursor = NS_RESIZE_CURSOR;
-          return;
-        }
-        if (hitDrawing.part === 'position-right') {
-          this.canvas.style.cursor = EW_RESIZE_CURSOR;
-          return;
-        }
-      }
-      const anchorParts: DrawingHitPart[] = ['start', 'channel-a', 'channel-b', 'channel-offset', 'fib-offset'];
-      if (anchorParts.includes(hitDrawing.part)) {
-        this.canvas.style.cursor = 'default';
-        return;
-      }
-      this.canvas.style.cursor = 'pointer';
-      return;
-    }
-    if (this.isHoveringCandle(this.mouseX, this.mouseY)) {
-      this.canvas.style.cursor = 'pointer';
-      return;
-    }
-    if (!this.drawingTool && !this.drawingMoveState && this.isOnMainYAxis(this.mouseX, this.mouseY)) {
-      this.canvas.style.cursor = NS_RESIZE_CURSOR;
-      return;
-    }
-    if (!this.drawingTool && !this.drawingMoveState && this.isOnXAxis(this.mouseX, this.mouseY)) {
-      this.canvas.style.cursor = X_AXIS_CURSOR;
-      return;
-    }
-    if (this.hoveredSubIndicatorAddButton) {
-      const { x: bx, y: by, r: br } = this.hoveredSubIndicatorAddButton;
-      const dx = this.mouseX - bx;
-      const dy = this.mouseY - by;
-      if (dx * dx + dy * dy <= (br + 4) * (br + 4)) {
-        this.canvas.style.cursor = 'pointer';
-        return;
-      }
-    }
-    if (!this.drawingTool && !this.drawingMoveState && this.getSubYAxisPanel(this.mouseX, this.mouseY)) {
-      this.canvas.style.cursor = NS_RESIZE_CURSOR;
-      return;
-    }
-    if (this.pointerMode === 'arrow') {
-      this.canvas.style.cursor = 'default';
-      return;
-    }
-    if (this.pointerMode === 'cross') {
-      this.canvas.style.cursor = 'crosshair';
-      return;
-    }
-    if (this.pointerMode === 'dot') {
-      this.canvas.style.cursor = 'none';
-      return;
-    }
-    if (this.pointerMode === 'demo') {
-      this.canvas.style.cursor = 'default';
-      return;
-    }
-    this.canvas.style.cursor = 'none';
+    this.canvas.style.cursor = resolveChartCursor({
+      isMouseOver: this.isMouseOver,
+      mouseX: this.mouseX,
+      mouseY: this.mouseY,
+      crosshairPlusHit: this.crosshairPlusHit,
+      drawingTool: this.drawingTool,
+      yAxisDragging: this.yAxisDragging,
+      subYAxisDragging: Boolean(this.subYAxisDragging),
+      xAxisDragging: this.xAxisDragging,
+      isDragging: this.isDragging,
+      drawingMoveActive: Boolean(this.drawingMoveState),
+      selectedDrawingPart: this.selectedDrawingPart,
+      movingShapeKind: movingShape?.kind ?? null,
+      hitSubAlert: Boolean(hitSubAlert),
+      hitDrawing,
+      hoveringCandle: this.isHoveringCandle(this.mouseX, this.mouseY),
+      onMainYAxis: this.isOnMainYAxis(this.mouseX, this.mouseY),
+      onXAxis: this.isOnXAxis(this.mouseX, this.mouseY),
+      hoveredSubIndicatorAddButton: this.hoveredSubIndicatorAddButton,
+      subYAxisPanel: this.getSubYAxisPanel(this.mouseX, this.mouseY),
+      pointerMode: this.pointerMode,
+      cursors: {
+        eraser: ERASER_CURSOR,
+        nsResize: NS_RESIZE_CURSOR,
+        ewResize: EW_RESIZE_CURSOR,
+        xAxis: X_AXIS_CURSOR,
+      },
+    });
   }
 
   private handleWheel(e: WheelEvent) {
     e.preventDefault();
-    if (Math.abs(e.deltaY) >= Math.abs(e.deltaX) && this.isOnMainYAxis(this.mouseX, this.mouseY)) {
-      const factor = e.deltaY > 0 ? 1.1 : (1 / 1.1);
-      this.yScaleFactor = Math.max(0.1, Math.min(20, this.yScaleFactor * factor));
-      this.draw();
-      return;
-    }
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-      const shift = Math.floor(e.deltaX / 5);
-      const visibleCount = Math.max(1, this.endIndex - this.startIndex);
-      const nextStart = this.normalizeHorizontalVirtualStart(this.startIndex + shift, this.startIndex);
-      const ns = this.clampPanStartIndex(nextStart, visibleCount);
-      this.startIndex = ns;
-      this.endIndex = ns + visibleCount;
-    } else {
-      const minVisible = 5;
-      const maxVisible = this.data.length;
-      const currentVisible = Math.max(minVisible, this.endIndex - this.startIndex);
-      // Dynamic acceleration: when many candles are visible, zoom faster.
-      const zoomStep = Math.max(8, Math.min(64, Math.round(currentVisible * 0.06)));
-      const zoomOut = e.deltaY > 0;
-      const nextVisible = zoomOut
-        ? Math.min(maxVisible, currentVisible + zoomStep)   // 아래 스크롤: 축소(더 많은 캔들)
-        : Math.max(minVisible, currentVisible - zoomStep);  // 위 스크롤: 확대(더 적은 캔들)
+    const result = resolveWheelInteraction({
+      deltaX: e.deltaX,
+      deltaY: e.deltaY,
+      mouseX: this.mouseX,
+      onMainYAxis: this.isOnMainYAxis(this.mouseX, this.mouseY),
+      yScaleFactor: this.yScaleFactor,
+      startIndex: this.startIndex,
+      endIndex: this.endIndex,
+      dataLength: this.data.length,
+      mainViewportMetrics: this.getMainViewportMetrics(),
+      normalizeHorizontalVirtualStart: (virtualStart, baseVirtualStart) => (
+        this.normalizeHorizontalVirtualStart(virtualStart, baseVirtualStart)
+      ),
+      clampPanStartIndex: (startIndex, visibleCount) => this.clampPanStartIndex(startIndex, visibleCount),
+    });
 
-      // 마우스 커서 위치를 앵커로 삼아 줌: 커서 아래 캔들이 제자리 유지
-      const metrics = this.getMainViewportMetrics();
-      if (metrics && nextVisible !== currentVisible) {
-        const chartWidth = Math.max(1, metrics.chartRight - metrics.chartLeft);
-        const ratio = Math.max(0, Math.min(1, (this.mouseX - metrics.chartLeft) / chartWidth));
-        const newStart = Math.round(this.startIndex + ratio * (currentVisible - nextVisible));
-        const clampedStart = Math.max(0, Math.min(this.data.length - nextVisible, newStart));
-        this.startIndex = clampedStart;
-        this.endIndex = clampedStart + nextVisible;
-      } else {
-        this.endIndex = this.data.length;
-        this.startIndex = Math.max(0, this.endIndex - nextVisible);
-      }
+    if (result.type === 'y-scale') {
+      this.yScaleFactor = result.yScaleFactor;
+    } else {
+      this.startIndex = result.startIndex;
+      this.endIndex = result.endIndex;
     }
     this.draw();
   }
@@ -10947,8 +8292,13 @@ export class SimpleChart {
     this.isMouseDownForTooltip = true;
     this.startMouseLongPressTooltip();
 
-    // Y축 드래그 시작
-    if (this.isOnMainYAxis(this.mouseX, this.mouseY)) {
+    const axisInteraction = resolveMouseDownAxisInteraction({
+      onMainYAxis: this.isOnMainYAxis(this.mouseX, this.mouseY),
+      onXAxis: this.isOnXAxis(this.mouseX, this.mouseY),
+      subYAxisPanel: this.getSubYAxisPanel(this.mouseX, this.mouseY),
+    });
+
+    if (axisInteraction.type === 'main-y-axis') {
       this.yAxisDragging = true;
       this.yAxisDragStartY = e.clientY;
       this.yAxisDragStartFactor = this.yScaleFactor;
@@ -10956,8 +8306,7 @@ export class SimpleChart {
       e.preventDefault();
       return;
     }
-    // X축 드래그 시작
-    if (this.isOnXAxis(this.mouseX, this.mouseY)) {
+    if (axisInteraction.type === 'x-axis') {
       this.xAxisDragging = true;
       this.xAxisDragStartX = e.clientX;
       this.xAxisDragStartVisible = Math.max(1, this.endIndex - this.startIndex);
@@ -10966,12 +8315,10 @@ export class SimpleChart {
       e.preventDefault();
       return;
     }
-    // 보조지표 Y축 드래그 시작
-    const subAxisPanel = this.getSubYAxisPanel(this.mouseX, this.mouseY);
-    if (subAxisPanel) {
-      this.subYAxisDragging = subAxisPanel;
+    if (axisInteraction.type === 'sub-y-axis') {
+      this.subYAxisDragging = axisInteraction.panelId;
       this.subYAxisDragStartY = e.clientY;
-      this.subYAxisDragStartFactor = this.subPanelScaleFactors[subAxisPanel] ?? 1.0;
+      this.subYAxisDragStartFactor = this.subPanelScaleFactors[axisInteraction.panelId] ?? 1.0;
       this.updateChartCursor();
       e.preventDefault();
       return;
@@ -10979,61 +8326,58 @@ export class SimpleChart {
 
     // 십자선 + 아이콘 클릭 → 수평선(hline) 생성
     // stale crosshairPlusHovered 의존하지 않고 클릭 시점 좌표로 직접 재계산
-    if (this.crosshairPlusHit) {
-      const { x: hx, y: hy, r: hr, price } = this.crosshairPlusHit;
-      const dx = this.mouseX - hx;
-      const dy = this.mouseY - hy;
-      if (dx * dx + dy * dy <= hr * hr) {
-        const anchor = this.getMouseAnchor(this.mouseX, this.mouseY);
-        const hline: DrawingShape = {
-          id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          kind: 'hline',
-          a: { index: anchor?.index ?? this.startIndex, price },
-          color: '#2962ff',
-          width: HLINE_DEFAULT_WIDTH,
-          lineStyle: 'solid',
-        };
-        this.drawings.push(hline);
-        // 선택 해제 상태 유지 → 연속 생성 가능
-        this.selectedDrawingId = null;
-        this.selectedDrawingPart = 'line';
-        this.drawingMoveState = null;
-        this.syncDrawingToolbar();
-        this.requestOverlayDraw();
-        e.preventDefault();
-        return;
-      }
+    const crosshairHlineAction = resolveCrosshairHlineAction({
+      mouseX: this.mouseX,
+      mouseY: this.mouseY,
+      hitArea: this.crosshairPlusHit,
+      getAnchor: () => this.getMouseAnchor(this.mouseX, this.mouseY),
+      fallbackIndex: this.startIndex,
+    });
+    if (crosshairHlineAction.type === 'create-hline') {
+      this.drawings = upsertDrawingShape(this.drawings, createHlineDrawing({
+        anchor: crosshairHlineAction.anchor,
+        fallbackIndex: crosshairHlineAction.fallbackIndex,
+        price: crosshairHlineAction.price,
+        width: HLINE_DEFAULT_WIDTH,
+      }));
+      // 선택 해제 상태 유지 → 연속 생성 가능
+      this.selectedDrawingId = null;
+      this.selectedDrawingPart = 'line';
+      this.drawingMoveState = null;
+      this.syncDrawingToolbar();
+      this.requestOverlayDraw();
+      e.preventDefault();
+      return;
     }
 
     const hitSubAlert = this.findSubIndicatorAlertHit(this.mouseX, this.mouseY);
-    if (hitSubAlert) {
-      const alert = this.subIndicatorAlerts.find((a) => a.id === hitSubAlert.id);
+    const subIndicatorAction = resolveSubIndicatorAlertMouseDown({
+      mouseX: this.mouseX,
+      mouseY: this.mouseY,
+      hitAlert: hitSubAlert,
+      addButton: this.hoveredSubIndicatorAddButton,
+    });
+    if (subIndicatorAction.type === 'edit-alert') {
+      const alert = this.subIndicatorAlerts.find((a) => a.id === subIndicatorAction.hit.id);
       if (alert) {
         this.openSubIndicatorAlertEditPopup(alert, {
-          panelTop: hitSubAlert.panelTop,
-          panelHeight: hitSubAlert.panelHeight,
+          panelTop: subIndicatorAction.hit.panelTop,
+          panelHeight: subIndicatorAction.hit.panelHeight,
         });
       }
       return;
     }
-
-    if (this.hoveredSubIndicatorAddButton) {
-      const dx = this.mouseX - this.hoveredSubIndicatorAddButton.x;
-      const dy = this.mouseY - this.hoveredSubIndicatorAddButton.y;
-      const hitRadius = this.hoveredSubIndicatorAddButton.r + 4;
-      const hit = dx * dx + dy * dy <= hitRadius * hitRadius;
-      if (hit) {
-        this.openSubIndicatorAlertPopup(
-          this.hoveredSubIndicatorAddButton.x,
-          this.hoveredSubIndicatorAddButton.y,
-          {
-            panelId: this.hoveredSubIndicatorAddButton.panelId,
-            value: this.hoveredSubIndicatorAddButton.value,
-            color: this.hoveredSubIndicatorAddButton.color,
-          },
-        );
-        return;
-      }
+    if (subIndicatorAction.type === 'add-alert') {
+      this.openSubIndicatorAlertPopup(
+        subIndicatorAction.button.x,
+        subIndicatorAction.button.y,
+        {
+          panelId: subIndicatorAction.button.panelId,
+          value: subIndicatorAction.button.value,
+          color: subIndicatorAction.button.color,
+        },
+      );
+      return;
     }
 
     if (this.subIndicatorAlertPopupEl) {
@@ -11063,32 +8407,19 @@ export class SimpleChart {
     if (e.shiftKey) {
       const shiftAnchor = this.getMouseAnchor(this.mouseX, this.mouseY);
       if (shiftAnchor) {
-        const snappedAnchor: DrawingAnchor = { index: Math.round(shiftAnchor.index), price: shiftAnchor.price };
-        if (!this.drawingDraft || this.drawingDraft.kind !== 'measure') {
-          this.drawingDraft = {
-            kind: 'measure',
-            a: snappedAnchor,
-            b: snappedAnchor,
-          };
+        const measureResult = resolveMeasureDraftClick(
+          this.drawingDraft,
+          shiftAnchor,
+          this.lastDrawMeta?.maxP ?? 1,
+        );
+        if (measureResult.type === 'start') {
+          this.drawingDraft = measureResult.draft;
           this.drawingDragActive = true;
           this.requestOverlayDraw();
           return;
         }
-        this.drawingDraft.b = snappedAnchor;
-        const a = this.drawingDraft.a;
-        const b = this.drawingDraft.b;
-        const moved = Math.abs(a.index - b.index) > 0.2
-          || Math.abs(a.price - b.price) > Math.max(1e-6, (this.lastDrawMeta?.maxP ?? 1) * 0.0005);
-        if (moved) {
-          const created: DrawingShape = {
-            id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            kind: 'measure',
-            a,
-            b,
-            color: '#2f6cff',
-            width: 1.5,
-            lineStyle: 'solid',
-          };
+        if (measureResult.type === 'created') {
+          const created = measureResult.shape;
           this.upsertDrawing(created);
           this.selectedDrawingId = created.id;
           this.selectedDrawingPart = 'end';
@@ -11102,66 +8433,46 @@ export class SimpleChart {
     }
 
     const hitDrawing = this.findDrawingAt(this.mouseX, this.mouseY);
-    if (
-      hitDrawing
-      && hitDrawing.shape.kind === 'anchored-vwap'
-      && hitDrawing.part === 'start'
-      && e.detail >= 2
-    ) {
-      this.selectedDrawingId = hitDrawing.shape.id;
-      this.selectedDrawingPart = 'start';
-      this.drawingMoveState = null;
-      this.syncDrawingToolbar();
-      this.openAnchoredVwapSettingsModal(hitDrawing.shape);
-      this.requestOverlayDraw();
-      this.updateChartCursor();
-      return;
-    }
-    if (
-      hitDrawing
-      && (hitDrawing.shape.kind === 'long-position' || hitDrawing.shape.kind === 'short-position')
-      && hitDrawing.part === 'position-entry-info'
-      && e.detail >= 2
-    ) {
-      this.selectedDrawingId = hitDrawing.shape.id;
-      this.selectedDrawingPart = hitDrawing.part;
-      this.drawingMoveState = null;
-      this.syncDrawingToolbar();
-      this.openPositionSettingsPopup(hitDrawing.shape);
-      this.requestOverlayDraw();
-      this.updateChartCursor();
-      return;
-    }
     const hoveredGuideTrendline = (
       !this.drawingTool
       && this.hoveredDrawingPart === 'trendline-text-guide'
       && this.hoveredDrawingId
     )
-      ? this.drawings.find((shape) => shape.id === this.hoveredDrawingId && this.isTrendlineShape(shape))
+      ? this.drawings.find((shape) => shape.id === this.hoveredDrawingId && this.isTrendlineShape(shape)) ?? null
       : null;
-    if (
-      hoveredGuideTrendline
-      && (!hitDrawing || (this.isTrendlineShape(hitDrawing.shape) && hitDrawing.shape.id === hoveredGuideTrendline.id))
-    ) {
-      this.selectedDrawingId = hoveredGuideTrendline.id;
-      this.selectedDrawingPart = 'trendline-text-guide';
+    const editAction = resolveDrawingMouseDownEditAction({
+      hitDrawing,
+      clickDetail: e.detail,
+      drawingToolActive: Boolean(this.drawingTool),
+      hoveredGuideTrendline,
+      isTrendlineShape: (shape) => this.isTrendlineShape(shape),
+    });
+    if (editAction.type === 'edit-anchored-vwap') {
+      this.selectedDrawingId = editAction.shape.id;
+      this.selectedDrawingPart = editAction.part;
       this.drawingMoveState = null;
       this.syncDrawingToolbar();
-      this.openTrendlineTextEditor(hoveredGuideTrendline);
+      this.openAnchoredVwapSettingsModal(editAction.shape);
+      this.requestOverlayDraw();
       this.updateChartCursor();
       return;
     }
-    if (
-      !this.drawingTool
-      && hitDrawing
-      && this.isTrendlineShape(hitDrawing.shape)
-      && hitDrawing.part === 'trendline-text-guide'
-    ) {
-      this.selectedDrawingId = hitDrawing.shape.id;
-      this.selectedDrawingPart = 'trendline-text-guide';
+    if (editAction.type === 'edit-position-settings') {
+      this.selectedDrawingId = editAction.shape.id;
+      this.selectedDrawingPart = editAction.part;
       this.drawingMoveState = null;
       this.syncDrawingToolbar();
-      this.openTrendlineTextEditor(hitDrawing.shape);
+      this.openPositionSettingsPopup(editAction.shape);
+      this.requestOverlayDraw();
+      this.updateChartCursor();
+      return;
+    }
+    if (editAction.type === 'edit-trendline-text') {
+      this.selectedDrawingId = editAction.shape.id;
+      this.selectedDrawingPart = editAction.part;
+      this.drawingMoveState = null;
+      this.syncDrawingToolbar();
+      this.openTrendlineTextEditor(editAction.shape);
       this.updateChartCursor();
       return;
     }
@@ -11174,7 +8485,7 @@ export class SimpleChart {
       return;
     }
     if (!this.drawingTool && hitDrawing && hitDrawing.shape.kind === 'measure') {
-      this.drawings = this.drawings.filter((shape) => shape.id !== hitDrawing.shape.id);
+      this.drawings = deleteDrawingById(this.drawings, hitDrawing.shape.id);
       if (this.selectedDrawingId === hitDrawing.shape.id) {
         this.selectedDrawingId = null;
         this.selectedDrawingPart = 'line';
@@ -11189,7 +8500,7 @@ export class SimpleChart {
       const hasMeasure = this.drawings.some((shape) => shape.kind === 'measure');
       const clickedMeasure = Boolean(hitDrawing && hitDrawing.shape.kind === 'measure');
       if (hasMeasure && !clickedMeasure) {
-        this.drawings = this.drawings.filter((shape) => shape.kind !== 'measure');
+        this.drawings = deleteDrawingsByKind(this.drawings, 'measure');
         if (this.selectedDrawingId) {
           const selected = this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null;
           if (!selected) {
@@ -11212,79 +8523,15 @@ export class SimpleChart {
       }
     }
     if (!this.drawingTool && hitDrawing) {
-      if (
-        (hitDrawing.shape.kind === 'long-position' || hitDrawing.shape.kind === 'short-position')
-        && (hitDrawing.part === 'body' || hitDrawing.part === 'line' || hitDrawing.part === 'position-entry-info')
-      ) {
-        const metrics = this.getMainViewportMetrics();
-        if (metrics) {
-          const ax = this.xForIndex(hitDrawing.shape.a.index, metrics.totalSp, metrics.candleW);
-          const ay = metrics.getY(hitDrawing.shape.a.price);
-          const by = metrics.getY(hitDrawing.shape.b?.price ?? hitDrawing.shape.a.price);
-          const targetOffset = hitDrawing.shape.channelOffset ?? { index: 0, price: 0 };
-          const tx = this.xForIndex(hitDrawing.shape.a.index + targetOffset.index, metrics.totalSp, metrics.candleW);
-          const ty = metrics.getY(hitDrawing.shape.a.price + targetOffset.price);
-          const minBoxWidthPx = 228;
-          let posLeft = Math.min(ax, tx);
-          let posRight = Math.max(ax, tx);
-          const currentWidth = Math.abs(posRight - posLeft);
-          if (currentWidth < minBoxWidthPx) {
-            if (tx >= ax) {
-              posLeft = ax;
-              posRight = ax + minBoxWidthPx;
-            } else {
-              posRight = ax;
-              posLeft = ax - minBoxWidthPx;
-            }
-          }
-          const anchorPad = 24;
-          if (Math.abs(this.mouseX - posRight) <= anchorPad && Math.abs(this.mouseY - ay) <= anchorPad) {
-            hitDrawing.part = 'position-right';
-          } else if (Math.abs(this.mouseX - posLeft) <= anchorPad && Math.abs(this.mouseY - by) <= anchorPad) {
-            hitDrawing.part = 'end';
-          } else if (Math.abs(this.mouseX - posLeft) <= anchorPad && Math.abs(this.mouseY - ty) <= anchorPad) {
-            hitDrawing.part = 'position-target';
-          }
-        }
-      }
-      let normalizedPart: DrawingHitPart = hitDrawing.part;
-      if (
-        (hitDrawing.shape.kind === 'long-position' || hitDrawing.shape.kind === 'short-position')
-        && (hitDrawing.part === 'body' || hitDrawing.part === 'line' || hitDrawing.part === 'position-entry-info')
-      ) {
-        const metrics = this.getMainViewportMetrics();
-        if (metrics) {
-          const ax = this.xForIndex(hitDrawing.shape.a.index, metrics.totalSp, metrics.candleW);
-          const ay = metrics.getY(hitDrawing.shape.a.price);
-          const by = metrics.getY(hitDrawing.shape.b?.price ?? hitDrawing.shape.a.price);
-          const targetOffset = hitDrawing.shape.channelOffset ?? { index: 0, price: 0 };
-          const tx = this.xForIndex(hitDrawing.shape.a.index + targetOffset.index, metrics.totalSp, metrics.candleW);
-          const ty = metrics.getY(hitDrawing.shape.a.price + targetOffset.price);
-          const minBoxWidthPx = 228;
-          let posLeft = Math.min(ax, tx);
-          let posRight = Math.max(ax, tx);
-          const currentWidth = Math.abs(posRight - posLeft);
-          if (currentWidth < minBoxWidthPx) {
-            if (tx >= ax) {
-              posLeft = ax;
-              posRight = ax + minBoxWidthPx;
-            } else {
-              posRight = ax;
-              posLeft = ax - minBoxWidthPx;
-            }
-          }
-          const distRight = Math.hypot(this.mouseX - posRight, this.mouseY - ay);
-          const distStop = Math.hypot(this.mouseX - posLeft, this.mouseY - by);
-          const distTarget = Math.hypot(this.mouseX - posLeft, this.mouseY - ty);
-          const minDist = Math.min(distRight, distStop, distTarget);
-          const forceAnchorPad = 24;
-          if (minDist <= forceAnchorPad) {
-            if (minDist === distRight) normalizedPart = 'position-right';
-            else if (minDist === distTarget) normalizedPart = 'position-target';
-            else normalizedPart = 'end';
-          }
-        }
-      }
+      const metrics = this.getMainViewportMetrics();
+      const normalizedPart = normalizePositionDrawingHitPart({
+        shape: hitDrawing.shape,
+        part: hitDrawing.part,
+        mouseX: this.mouseX,
+        mouseY: this.mouseY,
+        metrics,
+        xForIndex: (index, totalSp, candleW) => this.xForIndex(index, totalSp, candleW),
+      });
 
       this.selectedDrawingId = hitDrawing.shape.id;
       this.selectedDrawingPart = normalizedPart;
@@ -11317,32 +8564,19 @@ export class SimpleChart {
         return;
       }
       if (this.drawingTool === 'measure') {
-        const snappedAnchor: DrawingAnchor = { index: Math.round(anchor.index), price: anchor.price };
-        if (!this.drawingDraft || this.drawingDraft.kind !== 'measure') {
-          this.drawingDraft = {
-            kind: 'measure',
-            a: snappedAnchor,
-            b: snappedAnchor,
-          };
+        const measureResult = resolveMeasureDraftClick(
+          this.drawingDraft,
+          anchor,
+          this.lastDrawMeta?.maxP ?? 1,
+        );
+        if (measureResult.type === 'start') {
+          this.drawingDraft = measureResult.draft;
           this.drawingDragActive = true;
           this.requestOverlayDraw();
           return;
         }
-        this.drawingDraft.b = snappedAnchor;
-        const a = this.drawingDraft.a;
-        const b = this.drawingDraft.b;
-        const moved = Math.abs(a.index - b.index) > 0.2
-          || Math.abs(a.price - b.price) > Math.max(1e-6, (this.lastDrawMeta?.maxP ?? 1) * 0.0005);
-        if (moved) {
-          const created: DrawingShape = {
-            id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            kind: 'measure',
-            a,
-            b,
-            color: '#2f6cff',
-            width: 1.5,
-            lineStyle: 'solid',
-          };
+        if (measureResult.type === 'created') {
+          const created = measureResult.shape;
           this.upsertDrawing(created);
           this.selectedDrawingId = created.id;
           this.selectedDrawingPart = 'end';
@@ -11360,18 +8594,12 @@ export class SimpleChart {
         if (!defaults) { this.requestOverlayDraw(); return; }
         const { anchor: snappedAnchor, defaultRisk, defaultBars } = defaults;
         const isLong      = this.drawingTool === 'long-position';
-        const stopPrice   = isLong ? (snappedAnchor.price - defaultRisk) : (snappedAnchor.price + defaultRisk);
-        const targetPrice = isLong ? (snappedAnchor.price + defaultRisk) : (snappedAnchor.price - defaultRisk);
-
-        const created: DrawingShape = {
-          id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        const created = createPositionDrawing({
           kind: this.drawingTool,
-          a: { index: snappedAnchor.index, price: snappedAnchor.price },
-          b: { index: snappedAnchor.index, price: stopPrice },
-          channelOffset: { index: defaultBars, price: targetPrice - snappedAnchor.price },
-          color: '#2f6cff', width: 2, lineStyle: 'solid',
-          alert: { enabled: false, mode: 'up', target: 'trendline', appPush: false, onsite: true, sound: false },
-        };
+          anchor: snappedAnchor,
+          defaultRisk,
+          defaultBars,
+        });
         this.upsertDrawing(created);
         this.selectedDrawingId = created.id;
         this.selectedDrawingPart = 'position-target';
@@ -11404,30 +8632,9 @@ export class SimpleChart {
         if (this.fibTrendPointStage === 2) {
           const baseA = this.drawingDraft.a;
           const baseB = this.drawingDraft.b;
-          const offset = {
-            index: anchor.index - baseA.index,
-            price: anchor.price - baseA.price,
-          };
           const moved = Math.abs(baseA.index - baseB.index) > 0.2 || Math.abs(baseA.price - baseB.price) > Math.max(1e-6, (this.lastDrawMeta?.maxP ?? 1) * 0.0005);
           if (moved) {
-            const created: DrawingShape = {
-              id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-              kind: 'fib-trend',
-              a: baseA,
-              b: baseB,
-              channelOffset: offset,
-              color: '#2f6cff',
-              width: 2,
-              lineStyle: 'solid',
-              alert: {
-                enabled: false,
-                mode: 'up',
-                target: 'trendline',
-                appPush: false,
-                onsite: true,
-                sound: false,
-              },
-            };
+            const created = createFibTrendDrawing({ a: baseA, b: baseB, offsetAnchor: anchor });
             this.upsertDrawing(created);
             this.selectedDrawingId = created.id;
             this.selectedDrawingPart = 'fib-offset';
@@ -11441,14 +8648,13 @@ export class SimpleChart {
         }
       }
       if (this.drawingTool === 'hline') {
-        const created: DrawingShape = {
-          id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          kind: 'hline',
-          a: anchor,
+        const created = createHlineDrawing({
+          anchor,
+          fallbackIndex: this.startIndex,
+          price: anchor.price,
           color: '#2f6cff',
           width: HLINE_DEFAULT_WIDTH,
-          lineStyle: 'solid',
-        };
+        });
         this.upsertDrawing(created);
         this.selectedDrawingId = created.id;
         this.selectedDrawingPart = 'line';
@@ -11512,23 +8718,24 @@ export class SimpleChart {
       return;
     }
     const hitDrawing = this.findDrawingAt(mx, my);
-    if (hitDrawing && this.isTrendlineShape(hitDrawing.shape)) {
-      this.selectedDrawingId = hitDrawing.shape.id;
-      this.selectedDrawingPart = hitDrawing.part === 'start' || hitDrawing.part === 'end' ? 'body' : hitDrawing.part;
+    const drawingAction = resolveDrawingDoubleClickAction(hitDrawing, (shape) => this.isTrendlineShape(shape));
+    if (drawingAction.type === 'edit-trendline-text') {
+      this.selectedDrawingId = drawingAction.shape.id;
+      this.selectedDrawingPart = drawingAction.part;
       this.drawingMoveState = null;
       this.syncDrawingToolbar();
-      this.openTrendlineTextEditor(hitDrawing.shape);
+      this.openTrendlineTextEditor(drawingAction.shape);
       this.updateChartCursor();
       e.preventDefault();
       e.stopPropagation();
       return;
     }
-    if (hitDrawing && hitDrawing.shape.kind === 'text-note') {
-      this.selectedDrawingId = hitDrawing.shape.id;
-      this.selectedDrawingPart = 'body';
+    if (drawingAction.type === 'edit-text-note') {
+      this.selectedDrawingId = drawingAction.shape.id;
+      this.selectedDrawingPart = drawingAction.part;
       this.drawingMoveState = null;
       this.syncDrawingToolbar();
-      this.openTextNoteEditor(hitDrawing.shape);
+      this.openTextNoteEditor(drawingAction.shape);
       this.updateChartCursor();
       e.preventDefault();
       e.stopPropagation();
@@ -11543,39 +8750,43 @@ export class SimpleChart {
       const movingShape = this.selectedDrawingId
         ? this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null
         : null;
-      const isPositionShape = Boolean(movingShape && (movingShape.kind === 'long-position' || movingShape.kind === 'short-position'));
-      if (isPositionShape) {
-        if (this.selectedDrawingPart === 'position-right') {
-          this.mouseY = this.drawingMoveState.startY;
-        } else if (this.selectedDrawingPart === 'position-target' || this.selectedDrawingPart === 'end' || this.selectedDrawingPart === 'position-stop') {
-          this.mouseX = this.drawingMoveState.startX;
-        }
-      }
+      const constrained = constrainPositionDrawingPointer({
+        shape: movingShape,
+        part: this.selectedDrawingPart,
+        x: this.mouseX,
+        y: this.mouseY,
+        startX: this.drawingMoveState.startX,
+        startY: this.drawingMoveState.startY,
+      });
+      this.mouseX = constrained.x;
+      this.mouseY = constrained.y;
     }
     this.isMouseOver = true;
 
     if (this.xAxisDragging) {
-      const dx = e.clientX - this.xAxisDragStartX;
-      const minVisible = 5;
-      const maxVisible = this.data.length || 1;
-      const newVisible = Math.max(minVisible, Math.min(maxVisible, Math.round(this.xAxisDragStartVisible * Math.exp(-dx * 0.008))));
-      const mid = this.xAxisDragStartIndex + this.xAxisDragStartVisible / 2;
-      const newStart = Math.round(mid - newVisible / 2);
-      const clampedStart = Math.max(0, Math.min(maxVisible - newVisible, newStart));
-      this.startIndex = clampedStart;
-      this.endIndex = clampedStart + newVisible;
+      const range = resolveXAxisDragRange({
+        clientX: e.clientX,
+        dragStartX: this.xAxisDragStartX,
+        dragStartVisible: this.xAxisDragStartVisible,
+        dragStartIndex: this.xAxisDragStartIndex,
+        dataLength: this.data.length,
+      });
+      this.startIndex = range.startIndex;
+      this.endIndex = range.endIndex;
       this.draw();
       return;
     }
     if (this.yAxisDragging) {
-      const dy = e.clientY - this.yAxisDragStartY;
-      this.yScaleFactor = Math.max(0.1, Math.min(20, this.yAxisDragStartFactor * Math.exp(dy * 0.005)));
+      this.yScaleFactor = resolveMainYAxisDragScale(e.clientY, this.yAxisDragStartY, this.yAxisDragStartFactor);
       this.draw();
       return;
     }
     if (this.subYAxisDragging) {
-      const dy = e.clientY - this.subYAxisDragStartY;
-      this.subPanelScaleFactors[this.subYAxisDragging] = Math.max(0.05, Math.min(20, this.subYAxisDragStartFactor * Math.exp(dy * 0.005)));
+      this.subPanelScaleFactors[this.subYAxisDragging] = resolveSubYAxisDragScale(
+        e.clientY,
+        this.subYAxisDragStartY,
+        this.subYAxisDragStartFactor,
+      );
       this.draw();
       return;
     }
@@ -11586,10 +8797,8 @@ export class SimpleChart {
 
     // + 아이콘 hover 감지
     if (this.crosshairPlusHit) {
-      const dx = this.mouseX - this.crosshairPlusHit.x;
-      const dy = this.mouseY - this.crosshairPlusHit.y;
       const wasHovered = this.crosshairPlusHovered;
-      this.crosshairPlusHovered = dx * dx + dy * dy <= this.crosshairPlusHit.r * this.crosshairPlusHit.r;
+      this.crosshairPlusHovered = isPointInCircle(this.crosshairPlusHit, this.mouseX, this.mouseY);
       if (this.crosshairPlusHovered !== wasHovered) this.requestOverlayDraw();
     } else {
       this.crosshairPlusHovered = false;
@@ -11598,11 +8807,16 @@ export class SimpleChart {
     this.updateChartCursor();
     this.updateLogBtnPosition();
     if (this.drawingMoveState && this.selectedDrawingId) {
-      const dx = this.mouseX - this.drawingMoveState.startX;
-      const dy = this.mouseY - this.drawingMoveState.startY;
-      this.drawingMoveDistance = Math.max(this.drawingMoveDistance, Math.hypot(dx, dy));
-      const moved = this.moveShapeByDelta(this.drawingMoveState.baseShape, dx, dy, this.selectedDrawingPart);
-      this.upsertDrawing(moved);
+      const moveResult = applyDrawingMove({
+        pointerX: this.mouseX,
+        pointerY: this.mouseY,
+        moveState: this.drawingMoveState,
+        selectedPart: this.selectedDrawingPart,
+        currentMoveDistance: this.drawingMoveDistance,
+        moveShapeByDelta: (baseShape, dx, dy, part) => this.moveShapeByDelta(baseShape, dx, dy, part),
+      });
+      this.drawingMoveDistance = moveResult.moveDistance;
+      this.upsertDrawing(moveResult.movedShape);
       this.syncDrawingToolbar();
       this.requestOverlayDraw();
       return;
@@ -11625,37 +8839,40 @@ export class SimpleChart {
     if (this.drawingDragActive && this.drawingDraft) {
       const anchor = this.getMouseAnchor(this.mouseX, this.mouseY);
       if (anchor) {
-        if (this.drawingDraft.kind === 'draw-pencil' || this.drawingDraft.kind === 'draw-highlighter') {
-          if (!this.drawingDraft.points) this.drawingDraft.points = [this.drawingDraft.a];
-          this.drawingDraft.points.push(anchor);
-          this.drawingDraft.b = anchor;
-        } else if (this.drawingDraft.kind === 'measure') {
-          this.drawingDraft.b = { index: Math.round(anchor.index), price: anchor.price };
-        } else {
-          this.drawingDraft.b = anchor;
-        }
+        updateDrawingDraftAnchor(this.drawingDraft, anchor);
       }
       this.requestOverlayDraw();
       return;
     }
     this.requestOverlayDraw();
     if (!this.isDragging) return;
-    const dx = e.clientX - this.dragStartX;
-    const dy = e.clientY - this.dragStartY;
     const visibleCount = Math.max(1, this.endIndex - this.startIndex);
     const chartW = this.getChartGeometry(this.viewportWidth, this.lastDrawMeta?.axisPad).chartWidth;
-    const cpw = chartW / (visibleCount + Math.max(0, this.config.layout.rightGapBars ?? 0));
     let changed = false;
-    if (cpw > 0) {
-      const shift = Math.floor(dx / cpw) * -1;
-      const baseVirtualStart = this.dragStartIndex - this.dragStartLeftPanBars;
-      const virtualStart = this.normalizeHorizontalVirtualStart(baseVirtualStart + shift, baseVirtualStart);
+    const virtualStart = resolveHorizontalPanVirtualStart({
+      pointerX: e.clientX,
+      dragStartX: this.dragStartX,
+      dragStartIndex: this.dragStartIndex,
+      dragStartLeftPanBars: this.dragStartLeftPanBars,
+      chartWidth: chartW,
+      visibleCount,
+      rightGapBars: this.config.layout.rightGapBars ?? 0,
+      normalizeHorizontalVirtualStart: (nextVirtualStart, baseVirtualStart) => (
+        this.normalizeHorizontalVirtualStart(nextVirtualStart, baseVirtualStart)
+      ),
+    });
+    if (virtualStart != null) {
       if (this.applyHorizontalPan(virtualStart, visibleCount)) changed = true;
     }
     if (this.isVerticalPanEnabled()) {
-      const pricePerPixel = this.getMainPricePerPixel();
-      const nextPriceOffset = this.dragStartPriceOffset + dy * pricePerPixel;
-      if (Number.isFinite(nextPriceOffset) && Math.abs(nextPriceOffset - this.mainPricePanOffset) > 1e-12) {
+      const nextPriceOffset = resolveVerticalPanOffset({
+        pointerY: e.clientY,
+        dragStartY: this.dragStartY,
+        dragStartPriceOffset: this.dragStartPriceOffset,
+        currentPriceOffset: this.mainPricePanOffset,
+        pricePerPixel: this.getMainPricePerPixel(),
+      });
+      if (nextPriceOffset != null) {
         this.mainPricePanOffset = nextPriceOffset;
         changed = true;
       }
@@ -11684,11 +8901,15 @@ export class SimpleChart {
       return;
     }
     if (this.drawingMoveState) {
-      const baseShape = this.drawingMoveState.baseShape;
-      const wasClickOnly = baseShape.kind === 'text-note'
-        ? this.drawingMoveDistance < SimpleChart.TEXT_NOTE_TOUCH_TAP_MOVE_THRESHOLD
-        : this.drawingMoveDistance < 4;
-      if (this.pendingChannelId && this.selectedDrawingId === this.pendingChannelId && this.selectedDrawingPart === 'channel-offset') {
+      const moveEnd = resolveDrawingMoveEnd({
+        moveState: this.drawingMoveState,
+        moveDistance: this.drawingMoveDistance,
+        textNoteTapThreshold: SimpleChart.TEXT_NOTE_TOUCH_TAP_MOVE_THRESHOLD,
+        pendingChannelId: this.pendingChannelId,
+        selectedDrawingId: this.selectedDrawingId,
+        selectedPart: this.selectedDrawingPart,
+      });
+      if (moveEnd.shouldDisarmPendingChannel) {
         this.pendingChannelId = null;
         this.setDrawingTool(null);
       }
@@ -11697,51 +8918,23 @@ export class SimpleChart {
       this.syncDrawingToolbar();
       this.requestOverlayDraw();
       this.updateChartCursor();
-      if (baseShape.kind === 'text-note' && wasClickOnly) {
-        const current = this.drawings.find((shape) => shape.id === baseShape.id && shape.kind === 'text-note');
+      if (moveEnd.baseShape.kind === 'text-note' && moveEnd.wasClickOnly) {
+        const current = this.drawings.find((shape) => shape.id === moveEnd.baseShape.id && shape.kind === 'text-note');
         if (current) this.openTextNoteEditor(current);
       }
       return;
     }
     if (this.drawingDragActive && this.drawingDraft) {
-      if (this.drawingDraft.kind === 'measure') {
+      const finishResult = finishDrawingDraft(this.drawingDraft, this.lastDrawMeta?.maxP ?? 1);
+      if (finishResult.status === 'skip-measure') {
         this.requestOverlayDraw();
         this.updateChartCursor();
         return;
       }
-      const a = this.drawingDraft.a;
-      const b = this.drawingDraft.b;
-      const moved = Math.abs(a.index - b.index) > 0.2 || Math.abs(a.price - b.price) > Math.max(1e-6, (this.lastDrawMeta?.maxP ?? 1) * 0.0005);
-      if (moved) {
-        const draftKind = this.drawingDraft.kind;
-        const draftColor = draftKind === 'draw-pencil'
-          ? '#6ea8ff'
-          : draftKind === 'draw-highlighter'
-            ? 'rgba(255,234,86,0.4)'
-          : draftKind === 'draw-box'
-              ? 'rgba(126,166,255,0.20)'
-              : '#2f6cff';
-        const draftWidth = draftKind === 'draw-highlighter' ? 8 : 2;
-        const created: DrawingShape = {
-          id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          kind: draftKind,
-          a,
-          b,
-          points: this.drawingDraft.points ? this.drawingDraft.points.map((p) => ({ ...p })) : undefined,
-          color: draftColor,
-          width: draftWidth,
-          lineStyle: 'solid',
-          alert: {
-            enabled: false,
-            mode: 'up',
-            target: 'trendline',
-            appPush: false,
-            onsite: true,
-            sound: false,
-          },
-        };
+      if (finishResult.status === 'created') {
+        const created = finishResult.shape;
         if (created.kind === 'channel') {
-          created.channelOffset = this.getDefaultChannelOffset(a, b);
+          created.channelOffset = this.getDefaultChannelOffset(created.a, created.b ?? created.a);
         }
         this.upsertDrawing(created);
         this.selectedDrawingId = created.id;
@@ -11787,49 +8980,13 @@ export class SimpleChart {
   private completeDrawing(): void {
     if (!this.drawingDraft) return;
 
-    const a = this.drawingDraft.a;
-    const b = this.drawingDraft.b;
-    
-    // 포인트가 유의미한 거리에 있는지 확인
-    const moved = Math.abs(a.index - (b?.index ?? a.index)) > 0.2 
-      || Math.abs(a.price - (b?.price ?? a.price)) > Math.max(1e-6, (this.lastDrawMeta?.maxP ?? 1) * 0.0005);
-    
-    if (moved) {
-      const draftKind = this.drawingDraft.kind;
-      const draftColor = draftKind === 'draw-pencil'
-        ? '#6ea8ff'
-        : draftKind === 'draw-highlighter'
-          ? 'rgba(255,234,86,0.4)'
-        : draftKind === 'draw-box'
-            ? 'rgba(126,166,255,0.20)'
-            : '#2f6cff';
-      const draftWidth = draftKind === 'draw-highlighter' ? 8 : 2;
-      const created: DrawingShape = {
-        id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        kind: draftKind,
-        a: this.drawingDraft.a,
-        b: this.drawingDraft.b,
-        points: this.drawingDraft.points ? this.drawingDraft.points.map((p) => ({ ...p })) : undefined,
-        color: draftColor,
-        width: draftWidth,
-        lineStyle: 'solid',
-        alert: {
-          enabled: false,
-          mode: 'up',
-          target: 'trendline',
-          appPush: false,
-          onsite: true,
-          sound: false,
-        },
-      };
+    const finishResult = finishDrawingDraft(this.drawingDraft, this.lastDrawMeta?.maxP ?? 1);
+    if (finishResult.status === 'created') {
+      const created = finishResult.shape;
       
       // 채널은 기울기 방향 기준 기본 간격 오프셋을 자동 적용
       if (created.kind === 'channel') {
         created.channelOffset = this.getDefaultChannelOffset(created.a, created.b ?? created.a);
-      }
-      // 피보나치 추세의 경우 채널 오프셋 추가
-      if (created.kind === 'fib-trend' && this.drawingDraft.channelOffset) {
-        created.channelOffset = this.drawingDraft.channelOffset;
       }
       
       this.upsertDrawing(created);
@@ -12022,7 +9179,7 @@ export class SimpleChart {
       if (!this.drawingTool && !this.drawingDraft) {
         const hasMeasure = this.drawings.some((shape) => shape.kind === 'measure');
         if (hasMeasure && !hitDrawing) {
-          this.drawings = this.drawings.filter((shape) => shape.kind !== 'measure');
+          this.drawings = deleteDrawingsByKind(this.drawings, 'measure');
           if (this.selectedDrawingId) {
             const selected = this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null;
             if (!selected) {
@@ -12056,7 +9213,7 @@ export class SimpleChart {
               ...this.cloneShape(hitDrawing.shape),
               id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             };
-            this.drawings.push(dup);
+            this.drawings = upsertDrawingShape(this.drawings, dup);
             this.selectedDrawingId = dup.id;
             this.selectedDrawingPart = 'line';
             this.drawingMoveState = {
@@ -12266,16 +9423,18 @@ export class SimpleChart {
 
       // ── 메인 Y축 터치 드래그 ─────────────────────────────────────────
       if (this.yAxisDragging) {
-        const dy = touch.clientY - this.yAxisDragStartY;
-        this.yScaleFactor = Math.max(0.1, Math.min(20, this.yAxisDragStartFactor * Math.exp(dy * 0.005)));
+        this.yScaleFactor = resolveMainYAxisDragScale(touch.clientY, this.yAxisDragStartY, this.yAxisDragStartFactor);
         this.draw();
         return;
       }
 
       // ── 보조지표 Y축 터치 드래그 ─────────────────────────────────────
       if (this.subYAxisDragging) {
-        const dy = touch.clientY - this.subYAxisDragStartY;
-        this.subPanelScaleFactors[this.subYAxisDragging] = Math.max(0.05, Math.min(20, this.subYAxisDragStartFactor * Math.exp(dy * 0.005)));
+        this.subPanelScaleFactors[this.subYAxisDragging] = resolveSubYAxisDragScale(
+          touch.clientY,
+          this.subYAxisDragStartY,
+          this.subYAxisDragStartFactor,
+        );
         this.draw();
         return;
       }
@@ -12284,16 +9443,21 @@ export class SimpleChart {
       // ? 기존 드로잉 드래그: 터치로 앵커 이동
       // ????????????????????????????????????????????????????????????????????
       if (this.drawingMoveState && this.selectedDrawingId) {
-        const dx = pos.x - this.drawingMoveState.startX;
-        const dy = pos.y - this.drawingMoveState.startY;
-        this.drawingMoveDistance = Math.max(this.drawingMoveDistance, Math.hypot(dx, dy));
-        if (Math.sqrt(dx * dx + dy * dy) > SimpleChart.LONG_PRESS_MOVE_THRESHOLD) {
+        const moveResult = applyDrawingMove({
+          pointerX: pos.x,
+          pointerY: pos.y,
+          moveState: this.drawingMoveState,
+          selectedPart: this.selectedDrawingPart,
+          currentMoveDistance: this.drawingMoveDistance,
+          moveShapeByDelta: (baseShape, dx, dy, part) => this.moveShapeByDelta(baseShape, dx, dy, part),
+        });
+        this.drawingMoveDistance = moveResult.moveDistance;
+        if (Math.hypot(moveResult.dx, moveResult.dy) > SimpleChart.LONG_PRESS_MOVE_THRESHOLD) {
           this.cancelLongPress();
         }
-        const moved = this.moveShapeByDelta(this.drawingMoveState.baseShape, dx, dy, this.selectedDrawingPart);
-        this.upsertDrawing(moved);
-        if (moved.kind === 'text-note') {
-          const anchorPoint = this.getDrawingAnchorScreenPoint(moved);
+        this.upsertDrawing(moveResult.movedShape);
+        if (moveResult.movedShape.kind === 'text-note') {
+          const anchorPoint = this.getDrawingAnchorScreenPoint(moveResult.movedShape);
           if (anchorPoint) {
             this.touchDrawingCrosshairX = anchorPoint.x;
             this.touchDrawingCrosshairY = anchorPoint.y;
@@ -12353,20 +9517,20 @@ export class SimpleChart {
               const dy2 = pos.y - this.touchStartY;
               if (Math.sqrt(dx2 * dx2 + dy2 * dy2) > 4) this.drawingDragActive = true;
             }
-            if (this.drawingDraft.kind === 'draw-pencil' || this.drawingDraft.kind === 'draw-highlighter') {
-              if (!this.drawingDraft.points) this.drawingDraft.points = [this.drawingDraft.a];
-              this.drawingDraft.points.push(anchor);
-              this.drawingDraft.b = anchor;
-            } else if (this.drawingDraft.kind === 'measure') {
-              this.drawingDraft.b = { index: Math.round(anchor.index), price: anchor.price };
-            } else if (this.drawingDraft.kind === 'channel' && !this.drawingDraft.b ||
-                       (this.drawingDraft.b &&
-                        (this.drawingDraft.b.index === this.drawingDraft.a.index ||
-                         this.drawingDraft.b.price === this.drawingDraft.a.price))) {
+            const shouldPromoteChannelStage = (
+              this.drawingDraft.kind === 'channel' && !this.drawingDraft.b
+            ) || (
+              this.drawingDraft.b
+              && (
+                this.drawingDraft.b.index === this.drawingDraft.a.index
+                || this.drawingDraft.b.price === this.drawingDraft.a.price
+              )
+            );
+            if (shouldPromoteChannelStage) {
               this.drawingDraft.b = anchor;
               this.fibTrendPointStage = 2;
             } else {
-              this.drawingDraft.b = anchor;
+              updateDrawingDraftAnchor(this.drawingDraft, anchor);
             }
           }
         }
@@ -12402,22 +9566,33 @@ export class SimpleChart {
 
       // ── 패닝 ──────────────────────────────────────────────────────────
       if (this.isTouchPanning) {
-        const dx = pos.x - this.touchStartX;
-        const dy = pos.y - this.touchStartY;
         const visibleCount = Math.max(1, this.endIndex - this.startIndex);
         const chartW = this.getChartGeometry(this.viewportWidth, this.lastDrawMeta?.axisPad).chartWidth;
-        const cpw    = chartW / (visibleCount + Math.max(0, this.config.layout.rightGapBars ?? 0));
         let changed = false;
-        if (cpw > 0) {
-          const shift = Math.floor(dx / cpw) * -1;
-          const baseVirtualStart = this.touchStartIndex - this.touchStartLeftPanBars;
-          const virtualStart = this.normalizeHorizontalVirtualStart(baseVirtualStart + shift, baseVirtualStart);
+        const virtualStart = resolveHorizontalPanVirtualStart({
+          pointerX: pos.x,
+          dragStartX: this.touchStartX,
+          dragStartIndex: this.touchStartIndex,
+          dragStartLeftPanBars: this.touchStartLeftPanBars,
+          chartWidth: chartW,
+          visibleCount,
+          rightGapBars: this.config.layout.rightGapBars ?? 0,
+          normalizeHorizontalVirtualStart: (nextVirtualStart, baseVirtualStart) => (
+            this.normalizeHorizontalVirtualStart(nextVirtualStart, baseVirtualStart)
+          ),
+        });
+        if (virtualStart != null) {
           if (this.applyHorizontalPan(virtualStart, visibleCount)) changed = true;
         }
         if (this.isVerticalPanEnabled()) {
-          const pricePerPixel = this.getMainPricePerPixel();
-          const nextPriceOffset = this.touchStartPriceOffset + dy * pricePerPixel;
-          if (Number.isFinite(nextPriceOffset) && Math.abs(nextPriceOffset - this.mainPricePanOffset) > 1e-12) {
+          const nextPriceOffset = resolveVerticalPanOffset({
+            pointerY: pos.y,
+            dragStartY: this.touchStartY,
+            dragStartPriceOffset: this.touchStartPriceOffset,
+            currentPriceOffset: this.mainPricePanOffset,
+            pricePerPixel: this.getMainPricePerPixel(),
+          });
+          if (nextPriceOffset != null) {
             this.mainPricePanOffset = nextPriceOffset;
             changed = true;
           }
@@ -12453,17 +9628,21 @@ export class SimpleChart {
     // ????????????????????????????????????????????????????????????????????????????
     if (this.drawingMoveState && e.changedTouches.length > 0 && e.touches.length === 0) {
       // 드래그 상태만 종료, 선택은 유지
-      const baseShape = this.drawingMoveState.baseShape;
-      const wasClickOnly = baseShape.kind === 'text-note'
-        ? this.drawingMoveDistance < SimpleChart.TEXT_NOTE_TOUCH_TAP_MOVE_THRESHOLD
-        : this.drawingMoveDistance < 4;
+      const moveEnd = resolveDrawingMoveEnd({
+        moveState: this.drawingMoveState,
+        moveDistance: this.drawingMoveDistance,
+        textNoteTapThreshold: SimpleChart.TEXT_NOTE_TOUCH_TAP_MOVE_THRESHOLD,
+        pendingChannelId: this.pendingChannelId,
+        selectedDrawingId: this.selectedDrawingId,
+        selectedPart: this.selectedDrawingPart,
+      });
       this.drawingMoveState = null;
       this.drawingMoveDistance = 0;
       this.syncDrawingToolbar();
       this.requestOverlayDraw();
       this.updateChartCursor();
-      if (baseShape.kind === 'text-note' && wasClickOnly) {
-        const current = this.drawings.find((shape) => shape.id === baseShape.id && shape.kind === 'text-note');
+      if (moveEnd.baseShape.kind === 'text-note' && moveEnd.wasClickOnly) {
+        const current = this.drawings.find((shape) => shape.id === moveEnd.baseShape.id && shape.kind === 'text-note');
         if (current) this.openTextNoteEditor(current);
       }
       return;
@@ -12496,17 +9675,12 @@ export class SimpleChart {
         if (!defaults) { this.requestOverlayDraw(); return; }
         const { anchor: snappedAnchor, defaultRisk, defaultBars } = defaults;
         const isLong      = this.drawingTool === 'long-position';
-        const stopPrice   = isLong ? (snappedAnchor.price - defaultRisk) : (snappedAnchor.price + defaultRisk);
-        const targetPrice = isLong ? (snappedAnchor.price + defaultRisk) : (snappedAnchor.price - defaultRisk);
-        const created: DrawingShape = {
-          id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        const created = createPositionDrawing({
           kind: this.drawingTool,
-          a: { index: snappedAnchor.index, price: snappedAnchor.price },
-          b: { index: snappedAnchor.index, price: stopPrice },
-          channelOffset: { index: defaultBars, price: targetPrice - snappedAnchor.price },
-          color: '#2f6cff', width: 2, lineStyle: 'solid',
-          alert: { enabled: false, mode: 'up', target: 'trendline', appPush: false, onsite: true, sound: false },
-        };
+          anchor: snappedAnchor,
+          defaultRisk,
+          defaultBars,
+        });
         this.upsertDrawing(created);
         this.selectedDrawingId = created.id;
         this.selectedDrawingPart = 'position-target';
@@ -12565,22 +9739,14 @@ export class SimpleChart {
         }
         if (stage === 2) {
           // 3번째 손 뗌 → 완료
-          const offset = {
-            index: anchor.index - this.drawingDraft.a.index,
-            price: anchor.price - this.drawingDraft.a.price,
-          };
           const moved = Math.abs(this.drawingDraft.a.index - (this.drawingDraft.b?.index ?? this.drawingDraft.a.index)) > 0.2
             || Math.abs(this.drawingDraft.a.price - (this.drawingDraft.b?.price ?? this.drawingDraft.a.price)) > 1e-6;
           if (moved) {
-            const created: DrawingShape = {
-              id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-              kind: 'fib-trend',
+            const created = createFibTrendDrawing({
               a: this.drawingDraft.a,
               b: this.drawingDraft.b!,
-              channelOffset: offset,
-              color: '#2f6cff', width: 2, lineStyle: 'solid',
-              alert: { enabled: false, mode: 'up', target: 'trendline', appPush: false, onsite: true, sound: false },
-            };
+              offsetAnchor: anchor,
+            });
             this.upsertDrawing(created);
             this.selectedDrawingId = created.id;
             this.selectedDrawingPart = 'fib-offset';
@@ -12630,14 +9796,12 @@ export class SimpleChart {
           if (this.crosshairPlusHit) {
             const { x: hx, r: hr, price } = this.crosshairPlusHit;
             if (Math.abs(tx - hx) <= hr + 6) {
-              const anchor = this.getMouseAnchor(tx, ty);
-              const hline: DrawingShape = {
-                id: `draw-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                kind: 'hline',
-                a: { index: anchor?.index ?? this.startIndex, price },
-                color: '#2962ff', width: HLINE_DEFAULT_WIDTH, lineStyle: 'solid',
-              };
-              this.drawings.push(hline);
+              this.drawings = upsertDrawingShape(this.drawings, createHlineDrawing({
+                anchor: this.getMouseAnchor(tx, ty),
+                fallbackIndex: this.startIndex,
+                price,
+                width: HLINE_DEFAULT_WIDTH,
+              }));
               this.selectedDrawingId = null;
               this.selectedDrawingPart = 'line';
               this.drawingMoveState = null;

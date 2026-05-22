@@ -8,16 +8,20 @@
     "frontend:dev": "vite",
     "backend:dev": "node server/data-gateway.mjs",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "preview:cloudflare": "npm run build && wrangler pages dev dist",
+    "deploy:cloudflare": "npm run build && wrangler pages deploy dist --project-name chartwin",
+    "deploy:cloudflare:prod": "npm run build && wrangler pages deploy dist --project-name chartwin --branch main"
   },
   "devDependencies": {
     "@types/moo": "^0.5.10",
     "@types/nearley": "^2.11.5",
     "typescript": "~6.0.2",
-    "vite": "^8.0.4"
+    "vite": "^8.0.4",
+    "wrangler": "^4.93.0"
   },
   "dependencies": {
-"moo": "^0.5.3",
+    "moo": "^0.5.3",
     "nearley": "^2.20.1",
     "technicalindicators": "^3.1.0"
   }

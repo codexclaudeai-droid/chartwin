@@ -660,6 +660,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         ma60:     () => `MA ${i.ma60.value}`,
         ma120:    () => `MA ${i.ma120.value}`,
         ma200:    () => `MA ${i.ma200.value}`,
+        hma:      () => `HMA(${Number(i.hma?.period ?? 55)})`,
         bb:       () => bbLines.length
           ? `BB ${bbLines.map((line: any) => `${Number(line.period ?? 20)} ${Number(line.stdDev ?? 2)}`).join(' / ')}`
           : `BB ${i.bb.period} ${i.bb.stdDev}`,
@@ -669,9 +670,11 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         stochF:   () => `Stoch Fast(${i.stochF.kPeriod},${i.stochF.dPeriod})`,
         stochS:   () => `Stoch Slow(${i.stochS.kPeriod},${i.stochS.dPeriod})`,
         cci:      () => `CCI(${i.cci.period})`,
+        atr:      () => `ATR(${i.atr?.period ?? 14})`,
         obv:      () => 'OBV',
         cvd:      () => 'CVD',
         vwap:     () => 'VWAP',
+        williamsFractal: () => `Fractal(${Number(i.williamsFractal?.span ?? 2)})`,
         ichimoku: () => `Ichimoku(${i.ichimoku.tenkan},${i.ichimoku.kijun})`,
         envelope: () => `Envelope(${i.envelope.period}, ${i.envelope.pct}%)`,
         supertrend: () => `Supertrend(${i.supertrend.period}, ${i.supertrend.factor})`,
@@ -705,8 +708,10 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       ma60: getLineStyle(chart.config.panelState, 'ma60', { color: '#4caf50', width: 1.5, dash: [] }).color,
       ma120: getLineStyle(chart.config.panelState, 'ma120', { color: '#9c27b0', width: 1.5, dash: [] }).color,
       ma200: getLineStyle(chart.config.panelState, 'ma200', { color: '#ff5722', width: 1.5, dash: [] }).color,
+      hma: getLineStyle(chart.config.panelState, 'hma', { color: '#00bcd4', width: 1.7, dash: [] }).color,
       bb: getLineStyle(chart.config.panelState, ((chart.config.indicators as any).bb?.lines?.[0]?.id ?? 'bb1') + 'Upper', { color: 'rgba(100,149,237,0.95)', width: 1, dash: [] }).color,
       vwap: getLineStyle(chart.config.panelState, 'vwap', { color: '#ff9800', width: 1.5, dash: [] }).color,
+      williamsFractal: getLineStyle(chart.config.panelState, 'williamsFractalHigh', { color: '#ef5350', width: 1.5, dash: [] }).color,
       ichimoku: '#aaaaff',
       envelope: getLineStyle(chart.config.panelState, 'envelopeUpper', { color: 'rgba(255,200,50,0.95)', width: 1, dash: [] }).color,
       supertrend: getLineStyle(chart.config.panelState, 'supertrendUp', { color: '#26a69a', width: 1.7, dash: [] }).color,
@@ -720,6 +725,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       stochF: getLineStyle(chart.config.panelState, 'stochFastK', { color: '#26a69a', width: 1.5, dash: [] }).color,
       stochS: getLineStyle(chart.config.panelState, 'stochSlowK', { color: '#26a69a', width: 1.5, dash: [] }).color,
       cci: getLineStyle(chart.config.panelState, 'cci', { color: '#26a69a', width: 1.5, dash: [] }).color,
+      atr: getLineStyle(chart.config.panelState, 'atr', { color: '#00bcd4', width: 1.5, dash: [] }).color,
       obv: getLineStyle(chart.config.panelState, 'obv', { color: '#26a69a', width: 1.5, dash: [] }).color,
       volume: '#84898e',
     };
@@ -788,7 +794,9 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
           case 'ma60':     return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.ma60?.value ?? ''),    color: c }];
           case 'ma120':    return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.ma120?.value ?? ''),   color: c }];
           case 'ma200':    return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.ma200?.value ?? ''),   color: c }];
+          case 'hma':      return [{ text: 'HMA', color: '#dbe3f4' }, { text: String(i.hma?.period ?? ''), color: c }];
           case 'vwap':     return [{ text: 'VWAP', color: c }];
+          case 'williamsFractal': return [{ text: 'Fractal', color: '#dbe3f4' }, { text: String(Number(i.williamsFractal?.span ?? 2)), color: c }];
           case 'ichimoku': return [{ text: 'Ichi', color: '#dbe3f4' }, { text: String(i.ichimoku?.tenkan ?? ''), color: c }, { text: String(i.ichimoku?.kijun ?? ''), color: c }];
           case 'envelope': return [{ text: 'Env', color: '#dbe3f4' }, { text: String(i.envelope?.period ?? ''), color: c }, { text: `${i.envelope?.pct ?? ''}%`, color: c }];
           case 'supertrend': return [{ text: 'ST', color: '#dbe3f4' }, { text: String(i.supertrend?.period ?? ''), color: c }, { text: String(i.supertrend?.factor ?? ''), color: c }];
@@ -800,6 +808,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
           case 'stochF': return [{ text: 'StF',  color: '#dbe3f4' }, { text: String(i.stochF?.kPeriod ?? ''), color: c }, { text: String(i.stochF?.dPeriod ?? ''), color: c }];
           case 'stochS': return [{ text: 'StS',  color: '#dbe3f4' }, { text: String(i.stochS?.kPeriod ?? ''), color: c }, { text: String(i.stochS?.dPeriod ?? ''), color: c }];
           case 'cci':    return [{ text: 'CCI',  color: '#dbe3f4' }, { text: String(i.cci?.period ?? ''),  color: c }];
+          case 'atr':    return [{ text: 'ATR',  color: '#dbe3f4' }, { text: String(i.atr?.period ?? ''),  color: c }];
           case 'obv':    return [{ text: 'OBV',  color: c }];
           case 'cvd':    return [{ text: 'CVD',  color: c }];
           case 'volume': return [{ text: 'Vol',  color: c }];
@@ -826,9 +835,10 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     });
 
     const allKeys = [
-      'ma','ema','maShort','maLong','ma60','ma120','ma200','bb','vwap','volumeProfile','vpvr','ichimoku','envelope',
+      'ma','ema','hma','maShort','maLong','ma60','ma120','ma200','bb','vwap','volumeProfile','vpvr','ichimoku','envelope',
+      'williamsFractal',
       'supertrend','statisticalTrailingStop','zeroLagMaTrendLevels',
-      'rsi','dmi','macd','stochF','stochS','cci','obv','cvd','volume',
+      'rsi','dmi','macd','stochF','stochS','cci','atr','obv','cvd','volume',
     ];
     // 표시할 지표가 있는지 미리 파악
     let hasAnyIndicators = false;

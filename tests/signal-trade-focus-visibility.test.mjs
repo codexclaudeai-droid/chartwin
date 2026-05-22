@@ -5,6 +5,8 @@ import path from 'node:path';
 
 const sourcePath = path.resolve('src/chart/SimpleChart.ts');
 const source = fs.readFileSync(sourcePath, 'utf8');
+const tradeFocusRendererPath = path.resolve('src/chart/renderers/trade-focus-overlay-renderer.ts');
+const tradeFocusRendererSource = fs.readFileSync(tradeFocusRendererPath, 'utf8');
 const panelSourcePath = path.resolve('src/ui/workspace/strategy-report-panel.ts');
 const panelSource = fs.readFileSync(panelSourcePath, 'utf8');
 
@@ -41,18 +43,18 @@ test('closed trades use a profit or loss dashed connector instead of a pulsing r
     'focused trade metadata should distinguish between box and connector overlays',
   );
   assert.match(
-    source,
-    /if \(this\.focusedTradeRange\.type === 'connector' && mainScale\) \{/,
+    tradeFocusRendererSource,
+    /if \(focusedTradeRange\.type === 'connector' && mainScale\) \{/,
     'overlay rendering should branch closed trades into connector mode',
   );
   assert.match(
-    source,
+    tradeFocusRendererSource,
     /ctx\.setLineDash\(\[1, 2\]\);/,
     'connector mode should match the live-price dashed style',
   );
   assert.match(
-    source,
-    /drawPriceLineOverlay\(ctx, \{[\s\S]*label: 'ENTRY'[\s\S]*drawPriceLineOverlay\(ctx, \{[\s\S]*label: 'EXIT'/s,
+    tradeFocusRendererSource,
+    /drawPriceLineOverlay\(\{[\s\S]*label: 'ENTRY'[\s\S]*drawPriceLineOverlay\(\{[\s\S]*label: 'EXIT'/s,
     'connector mode should reuse the common price-line overlay labels for entry and exit',
   );
 });
@@ -98,8 +100,8 @@ test('mouse hover alone does not clear an active trade focus on desktop', () => 
 
 test('trade focus overlay does not keep reanimating while crosshair interaction is active', () => {
   assert.match(
-    source,
-    /if \(!this\.isMouseOver && this\.focusedTradeRange\.type !== 'connector'\) \{\s*this\.requestOverlayDraw\(\);\s*\}/s,
+    tradeFocusRendererSource,
+    /if \(!isMouseOver && focusedTradeRange\.type !== 'connector'\) \{\s*requestOverlayDraw\(\);\s*\}/s,
     'focused trade overlay should only self-schedule while passive box highlighting is active',
   );
   assert.doesNotMatch(

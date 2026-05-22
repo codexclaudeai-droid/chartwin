@@ -150,8 +150,15 @@ const ensureLiveStatusStyle = () => {
     .tc-delayed-data-copy strong { font-weight:800; }
     .tc-delayed-data-muted { margin-top:10px;font-size:12px;color:#7b8494;text-align:center; }
     .tc-delayed-data-timeline { margin-top:14px;display:flex;align-items:center;gap:8px;color:#4b5565;font-size:12px; }
-    .tc-delayed-data-progress { position:relative;height:8px;border-radius:999px;background:#d9dee8;flex:1;overflow:hidden; }
-    .tc-delayed-data-progress-fill { position:absolute;inset:0 auto 0 0;width:0%;border-radius:999px;background:#08715c;transition:width 0.25s ease; }
+    .tc-delayed-data-session-track { position:relative;display:flex;align-items:center;gap:4px;height:28px;flex:1; }
+    .tc-delayed-data-open-range { height:8px;border-radius:999px;background:#08715c;flex:23; }
+    .tc-delayed-data-maintenance-range { height:8px;border-radius:999px;background:#d8a72f;flex:1;box-shadow:inset 0 0 0 1px rgba(120,80,10,0.18); }
+    .tc-delayed-data-current-marker { position:absolute;bottom:5px;left:0;width:2px;height:18px;background:#1f2937;border-radius:999px;transform:translateX(-1px);transition:left 0.25s ease;box-shadow:0 0 0 1px rgba(255,255,255,0.72); }
+    .tc-delayed-data-current-marker::before { content:'🏃';position:absolute;left:50%;top:-18px;transform:translateX(-50%) scaleX(-1);font-size:14px;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,0.35));animation:tcDelayedRunner 0.72s steps(2,end) infinite; }
+    @keyframes tcDelayedRunner {
+      0%, 100% { transform:translateX(-50%) translateY(0) scaleX(-1) rotate(-4deg); }
+      50% { transform:translateX(-50%) translateY(-1px) scaleX(-1) rotate(4deg); }
+    }
     .tc-delayed-data-note { display:inline-flex;margin-top:12px;border-radius:8px;background:#f3f4f6;color:#303846;font-weight:700;font-size:14px;padding:8px 13px; }
   `;
   document.head.appendChild(style);
@@ -438,7 +445,6 @@ export function createPaneChrome<TKey extends string>({
   const delayedDataBadge = document.createElement('span');
   delayedDataBadge.className = 'tc-delayed-data-badge';
   delayedDataBadge.textContent = 'D';
-  delayedDataBadge.title = '거래소 데이터 지연';
   delayedDataBadge.setAttribute('aria-label', '거래소 데이터 지연 안내');
   delayedDataBadge.tabIndex = 0;
   paneHeader.appendChild(delayedDataBadge);
@@ -455,7 +461,11 @@ export function createPaneChrome<TKey extends string>({
       <div class="tc-delayed-data-copy" data-delayed-session-message>마켓이 오픈되었습니다.</div>
       <div class="tc-delayed-data-timeline">
         <span data-delayed-left-label>수</span>
-        <span class="tc-delayed-data-progress"><span class="tc-delayed-data-progress-fill" data-delayed-progress></span></span>
+        <span class="tc-delayed-data-session-track">
+          <span class="tc-delayed-data-open-range"></span>
+          <span class="tc-delayed-data-maintenance-range"></span>
+          <span class="tc-delayed-data-current-marker" data-delayed-progress></span>
+        </span>
         <span data-delayed-right-label>16:00</span>
       </div>
       <div class="tc-delayed-data-muted" data-delayed-timezone>거래소 시간대: 시카고 (UTC-5, 서머타임 기준)</div>
@@ -490,7 +500,7 @@ export function createPaneChrome<TKey extends string>({
     if (message) message.textContent = info.message;
     if (leftLabel) leftLabel.textContent = info.leftLabel;
     if (rightLabel) rightLabel.textContent = info.rightLabel;
-    if (progress) progress.style.width = `${Math.max(0, Math.min(100, info.progress * 100)).toFixed(1)}%`;
+    if (progress) progress.style.left = `${Math.max(0, Math.min(100, info.progress * 100)).toFixed(1)}%`;
     if (timezone) timezone.textContent = info.timezoneLabel;
   };
 

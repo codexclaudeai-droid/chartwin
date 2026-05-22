@@ -1,3 +1,4 @@
+# Legacy config only. Cloudflare Pages is the active deployment target.
 [build]
   command = "npm run build"
   publish = "dist"
