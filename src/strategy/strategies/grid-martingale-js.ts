@@ -1,63 +1,71 @@
+import { resolveGridMartingaleConfig } from './grid-martingale-presets.js';
+
 export const gridMartingaleJs = {
   id: 'strategy_js_grid_martingale',
   name: 'Grid Martingale Scalping',
-  description: '그리드 마틴게일 스캘핑 — 그리드 간격마다 매수 추가, 목표 수익/에쿼티 손절 자동 청산',
+  description: 'Grid martingale scalping strategy with configurable step, TP, max level, and stop settings.',
   language: 'javascript' as const,
-  version: 1,
+  version: 2,
+  params: {
+    gridStep: 120,
+    takeProfitSteps: 2.2,
+    maxLevel: 8,
+    equityStopPct: 14,
+  },
   sourceCode: `(
     function(context, index) {
       var close = context.close;
       if (!close || index < 1) return 0;
 
+      var rawParams = context.__strategyParams || {};
+      var resolveConfig = ${resolveGridMartingaleConfig.toString()};
+      var config = resolveConfig(context.__symbol || '', rawParams);
+
       var firstKey = Math.round((close[0] || 0) * 1e4);
       var lastKey  = Math.round((close[close.length - 1] || 0) * 1e4);
-      var cacheKey = 'gm_' + close.length + '_' + firstKey + '_' + lastKey;
+      var cacheKey = 'gm_' + close.length + '_' + firstKey + '_' + lastKey + '_' + JSON.stringify(config);
 
       if (!context.__gmCache) context.__gmCache = {};
       if (context.__gmCache[cacheKey]) return context.__gmCache[cacheKey][index] || 0;
 
-      // === 설정값 ===
-      var GRID_STEP       = 300;   // 그리드 간격 (Point 단위)
-      var MAX_LEVEL       = 10;    // 최대 포지션 수
-      var EQUITY_STOP_PCT = 20.0;  // 에쿼티 보호 손절 (%)
+      var GRID_STEP = Math.max(Number(config.gridStep) || 0, 0.0001);
+      var TAKE_PROFIT_STEPS = Math.max(Number(config.takeProfitSteps) || 0, 0.1);
+      var MAX_LEVEL = Math.max(1, Math.round(Number(config.maxLevel) || 1));
+      var EQUITY_STOP_PCT = Math.max(Number(config.equityStopPct) || 0, 0.1);
 
-      // 가격대별 포인트 단위 자동 감지
-      var midPrice   = close[Math.floor(close.length / 2)] || 1;
+      var midPrice = close[Math.floor(close.length / 2)] || 1;
       var pointValue = midPrice >= 10000 ? 1.0
                      : midPrice >= 1000  ? 0.1
                      : midPrice >= 10    ? 0.01
                      :                    0.0001;
-      var gridStep     = GRID_STEP * pointValue;
-      var targetProfit = gridStep * 5; // 목표 수익 = 그리드 5칸 상당
+      var gridStep = GRID_STEP * pointValue;
+      var targetProfit = gridStep * TAKE_PROFIT_STEPS;
 
-      var n        = close.length;
-      var signals  = new Array(n).fill(0);
-      var positions = []; // 진입가 배열 (숫자)
-      var balance  = midPrice * 100;
+      var n = close.length;
+      var signals = new Array(n).fill(0);
+      var positions = [];
+      var balance = midPrice * 100;
 
       for (var i = 1; i < n; i++) {
-        var price   = close[i];
+        var price = close[i];
         var openPnl = 0;
         for (var j = 0; j < positions.length; j++) openPnl += price - positions[j];
         var equity = balance + openPnl;
 
-        // STOP_OUT: 에쿼티가 잔고 대비 EQUITY_STOP_PCT% 이상 손실
         if (balance > 0 && (1.0 - equity / balance) * 100.0 >= EQUITY_STOP_PCT && positions.length > 0) {
           signals[i] = -1;
-          balance    = equity;
-          positions  = [];
+          balance = equity;
+          positions = [];
           continue;
         }
 
-        // CLOSE_ALL: 목표 수익 달성
         if (openPnl >= targetProfit && positions.length > 0) {
           signals[i] = -1;
-          balance   += openPnl;
-          positions  = [];
+          balance += openPnl;
+          positions = [];
           continue;
         }
 
-        // BUY 그리드 진입
         if (positions.length < MAX_LEVEL) {
           var doBuy = positions.length === 0;
           if (!doBuy) {

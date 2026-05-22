@@ -22,6 +22,7 @@ import {
   type StrategySignal,
 } from '../strategy/strategy-service';
 import { GRID_ATR_BNF_SROUTER_PRESETS, inferGridAtrBnfSrouterPreset } from '../strategy/strategies/grid-atr-bnf-srouter-v1';
+import { getStrategyHistoryDiagnostic } from '../strategy/strategy-history';
 import {
   openChartSettingsModal,
   openIndicatorModal,
@@ -650,6 +651,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   let refreshStrategyReportOnNewSignal = (_paneId: number) => {};
   let setTopBarSignalNotification = (_count: number) => {};
   let onSignalNotificationClick = () => {};
+  let notifyInsufficientStrategyHistory = (_args: {
+    symbol: string;
+    strategyName: string;
+    actual: number;
+    required: number;
+  }) => {};
   const strategyReportOpenByPane = new Map<number, boolean>();
   const prevStrategyActiveByPane = new Map<number, boolean>();
   const pendingStrategyReportRefreshByPane = new Map<number, boolean>();
@@ -1350,6 +1357,19 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       shiftBucketSec,
       onTick: () => refreshHeader(),
     });
+    const maybeWarnStrategyHistory = (candleCount: number) => {
+      const strategyId = chart.getActiveStrategyId();
+      const strategyName = chart.getActiveStrategyName();
+      if (!strategyId || !strategyName) return;
+      const diagnostic = getStrategyHistoryDiagnostic(strategyId, candleCount);
+      if (diagnostic.ready) return;
+      notifyInsufficientStrategyHistory({
+        symbol: chart.config.symbol,
+        strategyName,
+        actual: diagnostic.actual,
+        required: diagnostic.required,
+      });
+    };
     const binanceFeed = createBinanceLiveFeed({
       chart: {
         config: chart.config,
@@ -1401,6 +1421,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         applyDisplayCurrencyToChart();
         refreshChartUi();
         updateOhlcHeader(null);
+        maybeWarnStrategyHistory(rawCandles.length);
       },
       onLiveTick: () => {
         refreshHeader();
@@ -1461,6 +1482,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         applyDisplayCurrencyToChart();
         refreshChartUi();
         updateOhlcHeader(null);
+        maybeWarnStrategyHistory(rawCandles.length);
       },
       onLiveTick: () => {
         refreshHeader();
@@ -2454,6 +2476,40 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const closeBtn = card.querySelector('[data-k="close"]') as HTMLButtonElement | null;
       closeBtn?.addEventListener('click', closeCard);
       window.setTimeout(closeCard, 13000);
+    };
+    const announcedHistoryWarningKeys = new Set<string>();
+    notifyInsufficientStrategyHistory = (args: {
+      symbol: string;
+      strategyName: string;
+      actual: number;
+      required: number;
+    }) => {
+      const { symbol, strategyName, actual, required } = args;
+      const warningKey = `${symbol}:${strategyName}:${actual}:${required}`;
+      if (announcedHistoryWarningKeys.has(warningKey)) return;
+      announcedHistoryWarningKeys.add(warningKey);
+      const card = document.createElement('div');
+      card.style.cssText = 'pointer-events:auto;background:#221a0f;border:1px solid #6b5330;border-left:4px solid #ffb347;border-radius:10px;box-shadow:0 12px 26px rgba(0,0,0,0.35);padding:10px 12px;color:#f6e7ca;font:12px Segoe UI,Arial,sans-serif;animation:signalNoticeIn 0.18s ease-out forwards;';
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="font-weight:800;color:#ffd089;">전략 히스토리 부족</div>
+          <button type="button" data-k="close" style="border:none;background:transparent;color:#d1bb96;cursor:pointer;font-size:14px;line-height:1;">×</button>
+        </div>
+        <div style="margin-top:8px;display:grid;grid-template-columns:58px 1fr;row-gap:4px;column-gap:8px;">
+          <div style="color:#c9b18b;">종목</div><div>${symbol}</div>
+          <div style="color:#c9b18b;">전략</div><div>${strategyName}</div>
+          <div style="color:#c9b18b;">히스토리</div><div>${actual}/${required}봉</div>
+        </div>
+        <div style="margin-top:8px;color:#ffe6b8;line-height:1.45;">게이트웨이 종목은 초기 히스토리가 부족하면 전략 시그널이 거의 나오지 않을 수 있습니다.</div>
+      `;
+      getSignalNoticeHost().prepend(card);
+      const closeCard = () => {
+        card.style.animation = 'signalNoticeOut 0.18s ease-in forwards';
+        window.setTimeout(() => card.remove(), 180);
+      };
+      const closeBtn = card.querySelector('[data-k="close"]') as HTMLButtonElement | null;
+      closeBtn?.addEventListener('click', closeCard);
+      window.setTimeout(closeCard, 10000);
     };
     const getSignalEventCountByPane = (paneId: number): number => {
       const pane = paneControllers.get(paneId) ?? ensurePane(paneId);

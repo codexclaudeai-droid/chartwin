@@ -5,6 +5,7 @@ import { TIMEZONE_OPTIONS, UTC_OFFSET_OPTIONS, type TimezoneOption } from '../ca
 import { toRgba } from '../chart/color-utils';
 import { buildStrategyDefinition, isAdminMgmtButtonsVisible, type StrategyDefinition, type StrategyLang } from '../strategy/strategy-service';
 import { DEFAULT_GRID_ATR_BNF_SROUTER_PARAMS, GRID_ATR_BNF_SROUTER_PRESETS, inferGridAtrBnfSrouterPreset, type GridAtrBnfSrouterPresetMode } from '../strategy/strategies/grid-atr-bnf-srouter-v1';
+import { GRID_MARTINGALE_PRESETS, inferGridMartingalePreset } from '../strategy/strategies/grid-martingale-presets.js';
 
 function createModal(title: string, options: { anchorTop?: boolean } = {}) {
   if (!document.getElementById('strategy-list-scrollbar-style')) {
@@ -101,7 +102,9 @@ function createModal(title: string, options: { anchorTop?: boolean } = {}) {
 
 export function openStrategyModal(chart: any, onApply: () => void, options?: { mode?: 'admin' | 'frontend' }) {
   const GRID_ATR_BNF_SROUTER_ID = 'strategy_js_grid_atr_bnf_srouter_v1';
+  const GRID_MARTINGALE_ID = 'strategy_js_grid_martingale';
   const resolveSrouterPresetForSymbol = () => inferGridAtrBnfSrouterPreset(String(chart.config?.symbol ?? ''));
+  const resolveGridMartingalePresetForSymbol = () => inferGridMartingalePreset(String(chart.config?.symbol ?? ''));
   const buildSrouterPresetPatch = (preset: keyof typeof GRID_ATR_BNF_SROUTER_PRESETS) => ({
     presetSymbol: preset,
     ...GRID_ATR_BNF_SROUTER_PRESETS[preset],
@@ -495,6 +498,52 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     neutralThreshold: createSrouterField('neutralThreshold', 'Neutral Threshold', '0.001', '0.0001'),
   };
 
+  const gridMartingaleBox = document.createElement('div');
+  gridMartingaleBox.style.cssText = 'display:none;margin-top:12px;padding:12px;border:1px solid #2f4a52;border-radius:8px;background:#101b1f;';
+  const gmTitle = document.createElement('div');
+  gmTitle.textContent = 'Grid Martingale Scalping 설정';
+  gmTitle.style.cssText = 'font-size:13px;font-weight:700;color:#dff4fb;margin-bottom:6px;';
+  gridMartingaleBox.appendChild(gmTitle);
+  const gmHint = document.createElement('div');
+  gmHint.style.cssText = 'font-size:11px;color:#a9c9d3;line-height:1.5;margin-bottom:8px;';
+  gridMartingaleBox.appendChild(gmHint);
+  const gmGrid = document.createElement('div');
+  gmGrid.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(140px,1fr));gap:8px;';
+  gridMartingaleBox.appendChild(gmGrid);
+  listPanel.appendChild(gridMartingaleBox);
+
+  const createGridMartingaleField = (key: string, labelText: string, step = '1', min = '0') => {
+    const wrap = document.createElement('label');
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+    const label = document.createElement('span');
+    label.textContent = labelText;
+    label.style.cssText = 'font-size:11px;color:#a9c9d3;';
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = step;
+    input.min = min;
+    input.style.cssText = 'background:#0d1619;border:1px solid #33545f;border-radius:6px;padding:7px;color:white;font-size:12px;';
+    input.addEventListener('change', () => {
+      const activeId = chart.getActiveStrategyId?.();
+      const value = Number(input.value);
+      if (activeId !== GRID_MARTINGALE_ID || !Number.isFinite(value)) return;
+      chart.setStrategyParams?.(activeId, { [key]: value });
+      onApply();
+      render();
+    });
+    wrap.appendChild(label);
+    wrap.appendChild(input);
+    gmGrid.appendChild(wrap);
+    return input;
+  };
+
+  const gmInputs = {
+    gridStep: createGridMartingaleField('gridStep', 'Step', '1', '1'),
+    takeProfitSteps: createGridMartingaleField('takeProfitSteps', 'TP Step', '0.1', '0.1'),
+    maxLevel: createGridMartingaleField('maxLevel', 'Max Level', '1', '1'),
+    equityStopPct: createGridMartingaleField('equityStopPct', 'Stop Loss %', '0.1', '0.1'),
+  };
+
   const err = document.createElement('div');
   err.style.cssText = 'color:#ef5350;font-size:11px;min-height:16px;margin-top:8px;';
   registerPanel.appendChild(err);
@@ -574,6 +623,7 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     const activeIsDoubleBreak = activeId === 'strategy_js_double_break';
     const activeIsBollinger = activeId === 'strategy_pine_bbands_directed';
     const activeIsSrouter = activeId === GRID_ATR_BNF_SROUTER_ID;
+    const activeIsGridMartingale = activeId === GRID_MARTINGALE_ID;
     const activeSupportsRiskLines = activeIsDoubleBreak || (activeIsBollinger && chart.getBollingerRiskConfig?.().enabled);
 
     listWrap.innerHTML = '';
@@ -694,6 +744,19 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
       srouterHint.textContent = presetMode === 'CUSTOM'
         ? `현재 심볼: ${chart.config?.symbol ?? '-'} · 사용자설정은 종목이 바뀌어도 유지됩니다.`
         : `현재 심볼: ${chart.config?.symbol ?? '-'} · 자동 매칭 프리셋: ${resolvedPreset}`;
+    }
+    gridMartingaleBox.style.display = activeIsGridMartingale ? 'block' : 'none';
+    if (activeIsGridMartingale && chart.getStrategyParams) {
+      const presetKey = resolveGridMartingalePresetForSymbol();
+      const preset = GRID_MARTINGALE_PRESETS[presetKey];
+      const cfg = {
+        ...preset,
+        ...chart.getStrategyParams(activeId),
+      };
+      gmHint.textContent = `현재 심볼: ${chart.config?.symbol ?? '-'} · 추천 프리셋: ${presetKey} · Step ${preset.gridStep}, TP ${preset.takeProfitSteps}, Max ${preset.maxLevel}, Stop ${preset.equityStopPct}%`;
+      Object.entries(gmInputs).forEach(([key, input]) => {
+        input.value = String(cfg[key] ?? '');
+      });
     }
     applyViewState();
     scheduleStrategyListWrapHeightSync();

@@ -1,4 +1,5 @@
 import { MARKET_STATE_DETECTOR_FUNCTION_SOURCE } from '../MarketStateDetector';
+import { resolveSrouterBreakoutLevels } from './grid-atr-bnf-srouter-levels.js';
 
 export const GRID_ATR_BNF_SROUTER_PRESETS = {
   GOLD: {
@@ -65,7 +66,7 @@ export const gridAtrBnfSrouterV1 = {
   name: 'Grid+ATR+BNF+SRouter v1',
   description: 'Market state router that switches between Grid, breakout-follow, and ATR adaptive entries.',
   language: 'javascript' as const,
-  version: 3,
+  version: 4,
   params: { ...DEFAULT_GRID_ATR_BNF_SROUTER_PARAMS },
   sourceCode: `(
     function(context, index) {
@@ -82,6 +83,7 @@ export const gridAtrBnfSrouterV1 = {
         BTC: { gridStep: 500, profitTarget: 1.08, breakoutLevel: 65000, breakdownLevel: 60000, atrMultiplierEntry: 2.0, atrMultiplierExit: 4.0, maFastPeriod: 7, maSlowPeriod: 21, neutralThreshold: 0.02 }
       };
       var inferPresetKey = ${inferGridAtrBnfSrouterPreset.toString()};
+      var resolveBreakoutLevels = ${resolveSrouterBreakoutLevels.toString()};
       var presetKey = String(rawParams.presetSymbol || 'AUTO').toUpperCase();
       var resolvedPresetKey = (presetKey === 'AUTO' || presetKey === 'CUSTOM') ? inferPresetKey(context.__symbol) : presetKey;
       if (!presetMap[resolvedPresetKey]) resolvedPresetKey = 'BTC';
@@ -213,14 +215,21 @@ export const gridAtrBnfSrouterV1 = {
           }
         } else if (state === 'TREND_UP' || state === 'TREND_DOWN') {
           var bnfStart = Math.max(0, i - BNF_LOOKBACK);
-          var breakoutLevel = -Infinity;
-          var breakdownLevel = Infinity;
+          var dynamicBreakoutLevel = -Infinity;
+          var dynamicBreakdownLevel = Infinity;
           for (var k = bnfStart; k < i; k++) {
-            if (high[k] > breakoutLevel) breakoutLevel = high[k];
-            if (low[k] < breakdownLevel) breakdownLevel = low[k];
+            if (high[k] > dynamicBreakoutLevel) dynamicBreakoutLevel = high[k];
+            if (low[k] < dynamicBreakdownLevel) dynamicBreakdownLevel = low[k];
           }
-          if (STATIC_BREAKOUT_LEVEL > 0) breakoutLevel = Math.max(breakoutLevel, STATIC_BREAKOUT_LEVEL);
-          if (STATIC_BREAKDOWN_LEVEL > 0) breakdownLevel = Math.min(breakdownLevel, STATIC_BREAKDOWN_LEVEL);
+          var resolvedLevels = resolveBreakoutLevels({
+            presetMode: presetKey,
+            dynamicBreakoutLevel: dynamicBreakoutLevel,
+            dynamicBreakdownLevel: dynamicBreakdownLevel,
+            staticBreakoutLevel: STATIC_BREAKOUT_LEVEL,
+            staticBreakdownLevel: STATIC_BREAKDOWN_LEVEL
+          });
+          var breakoutLevel = resolvedLevels.breakoutLevel;
+          var breakdownLevel = resolvedLevels.breakdownLevel;
 
           if (!bnfLong && !bnfShort) {
             if (price > breakoutLevel) {

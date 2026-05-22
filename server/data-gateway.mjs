@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createKisWebSocketCollector, hasKisCredentials } from './kis-websocket-collector.mjs';
+import { getPreferredSymbolProviders, resolveProviderForSymbol } from './provider-routing.mjs';
 
 const PORT = Number(process.env.DATA_GATEWAY_PORT || 8787);
 const HOST = process.env.DATA_GATEWAY_HOST || '0.0.0.0';
@@ -20,7 +21,7 @@ const DEFAULT_PROVIDER_BY_MARKET = {
   commodity: 'webhook',
   fx: 'webhook',
 };
-const DEFAULT_SYMBOL_PROVIDER_BY_MARKET = {};
+const DEFAULT_SYMBOL_PROVIDER_BY_MARKET = getPreferredSymbolProviders();
 
 /** @typedef {{time:number,open:number,high:number,low:number,close:number,volume:number}} Candle */
 
@@ -494,7 +495,15 @@ async function persistRuntimeConfig() {
 function getProviderForMarket(market, symbol = '') {
   const canonicalSymbol = canonicalizeSymbolByMarket(market, symbol);
   const symbolProvider = runtimeConfig.symbolProviders?.[market]?.[canonicalSymbol];
-  if (symbolProvider) return normalizeProvider(symbolProvider) || DEFAULT_PROVIDER_BY_MARKET[market] || 'webhook';
+  if (symbolProvider) {
+    const normalized = normalizeProvider(symbolProvider) || DEFAULT_PROVIDER_BY_MARKET[market] || 'webhook';
+    return resolveProviderForSymbol({
+      market,
+      symbol: canonicalSymbol,
+      configuredProvider: normalized,
+      hasKisCredentials: hasKisCredentials(runtimeConfig.kis),
+    }) || DEFAULT_PROVIDER_BY_MARKET[market] || 'webhook';
+  }
   const fromConfig = runtimeConfig.providers[market];
   return normalizeProvider(fromConfig) || DEFAULT_PROVIDER_BY_MARKET[market] || 'webhook';
 }
