@@ -32,3 +32,9 @@ dev-server.log
 
 # bkit-codex
 .bkit-codex/
+
+# Local agent workspaces and temporary artifacts
+.agents/
+.codex/
+.tmp/
+*.patch
