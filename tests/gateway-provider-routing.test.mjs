@@ -47,19 +47,11 @@ test('webhook commodity aliases resolve to stored candle symbols', () => {
   );
   assert.match(
     gatewayFeedSource,
-    /normalized === 'XAUUSDT' \|\| normalized === 'XAUUSDT\.P'[\s\S]*return 'XAUUSD';/,
-    'frontend gateway requests should map gold USDT aliases to stored XAUUSD candles',
+    /return isCryptoLikeSymbol\(symbol\);/,
+    'USDT perpetual symbols such as XAUUSDT.P and XAGUSDT.P should keep using Binance direct history',
   );
-  assert.match(
-    gatewayFeedSource,
-    /return isCryptoLikeSymbol\(symbol\) && !isCommodityLikeSymbol\(symbol\);/,
-    'commodity-like USDT symbols should use the gateway instead of Binance direct history',
-  );
-  assert.match(
-    marketSessionSource,
-    /if \(upper === 'XAGUSDT' \|\| upper === 'XAGUSDT\.P'\) return 'XAGUSD';/,
-    'UI symbol selection should canonicalize silver USDT aliases before reloading data',
-  );
+  assert.doesNotMatch(marketSessionSource, /XAUUSDT\.P'[\s\S]*return 'XAUUSD'/);
+  assert.doesNotMatch(marketSessionSource, /XAGUSDT\.P'[\s\S]*return 'XAGUSD'/);
   assert.match(
     gatewayServerSource,
     /function getCandleRowsWithLegacyFallback\(market, symbol, timeframe\)/,
@@ -88,24 +80,13 @@ test('Cloudflare Pages functions use the same webhook symbol aliases', () => {
     /function canonicalizeMarketForSymbol\(market, symbol\)/,
     'Cloudflare /candles should normalize commodity symbols out of index requests',
   );
-  assert.match(
-    pagesCandlesSource,
-    /s === 'XAGUSDT' \|\| s === 'XAGUSDT\.P'[\s\S]*return 'XAGUSD';/,
-    'Cloudflare /candles should map silver USDT aliases to XAGUSD',
-  );
+  assert.doesNotMatch(pagesCandlesSource, /XAUUSDT\.P'[\s\S]*return 'XAUUSD'/);
+  assert.doesNotMatch(pagesCandlesSource, /XAGUSDT\.P'[\s\S]*return 'XAGUSD'/);
   assert.match(
     pagesCandlesSource,
     /env\.CANDLES_KV\.get\(`index:\$\{symbol\}:\$\{timeframe\}`/,
     'Cloudflare /candles should read legacy misplaced XAU/XAG index keys',
   );
-  assert.match(
-    pagesWebhookSource,
-    /s === 'XAUUSDT' \|\| s === 'XAUUSDT\.P'[\s\S]*return 'XAUUSD';/,
-    'Cloudflare webhook ingest should store gold USDT aliases under XAUUSD',
-  );
-  assert.match(
-    pagesWebhookSource,
-    /s === 'XAGUSDT' \|\| s === 'XAGUSDT\.P'[\s\S]*return 'XAGUSD';/,
-    'Cloudflare webhook ingest should store silver USDT aliases under XAGUSD',
-  );
+  assert.doesNotMatch(pagesWebhookSource, /XAUUSDT\.P'[\s\S]*return 'XAUUSD'/);
+  assert.doesNotMatch(pagesWebhookSource, /XAGUSDT\.P'[\s\S]*return 'XAGUSD'/);
 });

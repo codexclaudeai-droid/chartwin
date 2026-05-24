@@ -146,8 +146,6 @@ export function canonicalizeUiSymbol(symbol: string): string {
   if (upper === 'NAS100' || upper === 'NQ') return 'NQ1!';
   if (upper === '^IXIC') return 'NASDAQ';
   if (upper === 'WTI') return 'WTI1!';
-  if (upper === 'XAUUSDT' || upper === 'XAUUSDT.P') return 'XAUUSD';
-  if (upper === 'XAGUSDT' || upper === 'XAGUSDT.P') return 'XAGUSD';
   return upper;
 }
 
