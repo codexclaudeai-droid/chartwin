@@ -22,6 +22,7 @@ export * from './postgres-mappers.ts';
 export * from './postgres-connection.ts';
 export * from './postgres-repository.ts';
 export * from './postgres-pg-executor.ts';
+export * from './postgres-node-pg.ts';
 export * from './repository-adapter.ts';
 export * from './runtime-readiness.ts';
 export * from './route-errors.ts';

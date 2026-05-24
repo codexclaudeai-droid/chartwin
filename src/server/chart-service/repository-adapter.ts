@@ -13,6 +13,13 @@ import {
   createPostgresAsyncChartServiceRepository,
   type PostgresQueryExecutor,
 } from './postgres-repository.ts';
+import {
+  createPgPoolOptions,
+  createPgPostgresQueryExecutor,
+  type PgPoolLike,
+  type PgPoolOptions,
+} from './postgres-pg-executor.ts';
+import { createNodePgPostgresQueryExecutor } from './postgres-node-pg.ts';
 import type { ChartServiceRepository } from './repository.ts';
 
 const MEMORY_REPOSITORY_SCHEMA_VERSION = 'auth-password-hash-v1';
@@ -32,6 +39,7 @@ export type ChartServiceRepositoryAdapterConfig = {
   databaseSslMode?: string | null;
   runtimeMode?: string | null;
   postgresQueryExecutor?: PostgresQueryExecutor | null;
+  postgresPoolFactory?: ((options: PgPoolOptions) => PgPoolLike) | null;
 };
 
 export type ResolvedChartServiceRepositoryAdapter = {
@@ -100,11 +108,14 @@ export function createAsyncChartServicePersistenceFromConfig(
     return createAsyncChartServicePersistence(createMockChartServiceRepository());
   }
 
-  if (!config.postgresQueryExecutor) {
+  const queryExecutor = config.postgresQueryExecutor
+    ?? createPostgresQueryExecutorFromPoolFactory(config, adapter)
+    ?? createPostgresQueryExecutorFromRuntime(adapter);
+  if (!queryExecutor) {
     throw new Error('Postgres query executor is required before the async repository adapter can be used.');
   }
 
-  const repository = createPostgresAsyncChartServiceRepository(config.postgresQueryExecutor);
+  const repository = createPostgresAsyncChartServiceRepository(queryExecutor);
   const runOperation = async <T>(
     operation: (repository: AsyncChartServiceRepository) => T | Promise<T>,
   ): Promise<Awaited<T>> => await operation(repository);
@@ -114,6 +125,25 @@ export function createAsyncChartServicePersistenceFromConfig(
     runRead: runOperation,
     runMutation: runOperation,
   };
+}
+
+function createPostgresQueryExecutorFromPoolFactory(
+  config: ChartServiceRepositoryAdapterConfig,
+  adapter: ResolvedChartServiceRepositoryAdapter,
+): PostgresQueryExecutor | null {
+  if (!config.postgresPoolFactory) return null;
+  if (!adapter.connection) {
+    throw new Error('Postgres repository adapter resolved without connection settings');
+  }
+
+  return createPgPostgresQueryExecutor(config.postgresPoolFactory(createPgPoolOptions(adapter.connection)));
+}
+
+function createPostgresQueryExecutorFromRuntime(
+  adapter: ResolvedChartServiceRepositoryAdapter,
+): PostgresQueryExecutor | null {
+  if (!adapter.connection) return null;
+  return createNodePgPostgresQueryExecutor(adapter.connection);
 }
 
 export function getChartServiceRepositoryConfigSignature(

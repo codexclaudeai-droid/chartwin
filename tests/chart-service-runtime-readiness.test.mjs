@@ -18,7 +18,7 @@ test('runtime readiness flags production memory persistence as unsafe', async ()
   assert.equal(readiness.checks.some((check) => check.key === 'session_secret' && check.status === 'fail'), true);
 });
 
-test('runtime readiness accepts configured postgres persistence but reports implementation status', async () => {
+test('runtime readiness accepts configured postgres persistence with pg runtime binding', async () => {
   const { getChartServiceRuntimeReadiness } = await import('../src/server/chart-service/index.ts');
 
   const readiness = getChartServiceRuntimeReadiness({
@@ -33,7 +33,8 @@ test('runtime readiness accepts configured postgres persistence but reports impl
   assert.equal(readiness.checks.some((check) => check.key === 'database_url' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'database_ssl' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'postgres_mapping_contract' && check.status === 'pass'), true);
-  assert.equal(readiness.checks.some((check) => check.key === 'repository_adapter_implementation' && check.status === 'fail'), true);
+  assert.equal(readiness.checks.some((check) => check.key === 'repository_adapter_implementation' && check.status === 'pass'), true);
+  assert.equal(readiness.ok, true);
 });
 
 test('runtime readiness redacts postgres credentials while reporting connection safety', async () => {

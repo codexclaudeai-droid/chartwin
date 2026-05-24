@@ -1010,9 +1010,10 @@ Implemented scope:
 - Postgres SSL mode is normalized from `sslmode` or `CHART_SERVICE_DATABASE_SSL_MODE`, with production defaulting to `require`.
 - A query-executor-injected Postgres async repository implements the full chart-service repository contract.
 - A `pg` Pool-compatible executor adapter translates `query(sql, values)` clients into the repository query executor contract.
+- The runtime adapter now creates a `pg` Pool-backed query executor automatically when `CHART_SERVICE_REPOSITORY=postgres` is configured.
 - An async repository boundary wraps the current synchronous repository methods in awaited `runRead` and `runMutation` scopes.
 - `getAsyncChartServicePersistence` provides a config-keyed singleton for route-by-route migration to awaited repository access.
-- The async persistence factory can create Postgres persistence when a runtime query executor is injected, and fails clearly when Postgres is selected without that executor.
+- The async persistence factory can create Postgres persistence from the default runtime `pg` client, an injected query executor, or an injected pool factory.
 - `/api/subscription/plans` is the first route migrated to the async persistence scope, proving read-only APIs can move without changing response contracts.
 - Memory-backed async singleton wraps the same underlying repository as the existing sync singleton, so login/session state survives route-by-route migration.
 - `/api/subscription/me` now uses async read scope while preserving authenticated-session precedence over mock preview query fallback.
@@ -1032,11 +1033,9 @@ Implemented scope:
 
 Deferred scope:
 
-- Installing/choosing the final database client package, such as `pg`.
-- Installing and wiring the runtime Postgres client package to the selected deployment platform.
 - Keeping future API routes on the async persistence scope as new real-service endpoints are added.
 - Running migrations against a live database.
-- Connection pooling, transaction boundaries, and retry policy.
+- Production connection pool sizing, transaction boundaries, and retry policy.
 
 ## 37.1 Production Runtime Readiness Completion Criteria
 
@@ -1050,13 +1049,13 @@ Implemented scope:
 - `npm run service:schema` exports the current Postgres schema to `docs/02-design/features/chart-service-schema.sql`.
 - `.env.production.example` documents the minimum persistence variables for production.
 - State-changing API routes use a shared mutation guard that combines same-origin protection and route-aware rate limiting.
-- When Postgres is selected, readiness now distinguishes the completed mapping contract from the still-missing database client/repository implementation.
+- When Postgres is selected, readiness reports the completed mapping contract and the available `pg` runtime client binding.
 - When Postgres is selected, readiness reports a redacted database target and fails unsafe production SSL modes such as `disable`.
 - Runtime readiness reports the async repository boundary as available so future database work has a visible migration checkpoint.
 
 Deferred scope:
 
-- Actual Postgres repository implementation.
+- Running migrations against a live Postgres database and validating the first real query path.
 - Deployment-provider health check integration.
 - External rate-limit backend for multi-instance deployments.
 - Secret rotation policy and managed production secret provisioning.

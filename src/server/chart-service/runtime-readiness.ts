@@ -124,8 +124,8 @@ export function getChartServiceRuntimeReadiness(
     checks.push({
       key: 'repository_adapter_implementation',
       label: 'Repository implementation',
-      status: 'fail',
-      message: 'Postgres async repository implementation is available, but the runtime query executor/client binding is not installed yet.',
+      status: 'pass',
+      message: 'Postgres async repository implementation and pg runtime client binding are available.',
     });
   } else {
     checks.push({

@@ -138,14 +138,13 @@ test('async persistence factory creates isolated awaitable memory adapters', asy
   assert.equal(await second.repository.getUserById('user_async_factory'), null);
 });
 
-test('async persistence factory requires a postgres query executor before live database use', () => {
-  assert.throws(
-    () => createAsyncChartServicePersistenceFromConfig({
-      adapter: 'postgres',
-      databaseUrl: 'postgres://chart_app:secret@db.example.com/chart_service',
-    }),
-    /Postgres query executor is required/,
-  );
+test('async persistence factory can create postgres persistence from the runtime pg client', () => {
+  const persistence = createAsyncChartServicePersistenceFromConfig({
+    adapter: 'postgres',
+    databaseUrl: 'postgres://chart_app:secret@db.example.com/chart_service',
+  });
+
+  assert.equal(typeof persistence.repository.getUserById, 'function');
 });
 
 test('async persistence factory can create postgres persistence from an injected executor', async () => {
@@ -175,4 +174,43 @@ test('async persistence factory can create postgres persistence from an injected
   assert.equal(user.email, 'member@example.com');
   assert.equal(calls[0].sql, 'select * from users where id = $1');
   assert.deepEqual(calls[0].values, ['user_1']);
+});
+
+test('async persistence factory can create postgres persistence from a pool factory', async () => {
+  const poolCalls = [];
+  const queryCalls = [];
+  const persistence = createAsyncChartServicePersistenceFromConfig({
+    adapter: 'postgres',
+    databaseUrl: 'postgres://chart_app:secret@db.example.com/chart_service?sslmode=require',
+    postgresPoolFactory(options) {
+      poolCalls.push(options);
+      return {
+        async query(sql, values) {
+          queryCalls.push({ sql, values });
+          return {
+            rows: [{
+              id: 'user_2',
+              email: 'pool@example.com',
+              name: 'Pool User',
+              role: 'member',
+              account_status: 'active',
+              password_hash: 'hash',
+            }],
+          };
+        },
+      };
+    },
+  });
+
+  const user = await persistence.runRead((repository) => repository.getUserById('user_2'));
+
+  assert.equal(user.email, 'pool@example.com');
+  assert.deepEqual(poolCalls[0], {
+    connectionString: 'postgres://chart_app:secret@db.example.com/chart_service?sslmode=require',
+    ssl: { rejectUnauthorized: false },
+  });
+  assert.deepEqual(queryCalls[0], {
+    sql: 'select * from users where id = $1',
+    values: ['user_2'],
+  });
 });
