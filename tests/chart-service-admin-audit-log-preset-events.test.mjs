@@ -13,12 +13,12 @@ test('admin audit log preset event notifies subscribers and supports cleanup', (
     received.push(detail);
   }, target);
 
-  dispatchAdminAuditLogPresetEvent({ presetKey: 'all' }, target);
+  dispatchAdminAuditLogPresetEvent({ presetKey: 'all', targetId: 'support_123' }, target);
   unsubscribe();
   dispatchAdminAuditLogPresetEvent({ presetKey: 'payment' }, target);
 
   assert.equal(ADMIN_AUDIT_LOG_PRESET_EVENT, 'chart-service-admin-audit-log-preset');
-  assert.deepEqual(received, [{ presetKey: 'all' }]);
+  assert.deepEqual(received, [{ presetKey: 'all', targetId: 'support_123' }]);
 });
 
 test('admin audit log preset event helpers are safe without a browser target', () => {

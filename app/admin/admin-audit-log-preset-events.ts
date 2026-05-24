@@ -2,6 +2,7 @@ export const ADMIN_AUDIT_LOG_PRESET_EVENT = 'chart-service-admin-audit-log-prese
 
 export type AdminAuditLogPresetEventDetail = {
   presetKey: string;
+  targetId?: string;
 };
 
 type AuditLogPresetEventTarget = Pick<EventTarget, 'addEventListener' | 'removeEventListener' | 'dispatchEvent'>;

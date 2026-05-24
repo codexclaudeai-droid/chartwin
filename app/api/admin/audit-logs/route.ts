@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
       return getAsyncAdminAuditLogEntries(repository, {
         action: url.searchParams.get('action') ?? '',
         targetType: url.searchParams.get('targetType') ?? '',
+        targetId: url.searchParams.get('targetId') ?? '',
       });
     });
     return NextResponse.json({

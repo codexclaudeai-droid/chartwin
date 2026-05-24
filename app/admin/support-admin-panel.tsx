@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { dispatchAdminAuditLogPresetEvent } from './admin-audit-log-preset-events';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
 import { subscribeAdminQueuePresetEvent } from './admin-queue-preset-events';
 import { dispatchAdminRefreshEvent, subscribeAdminRefreshEvent } from './admin-refresh-events';
@@ -185,6 +186,13 @@ export function SupportAdminPanel() {
                 }}
               >
                 답변 입력창으로 이동
+              </a>
+              <a
+                className="text-link compact"
+                href="#admin-audit-logs"
+                onClick={() => dispatchAdminAuditLogPresetEvent({ presetKey: 'support', targetId: deepLinkedThread.thread.id })}
+              >
+                이 문의 감사로그 보기
               </a>
             </>
           ) : (

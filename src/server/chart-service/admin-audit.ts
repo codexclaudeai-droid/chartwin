@@ -11,6 +11,7 @@ export type AdminAuditLogEntry = {
 export type AdminAuditLogFilter = {
   action?: string;
   targetType?: string;
+  targetId?: string;
 };
 
 export function getAdminAuditLogEntries(
@@ -19,6 +20,7 @@ export function getAdminAuditLogEntries(
 ): AdminAuditLogEntry[] {
   const actionQuery = filter.action?.trim().toLowerCase() ?? '';
   const targetType = filter.targetType?.trim().toLowerCase() ?? '';
+  const targetId = filter.targetId?.trim().toLowerCase() ?? '';
 
   return repository
     .listAuditLogs()
@@ -29,6 +31,7 @@ export function getAdminAuditLogEntries(
     }))
     .filter((entry) => !actionQuery || entry.log.action.toLowerCase().includes(actionQuery))
     .filter((entry) => !targetType || entry.log.targetType.toLowerCase() === targetType)
+    .filter((entry) => !targetId || entry.log.targetId.toLowerCase() === targetId)
     .reverse();
 }
 

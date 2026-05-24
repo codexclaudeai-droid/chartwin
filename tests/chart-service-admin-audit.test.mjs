@@ -45,10 +45,10 @@ test('admin audit log panel renders quick filter presets that refresh with selec
   assert.match(source, /AUDIT_LOG_FILTER_PRESETS/);
   assert.match(source, /aria-label="감사 로그 빠른 필터"/);
   assert.match(source, /applyPreset/);
-  assert.match(source, /refresh\(\{ action: preset\.action, targetType: preset\.targetType \}\)/);
+  assert.match(source, /refresh\(\{ action: preset\.action, targetType: preset\.targetType, targetId: '' \}\)/);
 });
 
-test('admin audit log entries can be filtered by action and target type', () => {
+test('admin audit log entries can be filtered by action target type and target id', () => {
   const repository = createMockChartServiceRepository();
   repository.appendAuditLog(createAuditLogDraft({
     actor: { id: 'admin_1', role: 'admin' },
@@ -66,14 +66,29 @@ test('admin audit log entries can be filtered by action and target type', () => 
     beforeJson: {},
     afterJson: {},
   }));
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: { id: 'admin_1', role: 'admin' },
+    action: 'support.reply.created',
+    targetType: 'support_thread',
+    targetId: 'support_deposit_request',
+    beforeJson: {},
+    afterJson: {},
+  }));
 
   const paymentEntries = getAdminAuditLogEntries(repository, {
     action: 'payment',
     targetType: 'payment_request',
   });
+  const supportEntries = getAdminAuditLogEntries(repository, {
+    action: 'support',
+    targetType: 'support_thread',
+    targetId: 'support_public_notice',
+  });
 
   assert.equal(paymentEntries.length, 1);
   assert.equal(paymentEntries[0].log.action, 'payment.reject_and_subscription.cancel');
+  assert.equal(supportEntries.length, 1);
+  assert.equal(supportEntries[0].log.targetId, 'support_public_notice');
 });
 
 test('admin audit logs API requires admin session and supports filters', async () => {
@@ -101,7 +116,7 @@ test('admin audit logs API requires admin session and supports filters', async (
   const denied = await GET(new Request('http://localhost/api/admin/audit-logs', {
     headers: { cookie: `${SESSION_COOKIE_NAME}=${memberSession.id}` },
   }));
-  const allowed = await GET(new Request('http://localhost/api/admin/audit-logs?action=audit.test', {
+  const allowed = await GET(new Request('http://localhost/api/admin/audit-logs?action=audit.test&targetId=pay_pending', {
     headers: { cookie: `${SESSION_COOKIE_NAME}=${adminSession.id}` },
   }));
   const payload = await allowed.json();
@@ -162,8 +177,11 @@ test('admin audit log panel keeps active filters and explains source-triggered r
 
   assert.match(source, /type AuditLogRefreshOptions = AuditLogFilterInput & \{/);
   assert.match(source, /nextMessage\?: string/);
-  assert.match(source, /const latestFilterRef = useRef<AuditLogFilterInput>\(\{ action: '', targetType: '' \}\)/);
-  assert.match(source, /latestFilterRef\.current = \{ action, targetType \}/);
+  assert.match(source, /const \[targetId, setTargetId\] = useState\(''\)/);
+  assert.match(source, /const latestFilterRef = useRef<AuditLogFilterInput>\(\{ action: '', targetType: '', targetId: '' \}\)/);
+  assert.match(source, /latestFilterRef\.current = \{ action, targetType, targetId \}/);
+  assert.match(source, /aria-label="감사 로그 대상 ID 필터"/);
+  assert.match(source, /params\.set\('targetId', nextTargetId\)/);
   assert.match(source, /subscribeAdminRefreshEvent\(\(detail\) => \{/);
   assert.match(source, /void refresh\(\{ \.\.\.latestFilterRef\.current, nextMessage \}\)/);
   assert.match(source, /formatAuditLogRefreshMessage\(detail\.source\)/);
@@ -176,5 +194,7 @@ test('admin audit log panel applies dashboard preset events with an operator mes
   assert.match(source, /const preset = getAuditLogFilterPreset\(detail\.presetKey\)/);
   assert.match(source, /setAction\(preset\.action\)/);
   assert.match(source, /setTargetType\(preset\.targetType\)/);
-  assert.match(source, /void refresh\(\{ action: preset\.action, targetType: preset\.targetType, nextMessage: `\$\{preset\.label\} 감사 로그 필터를 적용했습니다\.` \}\)/);
+  assert.match(source, /const nextTargetId = detail\.targetId \?\? ''/);
+  assert.match(source, /setTargetId\(nextTargetId\)/);
+  assert.match(source, /void refresh\(\{ action: preset\.action, targetType: preset\.targetType, targetId: nextTargetId, nextMessage: `\$\{preset\.label\} 감사 로그 필터를 적용했습니다\.` \}\)/);
 });

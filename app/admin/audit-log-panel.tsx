@@ -33,7 +33,9 @@ type AuditLogResponse = {
   entries?: AuditLogEntry[];
 };
 
-type AuditLogFilterInput = Pick<AuditLogFilterPreset, 'action' | 'targetType'>;
+type AuditLogFilterInput = Pick<AuditLogFilterPreset, 'action' | 'targetType'> & {
+  targetId: string;
+};
 type AuditLogRefreshOptions = AuditLogFilterInput & {
   nextMessage?: string;
 };
@@ -49,10 +51,11 @@ export function AuditLogPanel() {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [action, setAction] = useState('');
   const [targetType, setTargetType] = useState('');
+  const [targetId, setTargetId] = useState('');
   const [message, setMessage] = useState('관리자 로그인 후 감사 로그를 확인할 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
-  const latestFilterRef = useRef<AuditLogFilterInput>({ action: '', targetType: '' });
-  latestFilterRef.current = { action, targetType };
+  const latestFilterRef = useRef<AuditLogFilterInput>({ action: '', targetType: '', targetId: '' });
+  latestFilterRef.current = { action, targetType, targetId };
 
   useEffect(() => {
     void refresh();
@@ -62,9 +65,11 @@ export function AuditLogPanel() {
     });
     const unsubscribeAuditPreset = subscribeAdminAuditLogPresetEvent((detail) => {
       const preset = getAuditLogFilterPreset(detail.presetKey);
+      const nextTargetId = detail.targetId ?? '';
       setAction(preset.action);
       setTargetType(preset.targetType);
-      void refresh({ action: preset.action, targetType: preset.targetType, nextMessage: `${preset.label} 감사 로그 필터를 적용했습니다.` });
+      setTargetId(nextTargetId);
+      void refresh({ action: preset.action, targetType: preset.targetType, targetId: nextTargetId, nextMessage: `${preset.label} 감사 로그 필터를 적용했습니다.` });
     });
 
     return () => {
@@ -78,8 +83,10 @@ export function AuditLogPanel() {
     const params = new URLSearchParams();
     const nextAction = nextFilter.action.trim();
     const nextTargetType = nextFilter.targetType.trim();
+    const nextTargetId = nextFilter.targetId.trim();
     if (nextAction) params.set('action', nextAction);
     if (nextTargetType) params.set('targetType', nextTargetType);
+    if (nextTargetId) params.set('targetId', nextTargetId);
 
     const endpoint = params.toString() ? `/api/admin/audit-logs?${params}` : '/api/admin/audit-logs';
     const response = await fetch(endpoint, { cache: 'no-store' });
@@ -99,7 +106,8 @@ export function AuditLogPanel() {
   function applyPreset(preset: AuditLogFilterPreset) {
     setAction(preset.action);
     setTargetType(preset.targetType);
-    void refresh({ action: preset.action, targetType: preset.targetType });
+    setTargetId('');
+    void refresh({ action: preset.action, targetType: preset.targetType, targetId: '' });
   }
 
   return (
@@ -137,6 +145,12 @@ export function AuditLogPanel() {
           value={targetType}
           onChange={(event) => setTargetType(event.target.value)}
           placeholder="대상 예: payment_request"
+        />
+        <input
+          aria-label="감사 로그 대상 ID 필터"
+          value={targetId}
+          onChange={(event) => setTargetId(event.target.value)}
+          placeholder="대상 ID 예: support_123"
         />
         <button className="button" type="button" onClick={() => void refresh()} disabled={isBusy}>검색</button>
       </div>

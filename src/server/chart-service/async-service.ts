@@ -632,6 +632,7 @@ export async function getAsyncAdminAuditLogEntries(
 ): Promise<AdminAuditLogEntry[]> {
   const actionQuery = filter.action?.trim().toLowerCase() ?? '';
   const targetType = filter.targetType?.trim().toLowerCase() ?? '';
+  const targetId = filter.targetId?.trim().toLowerCase() ?? '';
   const auditLogs = await repository.listAuditLogs();
   const entries = await Promise.all(auditLogs.map(async (log, index) => ({
     sequence: index + 1,
@@ -642,6 +643,7 @@ export async function getAsyncAdminAuditLogEntries(
   return entries
     .filter((entry) => !actionQuery || entry.log.action.toLowerCase().includes(actionQuery))
     .filter((entry) => !targetType || entry.log.targetType.toLowerCase() === targetType)
+    .filter((entry) => !targetId || entry.log.targetId.toLowerCase() === targetId)
     .reverse();
 }
 
