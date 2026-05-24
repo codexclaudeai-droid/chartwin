@@ -6,6 +6,7 @@ const adminMutationRoutes = [
   '../app/api/admin/payments/confirm/route.ts',
   '../app/api/admin/payments/refund/route.ts',
   '../app/api/admin/payments/reject/route.ts',
+  '../app/api/admin/subscriptions/approve/route.ts',
   '../app/api/admin/subscriptions/cancel/route.ts',
   '../app/api/admin/subscriptions/refund/route.ts',
   '../app/api/admin/subscriptions/reject/route.ts',
@@ -41,6 +42,14 @@ test('admin mutation routes return 401 when the admin session is missing', async
         method: 'POST',
         headers: { origin: 'http://localhost', 'content-type': 'application/json' },
         body: JSON.stringify({ paymentId: 'pay_pending', adminNote: 'reject' }),
+      }),
+    },
+    {
+      routePath: '../app/api/admin/subscriptions/approve/route.ts',
+      request: new Request('http://localhost/api/admin/subscriptions/approve', {
+        method: 'POST',
+        headers: { origin: 'http://localhost', 'content-type': 'application/json' },
+        body: JSON.stringify({ subscriptionId: 'sub_pending', adminNote: 'approve' }),
       }),
     },
     {

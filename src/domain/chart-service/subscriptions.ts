@@ -59,6 +59,7 @@ export function refundSubscription(
   if (
     subscription.status !== SUBSCRIPTION_STATUSES.active &&
     subscription.status !== SUBSCRIPTION_STATUSES.expiring &&
+    subscription.status !== SUBSCRIPTION_STATUSES.paymentRequested &&
     subscription.status !== SUBSCRIPTION_STATUSES.refundRequested
   ) {
     throw new Error(`Cannot refund subscription from status ${subscription.status}`);

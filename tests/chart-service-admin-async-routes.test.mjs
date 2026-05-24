@@ -22,3 +22,10 @@ test('admin read routes use the async persistence boundary', () => {
     assert.doesNotMatch(source, /requireAdminFromRequest\(/, `${routePath} should not use the sync admin guard directly`);
   }
 });
+
+test('payment confirmation route no longer activates subscriptions directly', () => {
+  const source = readFileSync(new URL('../app/api/admin/payments/confirm/route.ts', import.meta.url), 'utf8');
+
+  assert.match(source, /confirmAsyncManualPaymentRequest/);
+  assert.doesNotMatch(source, /confirmAsyncManualPaymentAndActivateSubscription/);
+});

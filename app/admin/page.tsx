@@ -11,7 +11,7 @@ export default function AdminPage() {
     <main className="page">
       <h1>관리자페이지</h1>
       <p className="lede">
-        관리자 세션이 있을 때만 결제 요청을 조회하고, 입금 확인 승인 또는 환불 처리를 실행합니다.
+        관리자 세션이 있을 때만 결제 요청, 입금 확인, 구독 승인, 환불/취소 처리를 실행합니다.
       </p>
       <AdminAccessGate>
         <AdminDashboardPanel />

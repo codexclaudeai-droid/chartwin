@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import {
+  approveSubscriptionActivationRequest,
   approveSubscriptionCancelRequest,
   approveSubscriptionRefundRequest,
+  confirmManualPaymentRequest,
   createMockChartServiceRepository,
   listAdminSubscriptionQueue,
   rejectSubscriptionRequest,
@@ -49,6 +51,29 @@ test('admin subscription queue joins requested subscriptions with user and plan 
   assert.equal(requested.user.email, 'subscriber@example.com');
   assert.equal(requested.plan?.name, 'Monthly');
   assert.equal(requested.subscription.status, 'cancel_requested');
+});
+
+test('admin can approve a payment-requested subscription from the subscription queue', () => {
+  const repository = createMockChartServiceRepository();
+  const confirmed = confirmManualPaymentRequest(repository, {
+    paymentId: 'pay_pending',
+    admin: { id: 'admin_1', role: 'admin' },
+    confirmedAt: '2026-05-23T12:00:00.000Z',
+  });
+  const queueItem = listAdminSubscriptionQueue(repository)
+    .find((item) => item.subscription.id === confirmed.subscription.id);
+
+  const result = approveSubscriptionActivationRequest(repository, {
+    subscriptionId: confirmed.subscription.id,
+    admin: { id: 'admin_1', role: 'admin' },
+    approvedAt: '2026-05-23T12:05:00.000Z',
+    adminNote: '최종 승인',
+  });
+
+  assert.equal(queueItem?.subscription.status, 'payment_requested');
+  assert.equal(queueItem?.payment?.status, 'confirmed');
+  assert.equal(result.status, 'active');
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'subscription.activate.approve');
 });
 
 test('admin subscription queue API does not expose user password hashes', async () => {
@@ -209,6 +234,14 @@ test('admin subscription panel confirms cancellation refund and rejection operat
   assert.match(source, /\{confirmationDialog\}/);
   assert.match(source, /`subscription\.\$\{action\}`/);
   assert.doesNotMatch(source, /shouldRunAdminAction/);
+});
+
+test('admin subscription panel exposes a separate activation approval action', () => {
+  const source = fs.readFileSync(new URL('../app/admin/subscription-admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /runOperation\(item\.subscription\.id, 'approve'\)/);
+  assert.match(source, /\/api\/admin\/subscriptions\/approve/);
+  assert.match(source, /item\.subscription\.status === 'payment_requested'/);
 });
 
 test('admin subscription panel refreshes its filtered queue after local operations without overwriting success context', () => {

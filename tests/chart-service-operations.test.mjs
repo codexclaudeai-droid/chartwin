@@ -23,9 +23,9 @@ test('mock service creates manual payment requests with a pending subscription',
   assert.equal(result.payment.amountKrw, 270640);
 });
 
-test('admin can confirm payment and activate subscription through service operation', async () => {
+test('admin can confirm payment without activating subscription', async () => {
   const {
-    confirmManualPaymentAndActivateSubscription,
+    confirmManualPaymentRequest,
     createManualPaymentRequest,
     createMockChartServiceRepository,
   } = await import('../src/server/chart-service/index.ts');
@@ -37,7 +37,7 @@ test('admin can confirm payment and activate subscription through service operat
     method: 'bank_transfer',
     requestedAt: '2026-05-23T10:00:00.000Z',
   });
-  const confirmed = confirmManualPaymentAndActivateSubscription(repository, {
+  const confirmed = confirmManualPaymentRequest(repository, {
     paymentId: requested.payment.id,
     admin: { id: 'admin_1', role: 'admin' },
     confirmedAt: '2026-05-23T11:00:00.000Z',
@@ -45,22 +45,99 @@ test('admin can confirm payment and activate subscription through service operat
   });
 
   assert.equal(confirmed.payment.status, 'confirmed');
-  assert.equal(confirmed.subscription.status, 'active');
+  assert.equal(confirmed.subscription.status, 'payment_requested');
+  assert.equal(confirmed.subscription.startsAt, null);
+  assert.equal(confirmed.subscription.approvedAt, null);
   assert.equal(repository.listAuditLogs().length, 1);
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'payment.confirm');
 });
 
-test('refund operation reverses related referral ledgers', async () => {
+test('admin can approve a confirmed payment subscription separately', async () => {
   const {
-    confirmManualPaymentAndActivateSubscription,
+    approveSubscriptionActivationRequest,
+    confirmManualPaymentRequest,
+    createManualPaymentRequest,
+    createMockChartServiceRepository,
+  } = await import('../src/server/chart-service/index.ts');
+
+  const repository = createMockChartServiceRepository();
+  const requested = createManualPaymentRequest(repository, {
+    userId: 'user_member',
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T10:00:00.000Z',
+  });
+  const confirmed = confirmManualPaymentRequest(repository, {
+    paymentId: requested.payment.id,
+    admin: { id: 'admin_1', role: 'admin' },
+    confirmedAt: '2026-05-23T11:00:00.000Z',
+  });
+
+  const approved = approveSubscriptionActivationRequest(repository, {
+    subscriptionId: confirmed.subscription.id,
+    admin: { id: 'admin_1', role: 'admin' },
+    approvedAt: '2026-05-23T11:05:00.000Z',
+    adminNote: 'subscription access approved',
+  });
+
+  assert.equal(approved.status, 'active');
+  assert.equal(approved.approvedByAdminId, 'admin_1');
+  assert.equal(approved.startsAt, '2026-05-23T11:05:00.000Z');
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'subscription.activate.approve');
+});
+
+test('admin can refund a confirmed payment before subscription activation', async () => {
+  const {
+    confirmManualPaymentRequest,
+    createManualPaymentRequest,
     createMockChartServiceRepository,
     refundManualPaymentAndSubscription,
   } = await import('../src/server/chart-service/index.ts');
 
   const repository = createMockChartServiceRepository();
-  confirmManualPaymentAndActivateSubscription(repository, {
+  const requested = createManualPaymentRequest(repository, {
+    userId: 'user_member',
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T10:00:00.000Z',
+  });
+  confirmManualPaymentRequest(repository, {
+    paymentId: requested.payment.id,
+    admin: { id: 'admin_1', role: 'admin' },
+    confirmedAt: '2026-05-23T11:00:00.000Z',
+  });
+
+  const refunded = refundManualPaymentAndSubscription(repository, {
+    paymentId: requested.payment.id,
+    admin: { id: 'admin_1', role: 'admin' },
+    refundedAt: '2026-05-23T11:30:00.000Z',
+    adminNote: 'customer requested refund before activation',
+  });
+
+  assert.equal(refunded.payment.status, 'refunded');
+  assert.equal(refunded.subscription.status, 'refunded');
+  assert.equal(refunded.subscription.startsAt, null);
+  assert.equal(refunded.reversedReferralCount, 0);
+});
+
+test('refund operation reverses related referral ledgers', async () => {
+  const {
+    approveSubscriptionActivationRequest,
+    confirmManualPaymentRequest,
+    createMockChartServiceRepository,
+    refundManualPaymentAndSubscription,
+  } = await import('../src/server/chart-service/index.ts');
+
+  const repository = createMockChartServiceRepository();
+  const confirmed = confirmManualPaymentRequest(repository, {
     paymentId: 'pay_pending',
     admin: { id: 'admin_1', role: 'admin' },
     confirmedAt: '2026-05-23T11:00:00.000Z',
+  });
+  approveSubscriptionActivationRequest(repository, {
+    subscriptionId: confirmed.subscription.id,
+    admin: { id: 'admin_1', role: 'admin' },
+    approvedAt: '2026-05-23T11:05:00.000Z',
   });
   const refunded = refundManualPaymentAndSubscription(repository, {
     paymentId: 'pay_pending',

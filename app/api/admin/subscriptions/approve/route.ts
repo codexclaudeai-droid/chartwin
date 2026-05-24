@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server.js';
 import {
+  approveAsyncSubscriptionActivationRequest,
   assertSameOriginMutationRequest,
-  confirmAsyncManualPaymentRequest,
   getActorFromAsyncRequest,
   getAsyncChartServicePersistence,
   getAdminMutationErrorStatus,
@@ -23,22 +23,25 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const persistence = getAsyncChartServicePersistence();
+
   try {
-    const result = await persistence.runMutation(async (repository) => {
+    const subscription = await persistence.runMutation(async (repository) => {
       const admin = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
-      return confirmAsyncManualPaymentRequest(repository, {
-        paymentId: String(body.paymentId || 'pay_pending'),
+      return approveAsyncSubscriptionActivationRequest(repository, {
+        subscriptionId: String(body.subscriptionId || ''),
         admin,
-        confirmedAt: new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
         adminNote: typeof body.adminNote === 'string' ? body.adminNote : undefined,
       });
     });
-
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ok: true,
+      subscription,
+    });
   } catch (error) {
     return NextResponse.json({
       ok: false,
-      message: error instanceof Error ? error.message : 'payment confirmation failed',
+      message: error instanceof Error ? error.message : 'subscription approval failed',
     }, { status: getAdminMutationErrorStatus(error) });
   }
 }

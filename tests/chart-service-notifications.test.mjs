@@ -3,7 +3,8 @@ import test from 'node:test';
 import {
   archiveAsyncNotificationForUser,
   archiveNotificationForUser,
-  confirmManualPaymentAndActivateSubscription,
+  approveSubscriptionActivationRequest,
+  confirmManualPaymentRequest,
   createAsyncChartServiceRepository,
   createMockChartServiceRepository,
   createSupportThread,
@@ -20,14 +21,38 @@ import {
   requestSubscriptionCancellation,
 } from '../src/server/chart-service/index.ts';
 
-test('payment confirmation creates a user notification', () => {
+test('payment confirmation creates a user notification without activating subscription', () => {
   const repository = createMockChartServiceRepository();
 
-  confirmManualPaymentAndActivateSubscription(repository, {
+  const result = confirmManualPaymentRequest(repository, {
     paymentId: 'pay_pending',
     admin: { id: 'admin_1', role: 'admin' },
     confirmedAt: '2026-05-23T13:00:00.000Z',
     adminNote: '입금 확인 완료',
+  });
+
+  const notifications = listNotificationsForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  });
+
+  assert.equal(result.subscription.status, 'payment_requested');
+  assert.equal(notifications.at(0)?.category, 'payment');
+  assert.match(notifications.at(0)?.title ?? '', /입금/);
+});
+
+test('subscription activation approval creates a subscription notification', () => {
+  const repository = createMockChartServiceRepository();
+  const confirmed = confirmManualPaymentRequest(repository, {
+    paymentId: 'pay_pending',
+    admin: { id: 'admin_1', role: 'admin' },
+    confirmedAt: '2026-05-23T13:00:00.000Z',
+  });
+
+  approveSubscriptionActivationRequest(repository, {
+    subscriptionId: confirmed.subscription.id,
+    admin: { id: 'admin_1', role: 'admin' },
+    approvedAt: '2026-05-23T13:05:00.000Z',
+    adminNote: '구독 승인 완료',
   });
 
   const notifications = listNotificationsForUser(repository, {

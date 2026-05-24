@@ -85,7 +85,7 @@ export function SubscriptionAdminPanel() {
     setMessage(options.nextMessage ?? `구독 요청 ${payload.subscriptions.length}건을 불러왔습니다.`);
   }
 
-  async function runOperation(subscriptionId: string, action: 'cancel' | 'refund' | 'reject') {
+  async function runOperation(subscriptionId: string, action: 'approve' | 'cancel' | 'refund' | 'reject') {
     const adminNote = normalizeAdminOperationNote(operationNotes[subscriptionId] || '');
     if (!canSubmitAdminOperationNote(adminNote)) {
       setMessage('관리자 처리 메모를 입력한 뒤 요청을 처리해주세요.');
@@ -97,6 +97,7 @@ export function SubscriptionAdminPanel() {
 
     setIsBusy(true);
     const endpointByAction = {
+      approve: '/api/admin/subscriptions/approve',
       cancel: '/api/admin/subscriptions/cancel',
       refund: '/api/admin/subscriptions/refund',
       reject: '/api/admin/subscriptions/reject',
@@ -193,6 +194,11 @@ export function SubscriptionAdminPanel() {
                   value={operationNotes[item.subscription.id] || ''}
                 />
                 <div className="actions compact">
+                  {item.subscription.status === 'payment_requested' && (
+                    <button className="button" type="button" onClick={() => runOperation(item.subscription.id, 'approve')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.subscription.id] || '')}>
+                      구독 승인
+                    </button>
+                  )}
                   {item.subscription.status === 'cancel_requested' && (
                     <button className="button secondary" type="button" onClick={() => runOperation(item.subscription.id, 'cancel')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.subscription.id] || '')}>
                       취소 승인

@@ -348,7 +348,7 @@ export function rejectSubscriptionRequest(
   return activeSubscription;
 }
 
-export function confirmManualPaymentAndActivateSubscription(
+export function confirmManualPaymentRequest(
   repository: ChartServiceRepository,
   input: {
     paymentId: string;
@@ -357,47 +357,89 @@ export function confirmManualPaymentAndActivateSubscription(
     adminNote?: string;
   },
 ): { payment: PaymentRequestRecord; subscription: SubscriptionRecord } {
+  assertAdminActor(input.admin);
   const adminNote = typeof input.adminNote === 'string' && input.adminNote.trim()
     ? input.adminNote.trim()
     : undefined;
   const payment = requirePayment(repository, input.paymentId);
   const subscription = requireSubscription(repository, payment.subscriptionId);
-  const plan = repository.getPlanById(payment.planId);
-  if (!plan) {
-    throw new Error(`Plan not found: ${payment.planId}`);
-  }
 
   const confirmedPayment = confirmPaymentRequest(payment, {
     adminId: input.admin.id,
     confirmedAt: input.confirmedAt,
     adminNote,
   });
-  const activeSubscription = approveSubscription(subscription, {
-    adminId: input.admin.id,
-    approvedAt: input.confirmedAt,
-    durationDays: plan.durationDays,
-  });
+  const approvalPendingSubscription: SubscriptionRecord = {
+    ...subscription,
+    status: SUBSCRIPTION_STATUSES.paymentRequested,
+    updatedAt: input.confirmedAt,
+  };
 
   repository.savePayment(confirmedPayment);
-  repository.saveSubscription(activeSubscription);
+  repository.saveSubscription(approvalPendingSubscription);
   repository.appendAuditLog(createAuditLogDraft({
     actor: input.admin,
-    action: 'payment.confirm_and_subscription.activate',
+    action: 'payment.confirm',
     targetType: 'payment_request',
     targetId: payment.id,
     beforeJson: { payment, subscription },
-    afterJson: { payment: confirmedPayment, subscription: activeSubscription },
+    afterJson: { payment: confirmedPayment, subscription: approvalPendingSubscription },
   }));
   createUserNotification(repository, {
     userId: payment.userId,
-    category: 'subscription',
-    title: '구독이 활성화되었습니다',
-    body: adminNote ?? '입금 확인이 완료되어 구독이 활성화되었습니다.',
+    category: 'payment',
+    title: '입금 확인이 완료되었습니다',
+    body: adminNote ?? '입금 확인이 완료되었습니다. 관리자 구독 승인을 기다리는 중입니다.',
     linkUrl: '/pricing',
     createdAt: input.confirmedAt,
   });
 
-  return { payment: confirmedPayment, subscription: activeSubscription };
+  return { payment: confirmedPayment, subscription: approvalPendingSubscription };
+}
+
+export function approveSubscriptionActivationRequest(
+  repository: ChartServiceRepository,
+  input: { subscriptionId: string; admin: Actor; approvedAt: string; adminNote?: string },
+): SubscriptionRecord {
+  assertAdminActor(input.admin);
+  const adminNote = typeof input.adminNote === 'string' && input.adminNote.trim()
+    ? input.adminNote.trim()
+    : undefined;
+  const subscription = requireSubscription(repository, input.subscriptionId);
+  const plan = subscription.planId ? repository.getPlanById(subscription.planId) : null;
+  if (!plan) {
+    throw new Error(`Plan not found for subscription: ${subscription.id}`);
+  }
+  const payment = repository.listPayments().find((item) => item.subscriptionId === subscription.id);
+  if (!payment || payment.status !== PAYMENT_STATUSES.confirmed) {
+    throw new Error(`Confirmed payment required for subscription: ${subscription.id}`);
+  }
+
+  const activeSubscription = approveSubscription(subscription, {
+    adminId: input.admin.id,
+    approvedAt: input.approvedAt,
+    durationDays: plan.durationDays,
+  });
+
+  repository.saveSubscription(activeSubscription);
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'subscription.activate.approve',
+    targetType: 'subscription',
+    targetId: subscription.id,
+    beforeJson: { payment, subscription },
+    afterJson: { subscription: activeSubscription, adminNote },
+  }));
+  createUserNotification(repository, {
+    userId: subscription.userId,
+    category: 'subscription',
+    title: '구독이 활성화되었습니다',
+    body: adminNote ?? '구독 승인이 완료되어 차트 서비스를 이용할 수 있습니다.',
+    linkUrl: '/pricing',
+    createdAt: input.approvedAt,
+  });
+
+  return activeSubscription;
 }
 
 export function rejectManualPaymentRequest(

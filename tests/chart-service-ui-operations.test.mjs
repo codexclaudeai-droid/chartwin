@@ -37,6 +37,26 @@ test('admin payment queue joins payment, user, plan, and subscription status for
   assert.equal(pending.subscription?.status, 'payment_pending');
 });
 
+test('admin payment confirmation leaves subscription approval for the subscription queue', async () => {
+  const {
+    confirmManualPaymentRequest,
+  } = await import('../src/server/chart-service/index.ts');
+  const repository = createMockChartServiceRepository();
+
+  const result = confirmManualPaymentRequest(repository, {
+    paymentId: 'pay_pending',
+    admin: { id: 'admin_1', role: 'admin' },
+    confirmedAt: '2026-05-23T12:10:00.000Z',
+    adminNote: '입금 확인',
+  });
+  const paymentQueueItem = listAdminPaymentQueue(repository)
+    .find((item) => item.payment.id === 'pay_pending');
+
+  assert.equal(result.payment.status, 'confirmed');
+  assert.equal(result.subscription.status, 'payment_requested');
+  assert.equal(paymentQueueItem?.subscription?.status, 'payment_requested');
+});
+
 test('admin payment queue API does not expose user password hashes', async () => {
   const {
     createSessionForUser,
@@ -149,6 +169,13 @@ test('admin payment panel confirms irreversible payment operations before postin
   assert.match(source, /\{confirmationDialog\}/);
   assert.match(source, /`payment\.\$\{operation\}`/);
   assert.doesNotMatch(source, /shouldRunAdminAction/);
+});
+
+test('admin payment panel labels confirmation as deposit confirmation only', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /입금 확인/);
+  assert.doesNotMatch(source, /구독 승인/);
 });
 
 test('admin payment panel refreshes its filtered queue after local operations without overwriting success context', () => {

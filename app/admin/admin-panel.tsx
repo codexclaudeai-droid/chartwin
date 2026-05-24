@@ -191,15 +191,21 @@ export function AdminPanel() {
                   value={operationNotes[item.payment.id] || ''}
                 />
                 <div className="actions compact">
-                  <button className="button" type="button" onClick={() => runOperation(item.payment.id, 'confirm')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
-                    승인
-                  </button>
-                  <button className="button danger" type="button" onClick={() => runOperation(item.payment.id, 'refund')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
-                    환불
-                  </button>
-                  <button className="button secondary" type="button" onClick={() => runOperation(item.payment.id, 'reject')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
-                    반려
-                  </button>
+                  {(item.payment.status === 'pending' || item.payment.status === 'requested') && (
+                    <button className="button" type="button" onClick={() => runOperation(item.payment.id, 'confirm')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
+                      입금 확인
+                    </button>
+                  )}
+                  {item.payment.status === 'confirmed' && (
+                    <button className="button danger" type="button" onClick={() => runOperation(item.payment.id, 'refund')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
+                      환불
+                    </button>
+                  )}
+                  {(item.payment.status === 'pending' || item.payment.status === 'requested') && (
+                    <button className="button secondary" type="button" onClick={() => runOperation(item.payment.id, 'reject')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
+                      반려
+                    </button>
+                  )}
                 </div>
               </td>
             </tr>
