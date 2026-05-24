@@ -1,6 +1,7 @@
 import {
   PAYMENT_STATUSES,
   SUBSCRIPTION_STATUSES,
+  TRANSACTION_VERIFICATION_STATUSES,
   USER_ACCOUNT_STATUSES,
   USER_ROLES,
   type AuditLogDraft,
@@ -329,6 +330,9 @@ function createPaymentRecord(overrides: Partial<PaymentRequestRecord>): PaymentR
     status: PAYMENT_STATUSES.pending,
     depositorName: 'Member',
     transactionId: null,
+    transactionVerificationStatus: TRANSACTION_VERIFICATION_STATUSES.unchecked,
+    transactionVerificationMessage: null,
+    transactionVerifiedAt: null,
     adminNote: null,
     confirmedByAdminId: null,
     confirmedAt: null,

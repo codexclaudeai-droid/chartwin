@@ -354,6 +354,18 @@ test('admin payment panel exposes USDT TXID for manual confirmation', () => {
   assert.match(source, /TXID/);
 });
 
+test('admin payment panel exposes TronScan verification controls for USDT TXIDs', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /transactionVerificationStatus/);
+  assert.match(source, /renderTransactionVerificationBadge/);
+  assert.match(source, /verifyTransactionId/);
+  assert.match(source, /\/api\/admin\/payments\/verify-txid/);
+  assert.match(source, /createTronScanTransactionUrl/);
+  assert.match(source, /txid-verification-badge/);
+  assert.match(source, /TronScan/);
+});
+
 test('admin payment panel refreshes its filtered queue after local operations without overwriting success context', () => {
   const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
 

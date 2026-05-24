@@ -39,7 +39,111 @@ test('USDT payment requests store the submitted transaction id for admin review'
   });
 
   assert.equal(result.payment.transactionId, '0xabc123txid');
+  assert.equal(result.payment.transactionVerificationStatus, 'unchecked');
+  assert.equal(result.payment.transactionVerificationMessage, null);
+  assert.equal(result.payment.transactionVerifiedAt, null);
   assert.match(result.supportMessage.body, /TXID: 0xabc123txid/);
+});
+
+test('admin can verify a USDT TXID against TronScan transfer data', async () => {
+  const {
+    createManualPaymentRequest,
+    createMockChartServiceRepository,
+    updatePaymentTransferSettings,
+    verifyPaymentTransactionPayload,
+  } = await import('../src/server/chart-service/index.ts');
+
+  const repository = createMockChartServiceRepository();
+  updatePaymentTransferSettings(repository, {
+    admin: { id: 'super_1', role: 'super_admin' },
+    bankName: 'KB',
+    bankAccountNumber: '123',
+    bankAccountHolder: 'TC Chart',
+    bankLogoUrl: '/bank-logos/kb.svg',
+    usdtAddress: 'TXYZ123456789',
+    usdtNetwork: 'TRC20',
+    updatedAt: '2026-05-23T09:00:00.000Z',
+  });
+  const requested = createManualPaymentRequest(repository, {
+    userId: 'user_member',
+    planId: 'plan_monthly',
+    method: 'usdt',
+    requestedAt: '2026-05-23T10:00:00.000Z',
+    transactionId: '0xabc123txid',
+  });
+
+  const result = verifyPaymentTransactionPayload(repository, {
+    paymentId: requested.payment.id,
+    admin: { id: 'admin_1', role: 'admin' },
+    checkedAt: '2026-05-23T10:10:00.000Z',
+    transactionPayload: {
+      hash: '0xabc123txid',
+      confirmed: true,
+      contractRet: 'SUCCESS',
+      trc20TransferInfo: [{
+        contract_address: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+        to_address: 'TXYZ123456789',
+        amount_str: '199000000',
+        decimals: 6,
+        symbol: 'USDT',
+      }],
+    },
+  });
+
+  assert.equal(result.payment.transactionVerificationStatus, 'verified');
+  assert.match(result.payment.transactionVerificationMessage, /199 USDT/);
+  assert.equal(result.payment.transactionVerifiedAt, '2026-05-23T10:10:00.000Z');
+  assert.equal(repository.getPaymentById(requested.payment.id)?.transactionVerificationStatus, 'verified');
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'payment.txid.verify');
+});
+
+test('admin TXID verification marks mismatched USDT recipient as mismatch', async () => {
+  const {
+    createManualPaymentRequest,
+    createMockChartServiceRepository,
+    updatePaymentTransferSettings,
+    verifyPaymentTransactionPayload,
+  } = await import('../src/server/chart-service/index.ts');
+
+  const repository = createMockChartServiceRepository();
+  updatePaymentTransferSettings(repository, {
+    admin: { id: 'super_1', role: 'super_admin' },
+    bankName: 'KB',
+    bankAccountNumber: '123',
+    bankAccountHolder: 'TC Chart',
+    bankLogoUrl: '/bank-logos/kb.svg',
+    usdtAddress: 'TXYZ123456789',
+    usdtNetwork: 'TRC20',
+    updatedAt: '2026-05-23T09:00:00.000Z',
+  });
+  const requested = createManualPaymentRequest(repository, {
+    userId: 'user_member',
+    planId: 'plan_monthly',
+    method: 'usdt',
+    requestedAt: '2026-05-23T10:00:00.000Z',
+    transactionId: '0xabc123txid',
+  });
+
+  const result = verifyPaymentTransactionPayload(repository, {
+    paymentId: requested.payment.id,
+    admin: { id: 'admin_1', role: 'admin' },
+    checkedAt: '2026-05-23T10:10:00.000Z',
+    transactionPayload: {
+      hash: '0xabc123txid',
+      confirmed: true,
+      contractRet: 'SUCCESS',
+      trc20TransferInfo: [{
+        contract_address: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+        to_address: 'TWRONGADDRESS',
+        amount_str: '199000000',
+        decimals: 6,
+        symbol: 'USDT',
+      }],
+    },
+  });
+
+  assert.equal(result.payment.transactionVerificationStatus, 'mismatch');
+  assert.match(result.payment.transactionVerificationMessage, /recipient/i);
 });
 
 test('USDT payment requests require a transaction id', async () => {

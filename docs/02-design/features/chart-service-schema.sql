@@ -122,11 +122,15 @@ create table if not exists payment_requests (
   status text not null,
   depositor_name text,
   transaction_id text,
+  transaction_verification_status text not null default 'unchecked',
+  transaction_verification_message text,
+  transaction_verified_at timestamptz,
   admin_note text,
   confirmed_by_admin_id text,
   confirmed_at timestamptz,
   created_at timestamptz not null,
   updated_at timestamptz not null,
+  constraint chk_payment_requests_transaction_verification_status check (transaction_verification_status in ('unchecked', 'verified', 'mismatch', 'failed')),
   foreign key (user_id) references users(id),
   foreign key (plan_id) references subscription_plans(id),
   foreign key (subscription_id) references subscriptions(id),
@@ -253,6 +257,14 @@ alter table if exists notifications add column if not exists archived_at timesta
 alter table if exists payment_requests add column if not exists support_thread_id text;
 
 alter table if exists payment_requests add column if not exists transaction_id text;
+
+alter table if exists payment_requests add column if not exists transaction_verification_status text;
+
+alter table if exists payment_requests add column if not exists transaction_verification_message text;
+
+alter table if exists payment_requests add column if not exists transaction_verified_at timestamptz;
+
+update payment_requests set transaction_verification_status = 'unchecked' where transaction_verification_status is null or transaction_verification_status = '';
 
 create index if not exists idx_payment_requests_support_thread_id on payment_requests (support_thread_id);
 

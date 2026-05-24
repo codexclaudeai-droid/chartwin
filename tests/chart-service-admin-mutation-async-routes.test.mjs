@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const adminMutationRoutes = [
   '../app/api/admin/payments/confirm/route.ts',
+  '../app/api/admin/payments/verify-txid/route.ts',
   '../app/api/admin/payments/refund/route.ts',
   '../app/api/admin/payments/reject/route.ts',
   '../app/api/admin/subscriptions/approve/route.ts',

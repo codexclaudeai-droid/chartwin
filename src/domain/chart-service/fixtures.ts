@@ -1,5 +1,6 @@
 import {
   SUBSCRIPTION_STATUSES,
+  TRANSACTION_VERIFICATION_STATUSES,
   type PaymentRequestRecord,
   type PaymentStatus,
   type ReferralLedgerRecord,
@@ -44,6 +45,9 @@ export function createPaymentRequestFixture(overrides: Partial<PaymentRequestRec
     status: 'pending' as PaymentStatus,
     depositorName: 'Tester',
     transactionId: null,
+    transactionVerificationStatus: TRANSACTION_VERIFICATION_STATUSES.unchecked,
+    transactionVerificationMessage: null,
+    transactionVerifiedAt: null,
     adminNote: null,
     confirmedByAdminId: null,
     confirmedAt: null,

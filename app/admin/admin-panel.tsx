@@ -17,6 +17,7 @@ import {
 } from './payment-queue-filters';
 import { getAdminPaymentDomId } from './payment-links';
 import { createAdminSupportThreadUrl } from './support-thread-links';
+import { createTronScanTransactionUrl } from './tronscan-links';
 
 type AdminPaymentQueueItem = {
   payment: {
@@ -26,6 +27,9 @@ type AdminPaymentQueueItem = {
     amountUsd: number;
     depositorName: string | null;
     transactionId: string | null;
+    transactionVerificationStatus: 'unchecked' | 'verified' | 'mismatch' | 'failed';
+    transactionVerificationMessage: string | null;
+    transactionVerifiedAt: string | null;
     createdAt: string;
   };
   user: {
@@ -126,6 +130,23 @@ export function AdminPanel() {
     dispatchAdminRefreshEvent({ source: 'payments' });
   }
 
+  async function verifyTransactionId(paymentId: string) {
+    setIsBusy(true);
+    const response = await fetch('/api/admin/payments/verify-txid', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentId }),
+    });
+    const payload = await response.json();
+    setIsBusy(false);
+    if (!response.ok) {
+      setMessage(payload.message || 'TronScan TXID 확인에 실패했습니다.');
+      return;
+    }
+    void refresh({ nextMessage: `${paymentId} TronScan 확인상태를 갱신했습니다.` });
+    dispatchAdminRefreshEvent({ source: 'payments' });
+  }
+
   function applyQuickFilter(presetKey: string) {
     setDashboardFilterNotice(null);
     setActiveFilterKey(presetKey);
@@ -148,6 +169,22 @@ export function AdminPanel() {
         <small className="manual-flow-description">{flowBadge.description}</small>
         <small className="manual-flow-raw-status">결제 상태: {formatPaymentStatusLabel(item.payment.status)}</small>
       </div>
+    );
+  }
+
+  function renderTransactionVerificationBadge(item: AdminPaymentQueueItem) {
+    const status = item.payment.transactionVerificationStatus ?? 'unchecked';
+    const labels = {
+      unchecked: 'TXID 확인 전',
+      verified: 'TronScan 확인 완료',
+      mismatch: 'TronScan 불일치',
+      failed: 'TronScan 조회 실패',
+    };
+
+    return (
+      <span className={`badge txid-verification-badge ${status}`}>
+        {labels[status]}
+      </span>
     );
   }
 
@@ -218,6 +255,29 @@ export function AdminPanel() {
                   <>
                     <br />
                     <small>TXID: {item.payment.transactionId}</small>
+                    <br />
+                    {renderTransactionVerificationBadge(item)}
+                    {item.payment.transactionVerificationMessage && (
+                      <>
+                        <br />
+                        <small>{item.payment.transactionVerificationMessage}</small>
+                      </>
+                    )}
+                    {item.payment.transactionVerifiedAt && (
+                      <>
+                        <br />
+                        <small>확인시각: {new Date(item.payment.transactionVerifiedAt).toLocaleString()}</small>
+                      </>
+                    )}
+                    <br />
+                    <a
+                      className="text-link compact"
+                      href={createTronScanTransactionUrl(item.payment.transactionId)}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      TronScan
+                    </a>
                   </>
                 )}
               </td>
@@ -249,6 +309,11 @@ export function AdminPanel() {
                   {(item.payment.status === 'pending' || item.payment.status === 'requested') && (
                     <button className="button secondary" type="button" onClick={() => runOperation(item.payment.id, 'reject')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
                       반려
+                    </button>
+                  )}
+                  {item.payment.method === 'usdt' && item.payment.transactionId && (
+                    <button className="button secondary" type="button" onClick={() => verifyTransactionId(item.payment.id)} disabled={isBusy}>
+                      다시 확인
                     </button>
                   )}
                 </div>

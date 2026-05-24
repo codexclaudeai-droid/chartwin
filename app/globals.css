@@ -766,6 +766,29 @@ a {
   color: var(--muted);
 }
 
+.badge.txid-verification-badge {
+  margin-top: 6px;
+}
+
+.badge.txid-verification-badge.unchecked {
+  background: rgba(109, 105, 94, 0.1);
+  border-color: rgba(109, 105, 94, 0.26);
+  color: var(--muted);
+}
+
+.badge.txid-verification-badge.verified {
+  background: rgba(12, 102, 90, 0.16);
+  border-color: rgba(12, 102, 90, 0.42);
+  color: var(--accent);
+}
+
+.badge.txid-verification-badge.mismatch,
+.badge.txid-verification-badge.failed {
+  background: rgba(155, 28, 28, 0.1);
+  border-color: rgba(155, 28, 28, 0.32);
+  color: var(--danger);
+}
+
 .manual-flow-description,
 .manual-flow-raw-status {
   color: var(--muted);

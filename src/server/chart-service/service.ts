@@ -1,6 +1,7 @@
 import {
   PAYMENT_STATUSES,
   SUBSCRIPTION_STATUSES,
+  TRANSACTION_VERIFICATION_STATUSES,
   approveSubscription,
   assertAdminActor,
   cancelSubscription,
@@ -22,8 +23,14 @@ import {
 import type { ChartServiceRepository, PublicServiceUserRecord, ServiceUserRecord } from './repository.ts';
 import { createUserNotification } from './notifications.ts';
 import { createProfilePaymentLink } from './notification-links.ts';
+import { getPaymentTransferSettingsForDisplay } from './payment-settings.ts';
 import { createReferralLedgerForPayment } from './referral-program.ts';
 import { notifyAdminsAboutSupportRequest } from './support-admin-notifications.ts';
+import {
+  createFailedTransactionVerificationResult,
+  verifyTronUsdtTransactionPayload,
+  type TronScanTransactionPayload,
+} from './txid-verification.ts';
 import { toPublicServiceUserRecord } from './user-serialization.ts';
 
 export type ChartAccessSnapshot = {
@@ -136,6 +143,9 @@ export function createManualPaymentRequest(
     status: PAYMENT_STATUSES.pending,
     depositorName: input.depositorName ?? null,
     transactionId,
+    transactionVerificationStatus: TRANSACTION_VERIFICATION_STATUSES.unchecked,
+    transactionVerificationMessage: null,
+    transactionVerifiedAt: null,
     adminNote: null,
     confirmedByAdminId: null,
     confirmedAt: null,
@@ -217,6 +227,82 @@ export function listAdminPaymentQueue(repository: ChartServiceRepository): Admin
     })
     .filter((item): item is AdminPaymentQueueItem => item !== null)
     .sort((a, b) => new Date(b.payment.createdAt).getTime() - new Date(a.payment.createdAt).getTime());
+}
+
+export function verifyPaymentTransactionPayload(
+  repository: ChartServiceRepository,
+  input: {
+    paymentId: string;
+    admin: Actor;
+    checkedAt: string;
+    transactionPayload: TronScanTransactionPayload;
+  },
+): { payment: PaymentRequestRecord } {
+  assertAdminActor(input.admin);
+  const payment = requirePayment(repository, input.paymentId);
+  if (payment.method !== 'usdt') {
+    throw new Error('Only USDT payments can be verified with TronScan');
+  }
+  if (!payment.transactionId) {
+    throw new Error('USDT transaction id required');
+  }
+
+  const settings = getPaymentTransferSettingsForDisplay(repository);
+  const result = verifyTronUsdtTransactionPayload({
+    payment,
+    expectedAddress: settings.usdtAddress,
+    transactionPayload: input.transactionPayload,
+  });
+  const updatedPayment: PaymentRequestRecord = {
+    ...payment,
+    transactionVerificationStatus: result.status,
+    transactionVerificationMessage: result.message,
+    transactionVerifiedAt: input.checkedAt,
+    updatedAt: input.checkedAt,
+  };
+
+  repository.savePayment(updatedPayment);
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'payment.txid.verify',
+    targetType: 'payment_request',
+    targetId: payment.id,
+    beforeJson: { payment },
+    afterJson: { payment: updatedPayment, verification: result },
+  }));
+
+  return { payment: updatedPayment };
+}
+
+export function markPaymentTransactionVerificationFailed(
+  repository: ChartServiceRepository,
+  input: {
+    paymentId: string;
+    admin: Actor;
+    checkedAt: string;
+    error: unknown;
+  },
+): { payment: PaymentRequestRecord } {
+  assertAdminActor(input.admin);
+  const payment = requirePayment(repository, input.paymentId);
+  const result = createFailedTransactionVerificationResult(input.error);
+  const updatedPayment: PaymentRequestRecord = {
+    ...payment,
+    transactionVerificationStatus: result.status,
+    transactionVerificationMessage: result.message,
+    transactionVerifiedAt: input.checkedAt,
+    updatedAt: input.checkedAt,
+  };
+  repository.savePayment(updatedPayment);
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'payment.txid.verify',
+    targetType: 'payment_request',
+    targetId: payment.id,
+    beforeJson: { payment },
+    afterJson: { payment: updatedPayment, verification: result },
+  }));
+  return { payment: updatedPayment };
 }
 
 export function requestSubscriptionCancellation(

@@ -114,6 +114,9 @@ test('postgres session subscription and payment mappers preserve nullable and nu
     status: 'pending',
     depositor_name: 'Member',
     transaction_id: '0xabc123txid',
+    transaction_verification_status: 'verified',
+    transaction_verification_message: 'TronScan confirmed 199 USDT',
+    transaction_verified_at: '2026-05-23T00:10:00.000Z',
     admin_note: null,
     confirmed_by_admin_id: null,
     confirmed_at: null,
@@ -124,10 +127,16 @@ test('postgres session subscription and payment mappers preserve nullable and nu
   assert.equal(payment.exchangeRate, 1390.125);
   assert.equal(payment.supportThreadId, 'support_1');
   assert.equal(payment.transactionId, '0xabc123txid');
+  assert.equal(payment.transactionVerificationStatus, 'verified');
+  assert.equal(payment.transactionVerificationMessage, 'TronScan confirmed 199 USDT');
+  assert.equal(payment.transactionVerifiedAt, '2026-05-23T00:10:00.000Z');
   assert.equal(payment.adminNote, null);
   assert.equal(mapPaymentToPostgresRow(payment).referral_points_used, 0);
   assert.equal(mapPaymentToPostgresRow(payment).support_thread_id, 'support_1');
   assert.equal(mapPaymentToPostgresRow(payment).transaction_id, '0xabc123txid');
+  assert.equal(mapPaymentToPostgresRow(payment).transaction_verification_status, 'verified');
+  assert.equal(mapPaymentToPostgresRow(payment).transaction_verification_message, 'TronScan confirmed 199 USDT');
+  assert.equal(mapPaymentToPostgresRow(payment).transaction_verified_at, '2026-05-23T00:10:00.000Z');
 });
 
 test('postgres audit row and upsert statement builder use safe parameter placeholders', () => {

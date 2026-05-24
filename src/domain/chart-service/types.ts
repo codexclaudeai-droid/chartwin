@@ -46,6 +46,16 @@ export const PAYMENT_STATUSES = {
 
 export type PaymentStatus = typeof PAYMENT_STATUSES[keyof typeof PAYMENT_STATUSES];
 
+export const TRANSACTION_VERIFICATION_STATUSES = {
+  unchecked: 'unchecked',
+  verified: 'verified',
+  mismatch: 'mismatch',
+  failed: 'failed',
+} as const;
+
+export type TransactionVerificationStatus =
+  typeof TRANSACTION_VERIFICATION_STATUSES[keyof typeof TRANSACTION_VERIFICATION_STATUSES];
+
 export const REFERRAL_LEDGER_STATUSES = {
   pending: 'pending',
   confirmed: 'confirmed',
@@ -97,6 +107,9 @@ export type PaymentRequestRecord = {
   status: PaymentStatus;
   depositorName: string | null;
   transactionId: string | null;
+  transactionVerificationStatus: TransactionVerificationStatus;
+  transactionVerificationMessage: string | null;
+  transactionVerifiedAt: string | null;
   adminNote: string | null;
   confirmedByAdminId: string | null;
   confirmedAt: string | null;

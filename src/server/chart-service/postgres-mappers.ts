@@ -197,6 +197,11 @@ export function mapPaymentFromPostgresRow(row: PostgresRow): PaymentRequestRecor
     status: readString(row.status) as PaymentRequestRecord['status'],
     depositorName: readNullableString(row.depositor_name),
     transactionId: readNullableString(row.transaction_id),
+    transactionVerificationStatus: (
+      readNullableString(row.transaction_verification_status) ?? 'unchecked'
+    ) as PaymentRequestRecord['transactionVerificationStatus'],
+    transactionVerificationMessage: readNullableString(row.transaction_verification_message),
+    transactionVerifiedAt: readNullableIsoString(row.transaction_verified_at),
     adminNote: readNullableString(row.admin_note),
     confirmedByAdminId: readNullableString(row.confirmed_by_admin_id),
     confirmedAt: readNullableIsoString(row.confirmed_at),
@@ -220,6 +225,9 @@ export function mapPaymentToPostgresRow(record: PaymentRequestRecord): PostgresR
     status: record.status,
     depositor_name: record.depositorName,
     transaction_id: record.transactionId,
+    transaction_verification_status: record.transactionVerificationStatus,
+    transaction_verification_message: record.transactionVerificationMessage,
+    transaction_verified_at: record.transactionVerifiedAt,
     admin_note: record.adminNote,
     confirmed_by_admin_id: record.confirmedByAdminId,
     confirmed_at: record.confirmedAt,

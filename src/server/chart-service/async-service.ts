@@ -1,6 +1,7 @@
 import {
   PAYMENT_STATUSES,
   SUBSCRIPTION_STATUSES,
+  TRANSACTION_VERIFICATION_STATUSES,
   USER_ACCOUNT_STATUSES,
   USER_ROLES,
   approveSubscription,
@@ -58,6 +59,13 @@ import {
   getAsyncUserReferralSummary,
 } from './referral-program.ts';
 import { notifyAsyncAdminsAboutSupportRequest } from './support-admin-notifications.ts';
+import { getAsyncPaymentTransferSettingsForDisplay } from './payment-settings.ts';
+import {
+  createFailedTransactionVerificationResult,
+  fetchTronScanTransaction,
+  verifyTronUsdtTransactionPayload,
+  type TronScanTransactionPayload,
+} from './txid-verification.ts';
 
 export async function getActorFromAsyncRequest(
   repository: AsyncChartServiceRepository,
@@ -382,6 +390,9 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
     status: PAYMENT_STATUSES.pending,
     depositorName: input.depositorName ?? null,
     transactionId,
+    transactionVerificationStatus: TRANSACTION_VERIFICATION_STATUSES.unchecked,
+    transactionVerificationMessage: null,
+    transactionVerifiedAt: null,
     adminNote: null,
     confirmedByAdminId: null,
     confirmedAt: null,
@@ -622,6 +633,60 @@ export async function listAsyncAdminPaymentQueue(
   return items
     .filter((item): item is AdminPaymentQueueItem => item !== null)
     .sort((a, b) => new Date(b.payment.createdAt).getTime() - new Date(a.payment.createdAt).getTime());
+}
+
+export async function verifyAsyncPaymentTransactionId(
+  repository: AsyncChartServiceRepository,
+  input: {
+    paymentId: string;
+    admin: Actor;
+    checkedAt: string;
+    fetchTransaction?: (transactionId: string) => Promise<TronScanTransactionPayload>;
+  },
+): Promise<{ payment: PaymentRequestRecord }> {
+  assertAdminActor(input.admin);
+  const payment = await requireAsyncPayment(repository, input.paymentId);
+  if (payment.method !== 'usdt') {
+    throw new Error('Only USDT payments can be verified with TronScan');
+  }
+  if (!payment.transactionId) {
+    throw new Error('USDT transaction id required');
+  }
+
+  const fetchTransaction = input.fetchTransaction ?? fetchTronScanTransaction;
+  let result;
+  try {
+    const [settings, transactionPayload] = await Promise.all([
+      getAsyncPaymentTransferSettingsForDisplay(repository),
+      fetchTransaction(payment.transactionId),
+    ]);
+    result = verifyTronUsdtTransactionPayload({
+      payment,
+      expectedAddress: settings.usdtAddress,
+      transactionPayload,
+    });
+  } catch (error) {
+    result = createFailedTransactionVerificationResult(error);
+  }
+
+  const updatedPayment: PaymentRequestRecord = {
+    ...payment,
+    transactionVerificationStatus: result.status,
+    transactionVerificationMessage: result.message,
+    transactionVerifiedAt: input.checkedAt,
+    updatedAt: input.checkedAt,
+  };
+  await repository.savePayment(updatedPayment);
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'payment.txid.verify',
+    targetType: 'payment_request',
+    targetId: payment.id,
+    beforeJson: { payment },
+    afterJson: { payment: updatedPayment, verification: result },
+  }));
+
+  return { payment: updatedPayment };
 }
 
 export async function listAsyncAdminSubscriptionQueue(
