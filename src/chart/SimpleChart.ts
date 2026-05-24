@@ -4343,9 +4343,21 @@ export class SimpleChart {
     this.clearPatternPopups();
     this.clearConfirmedPatternBoxes();
 
+    const prevViewportOverlapsNextData = (() => {
+      if (!this.data.length || !Number.isFinite(prevStartTime) || !Number.isFinite(prevEndTime)) return false;
+      const nextFirstTime = Number(this.data[0]?.time);
+      const nextLastTime = Number(this.data[this.data.length - 1]?.time);
+      if (!Number.isFinite(nextFirstTime) || !Number.isFinite(nextLastTime)) return false;
+      const prevMinTime = Math.min(prevStartTime as number, prevEndTime as number);
+      const prevMaxTime = Math.max(prevStartTime as number, prevEndTime as number);
+      const nextMinTime = Math.min(nextFirstTime, nextLastTime);
+      const nextMaxTime = Math.max(nextFirstTime, nextLastTime);
+      return prevMinTime <= nextMaxTime && prevMaxTime >= nextMinTime;
+    })();
+
     if (!prevData.length) {
       this.alignLatestCandleToAxisStart(Math.min(80, data.length));
-    } else if (prevWasNearLatest) {
+    } else if (prevWasNearLatest || !prevViewportOverlapsNextData) {
       this.alignLatestCandleToAxisStart(Math.min(prevVisible, data.length));
     } else {
       const findNearestIndexByTime = (targetTime: number): number => {

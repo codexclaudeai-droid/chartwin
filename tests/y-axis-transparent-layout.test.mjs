@@ -31,8 +31,26 @@ test('initial and near-latest data loads realign the latest candle to the axis s
   );
   assert.match(
     source,
-    /else if \(prevWasNearLatest\) \{\s*this\.alignLatestCandleToAxisStart\(Math\.min\(prevVisible, data\.length\)\);/s,
+    /else if \(prevWasNearLatest \|\| !prevViewportOverlapsNextData\) \{\s*this\.alignLatestCandleToAxisStart\(Math\.min\(prevVisible, data\.length\)\);/s,
     'symbol changes and refreshes near the latest range should preserve the same initial anchor',
+  );
+});
+
+test('data loads without time overlap realign to the latest available candle', () => {
+  assert.match(
+    source,
+    /const prevViewportOverlapsNextData = \(\(\) => \{/,
+    'setData should detect whether the previous viewport time range exists in the next dataset',
+  );
+  assert.match(
+    source,
+    /return prevMinTime <= nextMaxTime && prevMaxTime >= nextMinTime;/,
+    'overlap detection should compare previous viewport bounds with the next candle time bounds',
+  );
+  assert.match(
+    source,
+    /else if \(prevWasNearLatest \|\| !prevViewportOverlapsNextData\) \{/,
+    'stale webhook datasets should jump to their latest available candles instead of preserving an out-of-range viewport',
   );
 });
 
