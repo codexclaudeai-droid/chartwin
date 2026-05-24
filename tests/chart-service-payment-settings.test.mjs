@@ -13,6 +13,7 @@ test('payment transfer settings default to bank and USDT placeholders for displa
 
   assert.equal(settings.bankAccountNumber.length > 0, true);
   assert.equal(settings.bankAccountHolder.length > 0, true);
+  assert.equal(settings.bankLogoUrl.length > 0, true);
   assert.equal(settings.usdtAddress.length > 0, true);
   assert.equal(settings.usdtNetwork.length > 0, true);
 });
@@ -25,12 +26,14 @@ test('admin can update payment transfer settings and persist them through reposi
     bankName: 'KB국민은행',
     bankAccountNumber: '123-456-7890',
     bankAccountHolder: 'TC Chart',
+    bankLogoUrl: '/bank-logos/kb.svg',
     usdtAddress: 'TXYZ123456789',
     usdtNetwork: 'TRC20',
     updatedAt: '2026-05-25T03:00:00.000Z',
   });
 
   assert.equal(updated.bankName, 'KB국민은행');
+  assert.equal(updated.bankLogoUrl, '/bank-logos/kb.svg');
   assert.equal(updated.updatedByAdminId, 'admin_1');
   assert.equal(repository.getPaymentTransferSettings()?.usdtNetwork, 'TRC20');
 });
@@ -43,6 +46,7 @@ test('payment transfer settings reject blank required instructions', () => {
     bankName: 'KB국민은행',
     bankAccountNumber: '   ',
     bankAccountHolder: 'TC Chart',
+    bankLogoUrl: '/bank-logos/kb.svg',
     usdtAddress: 'TXYZ123456789',
     usdtNetwork: 'TRC20',
     updatedAt: '2026-05-25T03:00:00.000Z',

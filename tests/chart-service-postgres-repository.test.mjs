@@ -136,6 +136,7 @@ test('postgres async repository persists payment transfer settings with upsert S
             bank_name: 'KB국민은행',
             bank_account_number: '123-456-7890',
             bank_account_holder: 'TC Chart',
+            bank_logo_url: '/bank-logos/kb.svg',
             usdt_address: 'TXYZ123456789',
             usdt_network: 'TRC20',
             updated_by_admin_id: 'admin_1',
@@ -154,6 +155,7 @@ test('postgres async repository persists payment transfer settings with upsert S
     bankName: 'KB국민은행',
     bankAccountNumber: '123-456-7890',
     bankAccountHolder: 'TC Chart',
+    bankLogoUrl: '/bank-logos/kb.svg',
     usdtAddress: 'TXYZ123456789',
     usdtNetwork: 'TRC20',
     updatedByAdminId: 'admin_1',
@@ -170,7 +172,7 @@ test('postgres async repository persists payment transfer settings with upsert S
     'KB국민은행',
     '123-456-7890',
     'TC Chart',
+    '/bank-logos/kb.svg',
     'TXYZ123456789',
-    'TRC20',
   ]);
 });

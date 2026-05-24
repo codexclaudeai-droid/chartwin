@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="88" viewBox="0 0 220 88" role="img" aria-label="Woori">
+  <rect width="220" height="88" rx="18" fill="#eaf5ff"/>
+  <circle cx="48" cy="44" r="25" fill="#0082d6"/>
+  <path d="M32 45c8-12 24-12 32 0-8 12-24 12-32 0Z" fill="#fff"/>
+  <text x="86" y="54" font-family="Arial, sans-serif" font-size="30" font-weight="800" fill="#0082d6">WOORI</text>
+</svg>

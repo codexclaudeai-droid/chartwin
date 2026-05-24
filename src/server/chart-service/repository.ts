@@ -79,6 +79,7 @@ export type PaymentTransferSettingsRecord = {
   bankName: string;
   bankAccountNumber: string;
   bankAccountHolder: string;
+  bankLogoUrl: string;
   usdtAddress: string;
   usdtNetwork: string;
   updatedByAdminId: string | null;

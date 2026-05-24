@@ -6,15 +6,27 @@ type PaymentTransferSettings = {
   bankName: string;
   bankAccountNumber: string;
   bankAccountHolder: string;
+  bankLogoUrl: string;
   usdtAddress: string;
   usdtNetwork: string;
   updatedAt: string;
 };
 
+const BANK_LOGO_PRESETS = [
+  { bankName: 'KB국민은행', bankLogoUrl: '/bank-logos/kb.svg' },
+  { bankName: '신한은행', bankLogoUrl: '/bank-logos/shinhan.svg' },
+  { bankName: '하나은행', bankLogoUrl: '/bank-logos/hana.svg' },
+  { bankName: '우리은행', bankLogoUrl: '/bank-logos/woori.svg' },
+  { bankName: '카카오뱅크', bankLogoUrl: '/bank-logos/kakao.svg' },
+  { bankName: '토스뱅크', bankLogoUrl: '/bank-logos/toss.svg' },
+  { bankName: '직접 입력', bankLogoUrl: '/bank-logos/generic-bank.svg' },
+];
+
 const emptySettings: PaymentTransferSettings = {
   bankName: '',
   bankAccountNumber: '',
   bankAccountHolder: '',
+  bankLogoUrl: '/bank-logos/generic-bank.svg',
   usdtAddress: '',
   usdtNetwork: 'TRC20',
   updatedAt: '',
@@ -64,6 +76,16 @@ export function AdminPaymentSettingsPanel() {
     setSettings((current) => ({ ...current, [field]: value }));
   }
 
+  function selectBankPreset(bankName: string) {
+    const preset = BANK_LOGO_PRESETS.find((item) => item.bankName === bankName);
+    if (!preset) return;
+    setSettings((current) => ({
+      ...current,
+      bankName: preset.bankName === '직접 입력' ? current.bankName : preset.bankName,
+      bankLogoUrl: preset.bankLogoUrl,
+    }));
+  }
+
   return (
     <section className="card wide" id="admin-payment-settings">
       <div className="toolbar">
@@ -78,6 +100,17 @@ export function AdminPaymentSettingsPanel() {
       <form className="form admin-payment-settings-form" onSubmit={saveSettings}>
         <div className="settings-grid">
           <label>
+            은행 로고 선택
+            <select
+              value={BANK_LOGO_PRESETS.find((preset) => preset.bankLogoUrl === settings.bankLogoUrl)?.bankName ?? '직접 입력'}
+              onChange={(event) => selectBankPreset(event.target.value)}
+            >
+              {BANK_LOGO_PRESETS.map((preset) => (
+                <option key={preset.bankLogoUrl} value={preset.bankName}>{preset.bankName}</option>
+              ))}
+            </select>
+          </label>
+          <label>
             은행명
             <input
               value={settings.bankName}
@@ -86,6 +119,19 @@ export function AdminPaymentSettingsPanel() {
               required
             />
           </label>
+          <label>
+            은행 로고 이미지 URL
+            <input
+              value={settings.bankLogoUrl}
+              onChange={(event) => updateField('bankLogoUrl', event.target.value)}
+              placeholder="/bank-logos/kb.svg"
+              required
+            />
+          </label>
+          <div className="bank-logo-preview" aria-label="은행 로고 미리보기">
+            <img alt={`${settings.bankName || '은행'} 로고`} src={settings.bankLogoUrl} />
+            <span>{settings.bankName || '은행 로고 미리보기'}</span>
+          </div>
           <label>
             은행 계좌번호
             <input

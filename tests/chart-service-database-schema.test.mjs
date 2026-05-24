@@ -45,6 +45,7 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'sales_teams')?.columns.updated_by_admin_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'payment_transfer_settings')?.columns.bank_account_number.type, 'text');
   assert.equal(tables.find((table) => table.name === 'payment_transfer_settings')?.columns.bank_account_holder.type, 'text');
+  assert.equal(tables.find((table) => table.name === 'payment_transfer_settings')?.columns.bank_logo_url.type, 'text');
   assert.equal(tables.find((table) => table.name === 'payment_transfer_settings')?.columns.usdt_address.type, 'text');
   assert.equal(tables.find((table) => table.name === 'payment_transfer_settings')?.columns.usdt_network.type, 'text');
   assert.equal(tables.find((table) => table.name === 'payment_transfer_settings')?.columns.updated_by_admin_id.references, 'users.id');
@@ -79,9 +80,11 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /create table if not exists payment_transfer_settings/i);
   assert.match(sql, /bank_account_number text not null/i);
   assert.match(sql, /bank_account_holder text not null/i);
+  assert.match(sql, /bank_logo_url text not null/i);
   assert.match(sql, /usdt_address text not null/i);
   assert.match(sql, /usdt_network text not null/i);
   assert.match(sql, /alter table if exists payment_transfer_settings add column if not exists bank_account_number text/i);
+  assert.match(sql, /alter table if exists payment_transfer_settings add column if not exists bank_logo_url text/i);
   assert.match(sql, /create index if not exists idx_notifications_user_id_read_at/i);
   assert.match(sql, /archived_at timestamptz/i);
   assert.match(sql, /create index if not exists idx_notifications_user_id_archived_at/i);

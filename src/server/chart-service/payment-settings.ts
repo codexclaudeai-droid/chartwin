@@ -15,6 +15,7 @@ export function getDefaultPaymentTransferSettings(): PaymentTransferSettingsReco
     bankName: '은행명 입력 필요',
     bankAccountNumber: '계좌번호 입력 필요',
     bankAccountHolder: '예금주 입력 필요',
+    bankLogoUrl: '/bank-logos/generic-bank.svg',
     usdtAddress: 'USDT 주소 입력 필요',
     usdtNetwork: 'TRC20',
     updatedByAdminId: null,
@@ -65,6 +66,7 @@ type PaymentTransferSettingsInput = {
   bankName: string;
   bankAccountNumber: string;
   bankAccountHolder: string;
+  bankLogoUrl: string;
   usdtAddress: string;
   usdtNetwork: string;
   updatedAt: string;
@@ -78,6 +80,7 @@ function createPaymentTransferSettingsRecord(
     bankName: normalizeRequiredText(input.bankName, 'Bank name is required'),
     bankAccountNumber: normalizeRequiredText(input.bankAccountNumber, 'Bank account number is required'),
     bankAccountHolder: normalizeRequiredText(input.bankAccountHolder, 'Bank account holder is required'),
+    bankLogoUrl: normalizeRequiredText(input.bankLogoUrl, 'Bank logo URL is required'),
     usdtAddress: normalizeRequiredText(input.usdtAddress, 'USDT address is required'),
     usdtNetwork: normalizeRequiredText(input.usdtNetwork, 'USDT network is required').toUpperCase(),
     updatedByAdminId: input.admin.id,

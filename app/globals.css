@@ -532,6 +532,34 @@ a {
   padding: 14px;
 }
 
+.bank-logo-image,
+.bank-logo-preview img {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  height: 44px;
+  object-fit: contain;
+  padding: 7px;
+  width: 110px;
+}
+
+.bank-logo-preview {
+  align-items: center;
+  background: rgba(255, 253, 247, 0.75);
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  display: flex;
+  gap: 12px;
+  min-height: 72px;
+  padding: 12px;
+}
+
+.bank-logo-preview span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
 .payment-transfer-info strong {
   color: var(--accent);
 }

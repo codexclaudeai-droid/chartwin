@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="88" viewBox="0 0 220 88" role="img" aria-label="Toss">
+  <rect width="220" height="88" rx="18" fill="#edf4ff"/>
+  <path d="M26 48c15-27 42-34 60-20-10 25-33 43-60 20Z" fill="#246bfe"/>
+  <text x="94" y="54" font-family="Arial, sans-serif" font-size="34" font-weight="800" fill="#246bfe">toss</text>
+</svg>

@@ -43,6 +43,7 @@ export async function PATCH(request: NextRequest) {
         bankName: String(body.bankName || ''),
         bankAccountNumber: String(body.bankAccountNumber || ''),
         bankAccountHolder: String(body.bankAccountHolder || ''),
+        bankLogoUrl: String(body.bankLogoUrl || ''),
         usdtAddress: String(body.usdtAddress || ''),
         usdtNetwork: String(body.usdtNetwork || ''),
         updatedAt: new Date().toISOString(),

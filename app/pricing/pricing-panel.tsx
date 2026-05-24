@@ -15,6 +15,7 @@ type PaymentTransferSettings = {
   bankName: string;
   bankAccountNumber: string;
   bankAccountHolder: string;
+  bankLogoUrl: string;
   usdtAddress: string;
   usdtNetwork: string;
 };
@@ -103,6 +104,11 @@ export function PricingPanel({
           {paymentMethod === 'bank_transfer' ? (
             <>
               <strong>은행 입금 정보</strong>
+              <img
+                alt={`${paymentSettings.bankName} 로고`}
+                className="bank-logo-image"
+                src={paymentSettings.bankLogoUrl}
+              />
               <span>은행: {paymentSettings.bankName}</span>
               <span>계좌번호: {paymentSettings.bankAccountNumber}</span>
               <span>계좌주: {paymentSettings.bankAccountHolder}</span>

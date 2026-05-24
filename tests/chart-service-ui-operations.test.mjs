@@ -274,6 +274,8 @@ test('pricing payment request shows admin configured bank and USDT transfer inst
   assert.match(panelSource, /paymentMethod/);
   assert.match(panelSource, /bankAccountNumber/);
   assert.match(panelSource, /bankAccountHolder/);
+  assert.match(panelSource, /bankLogoUrl/);
+  assert.match(panelSource, /bank-logo-image/);
   assert.match(panelSource, /usdtAddress/);
   assert.match(panelSource, /usdtNetwork/);
   assert.match(panelSource, /method: paymentMethod/);
@@ -302,8 +304,11 @@ test('admin payment settings panel and route are wired into operations UI', () =
   assert.match(pageSource, /AdminPaymentSettingsPanel/);
   assert.match(pageSource, /sectionKey="paymentSettings"/);
   assert.match(panelSource, /admin-payment-settings/);
+  assert.match(panelSource, /BANK_LOGO_PRESETS/);
+  assert.match(panelSource, /bank-logo-preview/);
   assert.match(panelSource, /bankAccountNumber/);
   assert.match(panelSource, /bankAccountHolder/);
+  assert.match(panelSource, /bankLogoUrl/);
   assert.match(panelSource, /usdtAddress/);
   assert.match(panelSource, /usdtNetwork/);
   assert.match(routeSource, /updateAsyncPaymentTransferSettings/);
