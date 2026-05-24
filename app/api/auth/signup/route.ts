@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       email: String(body.email || ''),
       name: String(body.name || ''),
       password: String(body.password || ''),
+      referralCode: typeof body.referralCode === 'string' ? body.referralCode : '',
       createdAt: new Date().toISOString(),
     }));
     const response = NextResponse.json({

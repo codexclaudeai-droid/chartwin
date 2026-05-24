@@ -220,7 +220,7 @@ export async function authenticateAsyncUserWithPassword(
 
 export async function registerAsyncMockUserAccount(
   repository: AsyncChartServiceRepository,
-  input: { email: string; name: string; password: string; createdAt: string },
+  input: { email: string; name: string; password: string; createdAt: string; referralCode?: string | null },
 ) {
   const email = input.email.trim().toLowerCase();
   if (!email.includes('@')) {
@@ -233,6 +233,7 @@ export async function registerAsyncMockUserAccount(
   if (await repository.getUserByEmail(email)) {
     throw new Error('Email already registered');
   }
+  const referredByUserId = await getAsyncReferrerUserIdByReferralCode(repository, input.referralCode);
 
   const user: ServiceUserRecord = {
     id: await repository.nextId('user'),
@@ -242,7 +243,7 @@ export async function registerAsyncMockUserAccount(
     accountStatus: USER_ACCOUNT_STATUSES.active,
     phoneNumber: null,
     referralCode: '',
-    referredByUserId: null,
+    referredByUserId,
     createdAt: input.createdAt,
     passwordHash: createPasswordHash(input.password),
   };
@@ -257,6 +258,24 @@ export async function registerAsyncMockUserAccount(
 
 function createReferralCodeForUserId(userId: string): string {
   return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
+}
+
+async function getAsyncReferrerUserIdByReferralCode(
+  repository: AsyncChartServiceRepository,
+  referralCode: string | null | undefined,
+): Promise<string | null> {
+  const normalizedReferralCode = normalizeSignupReferralCode(referralCode);
+  if (!normalizedReferralCode) return null;
+
+  const referrer = (await repository.listUsers())
+    .find((user) => normalizeSignupReferralCode(user.referralCode) === normalizedReferralCode);
+  if (!referrer) throw new Error('Referral code not found');
+
+  return referrer.id;
+}
+
+function normalizeSignupReferralCode(value: string | null | undefined): string {
+  return String(value ?? '').trim().toUpperCase();
 }
 
 function normalizeProfilePhoneNumber(value: string | null | undefined): string | null {

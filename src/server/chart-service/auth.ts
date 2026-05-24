@@ -57,7 +57,7 @@ export function createSessionForUser(
 
 export function registerMockUserAccount(
   repository: ChartServiceRepository,
-  input: { email: string; name: string; password: string; createdAt: string },
+  input: { email: string; name: string; password: string; createdAt: string; referralCode?: string | null },
 ): { user: ServiceUserRecord; session: AuthSessionRecord; cookie: string } {
   const email = input.email.trim().toLowerCase();
   if (!email.includes('@')) {
@@ -70,6 +70,7 @@ export function registerMockUserAccount(
   if (repository.getUserByEmail(email)) {
     throw new Error('Email already registered');
   }
+  const referredByUserId = getReferrerUserIdByReferralCode(repository, input.referralCode);
 
   const user: ServiceUserRecord = {
     id: repository.nextId('user'),
@@ -79,7 +80,7 @@ export function registerMockUserAccount(
     accountStatus: USER_ACCOUNT_STATUSES.active,
     phoneNumber: null,
     referralCode: '',
-    referredByUserId: null,
+    referredByUserId,
     createdAt: input.createdAt,
     passwordHash: createPasswordHash(input.password),
   };
@@ -94,6 +95,25 @@ export function registerMockUserAccount(
 
 function createReferralCodeForUserId(userId: string): string {
   return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
+}
+
+function getReferrerUserIdByReferralCode(
+  repository: ChartServiceRepository,
+  referralCode: string | null | undefined,
+): string | null {
+  const normalizedReferralCode = normalizeSignupReferralCode(referralCode);
+  if (!normalizedReferralCode) return null;
+
+  const referrer = repository
+    .listUsers()
+    .find((user) => normalizeSignupReferralCode(user.referralCode) === normalizedReferralCode);
+  if (!referrer) throw new Error('Referral code not found');
+
+  return referrer.id;
+}
+
+function normalizeSignupReferralCode(value: string | null | undefined): string {
+  return String(value ?? '').trim().toUpperCase();
 }
 
 export function authenticateUserWithPassword(
