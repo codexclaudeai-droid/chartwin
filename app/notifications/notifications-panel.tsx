@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { dispatchNotificationsRefreshEvent } from '../notification-events';
 import {
   NOTIFICATION_FILTER_TABS,
@@ -12,6 +12,8 @@ import {
   getNotificationCategoryLabel,
   getNotificationFilterKeyFromSearch,
   getNotificationLinkLabel,
+  getNotificationSummaryFromList,
+  getNotificationsWithReadState,
   getUnreadNotificationsByTab,
 } from './notification-display';
 
@@ -37,6 +39,7 @@ type MarkNotificationReadOptions = {
 
 export function NotificationsPanel() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
+  const notificationsRef = useRef<NotificationRecord[]>([]);
   const [summary, setSummary] = useState<NotificationSummary>({ totalCount: 0, unreadCount: 0 });
   const [activeFilterKey, setActiveFilterKey] = useState<NotificationFilterKey>(() => getCurrentNotificationFilterKey());
   const [message, setMessage] = useState('로그인하면 결제 승인, 구독 상태, 고객센터 답변 알림을 확인할 수 있습니다.');
@@ -70,18 +73,31 @@ export function NotificationsPanel() {
     window.history.pushState(null, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
   }
 
+  function applyLocalReadState(notificationIds: string[]) {
+    const readAt = new Date().toISOString();
+    const nextNotifications = getNotificationsWithReadState(notificationsRef.current, notificationIds, readAt);
+
+    setNotificationRecords(nextNotifications);
+    setSummary(getNotificationSummaryFromList(nextNotifications));
+  }
+
+  function setNotificationRecords(nextNotifications: NotificationRecord[]) {
+    notificationsRef.current = nextNotifications;
+    setNotifications(nextNotifications);
+  }
+
   async function refresh() {
     setIsBusy(true);
     const response = await fetch('/api/notifications');
     const payload = await response.json();
     setIsBusy(false);
     if (!response.ok) {
-      setNotifications([]);
+      setNotificationRecords([]);
       setSummary({ totalCount: 0, unreadCount: 0 });
       setMessage(payload.message || '알림을 보려면 로그인이 필요합니다.');
       return;
     }
-    setNotifications(payload.notifications || []);
+    setNotificationRecords(payload.notifications || []);
     setSummary(payload.summary || { totalCount: 0, unreadCount: 0 });
     setMessage(formatNotificationSummaryMessage(payload.summary || { totalCount: 0, unreadCount: 0 }));
   }
@@ -98,6 +114,7 @@ export function NotificationsPanel() {
       setMessage(payload.message || '알림 읽음 처리에 실패했습니다.');
       return false;
     }
+    applyLocalReadState([notificationId]);
     dispatchNotificationsRefreshEvent();
     if (options.refreshAfter !== false) {
       await refresh();
@@ -146,15 +163,17 @@ export function NotificationsPanel() {
       setMessage(payload.message || '전체 알림 읽음 처리에 실패했습니다.');
       return;
     }
-    setMessage(`${payload.updatedCount}건을 읽음 처리했습니다.`);
+    applyLocalReadState(notifications.filter((notification) => !notification.readAt).map((notification) => notification.id));
     dispatchNotificationsRefreshEvent();
     await refresh();
+    setMessage(`${payload.updatedCount}건을 읽음 처리했습니다.`);
   }
 
   async function markFilteredRead() {
     if (filteredUnreadNotifications.length === 0) return;
 
-    const updatedCount = filteredUnreadNotifications.length;
+    const notificationIds = filteredUnreadNotifications.map((notification) => notification.id);
+    const updatedCount = notificationIds.length;
     setIsBusy(true);
     try {
       await Promise.all(filteredUnreadNotifications.map(async (notification) => {
@@ -164,6 +183,7 @@ export function NotificationsPanel() {
           throw new Error(payload.message || '현재 필터 알림 읽음 처리에 실패했습니다.');
         }
       }));
+      applyLocalReadState(notificationIds);
       dispatchNotificationsRefreshEvent();
       await refresh();
       setMessage(`${updatedCount}건을 현재 필터에서 읽음 처리했습니다.`);

@@ -12,6 +12,8 @@ test('notification display helpers translate categories and action labels', asyn
     getNotificationCenterHref,
     getNotificationFilterKeyFromSearch,
     getNotificationLinkLabel,
+    getNotificationSummaryFromList,
+    getNotificationsWithReadState,
     getUnreadNotificationsByTab,
   } = await import('../app/notifications/notification-display.ts');
 
@@ -62,6 +64,18 @@ test('notification display helpers translate categories and action labels', asyn
   assert.equal(getNotificationCenterHref(0), '/notifications');
   assert.equal(getNotificationCenterHref(1), '/notifications?tab=unread');
   assert.equal(getNotificationCenterHref(99), '/notifications?tab=unread');
+  assert.deepEqual(
+    getNotificationsWithReadState(notifications, ['n1', 'n3'], '2026-05-24T15:00:00.000Z'),
+    [
+      { id: 'n1', category: 'support_request', readAt: '2026-05-24T15:00:00.000Z' },
+      { id: 'n2', category: 'support_reply', readAt: '2026-05-24T14:00:00.000Z' },
+      { id: 'n3', category: 'payment', readAt: '2026-05-24T15:00:00.000Z' },
+      { id: 'n4', category: 'subscription', readAt: '2026-05-24T14:01:00.000Z' },
+      { id: 'n5', category: 'expiry', readAt: null },
+      { id: 'n6', category: 'signal', readAt: null },
+    ],
+  );
+  assert.deepEqual(getNotificationSummaryFromList(notifications), { totalCount: 6, unreadCount: 4 });
 });
 
 test('notifications page and panel use readable Korean copy instead of raw notification values', () => {
@@ -99,6 +113,9 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /dispatchNotificationsRefreshEvent/);
   assert.match(panelSource, /현재 필터 읽음/);
   assert.match(panelSource, /Promise\.all/);
+  assert.match(panelSource, /applyLocalReadState/);
+  assert.match(panelSource, /getNotificationsWithReadState/);
+  assert.match(panelSource, /getNotificationSummaryFromList/);
   assert.match(panelSource, /notification\.id/);
   assert.match(panelSource, /aria-pressed/);
   assert.match(panelSource, /알림 필터/);

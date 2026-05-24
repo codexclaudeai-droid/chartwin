@@ -13,6 +13,11 @@ type FilterableNotification = {
   readAt: string | null;
 };
 
+type ReadableNotification = {
+  id: string;
+  readAt: string | null;
+};
+
 export type NotificationFilterKey = 'all' | 'unread' | 'support' | 'payment' | 'subscription';
 
 export const NOTIFICATION_FILTER_TABS: Array<{ key: NotificationFilterKey; label: string }> = [
@@ -80,6 +85,32 @@ export function getUnreadNotificationsByTab<T extends FilterableNotification>(
 ): T[] {
   return filterNotificationsByTab(notifications, filterKey)
     .filter((notification) => !notification.readAt);
+}
+
+export function getNotificationsWithReadState<T extends ReadableNotification>(
+  notifications: T[],
+  notificationIds: string[],
+  readAt: string,
+): T[] {
+  const notificationIdSet = new Set(notificationIds);
+
+  return notifications.map((notification) => {
+    if (!notificationIdSet.has(notification.id) || notification.readAt) return notification;
+
+    return {
+      ...notification,
+      readAt,
+    };
+  });
+}
+
+export function getNotificationSummaryFromList<T extends ReadableNotification>(
+  notifications: T[],
+): NotificationSummary {
+  return {
+    totalCount: notifications.length,
+    unreadCount: notifications.filter((notification) => !notification.readAt).length,
+  };
 }
 
 export function getNotificationLinkLabel(notification: NotificationDisplayInput): string {
