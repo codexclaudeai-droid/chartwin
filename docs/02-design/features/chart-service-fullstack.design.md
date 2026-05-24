@@ -1138,3 +1138,22 @@ Deferred scope:
 - Statement timeout and lock timeout configuration.
 - Per-operation isolation-level overrides for financial reconciliation jobs.
 - Observability spans around transaction duration and rollback reasons.
+
+## 42. Chart Service CI Completion Criteria
+
+The CI slice should make the current service foundation reproducible outside the local Codex session.
+
+Implemented scope:
+
+- `.github/workflows/chart-service-ci.yml` runs on pushes to `main` and `codex-chart-service-foundation`, plus pull requests.
+- CI installs dependencies with `npm ci` on Windows to match the current local command environment.
+- CI runs `node --test tests\*.test.mjs`, `npm run build`, `npm run service:build`, and `npm run service:check`.
+- CI also runs production-mode Postgres readiness with safe placeholder connection settings to verify configuration gates without connecting to a real database.
+- A workflow contract test checks that the expected verification commands remain wired.
+
+Deferred scope:
+
+- CI artifact upload for build reports.
+- Browser smoke tests against a launched Next service.
+- Secret-backed staging database migration checks.
+- Deployment jobs after the repository hosting target is finalized.

@@ -1,0 +1,47 @@
+name: Chart Service CI
+
+on:
+  push:
+    branches:
+      - main
+      - codex-chart-service-foundation
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm.cmd ci
+
+      - name: Run Node tests
+        run: node --test tests\*.test.mjs
+
+      - name: Build chart app
+        run: npm.cmd run build
+
+      - name: Build Next service
+        run: npm.cmd run service:build
+
+      - name: Check local service readiness
+        run: npm.cmd run service:check
+
+      - name: Check production Postgres readiness
+        run: npm.cmd run service:check
+        env:
+          NODE_ENV: production
+          CHART_SERVICE_REPOSITORY: postgres
+          CHART_SERVICE_DATABASE_URL: postgres://chart_app:secret@db.example.com/chart_service
+          CHART_SERVICE_DATABASE_SSL_MODE: require
+          CHART_SERVICE_SESSION_SECRET: 0123456789abcdef0123456789abcdef
+
