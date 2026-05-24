@@ -122,6 +122,12 @@ export function getChartServiceRuntimeReadiness(
       message: 'Postgres row mappers and parameterized SQL builders are available.',
     });
     checks.push({
+      key: 'postgres_schema_migration_harness',
+      label: 'Postgres schema migration harness',
+      status: 'pass',
+      message: 'Postgres schema migration runner and deployment script are available.',
+    });
+    checks.push({
       key: 'repository_adapter_implementation',
       label: 'Repository implementation',
       status: 'pass',

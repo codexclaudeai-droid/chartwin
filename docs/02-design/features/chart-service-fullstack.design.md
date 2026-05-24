@@ -1078,3 +1078,22 @@ Deferred scope:
 - Custom reply templates by support category.
 - Rich text, attachments, and saved canned responses.
 - Reply assignment, SLA timers, and close/reopen workflow.
+
+## 39. Postgres Migration Harness Completion Criteria
+
+The Postgres migration slice should make the first live database setup repeatable without coupling the app to a specific hosted provider.
+
+Implemented scope:
+
+- `splitPostgresMigrationStatements` turns the rendered schema SQL into executable statements while preserving quoted semicolons.
+- `runChartServicePostgresSchemaMigration` applies the schema statements through the same Postgres query executor used by the repository layer.
+- Schema application runs in a transaction by default and rolls back if any statement fails.
+- `npm run service:migrate` resolves `CHART_SERVICE_DATABASE_URL` and `CHART_SERVICE_DATABASE_SSL_MODE`, creates a `pg` executor, applies the schema, and closes the pool.
+- Runtime readiness now reports that the Postgres schema migration harness is available when the Postgres adapter is selected.
+
+Deferred scope:
+
+- Running the migration against the real production database URL.
+- Versioned incremental migrations after the first schema baseline.
+- Seed data import from the current mock repository.
+- Backup, restore, retention, and rollback runbooks.
