@@ -1,5 +1,6 @@
 'use client';
 
+import type React from 'react';
 import { useEffect, useState } from 'react';
 import { dispatchNotificationsRefreshEvent } from '../notification-events';
 import {
@@ -27,6 +28,10 @@ type NotificationRecord = {
 type NotificationSummary = {
   totalCount: number;
   unreadCount: number;
+};
+
+type MarkNotificationReadOptions = {
+  refreshAfter?: boolean;
 };
 
 export function NotificationsPanel() {
@@ -58,17 +63,41 @@ export function NotificationsPanel() {
     setMessage(formatNotificationSummaryMessage(payload.summary || { totalCount: 0, unreadCount: 0 }));
   }
 
-  async function markOneRead(notificationId: string) {
+  async function markNotificationRead(
+    notificationId: string,
+    options: MarkNotificationReadOptions = {},
+  ): Promise<boolean> {
     setIsBusy(true);
     const response = await fetch(`/api/notifications/${notificationId}/read`, { method: 'POST' });
     const payload = await response.json();
     setIsBusy(false);
     if (!response.ok) {
       setMessage(payload.message || '알림 읽음 처리에 실패했습니다.');
-      return;
+      return false;
     }
     dispatchNotificationsRefreshEvent();
-    await refresh();
+    if (options.refreshAfter !== false) {
+      await refresh();
+    }
+    return true;
+  }
+
+  async function markOneRead(notificationId: string) {
+    await markNotificationRead(notificationId);
+  }
+
+  async function handleNotificationAction(
+    event: React.MouseEvent<HTMLAnchorElement>,
+    notification: NotificationRecord,
+  ) {
+    if (!notification.linkUrl || notification.readAt) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+
+    event.preventDefault();
+    const wasMarkedRead = await markNotificationRead(notification.id, { refreshAfter: false });
+    if (wasMarkedRead) {
+      window.location.assign(notification.linkUrl);
+    }
   }
 
   async function archiveNotification(notificationId: string) {
@@ -166,7 +195,11 @@ export function NotificationsPanel() {
             <p>{notification.body}</p>
             <div className="actions compact">
               {notification.linkUrl && (
-                <a className="text-link notification-action-link" href={notification.linkUrl}>
+                <a
+                  className="text-link notification-action-link"
+                  href={notification.linkUrl}
+                  onClick={(event) => handleNotificationAction(event, notification)}
+                >
                   {getNotificationLinkLabel(notification)}
                 </a>
               )}

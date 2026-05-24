@@ -71,6 +71,12 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /activeFilterKey/);
   assert.match(panelSource, /filteredUnreadNotifications/);
   assert.match(panelSource, /getUnreadNotificationsByTab/);
+  assert.match(panelSource, /handleNotificationAction/);
+  assert.match(panelSource, /React\.MouseEvent<HTMLAnchorElement>/);
+  assert.match(panelSource, /event\.preventDefault\(\)/);
+  assert.match(panelSource, /markNotificationRead\(notification\.id, \{ refreshAfter: false \}\)/);
+  assert.match(panelSource, /window\.location\.assign\(notification\.linkUrl\)/);
+  assert.match(panelSource, /event\.metaKey \|\| event\.ctrlKey \|\| event\.shiftKey \|\| event\.altKey/);
   assert.match(panelSource, /markFilteredRead/);
   assert.match(panelSource, /archiveNotification/);
   assert.match(panelSource, /\/api\/notifications\/\$\{notificationId\}\/archive/);
