@@ -18,6 +18,10 @@ type ReadableNotification = {
   readAt: string | null;
 };
 
+type IdentifiableNotification = {
+  id: string;
+};
+
 export type NotificationFilterKey = 'all' | 'unread' | 'support' | 'payment' | 'subscription';
 
 export const NOTIFICATION_FILTER_TABS: Array<{ key: NotificationFilterKey; label: string }> = [
@@ -102,6 +106,15 @@ export function getNotificationsWithReadState<T extends ReadableNotification>(
       readAt,
     };
   });
+}
+
+export function getNotificationsWithoutIds<T extends IdentifiableNotification>(
+  notifications: T[],
+  notificationIds: string[],
+): T[] {
+  const notificationIdSet = new Set(notificationIds);
+
+  return notifications.filter((notification) => !notificationIdSet.has(notification.id));
 }
 
 export function getNotificationSummaryFromList<T extends ReadableNotification>(

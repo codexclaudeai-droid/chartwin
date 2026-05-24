@@ -13,6 +13,7 @@ import {
   getNotificationFilterKeyFromSearch,
   getNotificationLinkLabel,
   getNotificationSummaryFromList,
+  getNotificationsWithoutIds,
   getNotificationsWithReadState,
   getUnreadNotificationsByTab,
 } from './notification-display';
@@ -76,6 +77,13 @@ export function NotificationsPanel() {
   function applyLocalReadState(notificationIds: string[]) {
     const readAt = new Date().toISOString();
     const nextNotifications = getNotificationsWithReadState(notificationsRef.current, notificationIds, readAt);
+
+    setNotificationRecords(nextNotifications);
+    setSummary(getNotificationSummaryFromList(nextNotifications));
+  }
+
+  function applyLocalArchiveState(notificationId: string) {
+    const nextNotifications = getNotificationsWithoutIds(notificationsRef.current, [notificationId]);
 
     setNotificationRecords(nextNotifications);
     setSummary(getNotificationSummaryFromList(nextNotifications));
@@ -149,6 +157,7 @@ export function NotificationsPanel() {
       setMessage(payload.message || '알림 숨김 처리에 실패했습니다.');
       return;
     }
+    applyLocalArchiveState(notificationId);
     dispatchNotificationsRefreshEvent();
     await refresh();
     setMessage('알림을 목록에서 숨겼습니다.');

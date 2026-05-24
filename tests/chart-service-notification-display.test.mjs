@@ -13,6 +13,7 @@ test('notification display helpers translate categories and action labels', asyn
     getNotificationFilterKeyFromSearch,
     getNotificationLinkLabel,
     getNotificationSummaryFromList,
+    getNotificationsWithoutIds,
     getNotificationsWithReadState,
     getUnreadNotificationsByTab,
   } = await import('../app/notifications/notification-display.ts');
@@ -75,6 +76,10 @@ test('notification display helpers translate categories and action labels', asyn
       { id: 'n6', category: 'signal', readAt: null },
     ],
   );
+  assert.deepEqual(
+    getNotificationsWithoutIds(notifications, ['n1', 'n5']).map((item) => item.id),
+    ['n2', 'n3', 'n4', 'n6'],
+  );
   assert.deepEqual(getNotificationSummaryFromList(notifications), { totalCount: 6, unreadCount: 4 });
 });
 
@@ -114,6 +119,8 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /현재 필터 읽음/);
   assert.match(panelSource, /Promise\.all/);
   assert.match(panelSource, /applyLocalReadState/);
+  assert.match(panelSource, /applyLocalArchiveState/);
+  assert.match(panelSource, /getNotificationsWithoutIds/);
   assert.match(panelSource, /getNotificationsWithReadState/);
   assert.match(panelSource, /getNotificationSummaryFromList/);
   assert.match(panelSource, /notification\.id/);
