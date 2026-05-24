@@ -153,6 +153,16 @@ test('profile page and panel expose my profile edit modal and referral controls'
   assert.match(panelSource, /\/signup\?ref=/);
 });
 
+test('profile page owns the member subscription status actions', () => {
+  const pricingSource = fs.readFileSync(new URL('../app/pricing/page.tsx', import.meta.url), 'utf8');
+  const profileSource = fs.readFileSync(new URL('../app/profile/page.tsx', import.meta.url), 'utf8');
+  const subscriptionActionsSource = fs.readFileSync(new URL('../app/profile/subscription-actions-panel.tsx', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(pricingSource, /SubscriptionActionsPanel/);
+  assert.match(profileSource, /SubscriptionActionsPanel/);
+  assert.match(subscriptionActionsSource, /내 구독 상태/);
+});
+
 test('profile edit controls move into a modal instead of inline summary edits', () => {
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
   const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');

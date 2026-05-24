@@ -3,7 +3,6 @@ import {
   getPaymentTransferSettingsForDisplay,
 } from '../../src/server/chart-service/index.ts';
 import { PricingPanel } from './pricing-panel';
-import { SubscriptionActionsPanel } from './subscription-actions-panel';
 
 export default function PricingPage() {
   const repository = getChartServiceRepository();
@@ -37,7 +36,6 @@ export default function PricingPage() {
         </tbody>
       </table>
       <PricingPanel plans={plans} paymentSettings={paymentSettings} />
-      <SubscriptionActionsPanel />
     </main>
   );
 }
