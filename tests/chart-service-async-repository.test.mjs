@@ -5,6 +5,7 @@ import {
   createAsyncChartServiceRepository,
   createMockChartServiceRepository,
   getAsyncChartServicePersistence,
+  getChartServiceRepositoryConfigSignature,
   getChartServiceRepository,
   getChartServiceRuntimeReadiness,
 } from '../src/server/chart-service/index.ts';
@@ -97,4 +98,42 @@ test('global async persistence shares memory state with the sync repository sing
   const session = await asyncPersistence.repository.getSessionById('session_shared_boundary');
 
   assert.equal(session?.userId, 'user_subscriber');
+});
+
+test('global memory persistence repairs stale repository singletons after new methods are added', async () => {
+  const env = { CHART_SERVICE_REPOSITORY: 'memory' };
+  const globals = globalThis;
+  const previousSync = globals.__chartServiceRepository;
+  const previousSyncSignature = globals.__chartServiceRepositorySignature;
+  const previousAsync = globals.__asyncChartServicePersistence;
+  const previousAsyncSignature = globals.__asyncChartServicePersistenceSignature;
+  const staleRepository = {
+    ...createMockChartServiceRepository(),
+  };
+
+  delete staleRepository.listSalesTeams;
+  delete staleRepository.saveSalesTeam;
+  delete staleRepository.getPaymentTransferSettings;
+  delete staleRepository.savePaymentTransferSettings;
+
+  try {
+    globals.__chartServiceRepository = staleRepository;
+    globals.__chartServiceRepositorySignature = getChartServiceRepositoryConfigSignature(env);
+    globals.__asyncChartServicePersistence = undefined;
+    globals.__asyncChartServicePersistenceSignature = undefined;
+
+    const persistence = getAsyncChartServicePersistence(env);
+    const teams = await persistence.repository.listSalesTeams();
+    const settings = await persistence.repository.getPaymentTransferSettings();
+
+    assert.deepEqual(teams, []);
+    assert.equal(settings, null);
+    assert.equal(typeof globals.__chartServiceRepository.listSalesTeams, 'function');
+    assert.equal(typeof globals.__chartServiceRepository.saveSalesTeam, 'function');
+  } finally {
+    globals.__chartServiceRepository = previousSync;
+    globals.__chartServiceRepositorySignature = previousSyncSignature;
+    globals.__asyncChartServicePersistence = previousAsync;
+    globals.__asyncChartServicePersistenceSignature = previousAsyncSignature;
+  }
 });
