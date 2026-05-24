@@ -1258,5 +1258,24 @@ Implemented scope:
 Deferred scope:
 
 - Dedicated `/admin/support/<threadId>` route.
-- Admin notifications that link directly to newly opened support threads.
 - Thread assignment and SLA state on deep-linked support cards.
+
+## 48. Admin Support Request Notification Completion Criteria
+
+The admin support request notification slice should turn newly opened customer inquiries into an operator handoff that can be answered immediately.
+
+Implemented scope:
+
+- Server-side admin support links are generated as `/admin?supportThread=<threadId>#admin-support`.
+- The server link format is covered against the admin UI link helper so notification links and copied UI links stay aligned.
+- New support threads create unread `support_request` notifications for admin and super admin users.
+- Admin notifications link directly to the support card and reply textarea through the existing admin deep-link behavior.
+- New support threads queue `support_request_admin` email outbox records for admin and super admin recipients.
+- The async API support creation path and the synchronous service helper share the same admin handoff behavior.
+
+Deferred scope:
+
+- Dedicated `/admin/support/<threadId>` route.
+- Admin-side notification filtering by support queue category.
+- Email provider-specific branded support request template.
+- Thread assignment, SLA ownership, and escalation state.

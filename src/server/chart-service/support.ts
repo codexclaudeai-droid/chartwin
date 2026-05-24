@@ -10,6 +10,7 @@ import {
 } from '../../domain/chart-service/index.ts';
 import type { ChartServiceRepository, ServiceUserRecord } from './repository.ts';
 import { createUserNotification } from './notifications.ts';
+import { notifyAdminsAboutSupportRequest } from './support-admin-notifications.ts';
 
 export type SupportThreadListItem = {
   thread: SupportThreadRecord;
@@ -54,6 +55,12 @@ export function createSupportThread(
 
   repository.saveSupportThread(thread);
   repository.saveSupportMessage(message);
+  notifyAdminsAboutSupportRequest(repository, {
+    thread,
+    message,
+    author,
+    createdAt: input.createdAt,
+  });
   return { thread, message };
 }
 

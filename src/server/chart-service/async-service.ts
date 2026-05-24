@@ -43,6 +43,7 @@ import type {
   AdminSubscriptionQueueItem,
   ChartAccessSnapshot,
 } from './service.ts';
+import { notifyAsyncAdminsAboutSupportRequest } from './support-admin-notifications.ts';
 
 export async function getActorFromAsyncRequest(
   repository: AsyncChartServiceRepository,
@@ -389,7 +390,7 @@ export async function createAsyncSupportThread(
     createdAt: string;
   },
 ): Promise<{ thread: SupportThreadRecord; message: SupportMessageRecord }> {
-  await requireAsyncUser(repository, input.actor.id);
+  const author = await requireAsyncUser(repository, input.actor.id);
   if (!input.title.trim()) throw new Error('Support title required');
   if (!input.body.trim()) throw new Error('Support message required');
 
@@ -414,6 +415,12 @@ export async function createAsyncSupportThread(
 
   await repository.saveSupportThread(thread);
   await repository.saveSupportMessage(message);
+  await notifyAsyncAdminsAboutSupportRequest(repository, {
+    thread,
+    message,
+    author,
+    createdAt: input.createdAt,
+  });
   return { thread, message };
 }
 

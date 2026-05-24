@@ -152,6 +152,7 @@ export type SupportMessageRecord = {
 
 export type NotificationCategory =
   | 'support_reply'
+  | 'support_request'
   | 'qna'
   | 'subscription'
   | 'payment'
