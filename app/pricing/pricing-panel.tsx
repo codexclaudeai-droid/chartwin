@@ -66,14 +66,30 @@ export function PricingPanel({
   return (
     <section className="card">
       <form className="form" onSubmit={requestPayment}>
-        <label htmlFor="planId">구독 플랜</label>
-        <select id="planId" value={selectedPlanId} onChange={(event) => setSelectedPlanId(event.target.value)}>
+        <span className="form-section-label">구독 플랜</span>
+        <div className="plan-card-grid" role="radiogroup" aria-label="구독 플랜 선택">
           {plans.map((plan) => (
-            <option key={plan.id} value={plan.id}>
-              {plan.name} / {plan.durationDays}일 / ${discountedAmount(plan)}
-            </option>
+            <label
+              className={`plan-card${selectedPlanId === plan.id ? ' selected' : ''}`}
+              key={plan.id}
+            >
+              <input
+                type="radio"
+                name="planId"
+                value={plan.id}
+                checked={selectedPlanId === plan.id}
+                onChange={() => setSelectedPlanId(plan.id)}
+              />
+              <span className="plan-card-kicker">{plan.durationDays}일 이용권</span>
+              <strong>{plan.name}</strong>
+              <span className="plan-card-price">${discountedAmount(plan)}</span>
+              <span className="plan-card-meta">
+                정가 ${plan.basePriceUsd}
+                {plan.discountPercent > 0 ? ` / ${plan.discountPercent}% 할인` : ' / 기본가'}
+              </span>
+            </label>
           ))}
-        </select>
+        </div>
         <label htmlFor="paymentMethod">결제 방식</label>
         <select
           id="paymentMethod"

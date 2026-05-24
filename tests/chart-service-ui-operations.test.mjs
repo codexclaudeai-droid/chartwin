@@ -279,6 +279,21 @@ test('pricing payment request shows admin configured bank and USDT transfer inst
   assert.match(panelSource, /method: paymentMethod/);
 });
 
+test('pricing payment request lets members choose a subscription plan from cards', () => {
+  const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /plan-card-grid/);
+  assert.match(panelSource, /plan-card/);
+  assert.match(panelSource, /type="radio"/);
+  assert.match(panelSource, /checked=\{selectedPlanId === plan\.id\}/);
+  assert.match(panelSource, /onChange=\{\(\) => setSelectedPlanId\(plan\.id\)\}/);
+  assert.match(panelSource, /discountedAmount\(plan\)/);
+  assert.doesNotMatch(panelSource, /<select id="planId"/);
+  assert.match(cssSource, /\.plan-card-grid/);
+  assert.match(cssSource, /\.plan-card\.selected/);
+});
+
 test('admin payment settings panel and route are wired into operations UI', () => {
   const pageSource = fs.readFileSync(new URL('../app/admin/page.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-payment-settings-panel.tsx', import.meta.url), 'utf8');
