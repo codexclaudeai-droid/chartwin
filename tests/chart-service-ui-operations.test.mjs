@@ -25,6 +25,28 @@ test('authenticated payment request uses the actor user id instead of trusting c
   assert.equal(result.subscription.status, 'payment_pending');
 });
 
+test('authenticated payment request creates a private deposit support thread', () => {
+  const repository = createMockChartServiceRepository();
+
+  const result = createAuthenticatedManualPaymentRequest(repository, {
+    actor: { id: 'user_trial', role: 'member' },
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T09:00:00.000Z',
+    depositorName: 'Trial User',
+  });
+
+  assert.equal(result.payment.supportThreadId, result.supportThread.id);
+  assert.equal(result.supportThread.category, 'deposit');
+  assert.equal(result.supportThread.visibility, 'private');
+  assert.equal(result.supportThread.status, 'waiting');
+  assert.equal(result.supportMessage.threadId, result.supportThread.id);
+  assert.equal(result.supportMessage.isAdminReply, false);
+  assert.match(result.supportMessage.body, new RegExp(result.payment.id));
+  assert.match(result.supportMessage.body, /Trial User/);
+  assert.match(result.supportMessage.body, /Monthly/);
+});
+
 test('admin payment queue joins payment, user, plan, and subscription status for operations UI', () => {
   const repository = createMockChartServiceRepository();
 
@@ -35,6 +57,23 @@ test('admin payment queue joins payment, user, plan, and subscription status for
   assert.equal(pending.user.email, 'member@example.com');
   assert.equal(pending.plan?.name, 'Monthly');
   assert.equal(pending.subscription?.status, 'payment_pending');
+});
+
+test('admin payment queue includes the linked deposit support thread', () => {
+  const repository = createMockChartServiceRepository();
+  const result = createAuthenticatedManualPaymentRequest(repository, {
+    actor: { id: 'user_trial', role: 'member' },
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T09:00:00.000Z',
+    depositorName: 'Trial User',
+  });
+
+  const queueItem = listAdminPaymentQueue(repository)
+    .find((item) => item.payment.id === result.payment.id);
+
+  assert.equal(queueItem?.supportThread?.id, result.supportThread.id);
+  assert.equal(queueItem?.supportThread?.category, 'deposit');
 });
 
 test('admin payment confirmation leaves subscription approval for the subscription queue', async () => {
@@ -176,6 +215,14 @@ test('admin payment panel labels confirmation as deposit confirmation only', () 
 
   assert.match(source, /입금 확인/);
   assert.doesNotMatch(source, /구독 승인/);
+});
+
+test('admin payment panel links deposit requests to the support thread reply view', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /createAdminSupportThreadUrl/);
+  assert.match(source, /item\.supportThread/);
+  assert.match(source, /입금확인 요청글/);
 });
 
 test('admin payment panel refreshes its filtered queue after local operations without overwriting success context', () => {

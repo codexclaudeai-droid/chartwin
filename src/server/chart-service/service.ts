@@ -16,9 +16,12 @@ import {
   type PaymentRequestRecord,
   type SubscriptionPlan,
   type SubscriptionRecord,
+  type SupportMessageRecord,
+  type SupportThreadRecord,
 } from '../../domain/chart-service/index.ts';
 import type { ChartServiceRepository, PublicServiceUserRecord, ServiceUserRecord } from './repository.ts';
 import { createUserNotification } from './notifications.ts';
+import { notifyAdminsAboutSupportRequest } from './support-admin-notifications.ts';
 import { toPublicServiceUserRecord } from './user-serialization.ts';
 
 export type ChartAccessSnapshot = {
@@ -34,6 +37,7 @@ export type AdminPaymentQueueItem = {
   user: PublicServiceUserRecord;
   plan: SubscriptionPlan | null;
   subscription: SubscriptionRecord | null;
+  supportThread: SupportThreadRecord | null;
 };
 
 export type AdminSubscriptionQueueItem = {
@@ -72,15 +76,23 @@ export function createManualPaymentRequest(
     exchangeRate?: number | null;
     referralPointsUsed?: number;
   },
-): { payment: PaymentRequestRecord; subscription: SubscriptionRecord } {
-  requireUser(repository, input.userId);
+): {
+  payment: PaymentRequestRecord;
+  subscription: SubscriptionRecord;
+  supportThread: SupportThreadRecord;
+  supportMessage: SupportMessageRecord;
+} {
+  const user = requireUser(repository, input.userId);
   const plan = repository.getPlanById(input.planId);
   if (!plan || !plan.isActive) {
     throw new Error(`Active plan not found: ${input.planId}`);
   }
+  const subscriptionId = repository.nextId('sub');
+  const paymentId = repository.nextId('pay');
+  const supportThreadId = repository.nextId('support');
 
   const subscription: SubscriptionRecord = {
-    id: repository.nextId('sub'),
+    id: subscriptionId,
     userId: input.userId,
     planId: plan.id,
     status: SUBSCRIPTION_STATUSES.paymentPending,
@@ -94,11 +106,23 @@ export function createManualPaymentRequest(
     updatedAt: input.requestedAt,
   };
   const amountUsd = calculatePlanAmountUsd(plan.basePriceUsd, plan.discountPercent);
+  const { thread: supportThread, message: supportMessage } = createDepositSupportThreadDraft({
+    threadId: supportThreadId,
+    messageId: repository.nextId('support_msg'),
+    userId: input.userId,
+    paymentId,
+    plan,
+    amountUsd,
+    method: input.method,
+    depositorName: input.depositorName ?? null,
+    createdAt: input.requestedAt,
+  });
   const payment: PaymentRequestRecord = {
-    id: repository.nextId('pay'),
+    id: paymentId,
     userId: input.userId,
     planId: plan.id,
     subscriptionId: subscription.id,
+    supportThreadId: supportThread.id,
     method: input.method,
     amountUsd,
     amountKrw: input.exchangeRate ? Math.round(amountUsd * input.exchangeRate) : null,
@@ -114,8 +138,16 @@ export function createManualPaymentRequest(
   };
 
   repository.saveSubscription(subscription);
+  repository.saveSupportThread(supportThread);
+  repository.saveSupportMessage(supportMessage);
   repository.savePayment(payment);
-  return { payment, subscription };
+  notifyAdminsAboutSupportRequest(repository, {
+    thread: supportThread,
+    message: supportMessage,
+    author: user,
+    createdAt: input.requestedAt,
+  });
+  return { payment, subscription, supportThread, supportMessage };
 }
 
 export function createAuthenticatedManualPaymentRequest(
@@ -129,7 +161,12 @@ export function createAuthenticatedManualPaymentRequest(
     exchangeRate?: number | null;
     referralPointsUsed?: number;
   },
-): { payment: PaymentRequestRecord; subscription: SubscriptionRecord } {
+): {
+  payment: PaymentRequestRecord;
+  subscription: SubscriptionRecord;
+  supportThread: SupportThreadRecord;
+  supportMessage: SupportMessageRecord;
+} {
   return createManualPaymentRequest(repository, {
     userId: input.actor.id,
     planId: input.planId,
@@ -153,6 +190,7 @@ export function listAdminPaymentQueue(repository: ChartServiceRepository): Admin
         user: toPublicServiceUserRecord(user),
         plan: repository.getPlanById(payment.planId),
         subscription: repository.getSubscriptionById(payment.subscriptionId),
+        supportThread: payment.supportThreadId ? repository.getSupportThreadById(payment.supportThreadId) : null,
       };
     })
     .filter((item): item is AdminPaymentQueueItem => item !== null)
@@ -534,6 +572,47 @@ export function refundManualPaymentAndSubscription(
     subscription: refundedSubscription,
     reversedReferralCount: reversedLedgers.length,
   };
+}
+
+function createDepositSupportThreadDraft(input: {
+  threadId: string;
+  messageId: string;
+  userId: string;
+  paymentId: string;
+  plan: SubscriptionPlan;
+  amountUsd: number;
+  method: PaymentRequestRecord['method'];
+  depositorName: string | null;
+  createdAt: string;
+}): { thread: SupportThreadRecord; message: SupportMessageRecord } {
+  const thread: SupportThreadRecord = {
+    id: input.threadId,
+    authorUserId: input.userId,
+    category: 'deposit',
+    title: `입금확인 요청 - ${input.paymentId}`,
+    visibility: 'private',
+    status: 'waiting',
+    createdAt: input.createdAt,
+    updatedAt: input.createdAt,
+  };
+  const message: SupportMessageRecord = {
+    id: input.messageId,
+    threadId: input.threadId,
+    authorUserId: input.userId,
+    body: [
+      '입금확인 요청입니다.',
+      `결제 ID: ${input.paymentId}`,
+      `플랜: ${input.plan.name}`,
+      `결제 방식: ${input.method === 'usdt' ? 'USDT' : '무통장 입금'}`,
+      `입금자명: ${input.depositorName || '미입력'}`,
+      `결제 금액: $${input.amountUsd}`,
+      '관리자 입금 확인 후 구독 승인을 진행해주세요.',
+    ].join('\n'),
+    isAdminReply: false,
+    createdAt: input.createdAt,
+  };
+
+  return { thread, message };
 }
 
 function calculatePlanAmountUsd(basePriceUsd: number, discountPercent: number): number {

@@ -91,6 +91,7 @@ test('postgres session subscription and payment mappers preserve nullable and nu
     user_id: 'user_1',
     plan_id: 'plan_monthly',
     subscription_id: 'sub_1',
+    support_thread_id: 'support_1',
     method: 'bank_transfer',
     amount_usd: '199.00',
     amount_krw: null,
@@ -106,8 +107,10 @@ test('postgres session subscription and payment mappers preserve nullable and nu
   });
   assert.equal(payment.amountUsd, 199);
   assert.equal(payment.exchangeRate, 1390.125);
+  assert.equal(payment.supportThreadId, 'support_1');
   assert.equal(payment.adminNote, null);
   assert.equal(mapPaymentToPostgresRow(payment).referral_points_used, 0);
+  assert.equal(mapPaymentToPostgresRow(payment).support_thread_id, 'support_1');
 });
 
 test('postgres audit row and upsert statement builder use safe parameter placeholders', () => {

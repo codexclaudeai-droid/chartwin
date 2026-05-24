@@ -70,55 +70,6 @@ create index if not exists idx_subscriptions_user_id on subscriptions (user_id);
 
 create index if not exists idx_subscriptions_status on subscriptions (status);
 
-create table if not exists payment_requests (
-  id text primary key,
-  user_id text not null,
-  plan_id text not null,
-  subscription_id text not null,
-  method text not null,
-  amount_usd numeric(12,2) not null,
-  amount_krw integer,
-  exchange_rate numeric(12,4),
-  referral_points_used numeric(12,2) not null default 0,
-  status text not null,
-  depositor_name text,
-  admin_note text,
-  confirmed_by_admin_id text,
-  confirmed_at timestamptz,
-  created_at timestamptz not null,
-  updated_at timestamptz not null,
-  foreign key (user_id) references users(id),
-  foreign key (plan_id) references subscription_plans(id),
-  foreign key (subscription_id) references subscriptions(id),
-  foreign key (confirmed_by_admin_id) references users(id)
-);
-
-create index if not exists idx_payment_requests_user_id on payment_requests (user_id);
-
-create index if not exists idx_payment_requests_status on payment_requests (status);
-
-create index if not exists idx_payment_requests_subscription_id on payment_requests (subscription_id);
-
-create table if not exists referral_ledgers (
-  id text primary key,
-  referrer_user_id text not null,
-  referred_user_id text not null,
-  payment_request_id text not null,
-  amount_usd numeric(12,2) not null,
-  percent numeric(5,2) not null,
-  points numeric(12,2) not null,
-  status text not null,
-  confirm_after timestamptz not null,
-  confirmed_at timestamptz,
-  reversed_at timestamptz,
-  created_at timestamptz not null,
-  foreign key (referrer_user_id) references users(id),
-  foreign key (referred_user_id) references users(id),
-  foreign key (payment_request_id) references payment_requests(id)
-);
-
-create index if not exists idx_referral_ledgers_payment_request_id on referral_ledgers (payment_request_id);
-
 create table if not exists support_threads (
   id text primary key,
   author_user_id text not null,
@@ -148,6 +99,59 @@ create table if not exists support_messages (
 
 create index if not exists idx_support_messages_thread_id on support_messages (thread_id);
 
+create table if not exists payment_requests (
+  id text primary key,
+  user_id text not null,
+  plan_id text not null,
+  subscription_id text not null,
+  support_thread_id text,
+  method text not null,
+  amount_usd numeric(12,2) not null,
+  amount_krw integer,
+  exchange_rate numeric(12,4),
+  referral_points_used numeric(12,2) not null default 0,
+  status text not null,
+  depositor_name text,
+  admin_note text,
+  confirmed_by_admin_id text,
+  confirmed_at timestamptz,
+  created_at timestamptz not null,
+  updated_at timestamptz not null,
+  foreign key (user_id) references users(id),
+  foreign key (plan_id) references subscription_plans(id),
+  foreign key (subscription_id) references subscriptions(id),
+  foreign key (support_thread_id) references support_threads(id),
+  foreign key (confirmed_by_admin_id) references users(id)
+);
+
+create index if not exists idx_payment_requests_user_id on payment_requests (user_id);
+
+create index if not exists idx_payment_requests_status on payment_requests (status);
+
+create index if not exists idx_payment_requests_subscription_id on payment_requests (subscription_id);
+
+create index if not exists idx_payment_requests_support_thread_id on payment_requests (support_thread_id);
+
+create table if not exists referral_ledgers (
+  id text primary key,
+  referrer_user_id text not null,
+  referred_user_id text not null,
+  payment_request_id text not null,
+  amount_usd numeric(12,2) not null,
+  percent numeric(5,2) not null,
+  points numeric(12,2) not null,
+  status text not null,
+  confirm_after timestamptz not null,
+  confirmed_at timestamptz,
+  reversed_at timestamptz,
+  created_at timestamptz not null,
+  foreign key (referrer_user_id) references users(id),
+  foreign key (referred_user_id) references users(id),
+  foreign key (payment_request_id) references payment_requests(id)
+);
+
+create index if not exists idx_referral_ledgers_payment_request_id on referral_ledgers (payment_request_id);
+
 create table if not exists notifications (
   id text primary key,
   user_id text not null,
@@ -156,11 +160,14 @@ create table if not exists notifications (
   body text not null,
   link_url text,
   read_at timestamptz,
+  archived_at timestamptz,
   created_at timestamptz not null,
   foreign key (user_id) references users(id)
 );
 
 create index if not exists idx_notifications_user_id_read_at on notifications (user_id, read_at);
+
+create index if not exists idx_notifications_user_id_archived_at on notifications (user_id, archived_at);
 
 create table if not exists email_outbox (
   id text primary key,
@@ -192,3 +199,9 @@ create table if not exists audit_logs (
 create index if not exists idx_audit_logs_actor_admin_id on audit_logs (actor_admin_id);
 
 create index if not exists idx_audit_logs_target on audit_logs (target_type, target_id);
+
+alter table if exists notifications add column if not exists archived_at timestamptz;
+
+alter table if exists payment_requests add column if not exists support_thread_id text;
+
+create index if not exists idx_payment_requests_support_thread_id on payment_requests (support_thread_id);

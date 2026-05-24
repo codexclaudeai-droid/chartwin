@@ -16,10 +16,10 @@ test('chart service database schema covers repository-backed core tables', () =>
     'password_reset_tokens',
     'subscription_plans',
     'subscriptions',
-    'payment_requests',
-    'referral_ledgers',
     'support_threads',
     'support_messages',
+    'payment_requests',
+    'referral_ledgers',
     'notifications',
     'email_outbox',
     'audit_logs',
@@ -30,6 +30,7 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'password_reset_tokens')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'subscriptions')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.subscription_id.references, 'subscriptions.id');
+  assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.support_thread_id.references, 'support_threads.id');
   assert.equal(tables.find((table) => table.name === 'notifications')?.columns.archived_at.nullable, true);
   assert.equal(tables.find((table) => table.name === 'email_outbox')?.columns.recipient_email.type, 'text');
   assert.equal(tables.find((table) => table.name === 'audit_logs')?.columns.actor_admin_id.references, 'users.id');
@@ -46,10 +47,12 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /check \(account_status in \('active', 'suspended'\)\)/i);
   assert.match(sql, /foreign key \(user_id\) references users\(id\)/i);
   assert.match(sql, /create index if not exists idx_payment_requests_user_id/i);
+  assert.match(sql, /create index if not exists idx_payment_requests_support_thread_id/i);
   assert.match(sql, /create index if not exists idx_notifications_user_id_read_at/i);
   assert.match(sql, /archived_at timestamptz/i);
   assert.match(sql, /create index if not exists idx_notifications_user_id_archived_at/i);
   assert.match(sql, /alter table if exists notifications add column if not exists archived_at timestamptz/i);
+  assert.match(sql, /alter table if exists payment_requests add column if not exists support_thread_id text/i);
   assert.match(sql, /create table if not exists email_outbox/i);
   assert.match(sql, /create index if not exists idx_email_outbox_status_created_at/i);
 });

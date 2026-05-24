@@ -35,6 +35,7 @@ export function createPaymentRequestFixture(overrides: Partial<PaymentRequestRec
     userId: 'user_1',
     planId: 'plan_monthly',
     subscriptionId: 'sub_1',
+    supportThreadId: null,
     method: 'bank_transfer',
     amountUsd: 199,
     amountKrw: 0,

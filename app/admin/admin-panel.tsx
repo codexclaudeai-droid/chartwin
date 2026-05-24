@@ -12,6 +12,7 @@ import {
   getPaymentQueueFilterPreset,
   PAYMENT_QUEUE_FILTER_PRESETS,
 } from './payment-queue-filters';
+import { createAdminSupportThreadUrl } from './support-thread-links';
 
 type AdminPaymentQueueItem = {
   payment: {
@@ -31,6 +32,10 @@ type AdminPaymentQueueItem = {
   } | null;
   subscription: {
     status: string;
+  } | null;
+  supportThread: {
+    id: string;
+    title: string;
   } | null;
 };
 
@@ -174,7 +179,17 @@ export function AdminPanel() {
         <tbody>
           {filteredPayments.map((item) => (
             <tr key={item.payment.id}>
-              <td>{item.payment.id}</td>
+              <td>
+                {item.payment.id}
+                {item.supportThread && (
+                  <>
+                    <br />
+                    <a className="text-link compact" href={createAdminSupportThreadUrl(item.supportThread.id)}>
+                      입금확인 요청글
+                    </a>
+                  </>
+                )}
+              </td>
               <td>{item.user.email}<br /><small>{item.payment.depositorName || item.user.name}</small></td>
               <td>{item.plan?.name ?? 'Unknown'}</td>
               <td>${item.payment.amountUsd}</td>

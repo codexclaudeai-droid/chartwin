@@ -21,6 +21,7 @@ import {
   type NotificationCategory,
   type NotificationRecord,
   type PaymentRequestRecord,
+  type SubscriptionPlan,
   type SubscriptionRecord,
   type SupportCategory,
   type SupportMessageRecord,
@@ -241,15 +242,23 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
     exchangeRate?: number | null;
     referralPointsUsed?: number;
   },
-): Promise<{ payment: PaymentRequestRecord; subscription: SubscriptionRecord }> {
-  await requireAsyncUser(repository, input.actor.id);
+): Promise<{
+  payment: PaymentRequestRecord;
+  subscription: SubscriptionRecord;
+  supportThread: SupportThreadRecord;
+  supportMessage: SupportMessageRecord;
+}> {
+  const user = await requireAsyncUser(repository, input.actor.id);
   const plan = await repository.getPlanById(input.planId);
   if (!plan || !plan.isActive) {
     throw new Error(`Active plan not found: ${input.planId}`);
   }
+  const subscriptionId = await repository.nextId('sub');
+  const paymentId = await repository.nextId('pay');
+  const supportThreadId = await repository.nextId('support');
 
   const subscription: SubscriptionRecord = {
-    id: await repository.nextId('sub'),
+    id: subscriptionId,
     userId: input.actor.id,
     planId: plan.id,
     status: SUBSCRIPTION_STATUSES.paymentPending,
@@ -263,11 +272,23 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
     updatedAt: input.requestedAt,
   };
   const amountUsd = Math.round(plan.basePriceUsd * (1 - plan.discountPercent / 100) * 100) / 100;
+  const { thread: supportThread, message: supportMessage } = createDepositSupportThreadDraft({
+    threadId: supportThreadId,
+    messageId: await repository.nextId('support_msg'),
+    userId: input.actor.id,
+    paymentId,
+    plan,
+    amountUsd,
+    method: input.method,
+    depositorName: input.depositorName ?? null,
+    createdAt: input.requestedAt,
+  });
   const payment: PaymentRequestRecord = {
-    id: await repository.nextId('pay'),
+    id: paymentId,
     userId: input.actor.id,
     planId: plan.id,
     subscriptionId: subscription.id,
+    supportThreadId: supportThread.id,
     method: input.method,
     amountUsd,
     amountKrw: input.exchangeRate ? Math.round(amountUsd * input.exchangeRate) : null,
@@ -283,8 +304,16 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
   };
 
   await repository.saveSubscription(subscription);
+  await repository.saveSupportThread(supportThread);
+  await repository.saveSupportMessage(supportMessage);
   await repository.savePayment(payment);
-  return { payment, subscription };
+  await notifyAsyncAdminsAboutSupportRequest(repository, {
+    thread: supportThread,
+    message: supportMessage,
+    author: user,
+    createdAt: input.requestedAt,
+  });
+  return { payment, subscription, supportThread, supportMessage };
 }
 
 export async function requestAsyncSubscriptionCancellation(
@@ -486,6 +515,7 @@ export async function listAsyncAdminPaymentQueue(
       user: toPublicServiceUserRecord(user),
       plan,
       subscription,
+      supportThread: payment.supportThreadId ? await repository.getSupportThreadById(payment.supportThreadId) : null,
     };
   }));
 
@@ -1131,6 +1161,47 @@ async function createAsyncUserNotification(
   };
   await repository.saveNotification(notification);
   return notification;
+}
+
+function createDepositSupportThreadDraft(input: {
+  threadId: string;
+  messageId: string;
+  userId: string;
+  paymentId: string;
+  plan: SubscriptionPlan;
+  amountUsd: number;
+  method: PaymentRequestRecord['method'];
+  depositorName: string | null;
+  createdAt: string;
+}): { thread: SupportThreadRecord; message: SupportMessageRecord } {
+  const thread: SupportThreadRecord = {
+    id: input.threadId,
+    authorUserId: input.userId,
+    category: 'deposit',
+    title: `입금확인 요청 - ${input.paymentId}`,
+    visibility: 'private',
+    status: 'waiting',
+    createdAt: input.createdAt,
+    updatedAt: input.createdAt,
+  };
+  const message: SupportMessageRecord = {
+    id: input.messageId,
+    threadId: input.threadId,
+    authorUserId: input.userId,
+    body: [
+      '입금확인 요청입니다.',
+      `결제 ID: ${input.paymentId}`,
+      `플랜: ${input.plan.name}`,
+      `결제 방식: ${input.method === 'usdt' ? 'USDT' : '무통장 입금'}`,
+      `입금자명: ${input.depositorName || '미입력'}`,
+      `결제 금액: $${input.amountUsd}`,
+      '관리자 입금 확인 후 구독 승인을 진행해주세요.',
+    ].join('\n'),
+    isAdminReply: false,
+    createdAt: input.createdAt,
+  };
+
+  return { thread, message };
 }
 
 async function requireAsyncUser(repository: AsyncChartServiceRepository, userId: string): Promise<ServiceUserRecord> {

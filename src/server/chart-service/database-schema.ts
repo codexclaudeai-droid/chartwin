@@ -98,52 +98,6 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       ],
     },
     {
-      name: 'payment_requests',
-      columns: {
-        id: { type: 'text', primaryKey: true },
-        user_id: { type: 'text', references: 'users.id' },
-        plan_id: { type: 'text', references: 'subscription_plans.id' },
-        subscription_id: { type: 'text', references: 'subscriptions.id' },
-        method: { type: 'text' },
-        amount_usd: { type: 'numeric(12,2)' },
-        amount_krw: { type: 'integer', nullable: true },
-        exchange_rate: { type: 'numeric(12,4)', nullable: true },
-        referral_points_used: { type: 'numeric(12,2)', default: '0' },
-        status: { type: 'text' },
-        depositor_name: { type: 'text', nullable: true },
-        admin_note: { type: 'text', nullable: true },
-        confirmed_by_admin_id: { type: 'text', nullable: true, references: 'users.id' },
-        confirmed_at: { type: 'timestamptz', nullable: true },
-        created_at: { type: 'timestamptz' },
-        updated_at: { type: 'timestamptz' },
-      },
-      indexes: [
-        { name: 'idx_payment_requests_user_id', columns: ['user_id'] },
-        { name: 'idx_payment_requests_status', columns: ['status'] },
-        { name: 'idx_payment_requests_subscription_id', columns: ['subscription_id'] },
-      ],
-    },
-    {
-      name: 'referral_ledgers',
-      columns: {
-        id: { type: 'text', primaryKey: true },
-        referrer_user_id: { type: 'text', references: 'users.id' },
-        referred_user_id: { type: 'text', references: 'users.id' },
-        payment_request_id: { type: 'text', references: 'payment_requests.id' },
-        amount_usd: { type: 'numeric(12,2)' },
-        percent: { type: 'numeric(5,2)' },
-        points: { type: 'numeric(12,2)' },
-        status: { type: 'text' },
-        confirm_after: { type: 'timestamptz' },
-        confirmed_at: { type: 'timestamptz', nullable: true },
-        reversed_at: { type: 'timestamptz', nullable: true },
-        created_at: { type: 'timestamptz' },
-      },
-      indexes: [
-        { name: 'idx_referral_ledgers_payment_request_id', columns: ['payment_request_id'] },
-      ],
-    },
-    {
       name: 'support_threads',
       columns: {
         id: { type: 'text', primaryKey: true },
@@ -172,6 +126,54 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       },
       indexes: [
         { name: 'idx_support_messages_thread_id', columns: ['thread_id'] },
+      ],
+    },
+    {
+      name: 'payment_requests',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        user_id: { type: 'text', references: 'users.id' },
+        plan_id: { type: 'text', references: 'subscription_plans.id' },
+        subscription_id: { type: 'text', references: 'subscriptions.id' },
+        support_thread_id: { type: 'text', nullable: true, references: 'support_threads.id' },
+        method: { type: 'text' },
+        amount_usd: { type: 'numeric(12,2)' },
+        amount_krw: { type: 'integer', nullable: true },
+        exchange_rate: { type: 'numeric(12,4)', nullable: true },
+        referral_points_used: { type: 'numeric(12,2)', default: '0' },
+        status: { type: 'text' },
+        depositor_name: { type: 'text', nullable: true },
+        admin_note: { type: 'text', nullable: true },
+        confirmed_by_admin_id: { type: 'text', nullable: true, references: 'users.id' },
+        confirmed_at: { type: 'timestamptz', nullable: true },
+        created_at: { type: 'timestamptz' },
+        updated_at: { type: 'timestamptz' },
+      },
+      indexes: [
+        { name: 'idx_payment_requests_user_id', columns: ['user_id'] },
+        { name: 'idx_payment_requests_status', columns: ['status'] },
+        { name: 'idx_payment_requests_subscription_id', columns: ['subscription_id'] },
+        { name: 'idx_payment_requests_support_thread_id', columns: ['support_thread_id'] },
+      ],
+    },
+    {
+      name: 'referral_ledgers',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        referrer_user_id: { type: 'text', references: 'users.id' },
+        referred_user_id: { type: 'text', references: 'users.id' },
+        payment_request_id: { type: 'text', references: 'payment_requests.id' },
+        amount_usd: { type: 'numeric(12,2)' },
+        percent: { type: 'numeric(5,2)' },
+        points: { type: 'numeric(12,2)' },
+        status: { type: 'text' },
+        confirm_after: { type: 'timestamptz' },
+        confirmed_at: { type: 'timestamptz', nullable: true },
+        reversed_at: { type: 'timestamptz', nullable: true },
+        created_at: { type: 'timestamptz' },
+      },
+      indexes: [
+        { name: 'idx_referral_ledgers_payment_request_id', columns: ['payment_request_id'] },
       ],
     },
     {
@@ -258,6 +260,8 @@ export function renderChartServicePostgresSchema(): string {
 function getChartServiceSchemaUpgradeStatements(): string[] {
   return [
     'alter table if exists notifications add column if not exists archived_at timestamptz;',
+    'alter table if exists payment_requests add column if not exists support_thread_id text;',
+    'create index if not exists idx_payment_requests_support_thread_id on payment_requests (support_thread_id);',
   ];
 }
 

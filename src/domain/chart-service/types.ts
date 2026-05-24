@@ -88,6 +88,7 @@ export type PaymentRequestRecord = {
   userId: string;
   planId: string;
   subscriptionId: string;
+  supportThreadId: string | null;
   method: 'bank_transfer' | 'usdt';
   amountUsd: number;
   amountKrw: number | null;
