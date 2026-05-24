@@ -947,9 +947,11 @@ a {
 .statistics-line {
   color: var(--danger);
   inset: 4px 14px 32px;
+  height: calc(100% - 36px);
   overflow: visible;
   pointer-events: none;
   position: absolute;
+  width: calc(100% - 28px);
 }
 
 .statistics-line path {

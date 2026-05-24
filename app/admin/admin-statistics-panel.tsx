@@ -205,7 +205,7 @@ function createLinePath(
 }
 
 function getLineX(index: number, length: number): number {
-  return length <= 1 ? 50 : Math.round((index / (length - 1)) * 100);
+  return length <= 1 ? 50 : Math.round(((index + 0.5) / length) * 100);
 }
 
 function getLineY(value: number, maxValue: number): number {
