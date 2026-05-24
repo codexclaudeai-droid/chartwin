@@ -1,6 +1,7 @@
 import { AdminAccessGate } from './admin-access-gate';
 import { AdminDashboardShell, AdminDashboardShellSection } from './admin-dashboard-shell';
 import { AdminDashboardPanel } from './admin-dashboard-panel';
+import { AdminStatisticsPanel } from './admin-statistics-panel';
 import { AdminPanel } from './admin-panel';
 import { AuditLogPanel } from './audit-log-panel';
 import { SubscriptionAdminPanel } from './subscription-admin-panel';
@@ -23,6 +24,9 @@ export default function AdminPage() {
             <div id="admin-overview">
               <AdminDashboardPanel />
             </div>
+          </AdminDashboardShellSection>
+          <AdminDashboardShellSection sectionKey="statistics">
+            <AdminStatisticsPanel />
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="users">
             <UserAdminPanel />

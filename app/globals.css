@@ -856,6 +856,120 @@ a {
   transform: translateY(-2px);
 }
 
+.compact-copy {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 4px 0 0;
+}
+
+.statistics-summary-row {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 16px 0;
+}
+
+.statistics-summary-row .mini-card strong {
+  display: block;
+  font-size: 24px;
+  margin: 8px 0;
+}
+
+.statistics-chart {
+  background: linear-gradient(180deg, rgba(255, 253, 247, 0.9), rgba(247, 241, 229, 0.72));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 88px minmax(0, 1fr);
+  margin: 16px 0;
+  min-height: 320px;
+  padding: 18px;
+}
+
+.statistics-y-axis {
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  font-weight: 800;
+  height: 220px;
+  justify-content: space-between;
+  padding: 4px 0 32px;
+  text-align: right;
+}
+
+.statistics-plot {
+  border-left: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  min-height: 250px;
+  position: relative;
+}
+
+.statistics-bars {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-auto-columns: minmax(54px, 1fr);
+  grid-auto-flow: column;
+  height: 220px;
+  overflow-x: auto;
+  padding: 4px 14px 0;
+}
+
+.statistics-bar-column {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  justify-content: flex-end;
+  min-width: 54px;
+}
+
+.statistics-bar {
+  background: linear-gradient(180deg, var(--accent), rgba(12, 102, 90, 0.62));
+  border-radius: 10px 10px 0 0;
+  box-shadow: 0 10px 24px rgba(12, 102, 90, 0.16);
+  min-height: 8px;
+  width: 100%;
+}
+
+.statistics-bar-column span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  min-height: 24px;
+  text-align: center;
+  word-break: keep-all;
+}
+
+.statistics-line {
+  color: var(--danger);
+  inset: 4px 14px 32px;
+  overflow: visible;
+  pointer-events: none;
+  position: absolute;
+}
+
+.statistics-line path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3.4;
+}
+
+.statistics-line circle {
+  fill: #fff;
+  stroke: currentColor;
+  stroke-width: 2.4;
+}
+
+.statistics-table {
+  margin-top: 12px;
+}
+
 .mini-card span {
   color: var(--muted);
   display: block;

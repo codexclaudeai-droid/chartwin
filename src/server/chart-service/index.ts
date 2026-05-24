@@ -19,6 +19,7 @@ export * from './notifications.ts';
 export * from './bootstrap.ts';
 export * from './dashboard.ts';
 export * from './admin-dashboard.ts';
+export * from './admin-statistics.ts';
 export * from './admin-users.ts';
 export * from './admin-audit.ts';
 export * from './profile-settings.ts';

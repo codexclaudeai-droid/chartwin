@@ -1,5 +1,6 @@
 export type AdminDashboardSectionKey =
   | 'overview'
+  | 'statistics'
   | 'users'
   | 'payments'
   | 'subscriptions'
@@ -21,6 +22,13 @@ export const ADMIN_DASHBOARD_SECTIONS: AdminDashboardSection[] = [
     label: '운영 개요',
     description: '대기 작업과 서비스 상태를 한눈에 확인합니다.',
     href: '#admin-overview',
+  },
+  {
+    key: 'statistics',
+    eyebrow: 'Analytics',
+    label: '통계',
+    description: '매출, 가입자, 방문자 흐름을 일별, 월별, 년도별 차트로 확인합니다.',
+    href: '#admin-statistics',
   },
   {
     key: 'users',
@@ -93,6 +101,10 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
 
   if (targetId === 'admin-overview') {
     return 'overview';
+  }
+
+  if (targetId === 'admin-statistics') {
+    return 'statistics';
   }
 
   if (targetId === 'admin-users' || targetId.startsWith('admin-user-')) {
