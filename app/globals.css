@@ -397,6 +397,13 @@ a {
   margin: 0;
 }
 
+.admin-deep-link-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .admin-deep-link-kicker {
   color: var(--warn);
   font-size: 11px;

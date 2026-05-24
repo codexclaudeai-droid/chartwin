@@ -161,12 +161,20 @@ export function SupportAdminPanel() {
       <p className="notice">{message}</p>
       {deepLinkedThreadId && (
         <div className="admin-deep-link-notice" role="status">
-          <span className="admin-deep-link-kicker">답변 대상 문의</span>
+          <div className="admin-deep-link-heading">
+            <span className="admin-deep-link-kicker">답변 대상 문의</span>
+            {deepLinkedThread && (
+              <span className="badge">{formatSupportStatusLabel(deepLinkedThread.thread.status)}</span>
+            )}
+          </div>
           {deepLinkedThread ? (
             <>
               <strong>{deepLinkedThread.thread.title}</strong>
               <p>
-                {deepLinkedThread.author?.email ?? 'system'} 문의입니다. 이 문의에 바로 답변할 수 있습니다.
+                {deepLinkedThread.author?.email ?? 'system'} 문의입니다.{' '}
+                {deepLinkedThread.thread.status === 'answered'
+                  ? '이미 답변 완료된 문의입니다. 필요한 경우 추가 답변을 남길 수 있습니다.'
+                  : '이 문의에 바로 답변할 수 있습니다.'}
               </p>
               <a
                 className="text-link compact"

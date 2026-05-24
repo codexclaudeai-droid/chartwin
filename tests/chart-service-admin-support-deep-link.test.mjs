@@ -31,6 +31,9 @@ test('admin support panel supports deep links that focus the reply field', () =>
   assert.match(source, /replyInputRefs/);
   assert.match(source, /admin-deep-link-notice/);
   assert.match(source, /답변 대상 문의/);
+  assert.match(source, /formatSupportStatusLabel\(deepLinkedThread\.thread\.status\)/);
+  assert.match(source, /deepLinkedThread\.thread\.status === 'answered'/);
+  assert.match(source, /이미 답변 완료된 문의입니다/);
   assert.match(source, /이 문의에 바로 답변할 수 있습니다/);
   assert.match(source, /상세 답변 링크/);
   assert.match(source, /바로 답변/);
