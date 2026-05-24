@@ -17,6 +17,7 @@ import type { Actor } from '../../domain/chart-service/index.ts';
 import type { ChartServiceRepository, PublicServiceUserRecord, ServiceUserRecord } from './repository.ts';
 import { getAdminAuditLogEntries, type AdminAuditLogEntry } from './admin-audit.ts';
 import { getChartAccessSnapshot, type ChartAccessSnapshot } from './service.ts';
+import { getUserReferralSummary, type UserReferralSummary } from './referral-program.ts';
 import { toPublicServiceUserRecord } from './user-serialization.ts';
 
 export type AdminUserDirectoryItem = {
@@ -41,6 +42,7 @@ export type AdminUserDetail = AdminUserDirectoryItem & {
   supportThreads: SupportThreadRecord[];
   notifications: NotificationRecord[];
   auditEntries: AdminAuditLogEntry[];
+  referrals: UserReferralSummary;
 };
 
 const ADMIN_ROLES: UserRole[] = ['admin', 'super_admin'];
@@ -134,6 +136,7 @@ export function getAdminUserDetail(
     supportThreads,
     notifications,
     auditEntries,
+    referrals: getUserReferralSummary(repository, user.id),
   };
 }
 

@@ -22,6 +22,7 @@ export * from './admin-dashboard.ts';
 export * from './admin-users.ts';
 export * from './admin-audit.ts';
 export * from './profile-settings.ts';
+export * from './referral-program.ts';
 export * from './database-schema.ts';
 export * from './postgres-mappers.ts';
 export * from './postgres-connection.ts';

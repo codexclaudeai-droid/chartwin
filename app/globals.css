@@ -990,6 +990,27 @@ a {
   line-height: 1.5;
 }
 
+.referral-list-card {
+  gap: 12px;
+}
+
+.compact-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 2px;
+}
+
+.referral-member-list {
+  margin-top: 0;
+}
+
+.referral-settings-row label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .member-directory-cell {
   min-width: 240px;
 }

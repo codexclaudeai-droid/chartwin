@@ -13,6 +13,8 @@ import {
   mapPaymentToPostgresRow,
   mapPlanFromPostgresRow,
   mapPlanToPostgresRow,
+  mapReferralProgramSettingsFromPostgresRow,
+  mapReferralProgramSettingsToPostgresRow,
   mapReferralLedgerFromPostgresRow,
   mapReferralLedgerToPostgresRow,
   mapSubscriptionFromPostgresRow,
@@ -199,6 +201,15 @@ test('postgres plan referral support and notification mappers preserve repositor
   assert.equal(ledger.referrerUserId, 'user_a');
   assert.equal(ledger.points, 39.8);
   assert.equal(mapReferralLedgerToPostgresRow(ledger).payment_request_id, 'pay_1');
+
+  const settings = mapReferralProgramSettingsFromPostgresRow({
+    id: 'default',
+    reward_percent: '10',
+    updated_by_admin_id: 'super_1',
+    updated_at: '2026-05-24T10:00:00.000Z',
+  });
+  assert.equal(settings.rewardPercent, 10);
+  assert.equal(mapReferralProgramSettingsToPostgresRow(settings).reward_percent, 10);
 
   const thread = mapSupportThreadFromPostgresRow({
     id: 'support_1',

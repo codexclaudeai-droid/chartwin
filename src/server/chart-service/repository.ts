@@ -57,6 +57,13 @@ export type EmailOutboxRecord = {
   lastError: string | null;
 };
 
+export type ReferralProgramSettingsRecord = {
+  id: string;
+  rewardPercent: number;
+  updatedByAdminId: string | null;
+  updatedAt: string;
+};
+
 export type EmailOutboxFilter = {
   status?: EmailOutboxStatus;
 };
@@ -85,6 +92,8 @@ export type ChartServiceRepository = {
   getPaymentById(id: string): PaymentRequestRecord | null;
   listPayments(): PaymentRequestRecord[];
   savePayment(payment: PaymentRequestRecord): void;
+  getReferralProgramSettings(): ReferralProgramSettingsRecord | null;
+  saveReferralProgramSettings(settings: ReferralProgramSettingsRecord): void;
   listReferralLedgersByPaymentId(paymentRequestId: string): ReferralLedgerRecord[];
   saveReferralLedger(ledger: ReferralLedgerRecord): void;
   getSupportThreadById(id: string): SupportThreadRecord | null;

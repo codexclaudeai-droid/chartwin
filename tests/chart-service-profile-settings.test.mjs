@@ -148,6 +148,18 @@ test('profile page and panel expose my profile contact password and referral con
   assert.match(panelSource, /\/signup\?ref=/);
 });
 
+test('profile panel renders my referral list with individual and total points', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /referrals/);
+  assert.match(panelSource, /dashboard\.referrals\.referredUsers/);
+  assert.match(panelSource, /pendingPoints/);
+  assert.match(panelSource, /confirmedPoints/);
+  assert.match(panelSource, /totalPoints/);
+  assert.match(panelSource, /나의 추천리스트/);
+  assert.match(panelSource, /추천개별포인트/);
+});
+
 test('profile API mutation path is routed through the async persistence boundary', () => {
   const routeSource = fs.readFileSync(new URL('../app/api/profile/route.ts', import.meta.url), 'utf8');
 

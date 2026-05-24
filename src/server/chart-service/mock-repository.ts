@@ -18,6 +18,7 @@ import type {
   EmailOutboxRecord,
   EmailOutboxFilter,
   PasswordResetTokenRecord,
+  ReferralProgramSettingsRecord,
   ServiceUserRecord,
 } from './repository.ts';
 import { getDefaultChartServiceSubscriptionPlans } from './bootstrap.ts';
@@ -32,6 +33,7 @@ export type MockChartServiceState = {
   plans: SubscriptionPlan[];
   subscriptions: SubscriptionRecord[];
   payments: PaymentRequestRecord[];
+  referralProgramSettings: ReferralProgramSettingsRecord | null;
   referralLedgers: ReferralLedgerRecord[];
   supportThreads: SupportThreadRecord[];
   supportMessages: SupportMessageRecord[];
@@ -102,6 +104,7 @@ export function createMockChartServiceState(): MockChartServiceState {
         confirmedAt: '2026-05-23T00:00:00.000Z',
       }),
     ],
+    referralProgramSettings: null,
     referralLedgers: [
       {
         id: 'ref_ledger_pending',
@@ -109,8 +112,8 @@ export function createMockChartServiceState(): MockChartServiceState {
         referredUserId: 'user_member',
         paymentRequestId: 'pay_pending',
         amountUsd: 199,
-        percent: 20,
-        points: 39.8,
+        percent: 10,
+        points: 19.9,
         status: 'pending',
         confirmAfter: '2026-05-30T00:00:00.000Z',
         confirmedAt: null,
@@ -179,6 +182,7 @@ export function createMockChartServiceRepository(
 ): ChartServiceRepository {
   state.passwordResetTokens ??= [];
   state.emailOutbox ??= [];
+  state.referralProgramSettings ??= null;
 
   return {
     nextId(prefix: string): string {
@@ -232,6 +236,12 @@ export function createMockChartServiceRepository(
     listPayments: () => state.payments.map((payment) => ({ ...payment })),
     savePayment(payment) {
       upsertById(state.payments, payment);
+    },
+    getReferralProgramSettings() {
+      return cloneOrNull(state.referralProgramSettings);
+    },
+    saveReferralProgramSettings(settings) {
+      state.referralProgramSettings = { ...settings };
     },
     listReferralLedgersByPaymentId(paymentRequestId) {
       return state.referralLedgers

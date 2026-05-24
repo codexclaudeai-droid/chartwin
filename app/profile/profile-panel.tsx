@@ -54,6 +54,39 @@ type Dashboard = {
     visibleThreadCount: number;
     waitingThreadCount: number;
   };
+  referrals: {
+    rewardPercent: number;
+    referredUserCount: number;
+    pendingPoints: number;
+    confirmedPoints: number;
+    reversedPoints: number;
+    totalPoints: number;
+    referredUsers: Array<{
+      user: {
+        id: string;
+        email: string;
+        name: string;
+        createdAt: string;
+      };
+      ledgerCount: number;
+      pendingPoints: number;
+      confirmedPoints: number;
+      reversedPoints: number;
+      totalPoints: number;
+      latestLedger: {
+        id: string;
+        status: string;
+        percent: number;
+        points: number;
+        createdAt: string;
+      } | null;
+      latestPayment: {
+        id: string;
+        status: PaymentStatus;
+        amountUsd: number;
+      } | null;
+    }>;
+  };
 };
 
 type ProfileResponse = {
@@ -270,6 +303,43 @@ export function ProfilePanel() {
           <p>{referralLink}</p>
           <small>회원 초대 시 이 링크를 전달하면 추천인 정보를 추적할 수 있습니다.</small>
         </div>
+        <div className="referral-card referral-list-card">
+          <span>나의 추천리스트</span>
+          <strong>{formatReferralPoints(dashboard.referrals.totalPoints)}</strong>
+          <p>
+            추천회원 {dashboard.referrals.referredUserCount}명 · 기본 적립률 {dashboard.referrals.rewardPercent}%
+          </p>
+          <div className="summary-grid compact-summary-grid">
+            <article className="mini-card">
+              <span>적립 예정</span>
+              <strong>{formatReferralPoints(dashboard.referrals.pendingPoints)}</strong>
+            </article>
+            <article className="mini-card">
+              <span>확정 포인트</span>
+              <strong>{formatReferralPoints(dashboard.referrals.confirmedPoints)}</strong>
+            </article>
+          </div>
+          {dashboard.referrals.referredUsers.length > 0 ? (
+            <ul className="admin-history-list referral-member-list">
+              {dashboard.referrals.referredUsers.map((item) => (
+                <li key={item.user.id}>
+                  <div className="admin-history-row">
+                    <strong>{item.user.name}</strong>
+                    <span>{formatReferralPoints(item.totalPoints)}</span>
+                  </div>
+                  <p>{item.user.email}</p>
+                  <small>
+                    추천개별포인트 예정 {formatReferralPoints(item.pendingPoints)}
+                    {' / '}
+                    확정 {formatReferralPoints(item.confirmedPoints)}
+                  </small>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <small>아직 추천 가입 회원이 없습니다. 추천링크를 공유하면 이곳에 집계됩니다.</small>
+          )}
+        </div>
         <form className="form profile-settings-form" onSubmit={validateImagePolicy}>
           <label htmlFor="profileImageFile">프로필 이미지 파일</label>
           <input
@@ -384,4 +454,11 @@ function getReferralLink(referralCode: string): string {
   if (typeof window === 'undefined') return path;
 
   return `${window.location.origin}${path}`;
+}
+
+function formatReferralPoints(value: number): string {
+  return `${value.toLocaleString('ko-KR', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: value % 1 === 0 ? 0 : 1,
+  })}P`;
 }

@@ -12,6 +12,7 @@ import type {
   AuthSessionRecord,
   EmailOutboxRecord,
   PasswordResetTokenRecord,
+  ReferralProgramSettingsRecord,
   ServiceUserRecord,
 } from './repository.ts';
 
@@ -253,6 +254,24 @@ export function mapReferralLedgerToPostgresRow(record: ReferralLedgerRecord): Po
     confirmed_at: record.confirmedAt,
     reversed_at: record.reversedAt,
     created_at: record.createdAt,
+  };
+}
+
+export function mapReferralProgramSettingsFromPostgresRow(row: PostgresRow): ReferralProgramSettingsRecord {
+  return {
+    id: readString(row.id),
+    rewardPercent: readNumber(row.reward_percent),
+    updatedByAdminId: readNullableString(row.updated_by_admin_id),
+    updatedAt: readIsoString(row.updated_at),
+  };
+}
+
+export function mapReferralProgramSettingsToPostgresRow(record: ReferralProgramSettingsRecord): PostgresRow {
+  return {
+    id: record.id,
+    reward_percent: record.rewardPercent,
+    updated_by_admin_id: record.updatedByAdminId,
+    updated_at: record.updatedAt,
   };
 }
 

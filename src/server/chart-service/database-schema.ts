@@ -183,6 +183,19 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       ],
     },
     {
+      name: 'referral_program_settings',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        reward_percent: {
+          type: 'numeric(5,2)',
+          default: '10',
+          check: 'reward_percent >= 0 and reward_percent <= 100',
+        },
+        updated_by_admin_id: { type: 'text', nullable: true, references: 'users.id' },
+        updated_at: { type: 'timestamptz', default: 'now()' },
+      },
+    },
+    {
       name: 'notifications',
       columns: {
         id: { type: 'text', primaryKey: true },
@@ -276,6 +289,11 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     'update users set created_at = now() where created_at is null;',
     'create index if not exists idx_users_referral_code on users (referral_code);',
     'create index if not exists idx_users_referred_by_user_id on users (referred_by_user_id);',
+    'create table if not exists referral_program_settings (id text primary key, reward_percent numeric(5,2) not null default 10, updated_by_admin_id text, updated_at timestamptz not null default now());',
+    'alter table if exists referral_program_settings add column if not exists reward_percent numeric(5,2);',
+    'alter table if exists referral_program_settings add column if not exists updated_by_admin_id text;',
+    'alter table if exists referral_program_settings add column if not exists updated_at timestamptz;',
+    "insert into referral_program_settings (id, reward_percent, updated_at) values ('default', 10, now()) on conflict (id) do nothing;",
   ];
 }
 

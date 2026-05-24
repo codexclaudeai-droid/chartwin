@@ -117,7 +117,8 @@ test('admin can refund a confirmed payment before subscription activation', asyn
   assert.equal(refunded.payment.status, 'refunded');
   assert.equal(refunded.subscription.status, 'refunded');
   assert.equal(refunded.subscription.startsAt, null);
-  assert.equal(refunded.reversedReferralCount, 0);
+  assert.equal(refunded.reversedReferralCount, 1);
+  assert.equal(repository.listReferralLedgersByPaymentId(requested.payment.id)[0].status, 'reversed');
 });
 
 test('refund operation reverses related referral ledgers', async () => {

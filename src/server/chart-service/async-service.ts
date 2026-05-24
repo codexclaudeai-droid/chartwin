@@ -48,6 +48,10 @@ import {
   createProfilePaymentLink,
   createSupportThreadLink,
 } from './notification-links.ts';
+import {
+  createAsyncReferralLedgerForPayment,
+  getAsyncUserReferralSummary,
+} from './referral-program.ts';
 import { notifyAsyncAdminsAboutSupportRequest } from './support-admin-notifications.ts';
 
 export async function getActorFromAsyncRequest(
@@ -105,12 +109,13 @@ export async function getAsyncUserDashboardSummary(
   const user = await repository.getUserById(input.actor.id);
   if (!user) throw new Error(`User not found: ${input.actor.id}`);
 
-  const [supportThreads, payments, notifications, access, subscription] = await Promise.all([
+  const [supportThreads, payments, notifications, access, subscription, referrals] = await Promise.all([
     repository.listSupportThreads(),
     repository.listPayments(),
     repository.listNotificationsByUserId(input.actor.id),
     getAsyncChartAccessSnapshot(repository, input.actor.id),
     repository.getSubscriptionByUserId(input.actor.id),
+    getAsyncUserReferralSummary(repository, input.actor.id),
   ]);
   const visibleSupportThreads = supportThreads.filter((thread) => (
     thread.visibility === 'public' ||
@@ -135,6 +140,7 @@ export async function getAsyncUserDashboardSummary(
       visibleThreadCount: visibleSupportThreads.length,
       waitingThreadCount: visibleSupportThreads.filter((thread) => thread.status === 'waiting').length,
     },
+    referrals,
   };
 }
 
@@ -381,6 +387,12 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
   await repository.saveSupportThread(supportThread);
   await repository.saveSupportMessage(supportMessage);
   await repository.savePayment(payment);
+  const referralLedger = await createAsyncReferralLedgerForPayment(repository, {
+    user,
+    payment,
+    createdAt: input.requestedAt,
+  });
+  if (referralLedger) await repository.saveReferralLedger(referralLedger);
   await notifyAsyncAdminsAboutSupportRequest(repository, {
     thread: supportThread,
     message: supportMessage,
@@ -773,12 +785,13 @@ export async function getAsyncAdminUserDetail(
   userId: string,
 ): Promise<AdminUserDetail> {
   const user = await requireAsyncUser(repository, userId);
-  const [payments, supportThreads, notifications, subscription, auditEntries] = await Promise.all([
+  const [payments, supportThreads, notifications, subscription, auditEntries, referrals] = await Promise.all([
     repository.listPayments(),
     repository.listSupportThreads(),
     repository.listNotificationsByUserId(user.id),
     repository.getSubscriptionByUserId(user.id),
     getAsyncAdminAuditLogEntries(repository),
+    getAsyncUserReferralSummary(repository, user.id),
   ]);
   const userPayments = payments
     .filter((payment) => payment.userId === user.id)
@@ -811,6 +824,7 @@ export async function getAsyncAdminUserDetail(
     supportThreads: userSupportThreads,
     notifications,
     auditEntries: relatedAuditEntries,
+    referrals,
   };
 }
 

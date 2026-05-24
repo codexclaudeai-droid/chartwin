@@ -22,6 +22,7 @@ import {
 import type { ChartServiceRepository, PublicServiceUserRecord, ServiceUserRecord } from './repository.ts';
 import { createUserNotification } from './notifications.ts';
 import { createProfilePaymentLink } from './notification-links.ts';
+import { createReferralLedgerForPayment } from './referral-program.ts';
 import { notifyAdminsAboutSupportRequest } from './support-admin-notifications.ts';
 import { toPublicServiceUserRecord } from './user-serialization.ts';
 
@@ -142,6 +143,12 @@ export function createManualPaymentRequest(
   repository.saveSupportThread(supportThread);
   repository.saveSupportMessage(supportMessage);
   repository.savePayment(payment);
+  const referralLedger = createReferralLedgerForPayment(repository, {
+    user,
+    payment,
+    createdAt: input.requestedAt,
+  });
+  if (referralLedger) repository.saveReferralLedger(referralLedger);
   notifyAdminsAboutSupportRequest(repository, {
     thread: supportThread,
     message: supportMessage,

@@ -92,6 +92,41 @@ type AdminUsersResponse = {
   users?: AdminUserDirectoryItem[];
 };
 
+type ReferralSummary = {
+  rewardPercent: number;
+  referredUserCount: number;
+  pendingPoints: number;
+  confirmedPoints: number;
+  reversedPoints: number;
+  totalPoints: number;
+  referredUsers: Array<{
+    user: {
+      id: string;
+      email: string;
+      name: string;
+      createdAt: string;
+    };
+    ledgerCount: number;
+    pendingPoints: number;
+    confirmedPoints: number;
+    reversedPoints: number;
+    totalPoints: number;
+    latestLedger: {
+      id: string;
+      status: string;
+      percent: number;
+      points: number;
+      createdAt: string;
+    } | null;
+    latestPayment: {
+      id: string;
+      status: PaymentStatus;
+      amountUsd: number;
+      updatedAt: string;
+    } | null;
+  }>;
+};
+
 type AdminUserDetail = AdminUserDirectoryItem & {
   payments: Array<{
     id: string;
@@ -129,12 +164,23 @@ type AdminUserDetail = AdminUserDirectoryItem & {
       role: string;
     } | null;
   }>;
+  referrals: ReferralSummary;
 };
 
 type AdminUserDetailResponse = {
   ok: boolean;
   message?: string;
   detail?: AdminUserDetail;
+};
+
+type ReferralSettingsResponse = {
+  ok: boolean;
+  message?: string;
+  settings?: {
+    rewardPercent: number;
+    updatedByAdminId: string | null;
+    updatedAt: string;
+  };
 };
 
 type CurrentAdmin = {
@@ -167,6 +213,8 @@ export function UserAdminPanel() {
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('all');
   const [accountStatus, setAccountStatus] = useState('all');
+  const [referralRewardPercent, setReferralRewardPercent] = useState('10');
+  const [referralSettingsMessage, setReferralSettingsMessage] = useState('추천포인트 적립률은 슈퍼관리자만 변경할 수 있습니다.');
   const [dashboardFilterNotice, setDashboardFilterNotice] = useState<string | null>(null);
   const [message, setMessage] = useState('관리자 로그인 후 회원 목록을 조회할 수 있습니다.');
   const [detailMessage, setDetailMessage] = useState('회원을 선택하면 상세 운영 상태를 볼 수 있습니다.');
@@ -176,6 +224,7 @@ export function UserAdminPanel() {
   useEffect(() => {
     void refresh();
     void refreshCurrentAdmin();
+    void refreshReferralSettings();
     const unsubscribeAdmin = subscribeAdminRefreshEvent((detail) => {
       if (detail.source === 'users') return;
       void refresh();
@@ -194,6 +243,7 @@ export function UserAdminPanel() {
     const unsubscribeAuth = subscribeAuthSessionChangedEvent(() => {
       void refresh();
       void refreshCurrentAdmin();
+      void refreshReferralSettings();
     });
 
     return () => {
@@ -213,6 +263,19 @@ export function UserAdminPanel() {
     const payload = await response.json() as AuthMeResponse;
     const actor = payload.actor ?? payload.user ?? null;
     setCurrentAdmin(payload.authenticated && actor ? actor : null);
+  }
+
+  async function refreshReferralSettings() {
+    const response = await fetch('/api/admin/referral-settings', { cache: 'no-store' });
+    const payload = await response.json() as ReferralSettingsResponse;
+
+    if (!response.ok || !payload.settings) {
+      setReferralSettingsMessage(payload.message || '추천포인트 설정을 불러오지 못했습니다.');
+      return;
+    }
+
+    setReferralRewardPercent(String(payload.settings.rewardPercent));
+    setReferralSettingsMessage(`현재 추천포인트 기본 적립률은 ${payload.settings.rewardPercent}%입니다.`);
   }
 
   async function refresh(filterOverride: UserDirectoryRefreshOptions = {}) {
@@ -345,6 +408,42 @@ export function UserAdminPanel() {
     dispatchAdminRefreshEvent({ source: 'users' });
   }
 
+  async function updateReferralRewardPercent() {
+    if (currentAdmin?.role !== 'super_admin') {
+      setReferralSettingsMessage('추천포인트 적립률은 슈퍼관리자만 변경할 수 있습니다.');
+      return;
+    }
+    const rewardPercent = Number(referralRewardPercent);
+    if (!Number.isFinite(rewardPercent) || rewardPercent < 0 || rewardPercent > 100) {
+      setReferralSettingsMessage('추천포인트 적립률은 0~100 사이 숫자로 입력해주세요.');
+      return;
+    }
+    if (!await confirmAdminAction(
+      'admin.referral.reward_percent.update',
+      `추천포인트 적립률 ${rewardPercent}%`,
+    )) {
+      return;
+    }
+
+    setIsBusy(true);
+    const response = await fetch('/api/admin/referral-settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rewardPercent }),
+    });
+    const payload = await response.json() as ReferralSettingsResponse;
+    setIsBusy(false);
+
+    if (!response.ok || !payload.settings) {
+      setReferralSettingsMessage(payload.message || '추천포인트 적립률 변경에 실패했습니다.');
+      return;
+    }
+
+    setReferralRewardPercent(String(payload.settings.rewardPercent));
+    setReferralSettingsMessage(`추천포인트 적립률을 ${payload.settings.rewardPercent}%로 변경했습니다.`);
+    if (detail) void openDetail(detail.user.id);
+  }
+
   function clearDashboardFilterNotice() {
     setDashboardFilterNotice(null);
     setAccountStatus('all');
@@ -393,6 +492,7 @@ export function UserAdminPanel() {
       nextAccountStatus: canSuspendAccount ? 'active' : 'suspended',
     })
     : null;
+  const canEditReferralRewardPercent = currentAdmin?.role === 'super_admin';
 
   return (
     <>
@@ -445,6 +545,29 @@ export function UserAdminPanel() {
         label={dashboardFilterNotice}
         onClear={clearDashboardFilterNotice}
       />
+      <div className="admin-filter-row referral-settings-row">
+        <label htmlFor="referralRewardPercent">추천포인트 적립률</label>
+        <input
+          aria-label="추천포인트 적립률"
+          disabled={!canEditReferralRewardPercent}
+          id="referralRewardPercent"
+          max="100"
+          min="0"
+          onChange={(event) => setReferralRewardPercent(event.target.value)}
+          step="0.01"
+          type="number"
+          value={referralRewardPercent}
+        />
+        <button
+          className="button secondary"
+          disabled={isBusy || !canEditReferralRewardPercent}
+          onClick={updateReferralRewardPercent}
+          type="button"
+        >
+          적립률 저장
+        </button>
+      </div>
+      <p className="notice">{referralSettingsMessage}</p>
       <p className="notice">{message}</p>
       <table className="table">
         <thead>
@@ -562,6 +685,11 @@ export function UserAdminPanel() {
                 <p>{detail.latestPayment ? formatPaymentStatusLabel(detail.latestPayment.status) : '최근 결제 없음'}</p>
               </article>
               <article className="mini-card">
+                <span>추천포인트</span>
+                <strong>{formatReferralPoints(detail.referrals.totalPoints)}</strong>
+                <p>추천회원 {detail.referrals.referredUserCount}명 / 적립 예정 {formatReferralPoints(detail.referrals.pendingPoints)}</p>
+              </article>
+              <article className="mini-card">
                 <span>고객센터</span>
                 <strong>{detail.supportThreads.length}건</strong>
                 <p>
@@ -577,6 +705,34 @@ export function UserAdminPanel() {
               </article>
             </div>
             <div className="admin-history-grid">
+              <section className="admin-history-card">
+                <h4>추천회원 목록</h4>
+                {detail.referrals.referredUsers.length > 0 ? (
+                  <ul className="admin-history-list referral-member-list">
+                    {detail.referrals.referredUsers.map((referral) => (
+                      <li key={referral.user.id}>
+                        <div className="admin-history-row">
+                          <strong>{referral.user.name}</strong>
+                          <span>{formatReferralPoints(referral.totalPoints)}</span>
+                        </div>
+                        <p>{referral.user.email}</p>
+                        <small>
+                          추천개별포인트 예정 {formatReferralPoints(referral.pendingPoints)}
+                          {' / '}
+                          확정 {formatReferralPoints(referral.confirmedPoints)}
+                        </small>
+                        {referral.latestPayment && (
+                          <a className="text-link compact" href={createAdminPaymentUrl(referral.latestPayment.id)}>
+                            최근 추천 결제 보기
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="admin-history-empty">추천회원 목록이 없습니다.</p>
+                )}
+              </section>
               <section className="admin-history-card">
                 <h4>최근 결제 내역</h4>
                 {detail.payments.length > 0 ? (
@@ -699,4 +855,11 @@ function formatDateTime(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function formatReferralPoints(value: number): string {
+  return `${value.toLocaleString('ko-KR', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: value % 1 === 0 ? 0 : 1,
+  })}P`;
 }

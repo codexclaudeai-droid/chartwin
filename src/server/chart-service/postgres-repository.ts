@@ -29,6 +29,8 @@ import {
   mapPaymentToPostgresRow,
   mapPlanFromPostgresRow,
   mapPlanToPostgresRow,
+  mapReferralProgramSettingsFromPostgresRow,
+  mapReferralProgramSettingsToPostgresRow,
   mapReferralLedgerFromPostgresRow,
   mapReferralLedgerToPostgresRow,
   mapSubscriptionFromPostgresRow,
@@ -47,6 +49,7 @@ import type {
   EmailOutboxFilter,
   EmailOutboxRecord,
   PasswordResetTokenRecord,
+  ReferralProgramSettingsRecord,
   ServiceUserRecord,
 } from './repository.ts';
 
@@ -191,6 +194,16 @@ export function createPostgresAsyncChartServiceRepository(
     },
     async savePayment(payment: PaymentRequestRecord): Promise<void> {
       await execute(createPostgresUpsertStatement('payment_requests', mapPaymentToPostgresRow(payment), ['id']));
+    },
+    async getReferralProgramSettings(): Promise<ReferralProgramSettingsRecord | null> {
+      return selectOne('referral_program_settings', mapReferralProgramSettingsFromPostgresRow, { id: 'default' });
+    },
+    async saveReferralProgramSettings(settings: ReferralProgramSettingsRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'referral_program_settings',
+        mapReferralProgramSettingsToPostgresRow(settings),
+        ['id'],
+      ));
     },
     async listReferralLedgersByPaymentId(paymentRequestId: string): Promise<ReferralLedgerRecord[]> {
       return selectMany('referral_ledgers', mapReferralLedgerFromPostgresRow, {

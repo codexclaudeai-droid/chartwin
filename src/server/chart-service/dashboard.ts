@@ -6,6 +6,7 @@ import type {
 import type { ChartServiceRepository, PublicServiceUserRecord, ServiceUserRecord } from './repository.ts';
 import { getChartAccessSnapshot, type ChartAccessSnapshot } from './service.ts';
 import { getNotificationSummaryForUser } from './notifications.ts';
+import { getUserReferralSummary, type UserReferralSummary } from './referral-program.ts';
 import { listVisibleSupportThreads } from './support.ts';
 import { toPublicServiceUserRecord } from './user-serialization.ts';
 
@@ -24,6 +25,7 @@ export type UserDashboardSummary = {
     visibleThreadCount: number;
     waitingThreadCount: number;
   };
+  referrals: UserReferralSummary;
 };
 
 export function toDashboardUserSummary(user: ServiceUserRecord): DashboardUserSummary {
@@ -53,5 +55,6 @@ export function getUserDashboardSummary(
       visibleThreadCount: visibleSupportThreads.length,
       waitingThreadCount: visibleSupportThreads.filter((item) => item.thread.status === 'waiting').length,
     },
+    referrals: getUserReferralSummary(repository, input.actor.id),
   };
 }
