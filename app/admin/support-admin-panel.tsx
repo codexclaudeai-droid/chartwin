@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
 import { subscribeAdminQueuePresetEvent } from './admin-queue-preset-events';
 import { dispatchAdminRefreshEvent, subscribeAdminRefreshEvent } from './admin-refresh-events';
@@ -15,6 +15,12 @@ import {
   getSupportThreadFilterPreset,
   SUPPORT_THREAD_FILTER_PRESETS,
 } from './support-thread-filters';
+import {
+  ADMIN_SUPPORT_THREAD_QUERY_PARAM,
+  createAdminSupportThreadUrl,
+  getAdminSupportReplyInputId,
+  getAdminSupportThreadDomId,
+} from './support-thread-links';
 
 type SupportThreadListItem = {
   thread: {
@@ -38,9 +44,12 @@ type SupportAdminPanelRefreshOptions = {
 };
 
 export function SupportAdminPanel() {
+  const replyInputRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const handledDeepLinkRef = useRef<string | null>(null);
   const [threads, setThreads] = useState<SupportThreadListItem[]>([]);
   const [activeFilterKey, setActiveFilterKey] = useState('all');
   const [dashboardFilterNotice, setDashboardFilterNotice] = useState<string | null>(null);
+  const [highlightedThreadId, setHighlightedThreadId] = useState<string | null>(null);
   const [replyByThreadId, setReplyByThreadId] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('관리자 세션으로 고객 문의를 조회하고 답변할 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
@@ -64,6 +73,29 @@ export function SupportAdminPanel() {
       unsubscribeQueuePreset();
     };
   }, []);
+
+  useEffect(() => {
+    if (threads.length === 0 || typeof window === 'undefined') return;
+    const targetThreadId = new URLSearchParams(window.location.search).get(ADMIN_SUPPORT_THREAD_QUERY_PARAM);
+    if (!targetThreadId || handledDeepLinkRef.current === targetThreadId) return;
+
+    handledDeepLinkRef.current = targetThreadId;
+    setActiveFilterKey('all');
+    setDashboardFilterNotice(null);
+    setHighlightedThreadId(targetThreadId);
+
+    window.setTimeout(() => {
+      const targetCard = document.getElementById(getAdminSupportThreadDomId(targetThreadId));
+      if (!targetCard) {
+        setMessage(`${targetThreadId} 문의를 찾을 수 없거나 조회 권한이 없습니다.`);
+        return;
+      }
+
+      targetCard.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      replyInputRefs.current[targetThreadId]?.focus();
+      setMessage(`${targetThreadId} 문의로 이동했습니다. 바로 답변할 수 있습니다.`);
+    }, 0);
+  }, [threads]);
 
   async function refresh(options: SupportAdminPanelRefreshOptions = {}) {
     setIsBusy(true);
@@ -145,11 +177,18 @@ export function SupportAdminPanel() {
       <p className="notice compact">현재 필터: {activeFilter.label} / 표시 {filteredThreads.length}건</p>
       <div className="thread-list">
         {filteredThreads.map((item) => (
-          <article className="thread-card" key={item.thread.id}>
+          <article
+            className={highlightedThreadId === item.thread.id ? 'thread-card highlighted' : 'thread-card'}
+            id={getAdminSupportThreadDomId(item.thread.id)}
+            key={item.thread.id}
+          >
             <div className="thread-meta">
               <span className="badge">{formatSupportStatusLabel(item.thread.status)}</span>
               <span>{formatSupportVisibilityLabel(item.thread.visibility)}</span>
               <span>{item.author?.email ?? 'system'}</span>
+              <a className="text-link compact" href={createAdminSupportThreadUrl(item.thread.id)}>
+                상세 답변 링크
+              </a>
             </div>
             <h3>{item.thread.title}</h3>
             {item.messages.map((threadMessage) => (
@@ -160,6 +199,11 @@ export function SupportAdminPanel() {
             ))}
             <div className="reply-row">
               <textarea
+                aria-label={`${item.thread.id} 문의 바로 답변`}
+                id={getAdminSupportReplyInputId(item.thread.id)}
+                ref={(element) => {
+                  replyInputRefs.current[item.thread.id] = element;
+                }}
                 value={replyByThreadId[item.thread.id] || ''}
                 onChange={(event) => setReplyByThreadId((current) => ({
                   ...current,

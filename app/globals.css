@@ -35,6 +35,11 @@ a {
   margin-top: 10px;
 }
 
+.text-link.compact {
+  font-size: 12px;
+  margin-top: 0;
+}
+
 .shell {
   min-height: 100vh;
 }
@@ -798,6 +803,11 @@ a {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 16px;
+}
+
+.thread-card.highlighted {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--line) 42%);
+  box-shadow: 0 16px 40px rgba(12, 102, 90, 0.16);
 }
 
 .thread-card h3 {

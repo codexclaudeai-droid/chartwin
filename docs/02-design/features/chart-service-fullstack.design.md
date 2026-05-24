@@ -1241,3 +1241,22 @@ Deferred scope:
 - Customer-side thread detail pages with direct URLs.
 - SLA labels, assignment, and close/reopen workflow.
 - FAQ publishing and searchable help articles.
+
+## 47. Admin Support Deep Link Completion Criteria
+
+The admin support deep-link slice should let an operator move directly from a support reference to the exact thread and reply box.
+
+Implemented scope:
+
+- Admin support thread URLs are generated as `/admin?supportThread=<threadId>#admin-support`.
+- Support thread URL and DOM id helpers live in `app/admin/support-thread-links.ts`.
+- The admin support panel reads the `supportThread` query parameter on load.
+- When a matching support thread is visible, the panel clears support filters, highlights the card, scrolls it into view, and focuses the reply textarea.
+- Each admin support thread card exposes a `상세 답변 링크` for copy/open workflows.
+- Missing or unauthorized deep-linked threads show an operator-facing message instead of failing silently.
+
+Deferred scope:
+
+- Dedicated `/admin/support/<threadId>` route.
+- Admin notifications that link directly to newly opened support threads.
+- Thread assignment and SLA state on deep-linked support cards.
