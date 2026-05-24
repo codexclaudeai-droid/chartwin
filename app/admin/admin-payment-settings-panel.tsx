@@ -12,15 +12,8 @@ type PaymentTransferSettings = {
   updatedAt: string;
 };
 
-const BANK_LOGO_PRESETS = [
-  { bankName: 'KB국민은행', bankLogoUrl: '/bank-logos/kb.svg' },
-  { bankName: '신한은행', bankLogoUrl: '/bank-logos/shinhan.svg' },
-  { bankName: '하나은행', bankLogoUrl: '/bank-logos/hana.svg' },
-  { bankName: '우리은행', bankLogoUrl: '/bank-logos/woori.svg' },
-  { bankName: '카카오뱅크', bankLogoUrl: '/bank-logos/kakao.svg' },
-  { bankName: '토스뱅크', bankLogoUrl: '/bank-logos/toss.svg' },
-  { bankName: '직접 입력', bankLogoUrl: '/bank-logos/generic-bank.svg' },
-];
+const BANK_LOGO_UPLOAD_ACCEPT = 'image/png,image/jpeg,image/webp';
+const BANK_LOGO_UPLOAD_MAX_BYTES = 300_000;
 
 const emptySettings: PaymentTransferSettings = {
   bankName: '',
@@ -76,14 +69,22 @@ export function AdminPaymentSettingsPanel() {
     setSettings((current) => ({ ...current, [field]: value }));
   }
 
-  function selectBankPreset(bankName: string) {
-    const preset = BANK_LOGO_PRESETS.find((item) => item.bankName === bankName);
-    if (!preset) return;
-    setSettings((current) => ({
-      ...current,
-      bankName: preset.bankName === '직접 입력' ? current.bankName : preset.bankName,
-      bankLogoUrl: preset.bankLogoUrl,
-    }));
+  async function handleBankLogoUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    if (!BANK_LOGO_UPLOAD_ACCEPT.split(',').includes(file.type)) {
+      setMessage('은행 로고는 PNG, JPG, WEBP 이미지만 업로드할 수 있습니다.');
+      event.currentTarget.value = '';
+      return;
+    }
+    if (file.size > BANK_LOGO_UPLOAD_MAX_BYTES) {
+      setMessage('은행 로고 이미지는 300KB 이하로 업로드해주세요.');
+      event.currentTarget.value = '';
+      return;
+    }
+    const bankLogoUrl = await readBankLogoFileAsDataUrl(file);
+    updateField('bankLogoUrl', bankLogoUrl);
+    setMessage('은행 로고 이미지를 미리보기에 반영했습니다. 저장 버튼을 눌러 결제정보에 적용해주세요.');
   }
 
   return (
@@ -100,17 +101,6 @@ export function AdminPaymentSettingsPanel() {
       <form className="form admin-payment-settings-form" onSubmit={saveSettings}>
         <div className="settings-grid">
           <label>
-            은행 로고 선택
-            <select
-              value={BANK_LOGO_PRESETS.find((preset) => preset.bankLogoUrl === settings.bankLogoUrl)?.bankName ?? '직접 입력'}
-              onChange={(event) => selectBankPreset(event.target.value)}
-            >
-              {BANK_LOGO_PRESETS.map((preset) => (
-                <option key={preset.bankLogoUrl} value={preset.bankName}>{preset.bankName}</option>
-              ))}
-            </select>
-          </label>
-          <label>
             은행명
             <input
               value={settings.bankName}
@@ -120,13 +110,13 @@ export function AdminPaymentSettingsPanel() {
             />
           </label>
           <label>
-            은행 로고 이미지 URL
+            은행 로고 이미지 업로드
             <input
-              value={settings.bankLogoUrl}
-              onChange={(event) => updateField('bankLogoUrl', event.target.value)}
-              placeholder="/bank-logos/kb.svg"
-              required
+              accept={BANK_LOGO_UPLOAD_ACCEPT}
+              onChange={(event) => void handleBankLogoUpload(event)}
+              type="file"
             />
+            <small>PNG, JPG, WEBP / 최대 300KB</small>
           </label>
           <div className="bank-logo-preview" aria-label="은행 로고 미리보기">
             <img alt={`${settings.bankName || '은행'} 로고`} src={settings.bankLogoUrl} />
@@ -179,4 +169,19 @@ export function AdminPaymentSettingsPanel() {
       )}
     </section>
   );
+}
+
+function readBankLogoFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error('Bank logo file could not be read.'));
+    });
+    reader.addEventListener('error', () => reject(reader.error ?? new Error('Bank logo file could not be read.')));
+    reader.readAsDataURL(file);
+  });
 }
