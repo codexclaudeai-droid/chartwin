@@ -146,6 +146,12 @@ export function getChartServiceRuntimeReadiness(
       message: 'Password reset emails can be queued in a repository-backed delivery outbox.',
     });
     checks.push({
+      key: 'transactional_email_dispatch_harness',
+      label: 'Transactional email dispatch harness',
+      status: 'pass',
+      message: 'Queued email delivery can be run through npm run service:email:deliver.',
+    });
+    checks.push({
       key: 'repository_adapter_implementation',
       label: 'Repository implementation',
       status: 'pass',

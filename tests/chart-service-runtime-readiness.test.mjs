@@ -37,6 +37,7 @@ test('runtime readiness accepts configured postgres persistence with pg runtime 
   assert.equal(readiness.checks.some((check) => check.key === 'postgres_bootstrap_harness' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'postgres_transaction_boundary' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'transactional_email_outbox' && check.status === 'pass'), true);
+  assert.equal(readiness.checks.some((check) => check.key === 'transactional_email_dispatch_harness' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'repository_adapter_implementation' && check.status === 'pass'), true);
   assert.equal(readiness.ok, true);
 });
@@ -118,4 +119,6 @@ test('production readiness harness is wired into package scripts and env templat
   assert.match(envExample, /CHART_SERVICE_REPOSITORY=postgres/);
   assert.match(envExample, /CHART_SERVICE_DATABASE_URL=/);
   assert.match(envExample, /CHART_SERVICE_SESSION_SECRET=/);
+  assert.match(envExample, /CHART_SERVICE_EMAIL_PROVIDER=/);
+  assert.match(envExample, /CHART_SERVICE_EMAIL_DELIVERY_LIMIT=/);
 });

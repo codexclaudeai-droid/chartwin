@@ -36,6 +36,9 @@ jobs:
       - name: Check local service readiness
         run: npm.cmd run service:check
 
+      - name: Check email delivery harness
+        run: npm.cmd run service:email:deliver
+
       - name: Check production Postgres readiness
         run: npm.cmd run service:check
         env:
@@ -44,4 +47,3 @@ jobs:
           CHART_SERVICE_DATABASE_URL: postgres://chart_app:secret@db.example.com/chart_service
           CHART_SERVICE_DATABASE_SSL_MODE: require
           CHART_SERVICE_SESSION_SECRET: 0123456789abcdef0123456789abcdef
-

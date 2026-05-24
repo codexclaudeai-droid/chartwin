@@ -1198,3 +1198,25 @@ Deferred scope:
 - Branded localized email templates.
 - Retry/backoff scheduling and max-attempt handling.
 - Admin mail delivery monitoring and manual replay controls.
+
+## 45. Transactional Email Delivery Harness Completion Criteria
+
+The transactional email delivery harness slice should make queued outbox records operationally processable before the final email provider is selected.
+
+Implemented scope:
+
+- `deliverQueuedEmailOutbox` processes queued email records through a provider interface.
+- Successfully delivered records are marked `sent` with `sent_at`.
+- Provider failures are isolated per message, marked `failed`, and preserved in `last_error` without stopping the rest of the batch.
+- `createLogEmailDeliveryProvider` gives local/CI environments a no-network delivery harness.
+- `npm run service:email:deliver` can process queued mail from memory or Postgres repository settings.
+- The delivery script validates `CHART_SERVICE_EMAIL_DELIVERY_LIMIT` and uses a transaction when the Postgres executor supports it.
+- CI now runs the email delivery harness with the default local log provider.
+- Runtime readiness reports the delivery harness when the Postgres adapter is selected.
+
+Deferred scope:
+
+- Real SMTP, Resend, SES, or SendGrid provider implementation.
+- Production provider credential validation in readiness checks.
+- Retry scheduling for failed records.
+- Admin UI for failed mail replay and provider diagnostics.

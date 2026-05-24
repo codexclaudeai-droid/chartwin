@@ -12,7 +12,7 @@ test('chart service CI workflow runs tests, builds, and readiness checks', () =>
   assert.match(workflow, /npm\.cmd run build|npm run build/);
   assert.match(workflow, /npm\.cmd run service:build|npm run service:build/);
   assert.match(workflow, /npm\.cmd run service:check|npm run service:check/);
+  assert.match(workflow, /npm\.cmd run service:email:deliver|npm run service:email:deliver/);
   assert.match(workflow, /CHART_SERVICE_REPOSITORY: postgres/);
   assert.match(workflow, /CHART_SERVICE_DATABASE_SSL_MODE: require/);
 });
-
