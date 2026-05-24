@@ -154,7 +154,7 @@ export function AdminStatisticsPanel() {
                     cx={getLineX(index, dataset.series.length)}
                     cy={getLineY(point.lineValue, dataset.maxValue)}
                     key={point.label}
-                    r="2.6"
+                    r="2"
                   />
                 ))}
               </svg>

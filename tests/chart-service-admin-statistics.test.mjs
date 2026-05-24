@@ -93,9 +93,12 @@ test('admin statistics panel renders tabs period controls mixed chart and y axis
   assert.match(panelSource, /statistics-bar/);
   assert.match(panelSource, /statistics-line/);
   assert.match(panelSource, /\(index \+ 0\.5\) \/ length/);
+  assert.match(panelSource, /r="2"/);
   assert.match(cssSource, /\.statistics-chart/);
   assert.match(cssSource, /\.statistics-y-axis/);
   assert.match(cssSource, /\.statistics-bar/);
   assert.match(cssSource, /height: calc\(100% - 36px\)/);
   assert.match(cssSource, /width: calc\(100% - 28px\)/);
+  assert.match(cssSource, /stroke-width: 2\.1/);
+  assert.match(cssSource, /stroke-width: 1\.5/);
 });

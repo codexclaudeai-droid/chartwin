@@ -959,13 +959,13 @@ a {
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 3.4;
+  stroke-width: 2.1;
 }
 
 .statistics-line circle {
   fill: #fff;
   stroke: currentColor;
-  stroke-width: 2.4;
+  stroke-width: 1.5;
 }
 
 .statistics-table {
