@@ -5,11 +5,14 @@ import test from 'node:test';
 import {
   createMockChartServiceRepository,
   createSessionForUser,
+  createAdminSalesTeam,
+  assignAdminSalespersonToTeam,
   getAdminSalesManagementSummary,
   getChartServiceRepository,
   SESSION_COOKIE_NAME,
   updateAdminCustomerSalesperson,
   updateAdminSalesCommissionPercent,
+  updateAdminSalesTeamCommissionPercent,
 } from '../src/server/chart-service/index.ts';
 import { USER_ROLES } from '../src/domain/chart-service/index.ts';
 import {
@@ -138,6 +141,82 @@ test('admin sales management summary exposes customer assignment candidates', ()
   assert.equal(summary.customers[0].salesperson?.email, 'subscriber@example.com');
 });
 
+test('admin can register sales teams assign salespeople and aggregate team revenue', () => {
+  const repository = createMockChartServiceRepository();
+  const salesperson = repository.getUserById('user_subscriber');
+  const customer = repository.getUserById('user_member');
+  const payment = repository.getPaymentById('pay_pending');
+  if (!salesperson || !customer || !payment) throw new Error('fixture records missing');
+  repository.saveUser({ ...salesperson, role: USER_ROLES.salesperson });
+  repository.saveUser({ ...customer, referredByUserId: salesperson.id });
+  repository.savePayment({
+    ...payment,
+    status: 'confirmed',
+    amountUsd: 500,
+    confirmedAt: '2026-05-24T03:00:00.000Z',
+    updatedAt: '2026-05-24T03:00:00.000Z',
+  });
+
+  const team = createAdminSalesTeam(repository, {
+    admin: { id: 'admin_1', role: USER_ROLES.admin },
+    name: 'Alpha Team',
+    createdAt: '2026-05-25T00:00:00.000Z',
+  });
+  assignAdminSalespersonToTeam(repository, {
+    admin: { id: 'admin_1', role: USER_ROLES.admin },
+    salespersonId: salesperson.id,
+    teamId: team.id,
+    updatedAt: '2026-05-25T00:01:00.000Z',
+  });
+
+  const summary = getAdminSalesManagementSummary(repository, {
+    teamId: team.id,
+    from: '2026-05-01',
+    to: '2026-05-31',
+  });
+
+  assert.equal(summary.defaultTeamPercent, 30);
+  assert.equal(summary.teamPageSize, 10);
+  assert.equal(summary.selectedTeam?.name, 'Alpha Team');
+  assert.equal(summary.selectedTeam?.commissionPercent, 30);
+  assert.equal(summary.selectedTeamSalespeople.length, 1);
+  assert.deepEqual(summary.teamTotals, {
+    salesCount: 1,
+    salesUsd: 500,
+    points: 150,
+  });
+  assert.equal(summary.selectedTeamSalespeople[0].sequence, 1);
+  assert.equal(summary.selectedTeamSalespeople[0].name, 'Subscriber');
+  assert.equal(summary.selectedTeamSalespeople[0].phoneNumber, null);
+});
+
+test('super admin can apply team commission percent and normal admin cannot', () => {
+  const repository = createMockChartServiceRepository();
+  const team = createAdminSalesTeam(repository, {
+    admin: { id: 'admin_1', role: USER_ROLES.admin },
+    name: 'Beta Team',
+    createdAt: '2026-05-25T00:00:00.000Z',
+  });
+
+  assert.throws(() => updateAdminSalesTeamCommissionPercent(repository, {
+    admin: { id: 'admin_1', role: USER_ROLES.admin },
+    teamId: team.id,
+    commissionPercent: 40,
+    updatedAt: '2026-05-25T00:02:00.000Z',
+  }), /Super admin/);
+
+  updateAdminSalesTeamCommissionPercent(repository, {
+    admin: { id: 'super_1', role: USER_ROLES.superAdmin },
+    teamId: team.id,
+    commissionPercent: 40,
+    updatedAt: '2026-05-25T00:03:00.000Z',
+  });
+
+  const summary = getAdminSalesManagementSummary(repository, { teamId: team.id });
+  assert.equal(summary.selectedTeam?.commissionPercent, 40);
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'admin.sales.team.commission_percent.update');
+});
+
 test('admin sales API requires admin session and lets super admin update commission percent', async () => {
   const repository = getChartServiceRepository();
   const salesperson = repository.getUserById('user_subscriber');
@@ -176,15 +255,61 @@ test('admin sales API requires admin session and lets super admin update commiss
       salespersonId: salesperson.id,
     }),
   }));
+  const createdTeam = await PATCH(new Request('http://localhost/api/admin/sales', {
+    method: 'PATCH',
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${session.id}`,
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      action: 'createSalesTeam',
+      teamName: 'API Team',
+    }),
+  }));
+  const teamPayload = await createdTeam.json();
+  const assignedTeam = await PATCH(new Request('http://localhost/api/admin/sales', {
+    method: 'PATCH',
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${session.id}`,
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      action: 'assignSalespersonTeam',
+      salespersonId: salesperson.id,
+      teamId: teamPayload.summary.selectedTeam.id,
+    }),
+  }));
+  const patchedTeam = await PATCH(new Request('http://localhost/api/admin/sales', {
+    method: 'PATCH',
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${session.id}`,
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      action: 'updateSalesTeamCommission',
+      teamId: teamPayload.summary.selectedTeam.id,
+      commissionPercent: 36,
+    }),
+  }));
   const payload = await patched.json();
   const assignedPayload = await assigned.json();
+  const assignedTeamPayload = await assignedTeam.json();
+  const patchedTeamPayload = await patchedTeam.json();
 
   assert.equal(denied.status, 401);
   assert.equal(allowed.status, 200);
   assert.equal(patched.status, 200);
   assert.equal(assigned.status, 200);
+  assert.equal(createdTeam.status, 200);
+  assert.equal(assignedTeam.status, 200);
+  assert.equal(patchedTeam.status, 200);
   assert.equal(payload.summary.selectedSalesperson.commissionPercent, 32);
   assert.equal(assignedPayload.summary.customers.find((customer) => customer.id === 'user_member').salesperson.id, salesperson.id);
+  assert.equal(assignedTeamPayload.summary.selectedTeamSalespeople[0].id, salesperson.id);
+  assert.equal(patchedTeamPayload.summary.selectedTeam.commissionPercent, 36);
 });
 
 test('admin sales panel renders filters commission editing table totals and excel export', () => {
@@ -206,7 +331,14 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(panelSource, /customerQuery/);
   assert.match(panelSource, /selectedCustomerId/);
   assert.match(panelSource, /assignCustomerSalesperson/);
+  assert.match(panelSource, /teamName/);
+  assert.match(panelSource, /selectedTeamId/);
+  assert.match(panelSource, /createSalesTeam/);
+  assert.match(panelSource, /assignSalespersonTeam/);
+  assert.match(panelSource, /saveTeamCommissionPercent/);
   assert.match(cssSource, /\.sales-filter-grid/);
   assert.match(cssSource, /\.salesperson-list/);
   assert.match(cssSource, /\.sales-customer-list/);
+  assert.match(cssSource, /\.sales-team-grid/);
+  assert.match(cssSource, /\.sales-team-table/);
 });

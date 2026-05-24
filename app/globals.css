@@ -1059,6 +1059,48 @@ a {
   padding: 16px;
 }
 
+.sales-team-panel {
+  background: linear-gradient(135deg, rgba(12, 102, 90, 0.08), rgba(255, 253, 247, 0.86));
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line) 74%);
+  border-radius: 18px;
+  margin: 18px 0;
+  padding: 16px;
+}
+
+.sales-team-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 14px 0;
+}
+
+.sales-team-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  text-align: left;
+}
+
+.sales-team-card.active,
+.sales-team-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 12px 28px rgba(12, 102, 90, 0.14);
+}
+
+.sales-team-card span,
+.sales-team-card small {
+  color: var(--muted);
+}
+
+.sales-team-table {
+  margin-top: 12px;
+}
+
 .sales-customer-list {
   display: grid;
   gap: 10px;
@@ -1617,6 +1659,7 @@ a {
   .sales-filter-grid.compact,
   .sales-summary-grid,
   .salesperson-list,
+  .sales-team-grid,
   .sales-customer-list {
     grid-template-columns: 1fr;
   }

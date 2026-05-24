@@ -11,9 +11,12 @@ import type { ChartServiceRepository, PublicServiceUserRecord } from './reposito
 import { toPublicServiceUserRecord } from './user-serialization.ts';
 
 export const DEFAULT_SALES_COMMISSION_PERCENT = 30;
+export const DEFAULT_SALES_TEAM_COMMISSION_PERCENT = 30;
+export const SALES_TEAM_PAGE_SIZE = 10;
 
 export type AdminSalesManagementInput = {
   salespersonId?: string | null;
+  teamId?: string | null;
   query?: string | null;
   customerQuery?: string | null;
   from?: string | null;
@@ -42,8 +45,34 @@ export type AdminSalesCustomerItem = PublicServiceUserRecord & {
   salesperson: PublicServiceUserRecord | null;
 };
 
+export type AdminSalesTeamRecord = {
+  id: string;
+  name: string;
+  commissionPercent: number;
+  salespersonIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  updatedByAdminId: string | null;
+};
+
+export type AdminSalesTeamItem = AdminSalesTeamRecord & {
+  salespersonCount: number;
+  salesCount: number;
+  salesUsd: number;
+  points: number;
+};
+
+export type AdminSalesTeamSalespersonItem = PublicServiceUserRecord & {
+  sequence: number;
+  salesCount: number;
+  salesUsd: number;
+  points: number;
+};
+
 export type AdminSalesManagementSummary = {
   defaultPercent: number;
+  defaultTeamPercent: number;
+  teamPageSize: number;
   salespersonQuery: string;
   customerQuery: string;
   dateRange: {
@@ -53,6 +82,14 @@ export type AdminSalesManagementSummary = {
   salespeople: AdminSalespersonItem[];
   selectedSalesperson: AdminSalespersonItem | null;
   customers: AdminSalesCustomerItem[];
+  teams: AdminSalesTeamItem[];
+  selectedTeam: AdminSalesTeamItem | null;
+  selectedTeamSalespeople: AdminSalesTeamSalespersonItem[];
+  teamTotals: {
+    salesCount: number;
+    salesUsd: number;
+    points: number;
+  };
   rows: AdminSalesManagementRow[];
   totals: {
     salesCount: number;
@@ -73,14 +110,23 @@ export type SalesCommissionSettings = {
   updatedAt: string;
 };
 
+export type SalesTeamSettings = {
+  defaultPercent: number;
+  teams: AdminSalesTeamRecord[];
+  updatedByAdminId: string | null;
+  updatedAt: string;
+};
+
 type SalesSource = {
   users: ReturnType<ChartServiceRepository['listUsers']>;
   payments: ReturnType<ChartServiceRepository['listPayments']>;
   plans: ReturnType<ChartServiceRepository['listPlans']>;
   settings: SalesCommissionSettings;
+  teamSettings: SalesTeamSettings;
 };
 
 const salesCommissionSettingsStore = new WeakMap<object, SalesCommissionSettings>();
+const salesTeamSettingsStore = new WeakMap<object, SalesTeamSettings>();
 
 export function getAdminSalesManagementSummary(
   repository: ChartServiceRepository,
@@ -92,6 +138,7 @@ export function getAdminSalesManagementSummary(
     payments: repository.listPayments(),
     plans: repository.listPlans(),
     settings: getSalesCommissionSettings(repository),
+    teamSettings: getSalesTeamSettings(repository),
   }, input);
 }
 
@@ -111,6 +158,7 @@ export async function getAsyncAdminSalesManagementSummary(
     payments,
     plans,
     settings: getSalesCommissionSettings(repository),
+    teamSettings: getSalesTeamSettings(repository),
   }, input);
 }
 
@@ -170,6 +218,128 @@ export async function updateAsyncAdminSalesCommissionPercent(
   }));
 
   return settings;
+}
+
+export function createAdminSalesTeam(
+  repository: ChartServiceRepository,
+  input: { admin: Actor; name: string; createdAt: string },
+): AdminSalesTeamRecord {
+  assertAdminActor(input.admin);
+  const team = createSalesTeamRecord(repository, input);
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.sales.team.create',
+    targetType: 'sales_team',
+    targetId: team.id,
+    beforeJson: null,
+    afterJson: { team },
+  }));
+  return team;
+}
+
+export async function createAsyncAdminSalesTeam(
+  repository: AsyncChartServiceRepository,
+  input: { admin: Actor; name: string; createdAt: string },
+): Promise<AdminSalesTeamRecord> {
+  assertAdminActor(input.admin);
+  const team = await createAsyncSalesTeamRecord(repository, input);
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.sales.team.create',
+    targetType: 'sales_team',
+    targetId: team.id,
+    beforeJson: null,
+    afterJson: { team },
+  }));
+  return team;
+}
+
+export function assignAdminSalespersonToTeam(
+  repository: ChartServiceRepository,
+  input: { admin: Actor; salespersonId: string; teamId: string; updatedAt: string },
+): AdminSalesTeamRecord {
+  assertAdminActor(input.admin);
+  const salesperson = repository.getUserById(input.salespersonId);
+  if (!salesperson || salesperson.role !== USER_ROLES.salesperson) {
+    throw new Error('Salesperson not found');
+  }
+  const before = getSalesTeamSettings(repository);
+  const settings = setSalespersonTeam(repository, input);
+  const team = settings.teams.find((item) => item.id === input.teamId);
+  if (!team) throw new Error('Sales team not found');
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.sales.team.salesperson.assign',
+    targetType: 'sales_team',
+    targetId: team.id,
+    beforeJson: { settings: before },
+    afterJson: { team, salespersonId: salesperson.id },
+  }));
+  return team;
+}
+
+export async function assignAsyncAdminSalespersonToTeam(
+  repository: AsyncChartServiceRepository,
+  input: { admin: Actor; salespersonId: string; teamId: string; updatedAt: string },
+): Promise<AdminSalesTeamRecord> {
+  assertAdminActor(input.admin);
+  const salesperson = await repository.getUserById(input.salespersonId);
+  if (!salesperson || salesperson.role !== USER_ROLES.salesperson) {
+    throw new Error('Salesperson not found');
+  }
+  const before = getSalesTeamSettings(repository);
+  const settings = setSalespersonTeam(repository, input);
+  const team = settings.teams.find((item) => item.id === input.teamId);
+  if (!team) throw new Error('Sales team not found');
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.sales.team.salesperson.assign',
+    targetType: 'sales_team',
+    targetId: team.id,
+    beforeJson: { settings: before },
+    afterJson: { team, salespersonId: salesperson.id },
+  }));
+  return team;
+}
+
+export function updateAdminSalesTeamCommissionPercent(
+  repository: ChartServiceRepository,
+  input: { admin: Actor; teamId: string; commissionPercent: number; updatedAt: string },
+): AdminSalesTeamRecord {
+  assertSuperAdminActor(input.admin);
+  const before = getSalesTeamSettings(repository);
+  const settings = setSalesTeamCommissionPercent(repository, input);
+  const team = settings.teams.find((item) => item.id === input.teamId);
+  if (!team) throw new Error('Sales team not found');
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.sales.team.commission_percent.update',
+    targetType: 'sales_team',
+    targetId: team.id,
+    beforeJson: { settings: before },
+    afterJson: { team },
+  }));
+  return team;
+}
+
+export async function updateAsyncAdminSalesTeamCommissionPercent(
+  repository: AsyncChartServiceRepository,
+  input: { admin: Actor; teamId: string; commissionPercent: number; updatedAt: string },
+): Promise<AdminSalesTeamRecord> {
+  assertSuperAdminActor(input.admin);
+  const before = getSalesTeamSettings(repository);
+  const settings = setSalesTeamCommissionPercent(repository, input);
+  const team = settings.teams.find((item) => item.id === input.teamId);
+  if (!team) throw new Error('Sales team not found');
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.sales.team.commission_percent.update',
+    targetType: 'sales_team',
+    targetId: team.id,
+    beforeJson: { settings: before },
+    afterJson: { team },
+  }));
+  return team;
 }
 
 export function updateAdminCustomerSalesperson(
@@ -290,15 +460,27 @@ function buildAdminSalesManagementSummary(
   const selectedSalespersonItem = selectedSalesperson
     ? toSalespersonItem(source, selectedSalesperson, rows)
     : null;
+  const selectedTeam = source.teamSettings.teams.find((team) => team.id === input.teamId)
+    ?? source.teamSettings.teams[0]
+    ?? null;
+  const teamRows = selectedTeam
+    ? buildSalesRowsForSalespeople(source, selectedTeam.salespersonIds, { from, to }, selectedTeam.commissionPercent)
+    : [];
 
   return {
     defaultPercent: source.settings.defaultPercent,
+    defaultTeamPercent: source.teamSettings.defaultPercent,
+    teamPageSize: SALES_TEAM_PAGE_SIZE,
     salespersonQuery,
     customerQuery,
     dateRange: { from, to },
     salespeople: salespersonItems,
     selectedSalesperson: selectedSalespersonItem,
     customers: buildSalesCustomerItems(source, customerQuery),
+    teams: buildSalesTeamItems(source, { from, to }),
+    selectedTeam: selectedTeam ? toSalesTeamItem(source, selectedTeam, teamRows) : null,
+    selectedTeamSalespeople: selectedTeam ? buildTeamSalespersonItems(source, selectedTeam, { from, to }) : [],
+    teamTotals: summarizeRows(teamRows),
     rows,
     totals: summarizeRows(rows),
   };
@@ -358,6 +540,87 @@ function buildSalesRows(
     .sort((a, b) => b.salesDate.localeCompare(a.salesDate));
 }
 
+function buildSalesRowsForSalespeople(
+  source: SalesSource,
+  salespersonIds: string[],
+  dateRange: { from: string | null; to: string | null },
+  commissionPercent: number,
+): AdminSalesManagementRow[] {
+  const teamSalespersonIds = new Set(salespersonIds);
+  const customerById = new Map(source.users.map((user) => [user.id, user]));
+  const planById = new Map(source.plans.map((plan) => [plan.id, plan]));
+
+  return source.payments
+    .filter((payment) => payment.status === PAYMENT_STATUSES.confirmed)
+    .filter((payment) => {
+      const customer = customerById.get(payment.userId);
+      return customer?.referredByUserId ? teamSalespersonIds.has(customer.referredByUserId) : false;
+    })
+    .filter((payment) => isWithinDateRange(payment.confirmedAt ?? payment.updatedAt, dateRange))
+    .map((payment) => {
+      const customer = customerById.get(payment.userId);
+      return {
+        paymentId: payment.id,
+        salesDate: (payment.confirmedAt ?? payment.updatedAt).slice(0, 10),
+        email: customer?.email ?? payment.userId,
+        customerName: customer?.name ?? 'Unknown',
+        subscriptionPlan: planById.get(payment.planId)?.name ?? payment.planId,
+        amountUsd: payment.amountUsd,
+        commissionPercent,
+        points: roundPoints(payment.amountUsd * commissionPercent / 100),
+      };
+    })
+    .sort((a, b) => b.salesDate.localeCompare(a.salesDate));
+}
+
+function buildSalesTeamItems(
+  source: SalesSource,
+  dateRange: { from: string | null; to: string | null },
+): AdminSalesTeamItem[] {
+  return source.teamSettings.teams.map((team) => {
+    const rows = buildSalesRowsForSalespeople(source, team.salespersonIds, dateRange, team.commissionPercent);
+    return toSalesTeamItem(source, team, rows);
+  });
+}
+
+function toSalesTeamItem(
+  source: SalesSource,
+  team: AdminSalesTeamRecord,
+  rows: AdminSalesManagementRow[],
+): AdminSalesTeamItem {
+  const totals = summarizeRows(rows);
+  return {
+    ...cloneTeam(team),
+    salespersonCount: team.salespersonIds.filter((id) => source.users.some((user) => user.id === id)).length,
+    salesCount: totals.salesCount,
+    salesUsd: totals.salesUsd,
+    points: totals.points,
+  };
+}
+
+function buildTeamSalespersonItems(
+  source: SalesSource,
+  team: AdminSalesTeamRecord,
+  dateRange: { from: string | null; to: string | null },
+): AdminSalesTeamSalespersonItem[] {
+  const userById = new Map(source.users.map((user) => [user.id, user]));
+  return team.salespersonIds
+    .map((salespersonId) => userById.get(salespersonId))
+    .filter((user): user is NonNullable<typeof user> => Boolean(user))
+    .slice(0, SALES_TEAM_PAGE_SIZE)
+    .map((user, index) => {
+      const rows = buildSalesRowsForSalespeople(source, [user.id], dateRange, team.commissionPercent);
+      const totals = summarizeRows(rows);
+      return {
+        ...toPublicServiceUserRecord(user),
+        sequence: index + 1,
+        salesCount: totals.salesCount,
+        salesUsd: totals.salesUsd,
+        points: totals.points,
+      };
+    });
+}
+
 function toSalespersonItem(
   source: SalesSource,
   user: SalesSource['users'][number],
@@ -395,6 +658,67 @@ function getSalesCommissionSettings(repository: object): SalesCommissionSettings
   return cloneSettings(settings);
 }
 
+function getSalesTeamSettings(repository: object): SalesTeamSettings {
+  const existing = salesTeamSettingsStore.get(repository);
+  if (existing) return cloneTeamSettings(existing);
+
+  const settings = {
+    defaultPercent: DEFAULT_SALES_TEAM_COMMISSION_PERCENT,
+    teams: [],
+    updatedByAdminId: null,
+    updatedAt: '1970-01-01T00:00:00.000Z',
+  };
+  salesTeamSettingsStore.set(repository, settings);
+  return cloneTeamSettings(settings);
+}
+
+function createSalesTeamRecord(
+  repository: ChartServiceRepository,
+  input: { admin: Actor; name: string; createdAt: string },
+): AdminSalesTeamRecord {
+  const current = getSalesTeamSettings(repository);
+  const team = buildNewSalesTeam(repository.nextId('sales_team'), input);
+  salesTeamSettingsStore.set(repository, {
+    ...current,
+    teams: [...current.teams, team],
+    updatedByAdminId: input.admin.id,
+    updatedAt: input.createdAt,
+  });
+  return cloneTeam(team);
+}
+
+async function createAsyncSalesTeamRecord(
+  repository: AsyncChartServiceRepository,
+  input: { admin: Actor; name: string; createdAt: string },
+): Promise<AdminSalesTeamRecord> {
+  const current = getSalesTeamSettings(repository);
+  const team = buildNewSalesTeam(await repository.nextId('sales_team'), input);
+  salesTeamSettingsStore.set(repository, {
+    ...current,
+    teams: [...current.teams, team],
+    updatedByAdminId: input.admin.id,
+    updatedAt: input.createdAt,
+  });
+  return cloneTeam(team);
+}
+
+function buildNewSalesTeam(
+  id: string,
+  input: { admin: Actor; name: string; createdAt: string },
+): AdminSalesTeamRecord {
+  const name = input.name.trim();
+  if (!name) throw new Error('Sales team name required');
+  return {
+    id,
+    name,
+    commissionPercent: DEFAULT_SALES_TEAM_COMMISSION_PERCENT,
+    salespersonIds: [],
+    createdAt: input.createdAt,
+    updatedAt: input.createdAt,
+    updatedByAdminId: input.admin.id,
+  };
+}
+
 function setSalespersonCommissionPercent(
   repository: object,
   input: { admin: Actor; salespersonId: string; commissionPercent: number; updatedAt: string },
@@ -412,6 +736,57 @@ function setSalespersonCommissionPercent(
   };
   salesCommissionSettingsStore.set(repository, settings);
   return cloneSettings(settings);
+}
+
+function setSalespersonTeam(
+  repository: object,
+  input: { admin: Actor; salespersonId: string; teamId: string; updatedAt: string },
+): SalesTeamSettings {
+  const current = getSalesTeamSettings(repository);
+  if (!current.teams.some((team) => team.id === input.teamId)) throw new Error('Sales team not found');
+  const teams = current.teams.map((team) => {
+    const nextSalespersonIds = team.salespersonIds.filter((id) => id !== input.salespersonId);
+    if (team.id === input.teamId) nextSalespersonIds.push(input.salespersonId);
+    return {
+      ...team,
+      salespersonIds: [...new Set(nextSalespersonIds)],
+      updatedAt: team.id === input.teamId ? input.updatedAt : team.updatedAt,
+      updatedByAdminId: team.id === input.teamId ? input.admin.id : team.updatedByAdminId,
+    };
+  });
+  const settings = {
+    ...current,
+    teams,
+    updatedByAdminId: input.admin.id,
+    updatedAt: input.updatedAt,
+  };
+  salesTeamSettingsStore.set(repository, settings);
+  return cloneTeamSettings(settings);
+}
+
+function setSalesTeamCommissionPercent(
+  repository: object,
+  input: { admin: Actor; teamId: string; commissionPercent: number; updatedAt: string },
+): SalesTeamSettings {
+  const commissionPercent = normalizePercent(input.commissionPercent);
+  const current = getSalesTeamSettings(repository);
+  if (!current.teams.some((team) => team.id === input.teamId)) throw new Error('Sales team not found');
+  const teams = current.teams.map((team) => team.id === input.teamId
+    ? {
+      ...team,
+      commissionPercent,
+      updatedAt: input.updatedAt,
+      updatedByAdminId: input.admin.id,
+    }
+    : team);
+  const settings = {
+    ...current,
+    teams,
+    updatedByAdminId: input.admin.id,
+    updatedAt: input.updatedAt,
+  };
+  salesTeamSettingsStore.set(repository, settings);
+  return cloneTeamSettings(settings);
 }
 
 function getCommissionPercent(settings: SalesCommissionSettings, salespersonId: string): number {
@@ -442,6 +817,20 @@ function cloneSettings(settings: SalesCommissionSettings): SalesCommissionSettin
   return {
     ...settings,
     salespersonPercents: { ...settings.salespersonPercents },
+  };
+}
+
+function cloneTeamSettings(settings: SalesTeamSettings): SalesTeamSettings {
+  return {
+    ...settings,
+    teams: settings.teams.map(cloneTeam),
+  };
+}
+
+function cloneTeam(team: AdminSalesTeamRecord): AdminSalesTeamRecord {
+  return {
+    ...team,
+    salespersonIds: [...team.salespersonIds],
   };
 }
 

@@ -6,6 +6,7 @@ type SalespersonItem = {
   id: string;
   email: string;
   name: string;
+  phoneNumber: string | null;
   commissionPercent: number;
   salesCount: number;
   salesUsd: number;
@@ -24,6 +25,21 @@ type SalesCustomerItem = {
   } | null;
 };
 
+type SalesTeamItem = {
+  id: string;
+  name: string;
+  commissionPercent: number;
+  salespersonIds: string[];
+  salespersonCount: number;
+  salesCount: number;
+  salesUsd: number;
+  points: number;
+};
+
+type TeamSalespersonItem = SalespersonItem & {
+  sequence: number;
+};
+
 type SalesRow = {
   paymentId: string;
   salesDate: string;
@@ -37,6 +53,8 @@ type SalesRow = {
 
 type SalesSummary = {
   defaultPercent: number;
+  defaultTeamPercent: number;
+  teamPageSize: number;
   salespersonQuery: string;
   customerQuery: string;
   dateRange: {
@@ -46,6 +64,14 @@ type SalesSummary = {
   salespeople: SalespersonItem[];
   selectedSalesperson: SalespersonItem | null;
   customers: SalesCustomerItem[];
+  teams: SalesTeamItem[];
+  selectedTeam: SalesTeamItem | null;
+  selectedTeamSalespeople: TeamSalespersonItem[];
+  teamTotals: {
+    salesCount: number;
+    salesUsd: number;
+    points: number;
+  };
   rows: SalesRow[];
   totals: {
     salesCount: number;
@@ -68,7 +94,10 @@ export function AdminSalesPanel() {
   const [to, setTo] = useState('');
   const [selectedSalespersonId, setSelectedSalespersonId] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [selectedTeamId, setSelectedTeamId] = useState('');
   const [commissionPercent, setCommissionPercent] = useState('30');
+  const [teamCommissionPercent, setTeamCommissionPercent] = useState('30');
+  const [teamName, setTeamName] = useState('');
   const [message, setMessage] = useState('영업관리 데이터를 불러오는 중입니다.');
   const [isBusy, setIsBusy] = useState(false);
 
@@ -76,7 +105,10 @@ export function AdminSalesPanel() {
     void refresh();
   }, []);
 
-  async function refresh(nextSalespersonId = selectedSalespersonId) {
+  async function refresh(
+    nextSalespersonId = selectedSalespersonId,
+    nextTeamId = selectedTeamId,
+  ) {
     setIsBusy(true);
     const searchParams = new URLSearchParams();
     if (query.trim()) searchParams.set('query', query.trim());
@@ -84,6 +116,7 @@ export function AdminSalesPanel() {
     if (from) searchParams.set('from', from);
     if (to) searchParams.set('to', to);
     if (nextSalespersonId) searchParams.set('salespersonId', nextSalespersonId);
+    if (nextTeamId) searchParams.set('teamId', nextTeamId);
 
     const response = await fetch(`/api/admin/sales?${searchParams.toString()}`, { cache: 'no-store' });
     const payload = await response.json() as SalesResponse;
@@ -96,7 +129,91 @@ export function AdminSalesPanel() {
     }
 
     applySummary(payload.summary);
-    setMessage(`영업자 ${payload.summary.salespeople.length}명, 매출 ${payload.summary.totals.salesCount}건을 불러왔습니다.`);
+    setMessage(`영업자 ${payload.summary.salespeople.length}명, 팀 ${payload.summary.teams.length}개를 불러왔습니다.`);
+  }
+
+  async function createSalesTeam() {
+    if (!teamName.trim()) {
+      setMessage('등록할 영업팀명을 입력하세요.');
+      return;
+    }
+
+    setIsBusy(true);
+    const response = await fetch('/api/admin/sales', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'createSalesTeam',
+        teamName,
+      }),
+    });
+    const payload = await response.json() as SalesResponse;
+    setIsBusy(false);
+
+    if (!response.ok || !payload.summary) {
+      setMessage(payload.message || '영업팀 등록에 실패했습니다.');
+      return;
+    }
+
+    setTeamName('');
+    applySummary(payload.summary);
+    setMessage('영업팀을 등록했습니다. 영업자를 선택한 뒤 팀에 배치할 수 있습니다.');
+  }
+
+  async function assignSalespersonTeam() {
+    if (!selectedSalespersonId || !selectedTeamId) {
+      setMessage('배치할 영업자와 영업팀을 모두 선택하세요.');
+      return;
+    }
+
+    setIsBusy(true);
+    const response = await fetch('/api/admin/sales', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'assignSalespersonTeam',
+        salespersonId: selectedSalespersonId,
+        teamId: selectedTeamId,
+      }),
+    });
+    const payload = await response.json() as SalesResponse;
+    setIsBusy(false);
+
+    if (!response.ok || !payload.summary) {
+      setMessage(payload.message || '영업자 팀 배치에 실패했습니다.');
+      return;
+    }
+
+    applySummary(payload.summary);
+    setMessage('선택 영업자를 영업팀에 배치했습니다.');
+  }
+
+  async function saveTeamCommissionPercent() {
+    if (!selectedTeamId) {
+      setMessage('정산율을 변경할 영업팀을 먼저 선택하세요.');
+      return;
+    }
+
+    setIsBusy(true);
+    const response = await fetch('/api/admin/sales', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'updateSalesTeamCommission',
+        teamId: selectedTeamId,
+        commissionPercent: Number(teamCommissionPercent),
+      }),
+    });
+    const payload = await response.json() as SalesResponse;
+    setIsBusy(false);
+
+    if (!response.ok || !payload.summary) {
+      setMessage(payload.message || '영업팀 정산율 저장에 실패했습니다.');
+      return;
+    }
+
+    applySummary(payload.summary);
+    setMessage('영업팀 정산율을 저장했습니다. 이 기능은 슈퍼관리자만 사용할 수 있습니다.');
   }
 
   async function saveCommissionPercent() {
@@ -158,18 +275,26 @@ export function AdminSalesPanel() {
   function applySummary(nextSummary: SalesSummary) {
     setSummary(nextSummary);
     const nextSelectedSalespersonId = nextSummary.selectedSalesperson?.id ?? '';
+    const nextSelectedTeamId = nextSummary.selectedTeam?.id ?? '';
     setSelectedSalespersonId(nextSelectedSalespersonId);
+    setSelectedTeamId(nextSelectedTeamId);
     setSelectedCustomerId((currentCustomerId) => (
       nextSummary.customers.some((customer) => customer.id === currentCustomerId)
         ? currentCustomerId
         : nextSummary.customers[0]?.id ?? ''
     ));
     setCommissionPercent(String(nextSummary.selectedSalesperson?.commissionPercent ?? nextSummary.defaultPercent));
+    setTeamCommissionPercent(String(nextSummary.selectedTeam?.commissionPercent ?? nextSummary.defaultTeamPercent));
   }
 
   function selectSalesperson(salespersonId: string) {
     setSelectedSalespersonId(salespersonId);
-    void refresh(salespersonId);
+    void refresh(salespersonId, selectedTeamId);
+  }
+
+  function selectTeam(teamId: string) {
+    setSelectedTeamId(teamId);
+    void refresh(selectedSalespersonId, teamId);
   }
 
   function downloadSalesExcel() {
@@ -202,7 +327,7 @@ export function AdminSalesPanel() {
       <div className="toolbar">
         <div>
           <h2>영업관리</h2>
-          <p className="compact-copy">영업자별 매출 현황, 적립포인트, 회원별 영업자 배정을 관리합니다.</p>
+          <p className="compact-copy">영업팀, 영업자 배치, 팀별 매출과 정산율을 한 곳에서 관리합니다.</p>
         </div>
         <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>
           새로고침
@@ -234,19 +359,123 @@ export function AdminSalesPanel() {
         <>
           <div className="sales-summary-grid">
             <div className="mini-card">
-              <span>기본 정산율</span>
+              <span>기본 팀 정산율</span>
+              <strong>{summary.defaultTeamPercent}%</strong>
+              <p>팀 정산율은 슈퍼관리자만 변경할 수 있습니다.</p>
+            </div>
+            <div className="mini-card">
+              <span>선택 영업팀</span>
+              <strong>{summary.selectedTeam?.name ?? '영업팀 없음'}</strong>
+              <p>{summary.selectedTeam ? `${summary.selectedTeam.salespersonCount}명 / ${summary.selectedTeam.commissionPercent}%` : '영업팀을 먼저 등록하세요.'}</p>
+            </div>
+            <div className="mini-card">
+              <span>팀 매출집계</span>
+              <strong>{formatUsd(summary.teamTotals.salesUsd)}</strong>
+              <p>포인트 {formatPoint(summary.teamTotals.points)} / 매출 {summary.teamTotals.salesCount}건</p>
+            </div>
+          </div>
+
+          <div className="sales-team-panel">
+            <div className="toolbar compact">
+              <div>
+                <h3>영업팀 등록 및 배치</h3>
+                <p className="compact-copy">영업팀을 만들고 선택한 영업자를 팀에 배치합니다. 영업자 리스트는 기본 {summary.teamPageSize}개 단위로 표시합니다.</p>
+              </div>
+              <button className="button" type="button" onClick={() => void createSalesTeam()} disabled={isBusy}>
+                영업팀 등록
+              </button>
+            </div>
+            <div className="sales-filter-grid compact">
+              <label>
+                <span>영업팀명</span>
+                <input
+                  onChange={(event) => setTeamName(event.target.value)}
+                  placeholder="예: 수도권 1팀"
+                  value={teamName}
+                />
+              </label>
+              <button className="button secondary" type="button" onClick={() => void assignSalespersonTeam()} disabled={isBusy || !selectedSalespersonId || !selectedTeamId}>
+                선택 영업자 팀 배치
+              </button>
+            </div>
+            <div className="sales-team-grid" aria-label="영업팀 목록">
+              {summary.teams.map((team) => (
+                <button
+                  aria-pressed={selectedTeamId === team.id}
+                  className={`sales-team-card${selectedTeamId === team.id ? ' active' : ''}`}
+                  key={team.id}
+                  onClick={() => selectTeam(team.id)}
+                  type="button"
+                >
+                  <strong>{team.name}</strong>
+                  <span>{team.commissionPercent}% / {team.salespersonCount}명</span>
+                  <small>{formatUsd(team.salesUsd)} / {formatPoint(team.points)} 포인트</small>
+                </button>
+              ))}
+              {summary.teams.length === 0 && (
+                <p className="notice compact">등록된 영업팀이 없습니다. 팀명을 입력하고 영업팀 등록을 누르세요.</p>
+              )}
+            </div>
+            <div className="sales-commission-row">
+              <label>
+                <span>영업팀 정산율</span>
+                <input
+                  max="100"
+                  min="0"
+                  onChange={(event) => setTeamCommissionPercent(event.target.value)}
+                  step="0.1"
+                  type="number"
+                  value={teamCommissionPercent}
+                />
+              </label>
+              <button className="button" type="button" onClick={() => void saveTeamCommissionPercent()} disabled={isBusy || !summary.selectedTeam}>
+                팀 정산율 저장
+              </button>
+            </div>
+            <table className="table sales-team-table">
+              <thead>
+                <tr>
+                  <th>순번</th>
+                  <th>이름</th>
+                  <th>연락번호</th>
+                  <th>매출</th>
+                  <th>포인트</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.selectedTeamSalespeople.map((salesperson) => (
+                  <tr key={salesperson.id}>
+                    <td>{salesperson.sequence}</td>
+                    <td>{salesperson.name}<br /><small>{salesperson.email}</small></td>
+                    <td>{salesperson.phoneNumber ?? '미등록'}</td>
+                    <td>{formatUsd(salesperson.salesUsd)}</td>
+                    <td>{formatPoint(salesperson.points)}</td>
+                  </tr>
+                ))}
+                {summary.selectedTeamSalespeople.length === 0 && (
+                  <tr>
+                    <td colSpan={5}>선택한 영업팀에 배치된 영업자가 없습니다.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="sales-summary-grid">
+            <div className="mini-card">
+              <span>개별 기본 정산율</span>
               <strong>{summary.defaultPercent}%</strong>
-              <p>기본값은 30%이며 최고관리자만 개별 정산율을 변경할 수 있습니다.</p>
+              <p>영업자별 매출 집계는 개별 정산율을 기준으로 계산합니다.</p>
             </div>
             <div className="mini-card">
               <span>선택 영업자</span>
               <strong>{summary.selectedSalesperson?.email ?? '영업자 없음'}</strong>
-              <p>{summary.selectedSalesperson ? `${summary.selectedSalesperson.name} / ${summary.selectedSalesperson.commissionPercent}%` : '영업 역할 회원을 먼저 지정하세요.'}</p>
+              <p>{summary.selectedSalesperson ? `${summary.selectedSalesperson.name} / ${summary.selectedSalesperson.commissionPercent}%` : '회원관리에서 역할을 영업으로 지정하세요.'}</p>
             </div>
             <div className="mini-card">
-              <span>집계</span>
+              <span>개별 집계</span>
               <strong>{formatUsd(summary.totals.salesUsd)}</strong>
-              <p>적립포인트 {formatPoint(summary.totals.points)} / 매출 {summary.totals.salesCount}건</p>
+              <p>포인트 {formatPoint(summary.totals.points)} / 매출 {summary.totals.salesCount}건</p>
             </div>
           </div>
           <div className="salesperson-list" aria-label="영업자 목록">

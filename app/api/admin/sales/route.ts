@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server.js';
 import { assertAdminActor } from '../../../../src/domain/chart-service/index.ts';
 import {
+  assignAsyncAdminSalespersonToTeam,
+  createAsyncAdminSalesTeam,
   getActorFromAsyncRequest,
   getAdminMutationErrorStatus,
   getAsyncAdminSalesManagementSummary,
@@ -8,6 +10,7 @@ import {
   guardMutationRequest,
   updateAsyncAdminCustomerSalesperson,
   updateAsyncAdminSalesCommissionPercent,
+  updateAsyncAdminSalesTeamCommissionPercent,
 } from '../../../../src/server/chart-service/index.ts';
 
 export async function GET(request: NextRequest) {
@@ -20,6 +23,7 @@ export async function GET(request: NextRequest) {
       assertAdminActor(admin);
       return getAsyncAdminSalesManagementSummary(repository, {
         salespersonId: searchParams.get('salespersonId'),
+        teamId: searchParams.get('teamId'),
         query: searchParams.get('query'),
         customerQuery: searchParams.get('customerQuery'),
         from: searchParams.get('from'),
@@ -55,6 +59,39 @@ export async function PATCH(request: NextRequest) {
         return getAsyncAdminSalesManagementSummary(repository, {
           salespersonId: body.salespersonId ? String(body.salespersonId) : null,
           customerQuery: typeof body.customerQuery === 'string' ? body.customerQuery : null,
+        });
+      }
+      if (body.action === 'createSalesTeam') {
+        const team = await createAsyncAdminSalesTeam(repository, {
+          admin,
+          name: String(body.teamName || ''),
+          createdAt: new Date().toISOString(),
+        });
+        return getAsyncAdminSalesManagementSummary(repository, {
+          teamId: team.id,
+        });
+      }
+      if (body.action === 'assignSalespersonTeam') {
+        await assignAsyncAdminSalespersonToTeam(repository, {
+          admin,
+          salespersonId: String(body.salespersonId || ''),
+          teamId: String(body.teamId || ''),
+          updatedAt: new Date().toISOString(),
+        });
+        return getAsyncAdminSalesManagementSummary(repository, {
+          salespersonId: String(body.salespersonId || ''),
+          teamId: String(body.teamId || ''),
+        });
+      }
+      if (body.action === 'updateSalesTeamCommission') {
+        await updateAsyncAdminSalesTeamCommissionPercent(repository, {
+          admin,
+          teamId: String(body.teamId || ''),
+          commissionPercent: Number(body.commissionPercent),
+          updatedAt: new Date().toISOString(),
+        });
+        return getAsyncAdminSalesManagementSummary(repository, {
+          teamId: String(body.teamId || ''),
         });
       }
 
