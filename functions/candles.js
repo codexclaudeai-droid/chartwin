@@ -26,15 +26,79 @@ function canonicalize(market, symbol) {
   return s;
 }
 
-async function getCandleRows(env, market, symbol, timeframe) {
-  const key = `${market}:${symbol}:${timeframe}`;
-  const raw = await env.CANDLES_KV.get(key, { type: 'json' });
-  if (Array.isArray(raw) && raw.length > 0) return raw;
-  if (market === 'commodity' && /^(XAU|XAG)/.test(symbol)) {
-    const legacyRaw = await env.CANDLES_KV.get(`index:${symbol}:${timeframe}`, { type: 'json' });
-    if (Array.isArray(legacyRaw) && legacyRaw.length > 0) return legacyRaw;
+function shouldFillTimeGaps(market, symbol) {
+  return market === 'index' && symbol === 'NQ1!';
+}
+
+function fillMissingCandles(rows, timeframe, maxGapBars = 240) {
+  if (!Array.isArray(rows) || rows.length < 2) return rows;
+  const tfSec = TF_SECONDS[timeframe];
+  if (!tfSec || tfSec <= 0 || timeframe === '1w' || timeframe === '1M') return rows;
+
+  const sorted = [...rows].sort((a, b) => a.time - b.time);
+  const out = [sorted[0]];
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = out[out.length - 1];
+    const next = sorted[i];
+    if (!prev || !next) continue;
+    const gapSec = next.time - prev.time;
+    if (gapSec > tfSec) {
+      const missingBars = Math.floor(gapSec / tfSec) - 1;
+      if (missingBars > 0 && missingBars <= maxGapBars) {
+        for (let j = 1; j <= missingBars; j += 1) {
+          out.push({
+            time: prev.time + tfSec * j,
+            open: prev.close,
+            high: prev.close,
+            low: prev.close,
+            close: prev.close,
+            volume: 0,
+          });
+        }
+      }
+    }
+    out.push(next);
   }
-  return [];
+  return out;
+}
+
+function getCandidateKeys(market, symbol, timeframe, requestedSymbol) {
+  const keySet = new Set([`${market}:${symbol}:${timeframe}`]);
+  const requested = norm(requestedSymbol);
+  if (requested && requested !== symbol) keySet.add(`${market}:${requested}:${timeframe}`);
+
+  if (symbol === 'NQ1!' || requested === 'NAS100' || requested === 'NQ') {
+    ['index', 'futures'].forEach((candidateMarket) => {
+      ['NQ1!', 'NAS100', 'NQ'].forEach((candidateSymbol) => {
+        keySet.add(`${candidateMarket}:${candidateSymbol}:${timeframe}`);
+      });
+    });
+  }
+
+  if (market === 'commodity' && /^(XAU|XAG)/.test(symbol)) {
+    keySet.add(`index:${symbol}:${timeframe}`);
+  }
+  if (market === 'commodity' && symbol === 'WTI1!') {
+    keySet.add(`commodity:WTI:${timeframe}`);
+  }
+
+  return Array.from(keySet);
+}
+
+async function getCandleRows(env, market, symbol, timeframe, requestedSymbol) {
+  const keys = getCandidateKeys(market, symbol, timeframe, requestedSymbol);
+  const errors = [];
+  for (const key of keys) {
+    try {
+      const raw = await env.CANDLES_KV.get(key, { type: 'json' });
+      if (Array.isArray(raw) && raw.length > 0) {
+        return { rows: raw, key, keys, errors };
+      }
+    } catch (error) {
+      errors.push(`${key}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  return { rows: [], key: null, keys, errors };
 }
 
 function aggregateFrom1m(candles1m, targetTfSec) {
@@ -70,9 +134,11 @@ export async function onRequestGet({ request, env }) {
   const requestedMarket = ALLOWED_MARKETS.includes(String(url.searchParams.get('market') || '').toLowerCase())
     ? String(url.searchParams.get('market')).toLowerCase() : null;
   const market = requestedMarket ? canonicalizeMarketForSymbol(requestedMarket, url.searchParams.get('symbol') || '') : null;
-  const symbol = canonicalize(market, url.searchParams.get('symbol') || '');
+  const requestedSymbol = url.searchParams.get('symbol') || '';
+  const symbol = canonicalize(market, requestedSymbol);
   const timeframe = String(url.searchParams.get('timeframe') || '1m').trim();
   const limit = Math.min(5000, Math.max(1, Math.floor(Number(url.searchParams.get('limit')) || 300)));
+  const debug = url.searchParams.get('debug') === '1';
 
   if (!market || !symbol || !timeframe) {
     return Response.json({ ok: false, message: 'market/symbol/timeframe required' }, { status: 400, headers: CORS });
@@ -80,28 +146,64 @@ export async function onRequestGet({ request, env }) {
 
   let candles = [];
   let source = 'stored';
+  let matchedKey = null;
+  let keysTried = [];
+  let readErrors = [];
   try {
     if (timeframe !== '1m') {
       const tfSec = TF_SECONDS[timeframe];
       if (tfSec && tfSec > 60) {
-        const raw1m = await getCandleRows(env, market, symbol, '1m');
-        if (Array.isArray(raw1m) && raw1m.length > 0) {
-          candles = aggregateFrom1m(raw1m, tfSec);
+        const result1m = await getCandleRows(env, market, symbol, '1m', requestedSymbol);
+        keysTried = result1m.keys;
+        readErrors = result1m.errors;
+        if (Array.isArray(result1m.rows) && result1m.rows.length > 0) {
+          const base1m = shouldFillTimeGaps(market, symbol) ? fillMissingCandles(result1m.rows, '1m') : result1m.rows;
+          candles = aggregateFrom1m(base1m, tfSec);
           source = 'aggregated_from_1m';
+          matchedKey = result1m.key;
         }
       }
     }
     if (!candles.length) {
-      const raw = await getCandleRows(env, market, symbol, timeframe);
-      if (Array.isArray(raw) && raw.length > 0) {
-        candles = raw;
+      const result = await getCandleRows(env, market, symbol, timeframe, requestedSymbol);
+      keysTried = result.keys;
+      readErrors = result.errors;
+      if (Array.isArray(result.rows) && result.rows.length > 0) {
+        candles = result.rows;
         source = 'stored';
+        matchedKey = result.key;
       }
     }
-  } catch {}
+  } catch (error) {
+    readErrors.push(error instanceof Error ? error.message : String(error));
+  }
+
+  const gapFilled = shouldFillTimeGaps(market, symbol);
+  if (gapFilled) {
+    candles = fillMissingCandles(candles, timeframe);
+  }
+
+  const payload = {
+    ok: true,
+    market,
+    symbol,
+    timeframe,
+    source,
+    total: candles.length,
+    gapFilled,
+    candles: candles.slice(-limit),
+  };
+  if (debug) {
+    payload.debug = {
+      matchedKey,
+      keysTried,
+      readErrors,
+      kvBound: Boolean(env.CANDLES_KV),
+    };
+  }
 
   return Response.json(
-    { ok: true, market, symbol, timeframe, source, candles: candles.slice(-limit) },
+    payload,
     { headers: CORS },
   );
 }

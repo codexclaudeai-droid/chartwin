@@ -84,8 +84,23 @@ test('Cloudflare Pages functions use the same webhook symbol aliases', () => {
   assert.doesNotMatch(pagesCandlesSource, /XAGUSDT\.P'[\s\S]*return 'XAGUSD'/);
   assert.match(
     pagesCandlesSource,
-    /env\.CANDLES_KV\.get\(`index:\$\{symbol\}:\$\{timeframe\}`/,
+    /keySet\.add\(`index:\$\{symbol\}:\$\{timeframe\}`\)/,
     'Cloudflare /candles should read legacy misplaced XAU/XAG index keys',
+  );
+  assert.match(
+    pagesCandlesSource,
+    /'futures'\]\.forEach\(\(candidateMarket\)/,
+    'Cloudflare /candles should look for legacy NAS100/NQ futures keys when reading NQ history',
+  );
+  assert.match(
+    pagesCandlesSource,
+    /debug = url\.searchParams\.get\('debug'\) === '1'/,
+    'Cloudflare /candles should expose opt-in diagnostics for KV key lookup issues',
+  );
+  assert.match(
+    pagesCandlesSource,
+    /kvBound: Boolean\(env\.CANDLES_KV\)/,
+    'diagnostics should reveal whether the production KV binding is available',
   );
   assert.doesNotMatch(pagesWebhookSource, /XAUUSDT\.P'[\s\S]*return 'XAUUSD'/);
   assert.doesNotMatch(pagesWebhookSource, /XAGUSDT\.P'[\s\S]*return 'XAGUSD'/);
