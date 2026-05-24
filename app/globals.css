@@ -981,6 +981,32 @@ a {
   box-shadow: 0 0 0 4px rgba(168, 76, 22, 0.12);
 }
 
+.support-deep-link-notice {
+  background: color-mix(in srgb, var(--accent) 9%, #fff 91%);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line) 72%);
+  border-left: 4px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(12, 102, 90, 0.1);
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px 14px;
+}
+
+.support-deep-link-notice p {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.support-deep-link-kicker {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .thread-meta {
   align-items: center;
   color: var(--muted);

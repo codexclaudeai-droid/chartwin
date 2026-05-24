@@ -119,9 +119,16 @@ test('member support panel supports notification deep links to a thread', () => 
 
   assert.match(panelSource, /useSearchParams/);
   assert.match(panelSource, /targetThreadId/);
+  assert.match(panelSource, /targetThread/);
+  assert.match(panelSource, /latestAdminReply/);
+  assert.match(panelSource, /support-deep-link-notice/);
+  assert.match(panelSource, /답변 확인 대상 문의/);
+  assert.match(panelSource, /최근 관리자 답변/);
+  assert.match(panelSource, /문의 카드로 이동/);
   assert.match(panelSource, /id=\{`support-\$\{item\.thread\.id\}`\}/);
   assert.match(panelSource, /support-thread-target/);
   assert.match(pageSource, /import \{ Suspense \} from 'react'/);
   assert.match(pageSource, /<Suspense fallback=/);
   assert.match(styleSource, /\.thread-card\.support-thread-target/);
+  assert.match(styleSource, /\.support-deep-link-notice/);
 });
