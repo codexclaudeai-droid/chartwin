@@ -10,6 +10,7 @@ import {
   formatNotificationSummaryMessage,
   getNotificationCategoryLabel,
   getNotificationLinkLabel,
+  getUnreadNotificationsByTab,
 } from './notification-display';
 
 type NotificationRecord = {
@@ -34,6 +35,7 @@ export function NotificationsPanel() {
   const [message, setMessage] = useState('로그인하면 결제 승인, 구독 상태, 고객센터 답변 알림을 확인할 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
   const filteredNotifications = filterNotificationsByTab(notifications, activeFilterKey);
+  const filteredUnreadNotifications = getUnreadNotificationsByTab(notifications, activeFilterKey);
 
   useEffect(() => {
     void refresh();
@@ -82,6 +84,29 @@ export function NotificationsPanel() {
     await refresh();
   }
 
+  async function markFilteredRead() {
+    if (filteredUnreadNotifications.length === 0) return;
+
+    const updatedCount = filteredUnreadNotifications.length;
+    setIsBusy(true);
+    try {
+      await Promise.all(filteredUnreadNotifications.map(async (notification) => {
+        const response = await fetch(`/api/notifications/${notification.id}/read`, { method: 'POST' });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.message || '현재 필터 알림 읽음 처리에 실패했습니다.');
+        }
+      }));
+      dispatchNotificationsRefreshEvent();
+      await refresh();
+      setMessage(`${updatedCount}건을 현재 필터에서 읽음 처리했습니다.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '현재 필터 알림 읽음 처리에 실패했습니다.');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
   return (
     <section className="card wide">
       <div className="toolbar">
@@ -90,6 +115,9 @@ export function NotificationsPanel() {
           <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
           <button className="button" type="button" onClick={markAllRead} disabled={isBusy || summary.unreadCount === 0}>
             모두 읽음
+          </button>
+          <button className="button secondary" type="button" onClick={markFilteredRead} disabled={isBusy || filteredUnreadNotifications.length === 0}>
+            현재 필터 읽음
           </button>
         </div>
       </div>
@@ -110,7 +138,7 @@ export function NotificationsPanel() {
           );
         })}
       </div>
-      <p className="notice compact">현재 필터: {NOTIFICATION_FILTER_TABS.find((tab) => tab.key === activeFilterKey)?.label ?? '전체'} / 표시 {filteredNotifications.length}건</p>
+      <p className="notice compact">현재 필터: {NOTIFICATION_FILTER_TABS.find((tab) => tab.key === activeFilterKey)?.label ?? '전체'} / 표시 {filteredNotifications.length}건 / 미확인 {filteredUnreadNotifications.length}건</p>
       <div className="thread-list">
         {filteredNotifications.map((notification) => (
           <article className="thread-card" key={notification.id}>

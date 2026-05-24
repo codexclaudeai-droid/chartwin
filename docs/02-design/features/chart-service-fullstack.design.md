@@ -1296,6 +1296,8 @@ Implemented scope:
 - Filter tabs are client-side so they do not require a new API contract or database query.
 - The selected filter uses `aria-pressed` and displays a compact count summary for accessibility and operator clarity.
 - Filtered empty states distinguish between no notifications at all and no notifications matching the selected tab.
+- Operators can mark only the current filter's unread notifications as read without clearing unrelated alert categories.
+- The current filter summary now includes both visible and unread counts.
 
 Deferred scope:
 

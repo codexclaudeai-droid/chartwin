@@ -62,6 +62,14 @@ export function filterNotificationsByTab<T extends FilterableNotification>(
   return notifications;
 }
 
+export function getUnreadNotificationsByTab<T extends FilterableNotification>(
+  notifications: T[],
+  filterKey: string,
+): T[] {
+  return filterNotificationsByTab(notifications, filterKey)
+    .filter((notification) => !notification.readAt);
+}
+
 export function getNotificationLinkLabel(notification: NotificationDisplayInput): string {
   if (notification.category === 'support_request') return '문의 바로 답변하기';
   if (notification.category === 'support_reply') return '답변 확인하기';
