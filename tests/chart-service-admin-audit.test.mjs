@@ -172,6 +172,30 @@ test('admin audit log panel renders human-readable summaries above raw JSON', ()
   assert.match(source, /변경 전후 데이터 보기/);
 });
 
+test('admin audit log panels link operational targets back to source screens', async () => {
+  const source = fs.readFileSync(new URL('../app/admin/audit-log-panel.tsx', import.meta.url), 'utf8');
+  const userSource = fs.readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+  const { getAdminAuditTargetLink } = await import('../app/admin/audit-target-links.ts');
+
+  assert.deepEqual(getAdminAuditTargetLink('payment_request', 'pay_pending'), {
+    href: '/admin#admin-payment-pay_pending',
+    label: '결제 큐에서 보기',
+  });
+  assert.deepEqual(getAdminAuditTargetLink('subscription', 'sub_pending'), {
+    href: '/admin#admin-subscription-sub_pending',
+    label: '구독 큐에서 보기',
+  });
+  assert.deepEqual(getAdminAuditTargetLink('support_thread', 'support_123'), {
+    href: '/admin?supportThread=support_123#admin-support',
+    label: '문의 답변 화면으로 이동',
+  });
+  assert.equal(getAdminAuditTargetLink('user', 'user_member'), null);
+  assert.match(source, /getAdminAuditTargetLink\(entry\.log\.targetType, entry\.log\.targetId\)/);
+  assert.match(source, /auditTargetLink\.href/);
+  assert.match(userSource, /getAdminAuditTargetLink\(entry\.log\.targetType, entry\.log\.targetId\)/);
+  assert.match(userSource, /auditTargetLink\.label/);
+});
+
 test('admin audit log panel keeps active filters and explains source-triggered refreshes', () => {
   const source = fs.readFileSync(new URL('../app/admin/audit-log-panel.tsx', import.meta.url), 'utf8');
 

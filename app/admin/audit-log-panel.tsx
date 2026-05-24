@@ -9,6 +9,7 @@ import {
   type AuditLogFilterPreset,
 } from './audit-log-filters';
 import { formatAuditLogSummary } from './audit-log-summary';
+import { getAdminAuditTargetLink } from './audit-target-links';
 
 type AuditLogEntry = {
   sequence: number;
@@ -156,34 +157,43 @@ export function AuditLogPanel() {
       </div>
       <p className="notice">{message}</p>
       <div className="thread-list">
-        {entries.map((entry) => (
-          <article className="thread-card" key={entry.sequence}>
-            <div className="thread-meta">
-              <span className="badge">#{entry.sequence}</span>
-              <span>{entry.log.action}</span>
-              <span>{entry.actor?.email ?? entry.log.actorAdminId}</span>
-            </div>
-            <h3>{entry.log.targetType} / {entry.log.targetId}</h3>
-            <ul className="audit-summary">
-              {formatAuditLogSummary({
-                action: entry.log.action,
-                targetType: entry.log.targetType,
-                targetId: entry.log.targetId,
-                beforeJson: entry.log.beforeJson,
-                afterJson: entry.log.afterJson,
-              }).map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-            <details>
-              <summary>변경 전후 데이터 보기</summary>
-              <pre className="audit-json">{JSON.stringify({
-                before: entry.log.beforeJson,
-                after: entry.log.afterJson,
-              }, null, 2)}</pre>
-            </details>
-          </article>
-        ))}
+        {entries.map((entry) => {
+          const auditTargetLink = getAdminAuditTargetLink(entry.log.targetType, entry.log.targetId);
+
+          return (
+            <article className="thread-card" key={entry.sequence}>
+              <div className="thread-meta">
+                <span className="badge">#{entry.sequence}</span>
+                <span>{entry.log.action}</span>
+                <span>{entry.actor?.email ?? entry.log.actorAdminId}</span>
+              </div>
+              <h3>{entry.log.targetType} / {entry.log.targetId}</h3>
+              {auditTargetLink && (
+                <a className="text-link compact" href={auditTargetLink.href}>
+                  {auditTargetLink.label}
+                </a>
+              )}
+              <ul className="audit-summary">
+                {formatAuditLogSummary({
+                  action: entry.log.action,
+                  targetType: entry.log.targetType,
+                  targetId: entry.log.targetId,
+                  beforeJson: entry.log.beforeJson,
+                  afterJson: entry.log.afterJson,
+                }).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+              <details>
+                <summary>변경 전후 데이터 보기</summary>
+                <pre className="audit-json">{JSON.stringify({
+                  before: entry.log.beforeJson,
+                  after: entry.log.afterJson,
+                }, null, 2)}</pre>
+              </details>
+            </article>
+          );
+        })}
         {entries.length === 0 && <p className="notice">표시할 감사 로그가 없습니다.</p>}
       </div>
     </section>

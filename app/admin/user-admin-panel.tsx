@@ -28,6 +28,7 @@ import {
   getAssignableUserRoles,
 } from './admin-user-permissions';
 import { formatAuditLogSummary } from './audit-log-summary';
+import { getAdminAuditTargetLink } from './audit-target-links';
 import { createAdminPaymentUrl } from './payment-links';
 import {
   createAdminSubscriptionUrl,
@@ -628,26 +629,35 @@ export function UserAdminPanel() {
                 <h4>최근 관리자 조치</h4>
                 {detail.auditEntries.length > 0 ? (
                   <ul className="admin-history-list admin-audit-history-list">
-                    {detail.auditEntries.map((entry) => (
-                      <li key={`${entry.sequence}-${entry.log.targetType}-${entry.log.targetId}`}>
-                        <div className="admin-history-row">
-                          <strong>{entry.log.action}</strong>
-                          <span>{entry.actor?.email ?? entry.log.actorAdminId}</span>
-                        </div>
-                        <p>{entry.log.targetType} / {entry.log.targetId}</p>
-                        <ul className="audit-summary">
-                          {formatAuditLogSummary({
-                            action: entry.log.action,
-                            targetType: entry.log.targetType,
-                            targetId: entry.log.targetId,
-                            beforeJson: entry.log.beforeJson,
-                            afterJson: entry.log.afterJson,
-                          }).map((line) => (
-                            <li key={line}>{line}</li>
-                          ))}
-                        </ul>
-                      </li>
-                    ))}
+                    {detail.auditEntries.map((entry) => {
+                      const auditTargetLink = getAdminAuditTargetLink(entry.log.targetType, entry.log.targetId);
+
+                      return (
+                        <li key={`${entry.sequence}-${entry.log.targetType}-${entry.log.targetId}`}>
+                          <div className="admin-history-row">
+                            <strong>{entry.log.action}</strong>
+                            <span>{entry.actor?.email ?? entry.log.actorAdminId}</span>
+                          </div>
+                          <p>{entry.log.targetType} / {entry.log.targetId}</p>
+                          {auditTargetLink && (
+                            <a className="text-link compact" href={auditTargetLink.href}>
+                              {auditTargetLink.label}
+                            </a>
+                          )}
+                          <ul className="audit-summary">
+                            {formatAuditLogSummary({
+                              action: entry.log.action,
+                              targetType: entry.log.targetType,
+                              targetId: entry.log.targetId,
+                              beforeJson: entry.log.beforeJson,
+                              afterJson: entry.log.afterJson,
+                            }).map((line) => (
+                              <li key={line}>{line}</li>
+                            ))}
+                          </ul>
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p className="admin-history-empty">관련 관리자 조치가 없습니다.</p>
