@@ -32,12 +32,44 @@ export const NOTIFICATION_FILTER_TABS: Array<{ key: NotificationFilterKey; label
   { key: 'subscription', label: '구독' },
 ];
 
+const EMPTY_STATE_MESSAGES: Record<NotificationFilterKey, string> = {
+  all: '아직 알림이 없습니다. 결제 요청, 구독 승인, 고객센터 답변이 생기면 여기에 표시됩니다.',
+  unread: '미확인 알림이 없습니다. 전체 탭에서 읽은 알림을 다시 확인할 수 있습니다.',
+  support: '문의 알림이 없습니다. 고객센터 답변이나 새 문의 알림이 생기면 표시됩니다.',
+  payment: '결제 알림이 없습니다. 입금확인 요청이나 관리자 처리 결과가 생기면 표시됩니다.',
+  subscription: '구독 알림이 없습니다. 승인, 만료 예정, 취소/환불 처리 결과가 생기면 표시됩니다.',
+};
+
 export function getNotificationFilterKeyFromSearch(search: string): NotificationFilterKey {
   const params = new URLSearchParams(search);
   const filterKey = params.get('tab');
   const matchedTab = NOTIFICATION_FILTER_TABS.find((tab) => tab.key === filterKey);
 
   return matchedTab?.key ?? 'all';
+}
+
+export function getNotificationEmptyStateMessage(
+  filterKey: NotificationFilterKey,
+  hasAnyNotifications: boolean,
+): string {
+  if (!hasAnyNotifications) return EMPTY_STATE_MESSAGES.all;
+
+  return EMPTY_STATE_MESSAGES[filterKey];
+}
+
+export function getNotificationBulkActionHint(
+  summary: NotificationSummary,
+  filterKey: NotificationFilterKey,
+  filteredUnreadCount: number,
+): string | null {
+  if (summary.unreadCount === 0) {
+    return '미확인 알림이 없어 읽음 처리 버튼이 비활성화되었습니다.';
+  }
+  if (filterKey !== 'all' && filteredUnreadCount === 0) {
+    return '현재 필터에 미확인 알림이 없어 필터 읽음 버튼이 비활성화되었습니다.';
+  }
+
+  return null;
 }
 
 export function getNotificationCenterHref(unreadCount: number): string {

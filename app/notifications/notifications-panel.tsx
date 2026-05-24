@@ -9,7 +9,9 @@ import {
   filterNotificationsByTab,
   formatNotificationReadState,
   formatNotificationSummaryMessage,
+  getNotificationBulkActionHint,
   getNotificationCategoryLabel,
+  getNotificationEmptyStateMessage,
   getNotificationFilterKeyFromSearch,
   getNotificationLinkLabel,
   getNotificationSummaryFromList,
@@ -47,6 +49,9 @@ export function NotificationsPanel() {
   const [isBusy, setIsBusy] = useState(false);
   const filteredNotifications = filterNotificationsByTab(notifications, activeFilterKey);
   const filteredUnreadNotifications = getUnreadNotificationsByTab(notifications, activeFilterKey);
+  const emptyStateMessage = getNotificationEmptyStateMessage(activeFilterKey, notifications.length > 0);
+  const bulkActionHint = getNotificationBulkActionHint(summary, activeFilterKey, filteredUnreadNotifications.length);
+  const bulkActionHintId = bulkActionHint ? 'notification-bulk-action-hint' : undefined;
 
   useEffect(() => {
     void refresh();
@@ -209,15 +214,30 @@ export function NotificationsPanel() {
         <h2>알림센터</h2>
         <div className="actions compact">
           <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
-          <button className="button" type="button" onClick={markAllRead} disabled={isBusy || summary.unreadCount === 0}>
+          <button
+            aria-describedby={summary.unreadCount === 0 ? bulkActionHintId : undefined}
+            className="button"
+            disabled={isBusy || summary.unreadCount === 0}
+            onClick={markAllRead}
+            title={summary.unreadCount === 0 ? bulkActionHint ?? undefined : undefined}
+            type="button"
+          >
             모두 읽음
           </button>
-          <button className="button secondary" type="button" onClick={markFilteredRead} disabled={isBusy || filteredUnreadNotifications.length === 0}>
+          <button
+            aria-describedby={filteredUnreadNotifications.length === 0 ? bulkActionHintId : undefined}
+            className="button secondary"
+            disabled={isBusy || filteredUnreadNotifications.length === 0}
+            onClick={markFilteredRead}
+            title={filteredUnreadNotifications.length === 0 ? bulkActionHint ?? undefined : undefined}
+            type="button"
+          >
             현재 필터 읽음
           </button>
         </div>
       </div>
       <p className="notice">{message}</p>
+      {bulkActionHint && <p className="notice compact" id={bulkActionHintId}>{bulkActionHint}</p>}
       <div className="quick-filter-row" aria-label="알림 필터">
         {NOTIFICATION_FILTER_TABS.map((tab) => {
           const isActive = activeFilterKey === tab.key;
@@ -266,10 +286,7 @@ export function NotificationsPanel() {
             </div>
           </article>
         ))}
-        {notifications.length === 0 && <p className="notice">표시할 알림이 없습니다.</p>}
-        {notifications.length > 0 && filteredNotifications.length === 0 && (
-          <p className="notice">선택한 필터에 해당하는 알림이 없습니다.</p>
-        )}
+        {filteredNotifications.length === 0 && <p className="notice">{emptyStateMessage}</p>}
       </div>
     </section>
   );

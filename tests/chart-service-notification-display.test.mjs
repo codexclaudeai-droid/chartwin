@@ -9,7 +9,9 @@ test('notification display helpers translate categories and action labels', asyn
     formatNotificationReadState,
     formatNotificationSummaryMessage,
     getNotificationCategoryLabel,
+    getNotificationBulkActionHint,
     getNotificationCenterHref,
+    getNotificationEmptyStateMessage,
     getNotificationFilterKeyFromSearch,
     getNotificationLinkLabel,
     getNotificationSummaryFromList,
@@ -28,6 +30,14 @@ test('notification display helpers translate categories and action labels', asyn
   assert.equal(getNotificationLinkLabel({ category: 'payment', linkUrl: '/profile#payment-pay_1' }), '결제 진행 상황 보기');
   assert.equal(getNotificationLinkLabel({ category: 'subscription', linkUrl: '/profile#payment-pay_1' }), '구독 승인 상태 보기');
   assert.equal(getNotificationLinkLabel({ category: 'notice', linkUrl: null }), '관련 화면으로 이동');
+  assert.equal(getNotificationEmptyStateMessage('all', false), '아직 알림이 없습니다. 결제 요청, 구독 승인, 고객센터 답변이 생기면 여기에 표시됩니다.');
+  assert.equal(getNotificationEmptyStateMessage('unread', true), '미확인 알림이 없습니다. 전체 탭에서 읽은 알림을 다시 확인할 수 있습니다.');
+  assert.equal(getNotificationEmptyStateMessage('payment', true), '결제 알림이 없습니다. 입금확인 요청이나 관리자 처리 결과가 생기면 표시됩니다.');
+  assert.equal(getNotificationEmptyStateMessage('support', true), '문의 알림이 없습니다. 고객센터 답변이나 새 문의 알림이 생기면 표시됩니다.');
+  assert.equal(getNotificationEmptyStateMessage('subscription', true), '구독 알림이 없습니다. 승인, 만료 예정, 취소/환불 처리 결과가 생기면 표시됩니다.');
+  assert.equal(getNotificationBulkActionHint({ totalCount: 3, unreadCount: 0 }, 'all', 0), '미확인 알림이 없어 읽음 처리 버튼이 비활성화되었습니다.');
+  assert.equal(getNotificationBulkActionHint({ totalCount: 3, unreadCount: 2 }, 'payment', 0), '현재 필터에 미확인 알림이 없어 필터 읽음 버튼이 비활성화되었습니다.');
+  assert.equal(getNotificationBulkActionHint({ totalCount: 3, unreadCount: 2 }, 'unread', 2), null);
   assert.equal(formatNotificationReadState(null), '미확인');
   assert.equal(formatNotificationReadState('2026-05-24T14:00:00.000Z'), '읽음');
   assert.equal(formatNotificationSummaryMessage({ totalCount: 3, unreadCount: 2 }), '전체 알림 3건 중 미확인 알림 2건이 있습니다.');
@@ -92,6 +102,8 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(pageSource, /알림센터/);
   assert.match(pageSource, /운영 처리 결과와 고객센터 답변을 한곳에서 확인합니다/);
   assert.match(panelSource, /getNotificationCategoryLabel/);
+  assert.match(panelSource, /getNotificationEmptyStateMessage/);
+  assert.match(panelSource, /getNotificationBulkActionHint/);
   assert.match(panelSource, /getNotificationLinkLabel/);
   assert.match(panelSource, /notification-action-link/);
   assert.match(panelSource, /formatNotificationReadState/);
@@ -117,6 +129,8 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /\/api\/notifications\/\$\{notificationId\}\/archive/);
   assert.match(panelSource, /dispatchNotificationsRefreshEvent/);
   assert.match(panelSource, /현재 필터 읽음/);
+  assert.match(panelSource, /bulkActionHint/);
+  assert.match(panelSource, /emptyStateMessage/);
   assert.match(panelSource, /Promise\.all/);
   assert.match(panelSource, /applyLocalReadState/);
   assert.match(panelSource, /applyLocalArchiveState/);
@@ -126,7 +140,8 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /notification\.id/);
   assert.match(panelSource, /aria-pressed/);
   assert.match(panelSource, /알림 필터/);
-  assert.match(panelSource, /선택한 필터에 해당하는 알림이 없습니다/);
+  assert.match(panelSource, /emptyStateMessage/);
+  assert.doesNotMatch(panelSource, /선택한 필터에 해당하는 알림이 없습니다/);
   assert.match(panelSource, /새로고침/);
   assert.match(panelSource, /모두 읽음/);
   assert.doesNotMatch(panelSource, /<span className="badge">\{notification\.category\}<\/span>/);
