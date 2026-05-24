@@ -31,6 +31,10 @@ export function getNotificationFilterKeyFromSearch(search: string): Notification
   return matchedTab?.key ?? 'all';
 }
 
+export function getNotificationCenterHref(unreadCount: number): string {
+  return unreadCount > 0 ? '/notifications?tab=unread' : '/notifications';
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   support_request: '신규 문의',
   support_reply: '고객센터 답변',

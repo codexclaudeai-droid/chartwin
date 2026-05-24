@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { subscribeAuthSessionChangedEvent } from '../auth-events';
+import { getNotificationCenterHref } from '../notifications/notification-display';
 import {
   formatChartAccessLabel,
   formatPaymentAmountUsd,
@@ -170,6 +171,7 @@ export function ProfilePanel() {
 
   const subscriptionStatus = dashboard.subscription?.status ?? dashboard.access.subscriptionStatus;
   const latestPayment = dashboard.payments[0] ?? null;
+  const notificationCenterHref = getNotificationCenterHref(dashboard.notifications.unreadCount);
 
   return (
     <section className="profile-layout">
@@ -247,7 +249,7 @@ export function ProfilePanel() {
         </div>
         <div className="actions">
           <Link className="button" href="/pricing">구독 관리</Link>
-          <Link className="button secondary" href="/notifications">알림 보기</Link>
+          <Link className="button secondary" href={notificationCenterHref}>알림 보기</Link>
           <Link className="button secondary" href="/support">고객센터</Link>
         </div>
       </div>

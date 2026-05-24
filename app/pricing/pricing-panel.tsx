@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { dispatchNotificationsRefreshEvent } from '../notification-events';
 
 type Plan = {
   id: string;
@@ -39,9 +40,12 @@ export function PricingPanel({ plans }: { plans: Plan[] }) {
     });
     const payload = await response.json() as PaymentResult;
     setIsSubmitting(false);
-    setMessage(response.ok && payload.payment
-      ? `입금확인 요청 ${payload.payment.id}이 접수되었습니다. 관리자 수동 입금 확인 전까지 상태: ${payload.payment.status}`
-      : payload.message || '결제 요청에 실패했습니다. 먼저 로그인해 주세요.');
+    if (response.ok && payload.payment) {
+      dispatchNotificationsRefreshEvent();
+      setMessage(`입금확인 요청 ${payload.payment.id}이 접수되었습니다. 관리자 수동 입금 확인 전까지 상태: ${payload.payment.status}`);
+      return;
+    }
+    setMessage(payload.message || '결제 요청에 실패했습니다. 먼저 로그인해 주세요.');
   }
 
   return (

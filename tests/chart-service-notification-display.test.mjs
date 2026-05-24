@@ -9,6 +9,7 @@ test('notification display helpers translate categories and action labels', asyn
     formatNotificationReadState,
     formatNotificationSummaryMessage,
     getNotificationCategoryLabel,
+    getNotificationCenterHref,
     getNotificationFilterKeyFromSearch,
     getNotificationLinkLabel,
     getUnreadNotificationsByTab,
@@ -58,11 +59,16 @@ test('notification display helpers translate categories and action labels', asyn
   assert.equal(getNotificationFilterKeyFromSearch('?tab=support&from=nav'), 'support');
   assert.equal(getNotificationFilterKeyFromSearch('?tab=unknown'), 'all');
   assert.equal(getNotificationFilterKeyFromSearch(''), 'all');
+  assert.equal(getNotificationCenterHref(0), '/notifications');
+  assert.equal(getNotificationCenterHref(1), '/notifications?tab=unread');
+  assert.equal(getNotificationCenterHref(99), '/notifications?tab=unread');
 });
 
 test('notifications page and panel use readable Korean copy instead of raw notification values', () => {
   const pageSource = fs.readFileSync(new URL('../app/notifications/page.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/notifications/notifications-panel.tsx', import.meta.url), 'utf8');
+  const navSource = fs.readFileSync(new URL('../app/notification-nav-link.tsx', import.meta.url), 'utf8');
+  const profileSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
 
   assert.match(pageSource, /알림센터/);
   assert.match(pageSource, /운영 처리 결과와 고객센터 답변을 한곳에서 확인합니다/);
@@ -100,4 +106,7 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /새로고침/);
   assert.match(panelSource, /모두 읽음/);
   assert.doesNotMatch(panelSource, /<span className="badge">\{notification\.category\}<\/span>/);
+  assert.match(navSource, /getNotificationCenterHref/);
+  assert.match(navSource, /href=\{notificationHref\}/);
+  assert.match(profileSource, /getNotificationCenterHref\(dashboard\.notifications\.unreadCount\)/);
 });

@@ -244,6 +244,7 @@ test('pricing copy makes deposit confirmation explicitly manual', () => {
 
   assert.match(pageSource, /관리자가 실제 입금 내역을 수동 확인/);
   assert.match(panelSource, /관리자 수동 입금 확인/);
+  assert.match(panelSource, /dispatchNotificationsRefreshEvent/);
   assert.doesNotMatch(pageSource, /자동 입금 확인/);
   assert.doesNotMatch(panelSource, /자동 입금 확인/);
 });
