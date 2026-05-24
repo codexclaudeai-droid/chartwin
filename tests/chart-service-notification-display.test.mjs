@@ -4,6 +4,8 @@ import test from 'node:test';
 
 test('notification display helpers translate categories and action labels', async () => {
   const {
+    NOTIFICATION_FILTER_TABS,
+    filterNotificationsByTab,
     formatNotificationReadState,
     formatNotificationSummaryMessage,
     getNotificationCategoryLabel,
@@ -22,6 +24,30 @@ test('notification display helpers translate categories and action labels', asyn
   assert.equal(formatNotificationReadState(null), '미확인');
   assert.equal(formatNotificationReadState('2026-05-24T14:00:00.000Z'), '읽음');
   assert.equal(formatNotificationSummaryMessage({ totalCount: 3, unreadCount: 2 }), '전체 알림 3건 중 미확인 알림 2건이 있습니다.');
+  assert.deepEqual(
+    NOTIFICATION_FILTER_TABS.map((tab) => [tab.key, tab.label]),
+    [
+      ['all', '전체'],
+      ['unread', '미확인'],
+      ['support', '문의'],
+      ['payment', '결제'],
+      ['subscription', '구독'],
+    ],
+  );
+  const notifications = [
+    { id: 'n1', category: 'support_request', readAt: null },
+    { id: 'n2', category: 'support_reply', readAt: '2026-05-24T14:00:00.000Z' },
+    { id: 'n3', category: 'payment', readAt: null },
+    { id: 'n4', category: 'subscription', readAt: '2026-05-24T14:01:00.000Z' },
+    { id: 'n5', category: 'expiry', readAt: null },
+    { id: 'n6', category: 'signal', readAt: null },
+  ];
+  assert.deepEqual(filterNotificationsByTab(notifications, 'all').map((item) => item.id), ['n1', 'n2', 'n3', 'n4', 'n5', 'n6']);
+  assert.deepEqual(filterNotificationsByTab(notifications, 'unread').map((item) => item.id), ['n1', 'n3', 'n5', 'n6']);
+  assert.deepEqual(filterNotificationsByTab(notifications, 'support').map((item) => item.id), ['n1', 'n2']);
+  assert.deepEqual(filterNotificationsByTab(notifications, 'payment').map((item) => item.id), ['n3']);
+  assert.deepEqual(filterNotificationsByTab(notifications, 'subscription').map((item) => item.id), ['n4', 'n5']);
+  assert.deepEqual(filterNotificationsByTab(notifications, 'missing').map((item) => item.id), ['n1', 'n2', 'n3', 'n4', 'n5', 'n6']);
 });
 
 test('notifications page and panel use readable Korean copy instead of raw notification values', () => {
@@ -34,6 +60,12 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /getNotificationLinkLabel/);
   assert.match(panelSource, /formatNotificationReadState/);
   assert.match(panelSource, /formatNotificationSummaryMessage/);
+  assert.match(panelSource, /NOTIFICATION_FILTER_TABS/);
+  assert.match(panelSource, /filterNotificationsByTab/);
+  assert.match(panelSource, /activeFilterKey/);
+  assert.match(panelSource, /aria-pressed/);
+  assert.match(panelSource, /알림 필터/);
+  assert.match(panelSource, /선택한 필터에 해당하는 알림이 없습니다/);
   assert.match(panelSource, /새로고침/);
   assert.match(panelSource, /모두 읽음/);
   assert.doesNotMatch(panelSource, /<span className="badge">\{notification\.category\}<\/span>/);

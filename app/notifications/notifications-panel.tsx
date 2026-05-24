@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { dispatchNotificationsRefreshEvent } from '../notification-events';
 import {
+  NOTIFICATION_FILTER_TABS,
+  type NotificationFilterKey,
+  filterNotificationsByTab,
   formatNotificationReadState,
   formatNotificationSummaryMessage,
   getNotificationCategoryLabel,
@@ -27,8 +30,10 @@ type NotificationSummary = {
 export function NotificationsPanel() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [summary, setSummary] = useState<NotificationSummary>({ totalCount: 0, unreadCount: 0 });
+  const [activeFilterKey, setActiveFilterKey] = useState<NotificationFilterKey>('all');
   const [message, setMessage] = useState('로그인하면 결제 승인, 구독 상태, 고객센터 답변 알림을 확인할 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
+  const filteredNotifications = filterNotificationsByTab(notifications, activeFilterKey);
 
   useEffect(() => {
     void refresh();
@@ -89,8 +94,25 @@ export function NotificationsPanel() {
         </div>
       </div>
       <p className="notice">{message}</p>
+      <div className="quick-filter-row" aria-label="알림 필터">
+        {NOTIFICATION_FILTER_TABS.map((tab) => {
+          const isActive = activeFilterKey === tab.key;
+          return (
+            <button
+              aria-pressed={isActive}
+              className={`button secondary${isActive ? ' active' : ''}`}
+              key={tab.key}
+              onClick={() => setActiveFilterKey(tab.key)}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="notice compact">현재 필터: {NOTIFICATION_FILTER_TABS.find((tab) => tab.key === activeFilterKey)?.label ?? '전체'} / 표시 {filteredNotifications.length}건</p>
       <div className="thread-list">
-        {notifications.map((notification) => (
+        {filteredNotifications.map((notification) => (
           <article className="thread-card" key={notification.id}>
             <div className="thread-meta">
               <span className="badge">{getNotificationCategoryLabel(notification.category)}</span>
@@ -112,6 +134,9 @@ export function NotificationsPanel() {
           </article>
         ))}
         {notifications.length === 0 && <p className="notice">표시할 알림이 없습니다.</p>}
+        {notifications.length > 0 && filteredNotifications.length === 0 && (
+          <p className="notice">선택한 필터에 해당하는 알림이 없습니다.</p>
+        )}
       </div>
     </section>
   );

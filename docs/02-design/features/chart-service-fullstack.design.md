@@ -1292,10 +1292,13 @@ Implemented scope:
 - Link CTA labels are selected by notification category, including `문의 바로 답변하기` for admin support handoffs.
 - Read state labels now use `미확인` and `읽음`.
 - Summary text is centralized as `전체 알림 N건 중 미확인 알림 M건이 있습니다.`
+- The notification center now includes `전체`, `미확인`, `문의`, `결제`, and `구독` filter tabs.
+- Filter tabs are client-side so they do not require a new API contract or database query.
+- The selected filter uses `aria-pressed` and displays a compact count summary for accessibility and operator clarity.
+- Filtered empty states distinguish between no notifications at all and no notifications matching the selected tab.
 
 Deferred scope:
 
-- Notification filtering tabs by category and unread state.
 - Bulk archive/delete controls.
 - Per-notification icons and visual severity treatment.
 - Server-side localization for notification titles and bodies.

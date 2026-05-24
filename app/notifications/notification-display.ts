@@ -8,6 +8,21 @@ type NotificationSummary = {
   unreadCount: number;
 };
 
+type FilterableNotification = {
+  category: string;
+  readAt: string | null;
+};
+
+export type NotificationFilterKey = 'all' | 'unread' | 'support' | 'payment' | 'subscription';
+
+export const NOTIFICATION_FILTER_TABS: Array<{ key: NotificationFilterKey; label: string }> = [
+  { key: 'all', label: '전체' },
+  { key: 'unread', label: '미확인' },
+  { key: 'support', label: '문의' },
+  { key: 'payment', label: '결제' },
+  { key: 'subscription', label: '구독' },
+];
+
 const CATEGORY_LABELS: Record<string, string> = {
   support_request: '신규 문의',
   support_reply: '고객센터 답변',
@@ -21,6 +36,30 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export function getNotificationCategoryLabel(category: string): string {
   return CATEGORY_LABELS[category] ?? category;
+}
+
+export function filterNotificationsByTab<T extends FilterableNotification>(
+  notifications: T[],
+  filterKey: string,
+): T[] {
+  if (filterKey === 'unread') return notifications.filter((notification) => !notification.readAt);
+  if (filterKey === 'support') {
+    return notifications.filter((notification) => (
+      notification.category === 'support_request' ||
+      notification.category === 'support_reply' ||
+      notification.category === 'qna'
+    ));
+  }
+  if (filterKey === 'payment') {
+    return notifications.filter((notification) => notification.category === 'payment');
+  }
+  if (filterKey === 'subscription') {
+    return notifications.filter((notification) => (
+      notification.category === 'subscription' ||
+      notification.category === 'expiry'
+    ));
+  }
+  return notifications;
 }
 
 export function getNotificationLinkLabel(notification: NotificationDisplayInput): string {
