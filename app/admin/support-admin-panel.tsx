@@ -49,6 +49,7 @@ export function SupportAdminPanel() {
   const [threads, setThreads] = useState<SupportThreadListItem[]>([]);
   const [activeFilterKey, setActiveFilterKey] = useState('all');
   const [dashboardFilterNotice, setDashboardFilterNotice] = useState<string | null>(null);
+  const [deepLinkedThreadId, setDeepLinkedThreadId] = useState<string | null>(null);
   const [highlightedThreadId, setHighlightedThreadId] = useState<string | null>(null);
   const [replyByThreadId, setReplyByThreadId] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('관리자 세션으로 고객 문의를 조회하고 답변할 수 있습니다.');
@@ -82,6 +83,7 @@ export function SupportAdminPanel() {
     handledDeepLinkRef.current = targetThreadId;
     setActiveFilterKey('all');
     setDashboardFilterNotice(null);
+    setDeepLinkedThreadId(targetThreadId);
     setHighlightedThreadId(targetThreadId);
 
     window.setTimeout(() => {
@@ -146,6 +148,9 @@ export function SupportAdminPanel() {
 
   const activeFilter = getSupportThreadFilterPreset(activeFilterKey);
   const filteredThreads = filterSupportThreads(threads, activeFilterKey);
+  const deepLinkedThread = deepLinkedThreadId
+    ? threads.find((item) => item.thread.id === deepLinkedThreadId) ?? null
+    : null;
 
   return (
     <section className="card wide" id="admin-support">
@@ -154,6 +159,31 @@ export function SupportAdminPanel() {
         <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>새로고침</button>
       </div>
       <p className="notice">{message}</p>
+      {deepLinkedThreadId && (
+        <div className="admin-deep-link-notice" role="status">
+          <span className="admin-deep-link-kicker">답변 대상 문의</span>
+          {deepLinkedThread ? (
+            <>
+              <strong>{deepLinkedThread.thread.title}</strong>
+              <p>
+                {deepLinkedThread.author?.email ?? 'system'} 문의입니다. 이 문의에 바로 답변할 수 있습니다.
+              </p>
+              <a
+                className="text-link compact"
+                href={`#${getAdminSupportReplyInputId(deepLinkedThread.thread.id)}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  replyInputRefs.current[deepLinkedThread.thread.id]?.focus();
+                }}
+              >
+                답변 입력창으로 이동
+              </a>
+            </>
+          ) : (
+            <p>{deepLinkedThreadId} 문의를 찾을 수 없거나 조회 권한이 없습니다.</p>
+          )}
+        </div>
+      )}
       <div className="quick-filter-row" aria-label="고객센터 빠른 필터">
         {SUPPORT_THREAD_FILTER_PRESETS.map((preset) => {
           const isActive = activeFilter.key === preset.key;

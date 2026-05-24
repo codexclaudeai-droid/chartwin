@@ -375,6 +375,36 @@ a {
   padding: 0 12px;
 }
 
+.admin-deep-link-notice {
+  background: color-mix(in srgb, var(--warn) 10%, #fff 90%);
+  border: 1px solid color-mix(in srgb, var(--warn) 30%, var(--line) 70%);
+  border-left: 4px solid var(--warn);
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(168, 76, 22, 0.11);
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  padding: 12px 14px;
+}
+
+.admin-deep-link-notice strong {
+  color: var(--ink);
+}
+
+.admin-deep-link-notice p {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.admin-deep-link-kicker {
+  color: var(--warn);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .toolbar {
   align-items: center;
   display: flex;
