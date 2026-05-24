@@ -11,3 +11,9 @@ test('login panel uses email and password instead of userId-only demo login', ()
   assert.doesNotMatch(source, /name="userId"/);
   assert.doesNotMatch(source, /JSON\.stringify\(\{ userId/);
 });
+
+test('login panel form does not leak credentials through a default GET fallback', () => {
+  const source = readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /<form className="form" method="post" onSubmit=\{login\}>/);
+});

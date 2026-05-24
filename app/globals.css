@@ -705,11 +705,61 @@ a {
   gap: 12px;
 }
 
-.payment-card {
+.payment-card-summary {
   align-items: center;
   display: flex;
   gap: 14px;
   justify-content: space-between;
+}
+
+.payment-card {
+  display: grid;
+  gap: 14px;
+}
+
+.payment-flow-steps {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.payment-flow-step {
+  background: rgba(109, 105, 94, 0.08);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+}
+
+.payment-flow-step span {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.payment-flow-step small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.payment-flow-step.done {
+  background: rgba(12, 102, 90, 0.1);
+  border-color: rgba(12, 102, 90, 0.28);
+}
+
+.payment-flow-step.current {
+  background: rgba(168, 76, 22, 0.12);
+  border-color: rgba(168, 76, 22, 0.34);
+}
+
+.payment-flow-step.blocked {
+  background: rgba(155, 28, 28, 0.1);
+  border-color: rgba(155, 28, 28, 0.3);
 }
 
 .profile-settings-form {
@@ -942,7 +992,8 @@ a {
   .admin-filter-row,
   .summary-grid,
   .admin-history-grid,
-  .dashboard-queue-grid {
+  .dashboard-queue-grid,
+  .payment-flow-steps {
     grid-template-columns: 1fr;
   }
 

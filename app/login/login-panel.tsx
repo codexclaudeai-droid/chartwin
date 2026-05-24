@@ -45,7 +45,7 @@ export function LoginPanel() {
 
   return (
     <section className="card">
-      <form className="form" onSubmit={login}>
+      <form className="form" method="post" onSubmit={login}>
         <label htmlFor="email">이메일</label>
         <input
           id="email"

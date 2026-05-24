@@ -12,6 +12,7 @@ import {
   type SubscriptionStatus,
 } from '../../src/domain/chart-service/index.ts';
 import { createProfileImagePolicyPayload } from './profile-image-policy';
+import { getProfilePaymentFlowSteps } from './profile-payment-flow';
 
 type Dashboard = {
   user: {
@@ -240,14 +241,27 @@ export function ProfilePanel() {
           <div className="payment-list">
             {dashboard.payments.slice(0, 3).map((payment) => (
               <article className="payment-card" key={payment.id}>
-                <div>
-                  <strong>{payment.id}</strong>
-                  <p>{formatPaymentAmountUsd(payment.amountUsd)} / {payment.method}</p>
+                <div className="payment-card-summary">
+                  <div>
+                    <strong>{payment.id}</strong>
+                    <p>{formatPaymentAmountUsd(payment.amountUsd)} / {payment.method}</p>
+                  </div>
+                  <div>
+                    <span className="badge">{formatPaymentStatusLabel(payment.status)}</span>
+                    <p>{formatDateTime(payment.updatedAt)}</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="badge">{formatPaymentStatusLabel(payment.status)}</span>
-                  <p>{formatDateTime(payment.updatedAt)}</p>
-                </div>
+                <ol className="payment-flow-steps" aria-label={`${payment.id} 결제 진행 단계`}>
+                  {getProfilePaymentFlowSteps({
+                    paymentStatus: payment.status,
+                    subscriptionStatus,
+                  }).map((step) => (
+                    <li className={`payment-flow-step ${step.state}`} key={step.key}>
+                      <span>{step.label}</span>
+                      <small>{step.description}</small>
+                    </li>
+                  ))}
+                </ol>
               </article>
             ))}
           </div>
