@@ -16,6 +16,7 @@ import {
   getSubscriptionQueueFilterPreset,
   SUBSCRIPTION_QUEUE_FILTER_PRESETS,
 } from './subscription-queue-filters';
+import { getAdminSubscriptionDomId } from './subscription-links';
 
 type AdminSubscriptionQueueItem = {
   subscription: {
@@ -192,7 +193,7 @@ export function SubscriptionAdminPanel() {
         </thead>
         <tbody>
           {filteredItems.map((item) => (
-            <tr key={item.subscription.id}>
+            <tr className="admin-subscription-row" id={getAdminSubscriptionDomId(item.subscription.id)} key={item.subscription.id}>
               <td>{item.subscription.id}</td>
               <td>{item.user.email}<br /><small>{item.user.name}</small></td>
               <td>{item.plan?.name ?? '-'}</td>

@@ -156,6 +156,9 @@ test('admin user panel renders detailed payment support and notification history
   assert.match(source, /최근 결제 내역/);
   assert.match(source, /detail\.payments\.map/);
   assert.match(source, /formatPaymentStatusLabel\(payment\.status\)/);
+  assert.match(source, /isAdminSubscriptionQueueStatus\(detail\.subscription\.status\)/);
+  assert.match(source, /createAdminSubscriptionUrl\(detail\.subscription\.id\)/);
+  assert.match(source, /구독 큐에서 보기/);
   assert.match(source, /createAdminPaymentUrl\(payment\.id\)/);
   assert.match(source, /결제 큐에서 보기/);
   assert.match(source, /최근 문의 내역/);

@@ -760,7 +760,8 @@ a {
   box-shadow: 0 0 0 4px rgba(168, 76, 22, 0.12);
 }
 
-.admin-payment-row:target {
+.admin-payment-row:target,
+.admin-subscription-row:target {
   outline: 3px solid rgba(168, 76, 22, 0.34);
   outline-offset: -3px;
 }

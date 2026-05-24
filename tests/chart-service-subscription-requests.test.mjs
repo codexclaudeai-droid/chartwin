@@ -210,6 +210,25 @@ test('admin subscription panel renders request quick filters before the table', 
   assert.match(source, /filteredItems\.map/);
 });
 
+test('admin subscription panel exposes direct anchors for subscription queue items', async () => {
+  const source = fs.readFileSync(new URL('../app/admin/subscription-admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const {
+    createAdminSubscriptionUrl,
+    getAdminSubscriptionDomId,
+    isAdminSubscriptionQueueStatus,
+  } = await import('../app/admin/subscription-links.ts');
+
+  assert.equal(getAdminSubscriptionDomId('sub_pending'), 'admin-subscription-sub_pending');
+  assert.equal(createAdminSubscriptionUrl('sub_pending'), '/admin#admin-subscription-sub_pending');
+  assert.equal(createAdminSubscriptionUrl('sub 1'), '/admin#admin-subscription-sub%201');
+  assert.equal(isAdminSubscriptionQueueStatus('payment_requested'), true);
+  assert.equal(isAdminSubscriptionQueueStatus('active'), false);
+  assert.match(source, /getAdminSubscriptionDomId\(item\.subscription\.id\)/);
+  assert.match(source, /id=\{getAdminSubscriptionDomId\(item\.subscription\.id\)\}/);
+  assert.match(cssSource, /\.admin-subscription-row:target/);
+});
+
 test('admin subscription panel applies dashboard queue preset events', () => {
   const source = fs.readFileSync(new URL('../app/admin/subscription-admin-panel.tsx', import.meta.url), 'utf8');
 

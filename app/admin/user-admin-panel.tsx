@@ -29,6 +29,10 @@ import {
 } from './admin-user-permissions';
 import { formatAuditLogSummary } from './audit-log-summary';
 import { createAdminPaymentUrl } from './payment-links';
+import {
+  createAdminSubscriptionUrl,
+  isAdminSubscriptionQueueStatus,
+} from './subscription-links';
 import { createAdminSupportThreadUrl } from './support-thread-links';
 import {
   getNotificationCategoryLabel,
@@ -53,6 +57,7 @@ type AdminUserDirectoryItem = {
     accountStatus: UserAccountStatus;
   };
   subscription: {
+    id: string;
     status: SubscriptionStatus;
     endsAt: string | null;
   } | null;
@@ -523,6 +528,11 @@ export function UserAdminPanel() {
                 <span>구독 상태</span>
                 <strong>{detail.subscription ? formatSubscriptionStatusLabel(detail.subscription.status) : '구독 없음'}</strong>
                 <p>{formatChartAccessLabel(detail.access)}</p>
+                {detail.subscription && isAdminSubscriptionQueueStatus(detail.subscription.status) && (
+                  <a className="text-link compact" href={createAdminSubscriptionUrl(detail.subscription.id)}>
+                    구독 큐에서 보기
+                  </a>
+                )}
               </article>
               <article className="mini-card">
                 <span>결제</span>
