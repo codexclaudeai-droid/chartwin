@@ -19,6 +19,7 @@ import type {
   EmailOutboxFilter,
   PasswordResetTokenRecord,
   ReferralProgramSettingsRecord,
+  SalesTeamRecord,
   ServiceUserRecord,
 } from './repository.ts';
 import { getDefaultChartServiceSubscriptionPlans } from './bootstrap.ts';
@@ -35,6 +36,7 @@ export type MockChartServiceState = {
   subscriptions: SubscriptionRecord[];
   payments: PaymentRequestRecord[];
   referralProgramSettings: ReferralProgramSettingsRecord | null;
+  salesTeams: SalesTeamRecord[];
   referralLedgers: ReferralLedgerRecord[];
   supportThreads: SupportThreadRecord[];
   supportMessages: SupportMessageRecord[];
@@ -106,6 +108,7 @@ export function createMockChartServiceState(): MockChartServiceState {
       }),
     ],
     referralProgramSettings: null,
+    salesTeams: [],
     referralLedgers: [
       {
         id: 'ref_ledger_pending',
@@ -180,6 +183,7 @@ export function createMockChartServiceRepository(
   state.passwordResetTokens ??= [];
   state.emailOutbox ??= [];
   state.referralProgramSettings ??= null;
+  state.salesTeams ??= [];
 
   return {
     nextId(prefix: string): string {
@@ -239,6 +243,12 @@ export function createMockChartServiceRepository(
     },
     saveReferralProgramSettings(settings) {
       state.referralProgramSettings = { ...settings };
+    },
+    listSalesTeams() {
+      return state.salesTeams.map((team) => structuredClone(team));
+    },
+    saveSalesTeam(team) {
+      upsertById(state.salesTeams, team);
     },
     listReferralLedgersByPaymentId(paymentRequestId) {
       return state.referralLedgers

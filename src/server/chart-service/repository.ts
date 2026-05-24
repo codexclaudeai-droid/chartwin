@@ -64,6 +64,16 @@ export type ReferralProgramSettingsRecord = {
   updatedAt: string;
 };
 
+export type SalesTeamRecord = {
+  id: string;
+  name: string;
+  commissionPercent: number;
+  salespersonIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  updatedByAdminId: string | null;
+};
+
 export type EmailOutboxFilter = {
   status?: EmailOutboxStatus;
 };
@@ -94,6 +104,8 @@ export type ChartServiceRepository = {
   savePayment(payment: PaymentRequestRecord): void;
   getReferralProgramSettings(): ReferralProgramSettingsRecord | null;
   saveReferralProgramSettings(settings: ReferralProgramSettingsRecord): void;
+  listSalesTeams(): SalesTeamRecord[];
+  saveSalesTeam(team: SalesTeamRecord): void;
   listReferralLedgersByPaymentId(paymentRequestId: string): ReferralLedgerRecord[];
   saveReferralLedger(ledger: ReferralLedgerRecord): void;
   getSupportThreadById(id: string): SupportThreadRecord | null;

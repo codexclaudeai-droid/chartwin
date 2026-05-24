@@ -33,6 +33,8 @@ import {
   mapReferralProgramSettingsToPostgresRow,
   mapReferralLedgerFromPostgresRow,
   mapReferralLedgerToPostgresRow,
+  mapSalesTeamFromPostgresRow,
+  mapSalesTeamToPostgresRow,
   mapSubscriptionFromPostgresRow,
   mapSubscriptionToPostgresRow,
   mapSupportMessageFromPostgresRow,
@@ -50,6 +52,7 @@ import type {
   EmailOutboxRecord,
   PasswordResetTokenRecord,
   ReferralProgramSettingsRecord,
+  SalesTeamRecord,
   ServiceUserRecord,
 } from './repository.ts';
 
@@ -204,6 +207,15 @@ export function createPostgresAsyncChartServiceRepository(
         mapReferralProgramSettingsToPostgresRow(settings),
         ['id'],
       ));
+    },
+    async listSalesTeams(): Promise<SalesTeamRecord[]> {
+      return selectMany('sales_teams', mapSalesTeamFromPostgresRow, {}, {
+        orderBy: ['created_at'],
+        direction: 'asc',
+      });
+    },
+    async saveSalesTeam(team: SalesTeamRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement('sales_teams', mapSalesTeamToPostgresRow(team), ['id']));
     },
     async listReferralLedgersByPaymentId(paymentRequestId: string): Promise<ReferralLedgerRecord[]> {
       return selectMany('referral_ledgers', mapReferralLedgerFromPostgresRow, {

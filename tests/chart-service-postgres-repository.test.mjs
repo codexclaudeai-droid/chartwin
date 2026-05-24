@@ -80,3 +80,45 @@ test('postgres async repository appends audit logs with insert-only SQL', async 
   assert.doesNotMatch(calls[0].sql, /on conflict/i);
   assert.deepEqual(calls[0].values.slice(0, 4), ['admin_1', 'payment.confirm', 'payment', 'pay_1']);
 });
+
+test('postgres async repository persists sales team records with upsert SQL', async () => {
+  const { createPostgresAsyncChartServiceRepository } = await import('../src/server/chart-service/index.ts');
+  const calls = [];
+  const executor = {
+    async query(statement) {
+      calls.push(statement);
+      if (statement.sql === 'select * from sales_teams order by created_at asc') {
+        return {
+          rows: [{
+            id: 'sales_team_1',
+            name: 'Alpha Team',
+            commission_percent: '30',
+            salesperson_ids: ['user_sales_1'],
+            created_at: '2026-05-25T00:00:00.000Z',
+            updated_at: '2026-05-25T00:00:00.000Z',
+            updated_by_admin_id: 'admin_1',
+          }],
+        };
+      }
+      return { rows: [] };
+    },
+  };
+  const repository = createPostgresAsyncChartServiceRepository(executor);
+
+  const teams = await repository.listSalesTeams();
+  await repository.saveSalesTeam({
+    id: 'sales_team_1',
+    name: 'Alpha Team',
+    commissionPercent: 30,
+    salespersonIds: ['user_sales_1'],
+    createdAt: '2026-05-25T00:00:00.000Z',
+    updatedAt: '2026-05-25T00:00:00.000Z',
+    updatedByAdminId: 'admin_1',
+  });
+
+  assert.equal(teams[0].name, 'Alpha Team');
+  assert.equal(calls[0].sql, 'select * from sales_teams order by created_at asc');
+  assert.match(calls[1].sql, /^insert into sales_teams /);
+  assert.match(calls[1].sql, /on conflict \(id\) do update/);
+  assert.deepEqual(calls[1].values.slice(0, 4), ['sales_team_1', 'Alpha Team', 30, ['user_sales_1']]);
+});

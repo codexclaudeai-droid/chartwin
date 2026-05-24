@@ -17,6 +17,8 @@ import {
   mapReferralProgramSettingsToPostgresRow,
   mapReferralLedgerFromPostgresRow,
   mapReferralLedgerToPostgresRow,
+  mapSalesTeamFromPostgresRow,
+  mapSalesTeamToPostgresRow,
   mapSubscriptionFromPostgresRow,
   mapSubscriptionToPostgresRow,
   mapSupportMessageFromPostgresRow,
@@ -250,6 +252,37 @@ test('postgres plan referral support and notification mappers preserve repositor
   assert.equal(notification.archivedAt, '2026-05-23T00:10:00.000Z');
   assert.equal(mapNotificationToPostgresRow(notification).read_at, null);
   assert.equal(mapNotificationToPostgresRow(notification).archived_at, '2026-05-23T00:10:00.000Z');
+});
+
+test('postgres sales team mapper preserves team commission and member assignments', () => {
+  const team = mapSalesTeamFromPostgresRow({
+    id: 'sales_team_1',
+    name: 'Alpha Team',
+    commission_percent: '35',
+    salesperson_ids: ['user_sales_1', 'user_sales_2'],
+    created_at: '2026-05-25T00:00:00.000Z',
+    updated_at: '2026-05-25T01:00:00.000Z',
+    updated_by_admin_id: 'super_1',
+  });
+
+  assert.deepEqual(team, {
+    id: 'sales_team_1',
+    name: 'Alpha Team',
+    commissionPercent: 35,
+    salespersonIds: ['user_sales_1', 'user_sales_2'],
+    createdAt: '2026-05-25T00:00:00.000Z',
+    updatedAt: '2026-05-25T01:00:00.000Z',
+    updatedByAdminId: 'super_1',
+  });
+  assert.deepEqual(mapSalesTeamToPostgresRow(team), {
+    id: 'sales_team_1',
+    name: 'Alpha Team',
+    commission_percent: 35,
+    salesperson_ids: ['user_sales_1', 'user_sales_2'],
+    created_at: '2026-05-25T00:00:00.000Z',
+    updated_at: '2026-05-25T01:00:00.000Z',
+    updated_by_admin_id: 'super_1',
+  });
 });
 
 test('postgres select and delete statement builders keep filters parameterized', () => {

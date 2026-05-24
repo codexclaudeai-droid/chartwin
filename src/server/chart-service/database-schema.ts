@@ -196,6 +196,25 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       },
     },
     {
+      name: 'sales_teams',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        name: { type: 'text' },
+        commission_percent: {
+          type: 'numeric(5,2)',
+          default: '30',
+          check: 'commission_percent >= 0 and commission_percent <= 100',
+        },
+        salesperson_ids: { type: 'jsonb', default: "'[]'::jsonb" },
+        created_at: { type: 'timestamptz', default: 'now()' },
+        updated_at: { type: 'timestamptz', default: 'now()' },
+        updated_by_admin_id: { type: 'text', nullable: true, references: 'users.id' },
+      },
+      indexes: [
+        { name: 'idx_sales_teams_updated_by_admin_id', columns: ['updated_by_admin_id'] },
+      ],
+    },
+    {
       name: 'notifications',
       columns: {
         id: { type: 'text', primaryKey: true },
@@ -294,6 +313,15 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     'alter table if exists referral_program_settings add column if not exists updated_by_admin_id text;',
     'alter table if exists referral_program_settings add column if not exists updated_at timestamptz;',
     "insert into referral_program_settings (id, reward_percent, updated_at) values ('default', 10, now()) on conflict (id) do nothing;",
+    "create table if not exists sales_teams (id text primary key, name text not null, commission_percent numeric(5,2) not null default 30, salesperson_ids jsonb not null default '[]'::jsonb, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), updated_by_admin_id text);",
+    'alter table if exists sales_teams add column if not exists name text;',
+    'alter table if exists sales_teams add column if not exists commission_percent numeric(5,2);',
+    "alter table if exists sales_teams add column if not exists salesperson_ids jsonb;",
+    'alter table if exists sales_teams add column if not exists created_at timestamptz;',
+    'alter table if exists sales_teams add column if not exists updated_at timestamptz;',
+    'alter table if exists sales_teams add column if not exists updated_by_admin_id text;',
+    "update sales_teams set salesperson_ids = '[]'::jsonb where salesperson_ids is null;",
+    'create index if not exists idx_sales_teams_updated_by_admin_id on sales_teams (updated_by_admin_id);',
   ];
 }
 

@@ -21,6 +21,7 @@ test('chart service database schema covers repository-backed core tables', () =>
     'payment_requests',
     'referral_ledgers',
     'referral_program_settings',
+    'sales_teams',
     'notifications',
     'email_outbox',
     'audit_logs',
@@ -38,6 +39,9 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.support_thread_id.references, 'support_threads.id');
   assert.equal(tables.find((table) => table.name === 'referral_program_settings')?.columns.reward_percent.type, 'numeric(5,2)');
   assert.equal(tables.find((table) => table.name === 'referral_program_settings')?.columns.updated_by_admin_id.references, 'users.id');
+  assert.equal(tables.find((table) => table.name === 'sales_teams')?.columns.commission_percent.type, 'numeric(5,2)');
+  assert.equal(tables.find((table) => table.name === 'sales_teams')?.columns.salesperson_ids.type, 'jsonb');
+  assert.equal(tables.find((table) => table.name === 'sales_teams')?.columns.updated_by_admin_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'notifications')?.columns.archived_at.nullable, true);
   assert.equal(tables.find((table) => table.name === 'email_outbox')?.columns.recipient_email.type, 'text');
   assert.equal(tables.find((table) => table.name === 'audit_logs')?.columns.actor_admin_id.references, 'users.id');
@@ -62,6 +66,10 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /create table if not exists referral_program_settings/i);
   assert.match(sql, /reward_percent numeric\(5,2\) not null default 10/i);
   assert.match(sql, /alter table if exists referral_program_settings add column if not exists reward_percent numeric\(5,2\)/i);
+  assert.match(sql, /create table if not exists sales_teams/i);
+  assert.match(sql, /commission_percent numeric\(5,2\) not null default 30/i);
+  assert.match(sql, /salesperson_ids jsonb not null default '\[\]'::jsonb/i);
+  assert.match(sql, /alter table if exists sales_teams add column if not exists salesperson_ids jsonb/i);
   assert.match(sql, /create index if not exists idx_notifications_user_id_read_at/i);
   assert.match(sql, /archived_at timestamptz/i);
   assert.match(sql, /create index if not exists idx_notifications_user_id_archived_at/i);

@@ -5,13 +5,22 @@ create table if not exists users (
   password_hash text not null,
   role text not null,
   account_status text not null default 'active',
+  phone_number text,
+  referral_code text not null,
+  referred_by_user_id text,
+  created_at timestamptz not null default now(),
   constraint chk_users_role check (role in ('guest', 'member', 'trial', 'subscriber', 'salesperson', 'admin', 'super_admin')),
-  constraint chk_users_account_status check (account_status in ('active', 'suspended'))
+  constraint chk_users_account_status check (account_status in ('active', 'suspended')),
+  foreign key (referred_by_user_id) references users(id)
 );
 
 create index if not exists idx_users_email on users (email);
 
 create index if not exists idx_users_role on users (role);
+
+create index if not exists idx_users_referral_code on users (referral_code);
+
+create index if not exists idx_users_referred_by_user_id on users (referred_by_user_id);
 
 create table if not exists auth_sessions (
   id text primary key,
@@ -152,6 +161,29 @@ create table if not exists referral_ledgers (
 
 create index if not exists idx_referral_ledgers_payment_request_id on referral_ledgers (payment_request_id);
 
+create table if not exists referral_program_settings (
+  id text primary key,
+  reward_percent numeric(5,2) not null default 10,
+  updated_by_admin_id text,
+  updated_at timestamptz not null default now(),
+  constraint chk_referral_program_settings_reward_percent check (reward_percent >= 0 and reward_percent <= 100),
+  foreign key (updated_by_admin_id) references users(id)
+);
+
+create table if not exists sales_teams (
+  id text primary key,
+  name text not null,
+  commission_percent numeric(5,2) not null default 30,
+  salesperson_ids jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by_admin_id text,
+  constraint chk_sales_teams_commission_percent check (commission_percent >= 0 and commission_percent <= 100),
+  foreign key (updated_by_admin_id) references users(id)
+);
+
+create index if not exists idx_sales_teams_updated_by_admin_id on sales_teams (updated_by_admin_id);
+
 create table if not exists notifications (
   id text primary key,
   user_id text not null,
@@ -205,3 +237,47 @@ alter table if exists notifications add column if not exists archived_at timesta
 alter table if exists payment_requests add column if not exists support_thread_id text;
 
 create index if not exists idx_payment_requests_support_thread_id on payment_requests (support_thread_id);
+
+alter table if exists users add column if not exists phone_number text;
+
+alter table if exists users add column if not exists referral_code text;
+
+alter table if exists users add column if not exists referred_by_user_id text;
+
+alter table if exists users add column if not exists created_at timestamptz;
+
+update users set referral_code = upper(substr(md5(id), 1, 6)) where referral_code is null or referral_code = '' or referral_code !~ '^[A-Z0-9]{6}$';
+
+update users set created_at = now() where created_at is null;
+
+create index if not exists idx_users_referral_code on users (referral_code);
+
+create index if not exists idx_users_referred_by_user_id on users (referred_by_user_id);
+
+create table if not exists referral_program_settings (id text primary key, reward_percent numeric(5,2) not null default 10, updated_by_admin_id text, updated_at timestamptz not null default now());
+
+alter table if exists referral_program_settings add column if not exists reward_percent numeric(5,2);
+
+alter table if exists referral_program_settings add column if not exists updated_by_admin_id text;
+
+alter table if exists referral_program_settings add column if not exists updated_at timestamptz;
+
+insert into referral_program_settings (id, reward_percent, updated_at) values ('default', 10, now()) on conflict (id) do nothing;
+
+create table if not exists sales_teams (id text primary key, name text not null, commission_percent numeric(5,2) not null default 30, salesperson_ids jsonb not null default '[]'::jsonb, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), updated_by_admin_id text);
+
+alter table if exists sales_teams add column if not exists name text;
+
+alter table if exists sales_teams add column if not exists commission_percent numeric(5,2);
+
+alter table if exists sales_teams add column if not exists salesperson_ids jsonb;
+
+alter table if exists sales_teams add column if not exists created_at timestamptz;
+
+alter table if exists sales_teams add column if not exists updated_at timestamptz;
+
+alter table if exists sales_teams add column if not exists updated_by_admin_id text;
+
+update sales_teams set salesperson_ids = '[]'::jsonb where salesperson_ids is null;
+
+create index if not exists idx_sales_teams_updated_by_admin_id on sales_teams (updated_by_admin_id);

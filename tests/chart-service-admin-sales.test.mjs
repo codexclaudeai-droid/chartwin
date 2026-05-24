@@ -9,6 +9,7 @@ import {
   assignAdminSalespersonToTeam,
   getAdminSalesManagementSummary,
   getChartServiceRepository,
+  createMockChartServiceState,
   SESSION_COOKIE_NAME,
   updateAdminCustomerSalesperson,
   updateAdminSalesCommissionPercent,
@@ -188,6 +189,22 @@ test('admin can register sales teams assign salespeople and aggregate team reven
   assert.equal(summary.selectedTeamSalespeople[0].sequence, 1);
   assert.equal(summary.selectedTeamSalespeople[0].name, 'Subscriber');
   assert.equal(summary.selectedTeamSalespeople[0].phoneNumber, null);
+});
+
+test('sales team records persist through the repository instead of process memory only', () => {
+  const state = createMockChartServiceState();
+  const firstRepository = createMockChartServiceRepository(state);
+  const team = createAdminSalesTeam(firstRepository, {
+    admin: { id: 'admin_1', role: USER_ROLES.admin },
+    name: 'Persisted Team',
+    createdAt: '2026-05-25T00:00:00.000Z',
+  });
+
+  const secondRepository = createMockChartServiceRepository(state);
+  const summary = getAdminSalesManagementSummary(secondRepository, { teamId: team.id });
+
+  assert.equal(secondRepository.listSalesTeams().length, 1);
+  assert.equal(summary.selectedTeam?.name, 'Persisted Team');
 });
 
 test('super admin can apply team commission percent and normal admin cannot', () => {

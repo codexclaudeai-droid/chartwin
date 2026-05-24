@@ -13,6 +13,7 @@ import type {
   EmailOutboxRecord,
   PasswordResetTokenRecord,
   ReferralProgramSettingsRecord,
+  SalesTeamRecord,
   ServiceUserRecord,
 } from './repository.ts';
 import { createStableFallbackReferralCode } from './referral-codes.ts';
@@ -276,6 +277,30 @@ export function mapReferralProgramSettingsToPostgresRow(record: ReferralProgramS
   };
 }
 
+export function mapSalesTeamFromPostgresRow(row: PostgresRow): SalesTeamRecord {
+  return {
+    id: readString(row.id),
+    name: readString(row.name),
+    commissionPercent: readNumber(row.commission_percent),
+    salespersonIds: readStringArray(row.salesperson_ids),
+    createdAt: readIsoString(row.created_at),
+    updatedAt: readIsoString(row.updated_at),
+    updatedByAdminId: readNullableString(row.updated_by_admin_id),
+  };
+}
+
+export function mapSalesTeamToPostgresRow(record: SalesTeamRecord): PostgresRow {
+  return {
+    id: record.id,
+    name: record.name,
+    commission_percent: record.commissionPercent,
+    salesperson_ids: [...record.salespersonIds],
+    created_at: record.createdAt,
+    updated_at: record.updatedAt,
+    updated_by_admin_id: record.updatedByAdminId,
+  };
+}
+
 export function mapSupportThreadFromPostgresRow(row: PostgresRow): SupportThreadRecord {
   return {
     id: readString(row.id),
@@ -494,6 +519,14 @@ function readBoolean(value: unknown): boolean {
 
 function readNullableNumber(value: unknown): number | null {
   return value == null ? null : readNumber(value);
+}
+
+function readStringArray(value: unknown): string[] {
+  const parsedValue = typeof value === 'string' ? JSON.parse(value) : value;
+  if (!Array.isArray(parsedValue) || !parsedValue.every((item) => typeof item === 'string')) {
+    throw new Error('Expected postgres json string array value');
+  }
+  return [...parsedValue];
 }
 
 function assertSafeIdentifier(identifier: string): void {
