@@ -5,6 +5,7 @@ import test from 'node:test';
 const adminReadRoutes = [
   '../app/api/admin/dashboard/route.ts',
   '../app/api/admin/statistics/route.ts',
+  '../app/api/admin/sales/route.ts',
   '../app/api/admin/payments/route.ts',
   '../app/api/admin/subscriptions/route.ts',
   '../app/api/admin/audit-logs/route.ts',

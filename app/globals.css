@@ -972,6 +972,88 @@ a {
   margin-top: 12px;
 }
 
+.sales-filter-grid {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.4fr) minmax(150px, 0.4fr) auto;
+  margin: 16px 0;
+}
+
+.sales-filter-grid label,
+.sales-commission-row label {
+  display: grid;
+  gap: 6px;
+}
+
+.sales-filter-grid span,
+.sales-commission-row span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sales-filter-grid input,
+.sales-commission-row input {
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: inherit;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.sales-summary-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 16px 0;
+}
+
+.sales-summary-grid .mini-card strong {
+  display: block;
+  font-size: 22px;
+  margin: 8px 0;
+}
+
+.salesperson-list {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 14px 0;
+}
+
+.salesperson-card {
+  background: rgba(255, 253, 247, 0.78);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  text-align: left;
+}
+
+.salesperson-card.active,
+.salesperson-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 12px 28px rgba(12, 102, 90, 0.12);
+}
+
+.salesperson-card span,
+.salesperson-card small {
+  color: var(--muted);
+}
+
+.sales-commission-row {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0;
+}
+
 .mini-card span {
   color: var(--muted);
   display: block;

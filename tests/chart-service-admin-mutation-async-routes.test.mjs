@@ -11,6 +11,7 @@ const adminMutationRoutes = [
   '../app/api/admin/subscriptions/refund/route.ts',
   '../app/api/admin/subscriptions/reject/route.ts',
   '../app/api/admin/support/reply/route.ts',
+  '../app/api/admin/sales/route.ts',
   '../app/api/admin/users/[id]/route.ts',
 ];
 
