@@ -227,6 +227,15 @@ export function ProfilePanel() {
     }
   }
 
+  async function copyReferralValue(label: string, value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setSettingsMessage(`${label}를 클립보드에 복사했습니다.`);
+    } catch {
+      setSettingsMessage(`${label} 복사에 실패했습니다. 직접 선택해서 복사해주세요.`);
+    }
+  }
+
   async function validateImagePolicy(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedImageFile) {
@@ -369,8 +378,32 @@ export function ProfilePanel() {
         )}
         <div className="referral-card">
           <span>추천 정보</span>
-          <strong>{dashboard.user.referralCode}</strong>
-          <p>{referralLink}</p>
+          <div className="referral-copy-row">
+            <strong>{dashboard.user.referralCode}</strong>
+            <button
+              aria-label="추천코드 복사"
+              className="copy-icon-button"
+              onClick={() => void copyReferralValue('추천코드', dashboard.user.referralCode)}
+              title="추천코드 복사"
+              type="button"
+            >
+              <span aria-hidden="true">⧉</span>
+              <span className="screen-reader-only">추천코드 복사</span>
+            </button>
+          </div>
+          <div className="referral-copy-row referral-link-row">
+            <p>{referralLink}</p>
+            <button
+              aria-label="추천링크 복사"
+              className="copy-icon-button"
+              onClick={() => void copyReferralValue('추천링크', referralLink)}
+              title="추천링크 복사"
+              type="button"
+            >
+              <span aria-hidden="true">⧉</span>
+              <span className="screen-reader-only">추천링크 복사</span>
+            </button>
+          </div>
           <small>회원 초대 시 이 링크를 전달하면 추천인 정보를 추적할 수 있습니다.</small>
         </div>
         <div className="referral-card referral-list-card">

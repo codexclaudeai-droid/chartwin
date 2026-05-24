@@ -177,6 +177,19 @@ test('profile edit modal closes from backdrop clicks and Escape key', () => {
   assert.match(panelSource, /onKeyDown=\{handleProfileEditModalKeyDown\}/);
 });
 
+test('profile referral card exposes copy icon buttons for code and link', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /copyReferralValue/);
+  assert.match(panelSource, /navigator\.clipboard\.writeText/);
+  assert.match(panelSource, /aria-label="추천코드 복사"/);
+  assert.match(panelSource, /aria-label="추천링크 복사"/);
+  assert.match(panelSource, /referral-copy-row/);
+  assert.match(styleSource, /\.copy-icon-button/);
+  assert.match(styleSource, /\.screen-reader-only/);
+});
+
 test('profile panel renders my referral list with individual and total points', () => {
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
 

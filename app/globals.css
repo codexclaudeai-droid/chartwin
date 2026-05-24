@@ -1006,6 +1006,17 @@ a {
   letter-spacing: 0.04em;
 }
 
+.referral-copy-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.referral-link-row p {
+  min-width: 0;
+}
+
 .referral-card p {
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--line);
@@ -1015,6 +1026,37 @@ a {
   margin: 0;
   overflow-wrap: anywhere;
   padding: 10px 12px;
+}
+
+.copy-icon-button {
+  align-items: center;
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 16px;
+  font-weight: 850;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.copy-icon-button:hover,
+.copy-icon-button:focus-visible {
+  background: var(--accent);
+  border-color: var(--accent);
+  outline: 2px solid rgba(12, 102, 90, 0.2);
+  outline-offset: 2px;
+}
+
+.screen-reader-only {
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .referral-card small {
