@@ -10,6 +10,7 @@ import {
   formatNotificationReadState,
   formatNotificationSummaryMessage,
   getNotificationCategoryLabel,
+  getNotificationFilterKeyFromSearch,
   getNotificationLinkLabel,
   getUnreadNotificationsByTab,
 } from './notification-display';
@@ -37,7 +38,7 @@ type MarkNotificationReadOptions = {
 export function NotificationsPanel() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [summary, setSummary] = useState<NotificationSummary>({ totalCount: 0, unreadCount: 0 });
-  const [activeFilterKey, setActiveFilterKey] = useState<NotificationFilterKey>('all');
+  const [activeFilterKey, setActiveFilterKey] = useState<NotificationFilterKey>(() => getCurrentNotificationFilterKey());
   const [message, setMessage] = useState('로그인하면 결제 승인, 구독 상태, 고객센터 답변 알림을 확인할 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
   const filteredNotifications = filterNotificationsByTab(notifications, activeFilterKey);
@@ -46,6 +47,28 @@ export function NotificationsPanel() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    const syncFilterFromUrl = () => setActiveFilterKey(getCurrentNotificationFilterKey());
+
+    syncFilterFromUrl();
+    window.addEventListener('popstate', syncFilterFromUrl);
+
+    return () => window.removeEventListener('popstate', syncFilterFromUrl);
+  }, []);
+
+  function applyFilter(filterKey: NotificationFilterKey) {
+    setActiveFilterKey(filterKey);
+    if (typeof window === 'undefined') return;
+
+    const nextUrl = new URL(window.location.href);
+    if (filterKey === 'all') {
+      nextUrl.searchParams.delete('tab');
+    } else {
+      nextUrl.searchParams.set('tab', filterKey);
+    }
+    window.history.pushState(null, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+  }
 
   async function refresh() {
     setIsBusy(true);
@@ -174,7 +197,7 @@ export function NotificationsPanel() {
               aria-pressed={isActive}
               className={`button secondary${isActive ? ' active' : ''}`}
               key={tab.key}
-              onClick={() => setActiveFilterKey(tab.key)}
+              onClick={() => applyFilter(tab.key)}
               type="button"
             >
               {tab.label}
@@ -221,4 +244,10 @@ export function NotificationsPanel() {
       </div>
     </section>
   );
+}
+
+function getCurrentNotificationFilterKey(): NotificationFilterKey {
+  if (typeof window === 'undefined') return 'all';
+
+  return getNotificationFilterKeyFromSearch(window.location.search);
 }

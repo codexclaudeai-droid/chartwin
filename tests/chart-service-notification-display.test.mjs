@@ -9,6 +9,7 @@ test('notification display helpers translate categories and action labels', asyn
     formatNotificationReadState,
     formatNotificationSummaryMessage,
     getNotificationCategoryLabel,
+    getNotificationFilterKeyFromSearch,
     getNotificationLinkLabel,
     getUnreadNotificationsByTab,
   } = await import('../app/notifications/notification-display.ts');
@@ -53,6 +54,10 @@ test('notification display helpers translate categories and action labels', asyn
   assert.deepEqual(getUnreadNotificationsByTab(notifications, 'all').map((item) => item.id), ['n1', 'n3', 'n5', 'n6']);
   assert.deepEqual(getUnreadNotificationsByTab(notifications, 'support').map((item) => item.id), ['n1']);
   assert.deepEqual(getUnreadNotificationsByTab(notifications, 'subscription').map((item) => item.id), ['n5']);
+  assert.equal(getNotificationFilterKeyFromSearch('?tab=payment'), 'payment');
+  assert.equal(getNotificationFilterKeyFromSearch('?tab=support&from=nav'), 'support');
+  assert.equal(getNotificationFilterKeyFromSearch('?tab=unknown'), 'all');
+  assert.equal(getNotificationFilterKeyFromSearch(''), 'all');
 });
 
 test('notifications page and panel use readable Korean copy instead of raw notification values', () => {
@@ -71,6 +76,11 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /activeFilterKey/);
   assert.match(panelSource, /filteredUnreadNotifications/);
   assert.match(panelSource, /getUnreadNotificationsByTab/);
+  assert.match(panelSource, /getNotificationFilterKeyFromSearch/);
+  assert.match(panelSource, /window\.location\.search/);
+  assert.match(panelSource, /window\.history\.pushState/);
+  assert.match(panelSource, /popstate/);
+  assert.match(panelSource, /applyFilter/);
   assert.match(panelSource, /handleNotificationAction/);
   assert.match(panelSource, /React\.MouseEvent<HTMLAnchorElement>/);
   assert.match(panelSource, /event\.preventDefault\(\)/);

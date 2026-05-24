@@ -23,6 +23,14 @@ export const NOTIFICATION_FILTER_TABS: Array<{ key: NotificationFilterKey; label
   { key: 'subscription', label: '구독' },
 ];
 
+export function getNotificationFilterKeyFromSearch(search: string): NotificationFilterKey {
+  const params = new URLSearchParams(search);
+  const filterKey = params.get('tab');
+  const matchedTab = NOTIFICATION_FILTER_TABS.find((tab) => tab.key === filterKey);
+
+  return matchedTab?.key ?? 'all';
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   support_request: '신규 문의',
   support_reply: '고객센터 답변',
