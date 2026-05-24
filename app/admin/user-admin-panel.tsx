@@ -29,7 +29,10 @@ import {
 } from './admin-user-permissions';
 import { formatAuditLogSummary } from './audit-log-summary';
 import { createAdminSupportThreadUrl } from './support-thread-links';
-import { getNotificationCategoryLabel } from '../notifications/notification-display';
+import {
+  getNotificationCategoryLabel,
+  getNotificationLinkLabel,
+} from '../notifications/notification-display';
 
 const ROLE_OPTIONS: Array<{ value: UserRole; label: string }> = [
   { value: 'member', label: formatUserRoleLabel('member') },
@@ -596,7 +599,7 @@ export function UserAdminPanel() {
                         <p>{notification.id}</p>
                         {notification.linkUrl && (
                           <a className="text-link compact" href={notification.linkUrl}>
-                            알림 대상 열기
+                            {getNotificationLinkLabel(notification)}
                           </a>
                         )}
                         <small>{notification.createdAt}</small>

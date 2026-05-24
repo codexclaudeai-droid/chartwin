@@ -164,9 +164,10 @@ test('admin user panel renders detailed payment support and notification history
   assert.match(source, /최근 알림 내역/);
   assert.match(source, /detail\.notifications\.map/);
   assert.match(source, /getNotificationCategoryLabel\(notification\.category\)/);
+  assert.match(source, /getNotificationLinkLabel\(notification\)/);
   assert.match(source, /notification\.readAt \? '읽음' : '미확인'/);
   assert.match(source, /notification\.linkUrl/);
-  assert.match(source, /알림 대상 열기/);
+  assert.doesNotMatch(source, /알림 대상 열기/);
 });
 
 test('admin user panel renders related audit entries in user detail', () => {
