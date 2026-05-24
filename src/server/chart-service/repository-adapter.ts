@@ -23,7 +23,13 @@ import {
 import { createNodePgPostgresQueryExecutor } from './postgres-node-pg.ts';
 import type { ChartServiceRepository } from './repository.ts';
 
-const MEMORY_REPOSITORY_SCHEMA_VERSION = 'auth-password-hash-v1-password-reset-v1-email-outbox-v1';
+const MEMORY_REPOSITORY_SCHEMA_VERSION = [
+  'auth-password-hash-v1',
+  'password-reset-v1',
+  'email-outbox-v1',
+  'sales-teams-v1',
+  'payment-transfer-settings-v1',
+].join('-');
 
 export type ChartServiceRepositoryAdapterKind = 'memory' | 'postgres';
 

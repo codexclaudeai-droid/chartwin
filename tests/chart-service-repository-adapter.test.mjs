@@ -64,7 +64,7 @@ test('global repository singleton is keyed by resolved adapter config', () => {
   assert.equal(first, second);
 });
 
-test('memory repository signature carries the auth seed schema version', () => {
+test('memory repository signature carries the service data schema version', () => {
   const signature = getChartServiceRepositoryConfigSignature({
     adapter: 'memory',
   });
@@ -73,6 +73,8 @@ test('memory repository signature carries the auth seed schema version', () => {
   assert.match(signature, /auth-password-hash/);
   assert.match(signature, /password-reset/);
   assert.match(signature, /email-outbox/);
+  assert.match(signature, /sales-teams/);
+  assert.match(signature, /payment-transfer-settings/);
 });
 
 test('postgres connection settings redact credentials and normalize SSL mode', () => {
