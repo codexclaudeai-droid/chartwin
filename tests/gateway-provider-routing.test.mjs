@@ -8,6 +8,8 @@ import { getStrategyMinimumHistory, getStrategyHistoryDiagnostic } from '../src/
 const gatewayFeedSource = fs.readFileSync(path.resolve('src/data/gateway-live-feed.ts'), 'utf8');
 const gatewayServerSource = fs.readFileSync(path.resolve('server/data-gateway.mjs'), 'utf8');
 const marketSessionSource = fs.readFileSync(path.resolve('src/utils/market-session.ts'), 'utf8');
+const pagesCandlesSource = fs.readFileSync(path.resolve('functions/candles.js'), 'utf8');
+const pagesWebhookSource = fs.readFileSync(path.resolve('functions/ingest/webhook/tradingview.js'), 'utf8');
 
 test('KOSPI-family symbols prefer KIS when credentials are available', () => {
   const prefs = getPreferredSymbolProviders();
@@ -77,5 +79,33 @@ test('webhook commodity aliases resolve to stored candle symbols', () => {
     gatewayServerSource,
     /candleKey\('index', symbol, timeframe\)/,
     'legacy XAU/XAG rows stored under index should still be returned for commodity requests',
+  );
+});
+
+test('Cloudflare Pages functions use the same webhook symbol aliases', () => {
+  assert.match(
+    pagesCandlesSource,
+    /function canonicalizeMarketForSymbol\(market, symbol\)/,
+    'Cloudflare /candles should normalize commodity symbols out of index requests',
+  );
+  assert.match(
+    pagesCandlesSource,
+    /s === 'XAGUSDT' \|\| s === 'XAGUSDT\.P'[\s\S]*return 'XAGUSD';/,
+    'Cloudflare /candles should map silver USDT aliases to XAGUSD',
+  );
+  assert.match(
+    pagesCandlesSource,
+    /env\.CANDLES_KV\.get\(`index:\$\{symbol\}:\$\{timeframe\}`/,
+    'Cloudflare /candles should read legacy misplaced XAU/XAG index keys',
+  );
+  assert.match(
+    pagesWebhookSource,
+    /s === 'XAUUSDT' \|\| s === 'XAUUSDT\.P'[\s\S]*return 'XAUUSD';/,
+    'Cloudflare webhook ingest should store gold USDT aliases under XAUUSD',
+  );
+  assert.match(
+    pagesWebhookSource,
+    /s === 'XAGUSDT' \|\| s === 'XAGUSDT\.P'[\s\S]*return 'XAGUSD';/,
+    'Cloudflare webhook ingest should store silver USDT aliases under XAGUSD',
   );
 });

@@ -27,6 +27,10 @@ function inferMarket(symbol) {
 function canonicalize(market, symbol) {
   const s = norm(symbol);
   if (market === 'index' && (s === 'NAS100' || s === 'NQ')) return 'NQ1!';
+  if (market === 'index' && s === '^IXIC') return 'NASDAQ';
+  if (market === 'commodity' && s === 'WTI') return 'WTI1!';
+  if (market === 'commodity' && (s === 'XAUUSDT' || s === 'XAUUSDT.P')) return 'XAUUSD';
+  if (market === 'commodity' && (s === 'XAGUSDT' || s === 'XAGUSDT.P')) return 'XAGUSD';
   return s;
 }
 

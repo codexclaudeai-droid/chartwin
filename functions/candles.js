@@ -11,10 +11,32 @@ const TF_SECONDS = {
 };
 
 function norm(s) { return String(s || '').trim().toUpperCase().replace(/\s+/g, ''); }
+
+function canonicalizeMarketForSymbol(market, symbol) {
+  const s = norm(symbol);
+  if (market === 'index' && /^(XAU|XAG|XPT|USO|WTI|BRENT)/.test(s)) return 'commodity';
+  return market;
+}
+
 function canonicalize(market, symbol) {
   const s = norm(symbol);
   if (market === 'index' && (s === 'NAS100' || s === 'NQ')) return 'NQ1!';
+  if (market === 'index' && s === '^IXIC') return 'NASDAQ';
+  if (market === 'commodity' && s === 'WTI') return 'WTI1!';
+  if (market === 'commodity' && (s === 'XAUUSDT' || s === 'XAUUSDT.P')) return 'XAUUSD';
+  if (market === 'commodity' && (s === 'XAGUSDT' || s === 'XAGUSDT.P')) return 'XAGUSD';
   return s;
+}
+
+async function getCandleRows(env, market, symbol, timeframe) {
+  const key = `${market}:${symbol}:${timeframe}`;
+  const raw = await env.CANDLES_KV.get(key, { type: 'json' });
+  if (Array.isArray(raw) && raw.length > 0) return raw;
+  if (market === 'commodity' && /^(XAU|XAG)/.test(symbol)) {
+    const legacyRaw = await env.CANDLES_KV.get(`index:${symbol}:${timeframe}`, { type: 'json' });
+    if (Array.isArray(legacyRaw) && legacyRaw.length > 0) return legacyRaw;
+  }
+  return [];
 }
 
 function aggregateFrom1m(candles1m, targetTfSec) {
@@ -47,8 +69,9 @@ export async function onRequestOptions() {
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
-  const market = ALLOWED_MARKETS.includes(String(url.searchParams.get('market') || '').toLowerCase())
+  const requestedMarket = ALLOWED_MARKETS.includes(String(url.searchParams.get('market') || '').toLowerCase())
     ? String(url.searchParams.get('market')).toLowerCase() : null;
+  const market = requestedMarket ? canonicalizeMarketForSymbol(requestedMarket, url.searchParams.get('symbol') || '') : null;
   const symbol = canonicalize(market, url.searchParams.get('symbol') || '');
   const timeframe = String(url.searchParams.get('timeframe') || '1m').trim();
   const limit = Math.min(5000, Math.max(1, Math.floor(Number(url.searchParams.get('limit')) || 300)));
@@ -57,15 +80,13 @@ export async function onRequestGet({ request, env }) {
     return Response.json({ ok: false, message: 'market/symbol/timeframe required' }, { status: 400, headers: CORS });
   }
 
-  const key = `${market}:${symbol}:${timeframe}`;
   let candles = [];
   let source = 'stored';
   try {
     if (timeframe !== '1m') {
       const tfSec = TF_SECONDS[timeframe];
       if (tfSec && tfSec > 60) {
-        const key1m = `${market}:${symbol}:1m`;
-        const raw1m = await env.CANDLES_KV.get(key1m, { type: 'json' });
+        const raw1m = await getCandleRows(env, market, symbol, '1m');
         if (Array.isArray(raw1m) && raw1m.length > 0) {
           candles = aggregateFrom1m(raw1m, tfSec);
           source = 'aggregated_from_1m';
@@ -73,7 +94,7 @@ export async function onRequestGet({ request, env }) {
       }
     }
     if (!candles.length) {
-      const raw = await env.CANDLES_KV.get(key, { type: 'json' });
+      const raw = await getCandleRows(env, market, symbol, timeframe);
       if (Array.isArray(raw) && raw.length > 0) {
         candles = raw;
         source = 'stored';
