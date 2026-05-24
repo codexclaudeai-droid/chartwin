@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
         method: body.method === 'usdt' ? 'usdt' : 'bank_transfer',
         requestedAt: now,
         depositorName: typeof body.depositorName === 'string' ? body.depositorName : undefined,
+        transactionId: typeof body.transactionId === 'string' ? body.transactionId : undefined,
         exchangeRate: typeof body.exchangeRate === 'number' ? body.exchangeRate : null,
         referralPointsUsed: typeof body.referralPointsUsed === 'number' ? body.referralPointsUsed : 0,
       });

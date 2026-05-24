@@ -281,6 +281,15 @@ test('pricing payment request shows admin configured bank and USDT transfer inst
   assert.match(panelSource, /method: paymentMethod/);
 });
 
+test('pricing USDT payment request captures and submits the TXID value', () => {
+  const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /transactionId/);
+  assert.match(panelSource, /id="transactionId"/);
+  assert.match(panelSource, /paymentMethod === 'usdt'/);
+  assert.match(panelSource, /body: JSON\.stringify\(\{/);
+});
+
 test('pricing payment request lets members choose a subscription plan from cards', () => {
   const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
@@ -312,6 +321,13 @@ test('admin payment settings panel and route are wired into operations UI', () =
   assert.match(panelSource, /usdtAddress/);
   assert.match(panelSource, /usdtNetwork/);
   assert.match(routeSource, /updateAsyncPaymentTransferSettings/);
+});
+
+test('admin payment panel exposes USDT TXID for manual confirmation', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /transactionId/);
+  assert.match(source, /TXID/);
 });
 
 test('admin payment panel refreshes its filtered queue after local operations without overwriting success context', () => {

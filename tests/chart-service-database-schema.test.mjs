@@ -38,6 +38,7 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'subscriptions')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.subscription_id.references, 'subscriptions.id');
   assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.support_thread_id.references, 'support_threads.id');
+  assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.transaction_id.nullable, true);
   assert.equal(tables.find((table) => table.name === 'referral_program_settings')?.columns.reward_percent.type, 'numeric(5,2)');
   assert.equal(tables.find((table) => table.name === 'referral_program_settings')?.columns.updated_by_admin_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'sales_teams')?.columns.commission_percent.type, 'numeric(5,2)');
@@ -90,6 +91,7 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /create index if not exists idx_notifications_user_id_archived_at/i);
   assert.match(sql, /alter table if exists notifications add column if not exists archived_at timestamptz/i);
   assert.match(sql, /alter table if exists payment_requests add column if not exists support_thread_id text/i);
+  assert.match(sql, /alter table if exists payment_requests add column if not exists transaction_id text/i);
   assert.match(sql, /alter table if exists users add column if not exists phone_number text/i);
   assert.match(sql, /alter table if exists users add column if not exists referral_code text/i);
   assert.match(sql, /update users set referral_code = upper\(substr\(md5\(id\), 1, 6\)\)/i);

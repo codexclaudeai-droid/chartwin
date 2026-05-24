@@ -321,6 +321,7 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
     method: 'bank_transfer' | 'usdt';
     requestedAt: string;
     depositorName?: string;
+    transactionId?: string;
     exchangeRate?: number | null;
     referralPointsUsed?: number;
   },
@@ -354,6 +355,7 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
     updatedAt: input.requestedAt,
   };
   const amountUsd = Math.round(plan.basePriceUsd * (1 - plan.discountPercent / 100) * 100) / 100;
+  const transactionId = normalizePaymentTransactionId(input.method, input.transactionId);
   const { thread: supportThread, message: supportMessage } = createDepositSupportThreadDraft({
     threadId: supportThreadId,
     messageId: await repository.nextId('support_msg'),
@@ -363,6 +365,7 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
     amountUsd,
     method: input.method,
     depositorName: input.depositorName ?? null,
+    transactionId,
     createdAt: input.requestedAt,
   });
   const payment: PaymentRequestRecord = {
@@ -378,6 +381,7 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
     referralPointsUsed: input.referralPointsUsed ?? 0,
     status: PAYMENT_STATUSES.pending,
     depositorName: input.depositorName ?? null,
+    transactionId,
     adminNote: null,
     confirmedByAdminId: null,
     confirmedAt: null,
@@ -1276,6 +1280,7 @@ function createDepositSupportThreadDraft(input: {
   amountUsd: number;
   method: PaymentRequestRecord['method'];
   depositorName: string | null;
+  transactionId: string | null;
   createdAt: string;
 }): { thread: SupportThreadRecord; message: SupportMessageRecord } {
   const thread: SupportThreadRecord = {
@@ -1298,6 +1303,7 @@ function createDepositSupportThreadDraft(input: {
       `플랜: ${input.plan.name}`,
       `결제 방식: ${input.method === 'usdt' ? 'USDT' : '무통장 입금'}`,
       `입금자명: ${input.depositorName || '미입력'}`,
+      ...(input.transactionId ? [`TXID: ${input.transactionId}`] : []),
       `결제 금액: $${input.amountUsd}`,
       '관리자가 실제 입금 내역을 수동 확인한 뒤 구독 승인을 진행해주세요.',
     ].join('\n'),
@@ -1346,6 +1352,17 @@ function requireAdminNote(adminNote: string): string {
   const normalizedNote = adminNote.trim();
   if (!normalizedNote) throw new Error('Admin note required');
   return normalizedNote;
+}
+
+function normalizePaymentTransactionId(method: PaymentRequestRecord['method'], value: string | undefined): string | null {
+  const transactionId = String(value ?? '').trim();
+  if (method === 'usdt' && !transactionId) {
+    throw new Error('USDT transaction id required');
+  }
+  if (transactionId.length > 160) {
+    throw new Error('USDT transaction id too long');
+  }
+  return transactionId || null;
 }
 
 const ADMIN_ROLES: UserRole[] = ['admin', 'super_admin'];

@@ -96,6 +96,7 @@ export type PaymentRequestRecord = {
   referralPointsUsed: number;
   status: PaymentStatus;
   depositorName: string | null;
+  transactionId: string | null;
   adminNote: string | null;
   confirmedByAdminId: string | null;
   confirmedAt: string | null;

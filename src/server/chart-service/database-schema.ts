@@ -149,6 +149,7 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
         referral_points_used: { type: 'numeric(12,2)', default: '0' },
         status: { type: 'text' },
         depositor_name: { type: 'text', nullable: true },
+        transaction_id: { type: 'text', nullable: true },
         admin_note: { type: 'text', nullable: true },
         confirmed_by_admin_id: { type: 'text', nullable: true, references: 'users.id' },
         confirmed_at: { type: 'timestamptz', nullable: true },
@@ -316,6 +317,7 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
   return [
     'alter table if exists notifications add column if not exists archived_at timestamptz;',
     'alter table if exists payment_requests add column if not exists support_thread_id text;',
+    'alter table if exists payment_requests add column if not exists transaction_id text;',
     'create index if not exists idx_payment_requests_support_thread_id on payment_requests (support_thread_id);',
     'alter table if exists users add column if not exists phone_number text;',
     'alter table if exists users add column if not exists referral_code text;',

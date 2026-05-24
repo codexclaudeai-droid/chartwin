@@ -43,6 +43,7 @@ export function createPaymentRequestFixture(overrides: Partial<PaymentRequestRec
     referralPointsUsed: 0,
     status: 'pending' as PaymentStatus,
     depositorName: 'Tester',
+    transactionId: null,
     adminNote: null,
     confirmedByAdminId: null,
     confirmedAt: null,

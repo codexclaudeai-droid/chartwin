@@ -25,6 +25,7 @@ type AdminPaymentQueueItem = {
     method: string;
     amountUsd: number;
     depositorName: string | null;
+    transactionId: string | null;
     createdAt: string;
   };
   user: {
@@ -209,7 +210,17 @@ export function AdminPanel() {
                   </>
                 )}
               </td>
-              <td>{item.user.email}<br /><small>{item.payment.depositorName || item.user.name}</small></td>
+              <td>
+                {item.user.email}
+                <br />
+                <small>{item.payment.depositorName || item.user.name}</small>
+                {item.payment.transactionId && (
+                  <>
+                    <br />
+                    <small>TXID: {item.payment.transactionId}</small>
+                  </>
+                )}
+              </td>
               <td>{item.plan?.name ?? 'Unknown'}</td>
               <td>${item.payment.amountUsd}</td>
               <td>{renderPaymentFlowStatus(item)}</td>

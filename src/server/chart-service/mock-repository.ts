@@ -328,6 +328,7 @@ function createPaymentRecord(overrides: Partial<PaymentRequestRecord>): PaymentR
     referralPointsUsed: 0,
     status: PAYMENT_STATUSES.pending,
     depositorName: 'Member',
+    transactionId: null,
     adminNote: null,
     confirmedByAdminId: null,
     confirmedAt: null,

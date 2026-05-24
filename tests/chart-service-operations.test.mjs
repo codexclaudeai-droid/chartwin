@@ -23,6 +23,42 @@ test('mock service creates manual payment requests with a pending subscription',
   assert.equal(result.payment.amountKrw, 270640);
 });
 
+test('USDT payment requests store the submitted transaction id for admin review', async () => {
+  const {
+    createManualPaymentRequest,
+    createMockChartServiceRepository,
+  } = await import('../src/server/chart-service/index.ts');
+
+  const repository = createMockChartServiceRepository();
+  const result = createManualPaymentRequest(repository, {
+    userId: 'user_member',
+    planId: 'plan_monthly',
+    method: 'usdt',
+    requestedAt: '2026-05-23T10:00:00.000Z',
+    transactionId: '  0xabc123txid  ',
+  });
+
+  assert.equal(result.payment.transactionId, '0xabc123txid');
+  assert.match(result.supportMessage.body, /TXID: 0xabc123txid/);
+});
+
+test('USDT payment requests require a transaction id', async () => {
+  const {
+    createManualPaymentRequest,
+    createMockChartServiceRepository,
+  } = await import('../src/server/chart-service/index.ts');
+
+  const repository = createMockChartServiceRepository();
+
+  assert.throws(() => createManualPaymentRequest(repository, {
+    userId: 'user_member',
+    planId: 'plan_monthly',
+    method: 'usdt',
+    requestedAt: '2026-05-23T10:00:00.000Z',
+    transactionId: '   ',
+  }), /USDT transaction id required/);
+});
+
 test('admin can confirm payment without activating subscription', async () => {
   const {
     confirmManualPaymentRequest,

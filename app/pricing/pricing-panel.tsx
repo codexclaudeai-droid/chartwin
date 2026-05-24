@@ -39,6 +39,7 @@ export function PricingPanel({
   const [selectedPlanId, setSelectedPlanId] = useState(plans[0]?.id ?? 'plan_monthly');
   const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'usdt'>('bank_transfer');
   const [depositorName, setDepositorName] = useState('');
+  const [transactionId, setTransactionId] = useState('');
   const [message, setMessage] = useState('로그인 후 입금확인 요청을 남기면 관리자 수동 입금 확인 후 승인합니다.');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,6 +53,7 @@ export function PricingPanel({
         planId: selectedPlanId,
         method: paymentMethod,
         depositorName,
+        transactionId: paymentMethod === 'usdt' ? transactionId : undefined,
       }),
     });
     const payload = await response.json() as PaymentResult;
@@ -121,13 +123,28 @@ export function PricingPanel({
             </>
           )}
         </div>
-        <label htmlFor="depositorName">입금자명</label>
-        <input
-          id="depositorName"
-          value={depositorName}
-          onChange={(event) => setDepositorName(event.target.value)}
-          placeholder="입금자명을 입력하세요"
-        />
+        {paymentMethod === 'usdt' ? (
+          <>
+            <label htmlFor="transactionId">USDT TXID</label>
+            <input
+              id="transactionId"
+              value={transactionId}
+              onChange={(event) => setTransactionId(event.target.value)}
+              placeholder="테더 이체 후 TXID를 입력하세요"
+              required
+            />
+          </>
+        ) : (
+          <>
+            <label htmlFor="depositorName">입금자명</label>
+            <input
+              id="depositorName"
+              value={depositorName}
+              onChange={(event) => setDepositorName(event.target.value)}
+              placeholder="입금자명을 입력하세요"
+            />
+          </>
+        )}
         <button className="button" type="submit" disabled={isSubmitting}>
           {isSubmitting ? '요청 중' : '입금 확인 요청'}
         </button>

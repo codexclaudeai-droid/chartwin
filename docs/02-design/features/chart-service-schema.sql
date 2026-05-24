@@ -121,6 +121,7 @@ create table if not exists payment_requests (
   referral_points_used numeric(12,2) not null default 0,
   status text not null,
   depositor_name text,
+  transaction_id text,
   admin_note text,
   confirmed_by_admin_id text,
   confirmed_at timestamptz,
@@ -250,6 +251,8 @@ create index if not exists idx_audit_logs_target on audit_logs (target_type, tar
 alter table if exists notifications add column if not exists archived_at timestamptz;
 
 alter table if exists payment_requests add column if not exists support_thread_id text;
+
+alter table if exists payment_requests add column if not exists transaction_id text;
 
 create index if not exists idx_payment_requests_support_thread_id on payment_requests (support_thread_id);
 

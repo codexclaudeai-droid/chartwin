@@ -75,6 +75,7 @@ export function createManualPaymentRequest(
     method: 'bank_transfer' | 'usdt';
     requestedAt: string;
     depositorName?: string;
+    transactionId?: string;
     exchangeRate?: number | null;
     referralPointsUsed?: number;
   },
@@ -108,6 +109,7 @@ export function createManualPaymentRequest(
     updatedAt: input.requestedAt,
   };
   const amountUsd = calculatePlanAmountUsd(plan.basePriceUsd, plan.discountPercent);
+  const transactionId = normalizePaymentTransactionId(input.method, input.transactionId);
   const { thread: supportThread, message: supportMessage } = createDepositSupportThreadDraft({
     threadId: supportThreadId,
     messageId: repository.nextId('support_msg'),
@@ -117,6 +119,7 @@ export function createManualPaymentRequest(
     amountUsd,
     method: input.method,
     depositorName: input.depositorName ?? null,
+    transactionId,
     createdAt: input.requestedAt,
   });
   const payment: PaymentRequestRecord = {
@@ -132,6 +135,7 @@ export function createManualPaymentRequest(
     referralPointsUsed: input.referralPointsUsed ?? 0,
     status: PAYMENT_STATUSES.pending,
     depositorName: input.depositorName ?? null,
+    transactionId,
     adminNote: null,
     confirmedByAdminId: null,
     confirmedAt: null,
@@ -174,6 +178,7 @@ export function createAuthenticatedManualPaymentRequest(
     method: 'bank_transfer' | 'usdt';
     requestedAt: string;
     depositorName?: string;
+    transactionId?: string;
     exchangeRate?: number | null;
     referralPointsUsed?: number;
   },
@@ -189,6 +194,7 @@ export function createAuthenticatedManualPaymentRequest(
     method: input.method,
     requestedAt: input.requestedAt,
     depositorName: input.depositorName,
+    transactionId: input.transactionId,
     exchangeRate: input.exchangeRate,
     referralPointsUsed: input.referralPointsUsed,
   });
@@ -599,6 +605,7 @@ function createDepositSupportThreadDraft(input: {
   amountUsd: number;
   method: PaymentRequestRecord['method'];
   depositorName: string | null;
+  transactionId: string | null;
   createdAt: string;
 }): { thread: SupportThreadRecord; message: SupportMessageRecord } {
   const thread: SupportThreadRecord = {
@@ -621,6 +628,7 @@ function createDepositSupportThreadDraft(input: {
       `플랜: ${input.plan.name}`,
       `결제 방식: ${input.method === 'usdt' ? 'USDT' : '무통장 입금'}`,
       `입금자명: ${input.depositorName || '미입력'}`,
+      ...(input.transactionId ? [`TXID: ${input.transactionId}`] : []),
       `결제 금액: $${input.amountUsd}`,
       '관리자가 실제 입금 내역을 수동 확인한 뒤 구독 승인을 진행해주세요.',
     ].join('\n'),
@@ -633,6 +641,17 @@ function createDepositSupportThreadDraft(input: {
 
 function calculatePlanAmountUsd(basePriceUsd: number, discountPercent: number): number {
   return Math.round(basePriceUsd * (1 - discountPercent / 100) * 100) / 100;
+}
+
+function normalizePaymentTransactionId(method: PaymentRequestRecord['method'], value: string | undefined): string | null {
+  const transactionId = String(value ?? '').trim();
+  if (method === 'usdt' && !transactionId) {
+    throw new Error('USDT transaction id required');
+  }
+  if (transactionId.length > 160) {
+    throw new Error('USDT transaction id too long');
+  }
+  return transactionId || null;
 }
 
 function requireUser(repository: ChartServiceRepository, userId: string) {
