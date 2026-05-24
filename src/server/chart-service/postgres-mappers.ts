@@ -15,6 +15,7 @@ import type {
   ReferralProgramSettingsRecord,
   ServiceUserRecord,
 } from './repository.ts';
+import { createStableFallbackReferralCode } from './referral-codes.ts';
 
 export type PostgresRow = Record<string, unknown>;
 
@@ -34,7 +35,7 @@ export function mapUserFromPostgresRow(row: PostgresRow): ServiceUserRecord {
     role: readString(row.role) as ServiceUserRecord['role'],
     accountStatus: readString(row.account_status) as ServiceUserRecord['accountStatus'],
     phoneNumber: readNullableString(row.phone_number),
-    referralCode: readNullableString(row.referral_code) ?? createReferralCodeForUserId(id),
+    referralCode: readNullableString(row.referral_code) ?? createStableFallbackReferralCode(id),
     referredByUserId: readNullableString(row.referred_by_user_id),
     createdAt: readNullableIsoString(row.created_at) ?? '1970-01-01T00:00:00.000Z',
   };
@@ -499,8 +500,4 @@ function assertSafeIdentifier(identifier: string): void {
   if (!/^[a-z_][a-z0-9_]*$/i.test(identifier)) {
     throw new Error(`Unsafe postgres identifier: ${identifier}`);
   }
-}
-
-function createReferralCodeForUserId(userId: string): string {
-  return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
 }

@@ -49,6 +49,11 @@ import {
   createSupportThreadLink,
 } from './notification-links.ts';
 import {
+  ensureAsyncRepositoryReferralCodes,
+  createUniqueRandomReferralCode,
+  normalizeReferralCode,
+} from './referral-codes.ts';
+import {
   createAsyncReferralLedgerForPayment,
   getAsyncUserReferralSummary,
 } from './referral-program.ts';
@@ -106,6 +111,7 @@ export async function getAsyncUserDashboardSummary(
   repository: AsyncChartServiceRepository,
   input: { actor: Actor },
 ): Promise<UserDashboardSummary> {
+  await ensureAsyncRepositoryReferralCodes(repository);
   const user = await repository.getUserById(input.actor.id);
   if (!user) throw new Error(`User not found: ${input.actor.id}`);
 
@@ -253,17 +259,13 @@ export async function registerAsyncMockUserAccount(
     createdAt: input.createdAt,
     passwordHash: createPasswordHash(input.password),
   };
-  user.referralCode = createReferralCodeForUserId(user.id);
+  user.referralCode = createUniqueRandomReferralCode((await repository.listUsers()).map((item) => item.referralCode));
   await repository.saveUser(user);
   const { session, cookie } = await createAsyncSessionForUser(repository, {
     userId: user.id,
     createdAt: input.createdAt,
   });
   return { user, session, cookie };
-}
-
-function createReferralCodeForUserId(userId: string): string {
-  return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
 }
 
 async function getAsyncReferrerUserIdByReferralCode(
@@ -281,7 +283,7 @@ async function getAsyncReferrerUserIdByReferralCode(
 }
 
 function normalizeSignupReferralCode(value: string | null | undefined): string {
-  return String(value ?? '').trim().toUpperCase();
+  return normalizeReferralCode(value);
 }
 
 function normalizeProfilePhoneNumber(value: string | null | undefined): string | null {
@@ -733,6 +735,7 @@ export async function getAsyncAdminUserDirectory(
   repository: AsyncChartServiceRepository,
   input: AdminUserDirectoryInput = {},
 ): Promise<AdminUserDirectoryItem[]> {
+  await ensureAsyncRepositoryReferralCodes(repository);
   const query = input.query?.trim().toLowerCase() ?? '';
   const role = input.role && input.role !== 'all' ? input.role : null;
   const accountStatus = input.accountStatus && input.accountStatus !== 'all'
@@ -784,6 +787,7 @@ export async function getAsyncAdminUserDetail(
   repository: AsyncChartServiceRepository,
   userId: string,
 ): Promise<AdminUserDetail> {
+  await ensureAsyncRepositoryReferralCodes(repository);
   const user = await requireAsyncUser(repository, userId);
   const [payments, supportThreads, notifications, subscription, auditEntries, referrals] = await Promise.all([
     repository.listPayments(),

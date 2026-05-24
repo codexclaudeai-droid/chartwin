@@ -1,5 +1,6 @@
 import type { AuditLogDraft } from '../../domain/chart-service/index.ts';
 import type { PublicServiceUserRecord, ServiceUserRecord } from './repository.ts';
+import { createStableFallbackReferralCode } from './referral-codes.ts';
 
 export function toPublicServiceUserRecord(user: ServiceUserRecord): PublicServiceUserRecord {
   const { passwordHash: _passwordHash, ...publicUser } = normalizeServiceUserRecord(user);
@@ -10,7 +11,7 @@ export function normalizeServiceUserRecord(user: ServiceUserRecord): ServiceUser
   return {
     ...user,
     phoneNumber: user.phoneNumber ?? null,
-    referralCode: user.referralCode || createReferralCodeForUserId(user.id),
+    referralCode: user.referralCode || createStableFallbackReferralCode(user.id),
     referredByUserId: user.referredByUserId ?? null,
     createdAt: user.createdAt || '1970-01-01T00:00:00.000Z',
   };
@@ -38,8 +39,4 @@ function redactSensitiveJson(value: unknown): unknown {
   }
 
   return value;
-}
-
-function createReferralCodeForUserId(userId: string): string {
-  return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
 }

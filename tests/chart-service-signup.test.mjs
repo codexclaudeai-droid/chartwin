@@ -38,9 +38,27 @@ test('mock signup creates a member account and httpOnly session cookie', () => {
   assert.equal(result.user.email, 'new@example.com');
   assert.equal(result.user.role, 'member');
   assert.equal(result.user.passwordHash?.includes('Aa1!aaaa'), false);
+  assert.match(result.user.referralCode, /^[A-Z0-9]{6}$/);
+  assert.doesNotMatch(result.user.referralCode, /^TC-/);
   assert.match(result.user.passwordHash ?? '', /^pbkdf2_sha256\$/);
   assert.match(result.cookie, new RegExp(`${SESSION_COOKIE_NAME}=`));
   assert.equal(parseSessionCookie(result.cookie), result.session.id);
+});
+
+test('mock users and new signups use unique six character referral codes', () => {
+  const repository = createMockChartServiceRepository();
+
+  const result = registerMockUserAccount(repository, {
+    email: 'six-code@example.com',
+    name: 'Six Code',
+    password: 'Aa1!aaaa',
+    createdAt: '2026-05-23T10:00:00.000Z',
+  });
+  const codes = repository.listUsers().map((user) => user.referralCode);
+
+  assert.equal(codes.every((code) => /^[A-Z0-9]{6}$/.test(code)), true);
+  assert.equal(new Set(codes).size, codes.length);
+  assert.equal(codes.includes(result.user.referralCode), true);
 });
 
 test('mock signup stores the referrer from a referral code', () => {
@@ -89,11 +107,16 @@ test('async signup stores the referrer from a referral code', async () => {
   });
 
   assert.equal(result.user.referredByUserId, 'user_subscriber');
+  assert.match(result.user.referralCode, /^[A-Z0-9]{6}$/);
   assert.equal(syncRepository.getUserByEmail('async-referred@example.com')?.referredByUserId, 'user_subscriber');
 });
 
 test('signup API stores the referrer from a referral code', async () => {
+  const {
+    getChartServiceRepository,
+  } = await import('../src/server/chart-service/index.ts');
   const { POST } = await import('../app/api/auth/signup/route.ts');
+  const referrer = getChartServiceRepository().getUserById('user_subscriber');
 
   resetChartServiceRateLimits();
   const response = await POST(new Request('http://localhost/api/auth/signup', {
@@ -106,13 +129,14 @@ test('signup API stores the referrer from a referral code', async () => {
       email: `route-referred-${Date.now()}@example.com`,
       name: 'Route Referred User',
       password: 'Aa1!aaaa',
-      referralCode: 'TC-USERSUBSCRIBER',
+      referralCode: referrer?.referralCode,
     }),
   }));
   const payload = await response.json();
 
   assert.equal(response.status, 200);
   assert.equal(payload.user.referredByUserId, 'user_subscriber');
+  assert.match(payload.user.referralCode, /^[A-Z0-9]{6}$/);
 });
 
 test('signup panel captures referral codes from the signup URL', () => {

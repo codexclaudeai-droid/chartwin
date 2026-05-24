@@ -6,6 +6,10 @@ import {
 } from '../../domain/chart-service/index.ts';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createPasswordHash, verifyPasswordHash } from './passwords.ts';
+import {
+  createUniqueRandomReferralCode,
+  normalizeReferralCode,
+} from './referral-codes.ts';
 import type { AuthSessionRecord, ChartServiceRepository, ServiceUserRecord } from './repository.ts';
 
 export const SESSION_COOKIE_NAME = 'tc_chart_session';
@@ -84,17 +88,13 @@ export function registerMockUserAccount(
     createdAt: input.createdAt,
     passwordHash: createPasswordHash(input.password),
   };
-  user.referralCode = createReferralCodeForUserId(user.id);
+  user.referralCode = createUniqueRandomReferralCode(repository.listUsers().map((item) => item.referralCode));
   repository.saveUser(user);
   const { session, cookie } = createSessionForUser(repository, {
     userId: user.id,
     createdAt: input.createdAt,
   });
   return { user, session, cookie };
-}
-
-function createReferralCodeForUserId(userId: string): string {
-  return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
 }
 
 function getReferrerUserIdByReferralCode(
@@ -113,7 +113,7 @@ function getReferrerUserIdByReferralCode(
 }
 
 function normalizeSignupReferralCode(value: string | null | undefined): string {
-  return String(value ?? '').trim().toUpperCase();
+  return normalizeReferralCode(value);
 }
 
 export function authenticateUserWithPassword(

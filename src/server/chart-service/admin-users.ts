@@ -18,6 +18,7 @@ import type { ChartServiceRepository, PublicServiceUserRecord, ServiceUserRecord
 import { getAdminAuditLogEntries, type AdminAuditLogEntry } from './admin-audit.ts';
 import { getChartAccessSnapshot, type ChartAccessSnapshot } from './service.ts';
 import { getUserReferralSummary, type UserReferralSummary } from './referral-program.ts';
+import { ensureRepositoryReferralCodes } from './referral-codes.ts';
 import { toPublicServiceUserRecord } from './user-serialization.ts';
 
 export type AdminUserDirectoryItem = {
@@ -51,6 +52,7 @@ export function getAdminUserDirectory(
   repository: ChartServiceRepository,
   input: AdminUserDirectoryInput = {},
 ): AdminUserDirectoryItem[] {
+  ensureRepositoryReferralCodes(repository);
   const query = input.query?.trim().toLowerCase() ?? '';
   const role = input.role && input.role !== 'all' ? input.role : null;
   const accountStatus = input.accountStatus && input.accountStatus !== 'all'
@@ -98,6 +100,7 @@ export function getAdminUserDetail(
   repository: ChartServiceRepository,
   userId: string,
 ): AdminUserDetail {
+  ensureRepositoryReferralCodes(repository);
   const user = repository.getUserById(userId);
   if (!user) throw new Error(`User not found: ${userId}`);
 

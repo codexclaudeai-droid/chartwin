@@ -6,6 +6,7 @@ import {
 } from '../../domain/chart-service/index.ts';
 import type { AsyncChartServiceRepository } from './async-repository.ts';
 import { createPasswordHash } from './passwords.ts';
+import { createUniqueRandomReferralCode } from './referral-codes.ts';
 import type { ServiceUserRecord } from './repository.ts';
 
 export type ChartServiceBootstrapAdminInput = {
@@ -109,10 +110,6 @@ async function createInitialAdminUser(
     createdAt: new Date().toISOString(),
     passwordHash: createPasswordHash(input.password),
   };
-  user.referralCode = createReferralCodeForUserId(user.id);
+  user.referralCode = createUniqueRandomReferralCode((await repository.listUsers()).map((item) => item.referralCode));
   return user;
-}
-
-function createReferralCodeForUserId(userId: string): string {
-  return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
 }

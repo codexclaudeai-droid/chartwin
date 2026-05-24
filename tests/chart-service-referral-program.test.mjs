@@ -6,6 +6,7 @@ import {
   createSessionForUser,
   getAdminUserDetail,
   getChartServiceRepository,
+  confirmMaturedReferralLedgers,
   getReferralProgramSettings,
   getUserDashboardSummary,
   getUserReferralSummary,
@@ -40,6 +41,34 @@ test('manual payment request from a referred user creates pending referral point
   assert.equal(ledgers[0].points, 19.9);
   assert.equal(ledgers[0].status, 'pending');
   assert.equal(ledgers[0].confirmAfter, '2026-05-31T09:00:00.000Z');
+});
+
+test('referral points automatically confirm after the seven day refund window', () => {
+  const repository = createMockChartServiceRepository();
+
+  const result = confirmMaturedReferralLedgers(repository, '2026-05-30T00:00:00.000Z');
+  const summary = getUserReferralSummary(repository, 'user_subscriber', {
+    nowIso: '2026-05-30T00:00:00.000Z',
+  });
+  const ledgers = repository.listReferralLedgersByPaymentId('pay_pending');
+
+  assert.equal(result.confirmedCount, 1);
+  assert.equal(ledgers[0].status, 'confirmed');
+  assert.equal(ledgers[0].confirmedAt, '2026-05-30T00:00:00.000Z');
+  assert.equal(summary.pendingPoints, 0);
+  assert.equal(summary.confirmedPoints, 19.9);
+  assert.equal(summary.totalPoints, 19.9);
+});
+
+test('referral points remain pending before the seven day refund window', () => {
+  const repository = createMockChartServiceRepository();
+
+  const result = confirmMaturedReferralLedgers(repository, '2026-05-29T23:59:59.999Z');
+  const ledgers = repository.listReferralLedgersByPaymentId('pay_pending');
+
+  assert.equal(result.confirmedCount, 0);
+  assert.equal(ledgers[0].status, 'pending');
+  assert.equal(ledgers[0].confirmedAt, null);
 });
 
 test('super admin can change referral reward percent for future payment requests', () => {
@@ -81,7 +110,9 @@ test('profile and admin summaries expose referred users and point totals', () =>
     actor: { id: 'user_subscriber', role: 'member' },
   });
   const adminDetail = getAdminUserDetail(repository, 'user_subscriber');
-  const directSummary = getUserReferralSummary(repository, 'user_subscriber');
+  const directSummary = getUserReferralSummary(repository, 'user_subscriber', {
+    nowIso: '2026-05-29T00:00:00.000Z',
+  });
 
   assert.equal(profileSummary.referrals.referredUserCount, 1);
   assert.equal(profileSummary.referrals.pendingPoints, 19.9);

@@ -6,6 +6,7 @@ import type {
 import type { ChartServiceRepository, PublicServiceUserRecord, ServiceUserRecord } from './repository.ts';
 import { getChartAccessSnapshot, type ChartAccessSnapshot } from './service.ts';
 import { getNotificationSummaryForUser } from './notifications.ts';
+import { ensureRepositoryReferralCodes } from './referral-codes.ts';
 import { getUserReferralSummary, type UserReferralSummary } from './referral-program.ts';
 import { listVisibleSupportThreads } from './support.ts';
 import { toPublicServiceUserRecord } from './user-serialization.ts';
@@ -36,6 +37,7 @@ export function getUserDashboardSummary(
   repository: ChartServiceRepository,
   input: { actor: Actor },
 ): UserDashboardSummary {
+  ensureRepositoryReferralCodes(repository);
   const user = repository.getUserById(input.actor.id);
   if (!user) throw new Error(`User not found: ${input.actor.id}`);
 

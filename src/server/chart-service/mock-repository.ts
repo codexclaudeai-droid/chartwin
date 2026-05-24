@@ -23,6 +23,7 @@ import type {
 } from './repository.ts';
 import { getDefaultChartServiceSubscriptionPlans } from './bootstrap.ts';
 import { createPasswordHash } from './passwords.ts';
+import { createStableFallbackReferralCode } from './referral-codes.ts';
 
 export type MockChartServiceState = {
   idSeq: number;
@@ -166,15 +167,11 @@ function createMockUser(input: {
     role: input.role,
     accountStatus: input.accountStatus ?? USER_ACCOUNT_STATUSES.active,
     phoneNumber: input.phoneNumber ?? null,
-    referralCode: input.referralCode ?? createReferralCodeForUserId(input.id),
+    referralCode: input.referralCode ?? createStableFallbackReferralCode(input.id),
     referredByUserId: input.referredByUserId ?? null,
     createdAt: input.createdAt ?? '2026-05-23T00:00:00.000Z',
     passwordHash: createPasswordHash('Demo1234!', { salt: `demo_${input.id}` }),
   };
-}
-
-function createReferralCodeForUserId(userId: string): string {
-  return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
 }
 
 export function createMockChartServiceRepository(

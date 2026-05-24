@@ -69,6 +69,8 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /alter table if exists payment_requests add column if not exists support_thread_id text/i);
   assert.match(sql, /alter table if exists users add column if not exists phone_number text/i);
   assert.match(sql, /alter table if exists users add column if not exists referral_code text/i);
+  assert.match(sql, /update users set referral_code = upper\(substr\(md5\(id\), 1, 6\)\)/i);
+  assert.match(sql, /referral_code !~ '\^\[A-Z0-9\]\{6\}\$'/i);
   assert.match(sql, /alter table if exists users add column if not exists referred_by_user_id text/i);
   assert.match(sql, /alter table if exists users add column if not exists created_at timestamptz/i);
   assert.match(sql, /create table if not exists email_outbox/i);

@@ -1,6 +1,7 @@
 import {
   REFERRAL_LEDGER_STATUSES,
   assertSuperAdminActor,
+  confirmReferralLedger,
   createAuditLogDraft,
   type Actor,
   type PaymentRequestRecord,
@@ -38,6 +39,16 @@ export type UserReferralSummary = {
   reversedPoints: number;
   totalPoints: number;
   referredUsers: UserReferralListItem[];
+};
+
+export type UserReferralSummaryOptions = {
+  nowIso?: string;
+  autoConfirm?: boolean;
+};
+
+export type ReferralAutoConfirmResult = {
+  confirmedCount: number;
+  confirmedLedgers: ReferralLedgerRecord[];
 };
 
 export function getReferralProgramSettings(
@@ -153,7 +164,12 @@ export async function createAsyncReferralLedgerForPayment(
 export function getUserReferralSummary(
   repository: ChartServiceRepository,
   userId: string,
+  options: UserReferralSummaryOptions = {},
 ): UserReferralSummary {
+  if (options.autoConfirm !== false) {
+    confirmMaturedReferralLedgers(repository, options.nowIso ?? new Date().toISOString());
+  }
+
   return buildUserReferralSummary({
     settings: getReferralProgramSettings(repository),
     users: repository.listUsers(),
@@ -168,7 +184,12 @@ export function getUserReferralSummary(
 export async function getAsyncUserReferralSummary(
   repository: AsyncChartServiceRepository,
   userId: string,
+  options: UserReferralSummaryOptions = {},
 ): Promise<UserReferralSummary> {
+  if (options.autoConfirm !== false) {
+    await confirmAsyncMaturedReferralLedgers(repository, options.nowIso ?? new Date().toISOString());
+  }
+
   const [settings, users, payments] = await Promise.all([
     getAsyncReferralProgramSettings(repository),
     repository.listUsers(),
@@ -181,6 +202,44 @@ export async function getAsyncUserReferralSummary(
   return buildUserReferralSummary({ settings, users, payments, ledgers, userId });
 }
 
+export function confirmMaturedReferralLedgers(
+  repository: ChartServiceRepository,
+  nowIso: string,
+): ReferralAutoConfirmResult {
+  const confirmedLedgers = repository
+    .listPayments()
+    .flatMap((payment) => repository.listReferralLedgersByPaymentId(payment.id))
+    .filter((ledger) => shouldConfirmReferralLedger(ledger, nowIso))
+    .map((ledger) => confirmReferralLedger(ledger, nowIso));
+
+  confirmedLedgers.forEach((ledger) => repository.saveReferralLedger(ledger));
+
+  return {
+    confirmedCount: confirmedLedgers.length,
+    confirmedLedgers,
+  };
+}
+
+export async function confirmAsyncMaturedReferralLedgers(
+  repository: AsyncChartServiceRepository,
+  nowIso: string,
+): Promise<ReferralAutoConfirmResult> {
+  const payments = await repository.listPayments();
+  const ledgers = (await Promise.all(
+    payments.map((payment) => repository.listReferralLedgersByPaymentId(payment.id)),
+  )).flat();
+  const confirmedLedgers = ledgers
+    .filter((ledger) => shouldConfirmReferralLedger(ledger, nowIso))
+    .map((ledger) => confirmReferralLedger(ledger, nowIso));
+
+  await Promise.all(confirmedLedgers.map((ledger) => repository.saveReferralLedger(ledger)));
+
+  return {
+    confirmedCount: confirmedLedgers.length,
+    confirmedLedgers,
+  };
+}
+
 function createDefaultReferralProgramSettings(): ReferralProgramSettingsRecord {
   return {
     id: DEFAULT_REFERRAL_SETTINGS_ID,
@@ -188,6 +247,11 @@ function createDefaultReferralProgramSettings(): ReferralProgramSettingsRecord {
     updatedByAdminId: null,
     updatedAt: '1970-01-01T00:00:00.000Z',
   };
+}
+
+function shouldConfirmReferralLedger(ledger: ReferralLedgerRecord, nowIso: string): boolean {
+  return ledger.status === REFERRAL_LEDGER_STATUSES.pending &&
+    new Date(ledger.confirmAfter).getTime() <= new Date(nowIso).getTime();
 }
 
 function readReferralProgramSettings(

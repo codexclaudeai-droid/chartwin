@@ -75,7 +75,24 @@ test('dashboard summary backfills profile metadata for legacy user records', () 
   });
 
   assert.equal(summary.user.phoneNumber, null);
-  assert.equal(summary.user.referralCode, 'TC-USERMEMBER');
+  assert.match(summary.user.referralCode, /^[A-Z0-9]{6}$/);
+  assert.doesNotMatch(summary.user.referralCode, /^TC-/);
   assert.equal(summary.user.referredByUserId, null);
   assert.equal(summary.user.createdAt, '1970-01-01T00:00:00.000Z');
+});
+
+test('dashboard summary upgrades legacy referral codes to the six character format', () => {
+  const repository = createMockChartServiceRepository();
+  const user = repository.getUserById('user_member');
+  repository.saveUser({
+    ...user,
+    referralCode: 'TC-USERMEMBER',
+  });
+
+  const summary = getUserDashboardSummary(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  });
+
+  assert.match(summary.user.referralCode, /^[A-Z0-9]{6}$/);
+  assert.equal(repository.getUserById('user_member')?.referralCode, summary.user.referralCode);
 });
