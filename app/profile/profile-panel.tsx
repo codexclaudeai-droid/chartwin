@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { subscribeAuthSessionChangedEvent } from '../auth-events';
 import { getNotificationCenterHref } from '../notifications/notification-display';
 import {
@@ -107,6 +107,8 @@ export function ProfilePanel() {
   const [settingsMessage, setSettingsMessage] = useState('연락번호, 비밀번호, 추천 정보를 관리할 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
   const [targetPaymentId, setTargetPaymentId] = useState(() => getTargetPaymentIdFromHash());
+  const [isPhoneEditorActive, setIsPhoneEditorActive] = useState(false);
+  const phoneInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     void refresh();
@@ -186,6 +188,15 @@ export function ProfilePanel() {
     setSettingsMessage('마이프로필 정보를 저장했습니다.');
   }
 
+  function focusPhoneNumberEditor() {
+    setIsPhoneEditorActive(true);
+    setSettingsMessage('연락번호를 수정한 뒤 프로필 저장을 눌러주세요.');
+    window.requestAnimationFrame(() => {
+      phoneInputRef.current?.scrollIntoView({ block: 'center' });
+      phoneInputRef.current?.focus();
+    });
+  }
+
   async function validateImagePolicy(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedImageFile) {
@@ -246,7 +257,17 @@ export function ProfilePanel() {
           </div>
           <div className="status-row">
             <span>연락번호</span>
-            <strong>{dashboard.user.phoneNumber || '미등록'}</strong>
+            <div className="status-row-actions">
+              <strong>{dashboard.user.phoneNumber || '미등록'}</strong>
+              <button
+                aria-label="연락번호 수정"
+                className="inline-edit-button"
+                onClick={focusPhoneNumberEditor}
+                type="button"
+              >
+                수정
+              </button>
+            </div>
           </div>
           <div className="status-row">
             <span>권한</span>
@@ -263,7 +284,9 @@ export function ProfilePanel() {
           />
           <label htmlFor="profilePhoneNumber">연락번호</label>
           <input
+            className={isPhoneEditorActive ? 'profile-phone-input is-edit-target' : 'profile-phone-input'}
             id="profilePhoneNumber"
+            ref={phoneInputRef}
             value={phoneDraft}
             onChange={(event) => setPhoneDraft(event.target.value)}
             placeholder="010-0000-0000"

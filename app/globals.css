@@ -237,6 +237,36 @@ a {
   font-size: 13px;
 }
 
+.status-row-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.inline-edit-button {
+  background: rgba(255, 253, 247, 0.72);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 750;
+  min-height: 28px;
+  padding: 0 10px;
+}
+
+.inline-edit-button:hover,
+.inline-edit-button:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid rgba(168, 76, 22, 0.18);
+  outline-offset: 2px;
+}
+
+.profile-phone-input.is-edit-target {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(168, 76, 22, 0.12);
+}
+
 .band {
   border-top: 1px solid var(--line);
   display: grid;

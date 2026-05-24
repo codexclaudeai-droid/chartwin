@@ -148,6 +148,17 @@ test('profile page and panel expose my profile contact password and referral con
   assert.match(panelSource, /\/signup\?ref=/);
 });
 
+test('profile contact summary exposes an edit button that targets the phone input', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /phoneInputRef/);
+  assert.match(panelSource, /focusPhoneNumberEditor/);
+  assert.match(panelSource, /aria-label="연락번호 수정"/);
+  assert.match(panelSource, /연락번호를 수정한 뒤 프로필 저장을 눌러주세요/);
+  assert.match(styleSource, /\.status-row-actions/);
+});
+
 test('profile panel renders my referral list with individual and total points', () => {
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
 
