@@ -71,6 +71,7 @@ test('memory repository signature carries the auth seed schema version', () => {
 
   assert.match(signature, /^memory:/);
   assert.match(signature, /auth-password-hash/);
+  assert.match(signature, /password-reset/);
 });
 
 test('postgres connection settings redact credentials and normalize SSL mode', () => {

@@ -51,6 +51,21 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       ],
     },
     {
+      name: 'password_reset_tokens',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        user_id: { type: 'text', references: 'users.id' },
+        token_hash: { type: 'text' },
+        created_at: { type: 'timestamptz' },
+        expires_at: { type: 'timestamptz' },
+        used_at: { type: 'timestamptz', nullable: true },
+      },
+      indexes: [
+        { name: 'idx_password_reset_tokens_token_hash', columns: ['token_hash'] },
+        { name: 'idx_password_reset_tokens_user_id', columns: ['user_id'] },
+      ],
+    },
+    {
       name: 'subscription_plans',
       columns: {
         id: { type: 'text', primaryKey: true },

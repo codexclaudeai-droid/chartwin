@@ -1157,3 +1157,24 @@ Deferred scope:
 - Browser smoke tests against a launched Next service.
 - Secret-backed staging database migration checks.
 - Deployment jobs after the repository hosting target is finalized.
+
+## 43. Password Reset Completion Criteria
+
+The password reset slice should give users a recovery path without storing reset secrets in plain text.
+
+Implemented scope:
+
+- Password reset token records are part of the repository contract and Postgres schema.
+- Reset token originals are never stored; only SHA-256 token hashes are persisted.
+- Password reset requests return the same production response whether or not the account exists.
+- Development mode can show a local `resetTokenPreview` so the flow remains testable before email delivery is connected.
+- Reset confirmation validates the password policy, updates the password hash, marks the token as used, and clears existing sessions for the user.
+- `/api/auth/password-reset/request` and `/api/auth/password-reset/confirm` use same-origin mutation guards and async repository mutation scopes.
+- `/forgot-password` exposes the request and confirm flow, and `/login` links users to recovery.
+
+Deferred scope:
+
+- Email delivery provider integration.
+- Branded reset email template and localization polish.
+- Token revocation for all older reset tokens after one token is consumed.
+- Abuse monitoring beyond the shared mutation rate limiter.

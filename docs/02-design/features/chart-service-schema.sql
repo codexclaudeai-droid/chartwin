@@ -25,6 +25,20 @@ create index if not exists idx_auth_sessions_user_id on auth_sessions (user_id);
 
 create index if not exists idx_auth_sessions_expires_at on auth_sessions (expires_at);
 
+create table if not exists password_reset_tokens (
+  id text primary key,
+  user_id text not null,
+  token_hash text not null,
+  created_at timestamptz not null,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  foreign key (user_id) references users(id)
+);
+
+create index if not exists idx_password_reset_tokens_token_hash on password_reset_tokens (token_hash);
+
+create index if not exists idx_password_reset_tokens_user_id on password_reset_tokens (user_id);
+
 create table if not exists subscription_plans (
   id text primary key,
   name text not null,

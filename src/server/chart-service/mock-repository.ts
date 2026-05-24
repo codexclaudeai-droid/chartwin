@@ -12,8 +12,12 @@ import {
   type SupportMessageRecord,
   type SupportThreadRecord,
 } from '../../domain/chart-service/index.ts';
-import type { ChartServiceRepository, ServiceUserRecord } from './repository.ts';
-import type { AuthSessionRecord } from './repository.ts';
+import type {
+  AuthSessionRecord,
+  ChartServiceRepository,
+  PasswordResetTokenRecord,
+  ServiceUserRecord,
+} from './repository.ts';
 import { getDefaultChartServiceSubscriptionPlans } from './bootstrap.ts';
 import { createPasswordHash } from './passwords.ts';
 
@@ -21,6 +25,7 @@ export type MockChartServiceState = {
   idSeq: number;
   users: ServiceUserRecord[];
   sessions: AuthSessionRecord[];
+  passwordResetTokens: PasswordResetTokenRecord[];
   plans: SubscriptionPlan[];
   subscriptions: SubscriptionRecord[];
   payments: PaymentRequestRecord[];
@@ -42,6 +47,7 @@ export function createMockChartServiceState(): MockChartServiceState {
       createMockUser({ id: 'super_1', email: 'super@example.com', name: 'Super Admin', role: USER_ROLES.superAdmin }),
     ],
     sessions: [],
+    passwordResetTokens: [],
     plans: getDefaultChartServiceSubscriptionPlans(),
     subscriptions: [
       createSubscriptionRecord({
@@ -148,6 +154,8 @@ function createMockUser(input: {
 export function createMockChartServiceRepository(
   state: MockChartServiceState = createMockChartServiceState(),
 ): ChartServiceRepository {
+  state.passwordResetTokens ??= [];
+
   return {
     nextId(prefix: string): string {
       state.idSeq += 1;
@@ -165,11 +173,22 @@ export function createMockChartServiceRepository(
       upsertById(state.users, user);
     },
     getSessionById: (id) => cloneOrNull(state.sessions.find((session) => session.id === id)),
+    listSessionsByUserId(userId) {
+      return state.sessions
+        .filter((session) => session.userId === userId)
+        .map((session) => ({ ...session }));
+    },
     saveSession(session) {
       upsertById(state.sessions, session);
     },
     deleteSession(id) {
       state.sessions = state.sessions.filter((session) => session.id !== id);
+    },
+    getPasswordResetTokenByTokenHash(tokenHash) {
+      return cloneOrNull(state.passwordResetTokens.find((token) => token.tokenHash === tokenHash));
+    },
+    savePasswordResetToken(token) {
+      upsertById(state.passwordResetTokens, token);
     },
     getSubscriptionById: (id) => cloneOrNull(state.subscriptions.find((subscription) => subscription.id === id)),
     getSubscriptionByUserId: (userId) => cloneOrNull(state.subscriptions.find((subscription) => subscription.userId === userId)),

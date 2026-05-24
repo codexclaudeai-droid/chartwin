@@ -21,6 +21,8 @@ import {
   mapAuthSessionToPostgresRow,
   mapNotificationFromPostgresRow,
   mapNotificationToPostgresRow,
+  mapPasswordResetTokenFromPostgresRow,
+  mapPasswordResetTokenToPostgresRow,
   mapPaymentFromPostgresRow,
   mapPaymentToPostgresRow,
   mapPlanFromPostgresRow,
@@ -38,7 +40,7 @@ import {
   type PostgresRow,
   type PostgresStatement,
 } from './postgres-mappers.ts';
-import type { AuthSessionRecord, ServiceUserRecord } from './repository.ts';
+import type { AuthSessionRecord, PasswordResetTokenRecord, ServiceUserRecord } from './repository.ts';
 
 export type PostgresQueryResult = {
   rows: PostgresRow[];
@@ -120,11 +122,24 @@ export function createPostgresAsyncChartServiceRepository(
     async getSessionById(id: string): Promise<AuthSessionRecord | null> {
       return selectOne('auth_sessions', mapAuthSessionFromPostgresRow, { id });
     },
+    async listSessionsByUserId(userId: string): Promise<AuthSessionRecord[]> {
+      return selectMany('auth_sessions', mapAuthSessionFromPostgresRow, { user_id: userId });
+    },
     async saveSession(session: AuthSessionRecord): Promise<void> {
       await execute(createPostgresUpsertStatement('auth_sessions', mapAuthSessionToPostgresRow(session), ['id']));
     },
     async deleteSession(id: string): Promise<void> {
       await execute(createPostgresDeleteStatement('auth_sessions', { id }));
+    },
+    async getPasswordResetTokenByTokenHash(tokenHash: string): Promise<PasswordResetTokenRecord | null> {
+      return selectOne('password_reset_tokens', mapPasswordResetTokenFromPostgresRow, { token_hash: tokenHash });
+    },
+    async savePasswordResetToken(token: PasswordResetTokenRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'password_reset_tokens',
+        mapPasswordResetTokenToPostgresRow(token),
+        ['id'],
+      ));
     },
     async getSubscriptionById(id: string): Promise<SubscriptionRecord | null> {
       return selectOne('subscriptions', mapSubscriptionFromPostgresRow, { id });

@@ -13,6 +13,7 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.deepEqual(tableNames, [
     'users',
     'auth_sessions',
+    'password_reset_tokens',
     'subscription_plans',
     'subscriptions',
     'payment_requests',
@@ -24,6 +25,8 @@ test('chart service database schema covers repository-backed core tables', () =>
   ]);
   assert.equal(tables.find((table) => table.name === 'users')?.columns.account_status.type, 'text');
   assert.equal(tables.find((table) => table.name === 'users')?.columns.password_hash.type, 'text');
+  assert.equal(tables.find((table) => table.name === 'password_reset_tokens')?.columns.token_hash.type, 'text');
+  assert.equal(tables.find((table) => table.name === 'password_reset_tokens')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'subscriptions')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.subscription_id.references, 'subscriptions.id');
   assert.equal(tables.find((table) => table.name === 'audit_logs')?.columns.actor_admin_id.references, 'users.id');
@@ -34,6 +37,8 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
 
   assert.match(sql, /create table if not exists users/i);
   assert.match(sql, /password_hash text not null/i);
+  assert.match(sql, /create table if not exists password_reset_tokens/i);
+  assert.match(sql, /token_hash text not null/i);
   assert.match(sql, /account_status text not null default 'active'/i);
   assert.match(sql, /check \(account_status in \('active', 'suspended'\)\)/i);
   assert.match(sql, /foreign key \(user_id\) references users\(id\)/i);

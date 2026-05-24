@@ -8,7 +8,7 @@ import type {
   SupportMessageRecord,
   SupportThreadRecord,
 } from '../../domain/chart-service/index.ts';
-import type { AuthSessionRecord, ServiceUserRecord } from './repository.ts';
+import type { AuthSessionRecord, PasswordResetTokenRecord, ServiceUserRecord } from './repository.ts';
 
 export type PostgresRow = Record<string, unknown>;
 
@@ -76,6 +76,28 @@ export function mapAuthSessionToPostgresRow(record: AuthSessionRecord): Postgres
     user_id: record.userId,
     created_at: record.createdAt,
     expires_at: record.expiresAt,
+  };
+}
+
+export function mapPasswordResetTokenFromPostgresRow(row: PostgresRow): PasswordResetTokenRecord {
+  return {
+    id: readString(row.id),
+    userId: readString(row.user_id),
+    tokenHash: readString(row.token_hash),
+    createdAt: readIsoString(row.created_at),
+    expiresAt: readIsoString(row.expires_at),
+    usedAt: readNullableIsoString(row.used_at),
+  };
+}
+
+export function mapPasswordResetTokenToPostgresRow(record: PasswordResetTokenRecord): PostgresRow {
+  return {
+    id: record.id,
+    user_id: record.userId,
+    token_hash: record.tokenHash,
+    created_at: record.createdAt,
+    expires_at: record.expiresAt,
+    used_at: record.usedAt,
   };
 }
 

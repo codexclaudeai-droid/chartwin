@@ -30,6 +30,15 @@ export type AuthSessionRecord = {
   expiresAt: string;
 };
 
+export type PasswordResetTokenRecord = {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  createdAt: string;
+  expiresAt: string;
+  usedAt: string | null;
+};
+
 export type ChartServiceRepository = {
   nextId(prefix: string): string;
   listPlans(): SubscriptionPlan[];
@@ -40,8 +49,11 @@ export type ChartServiceRepository = {
   getUserByEmail(email: string): ServiceUserRecord | null;
   saveUser(user: ServiceUserRecord): void;
   getSessionById(id: string): AuthSessionRecord | null;
+  listSessionsByUserId(userId: string): AuthSessionRecord[];
   saveSession(session: AuthSessionRecord): void;
   deleteSession(id: string): void;
+  getPasswordResetTokenByTokenHash(tokenHash: string): PasswordResetTokenRecord | null;
+  savePasswordResetToken(token: PasswordResetTokenRecord): void;
   getSubscriptionById(id: string): SubscriptionRecord | null;
   getSubscriptionByUserId(userId: string): SubscriptionRecord | null;
   listSubscriptions(): SubscriptionRecord[];
