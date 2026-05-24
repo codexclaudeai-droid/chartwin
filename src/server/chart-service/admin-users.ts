@@ -1,0 +1,211 @@
+import type {
+  AuditLogDraft,
+  NotificationRecord,
+  PaymentRequestRecord,
+  SubscriptionRecord,
+  SupportThreadRecord,
+  UserAccountStatus,
+  UserRole,
+} from '../../domain/chart-service/index.ts';
+import {
+  assertAdminActor,
+  assertSuperAdminActor,
+  createAuditLogDraft,
+  USER_ACCOUNT_STATUSES,
+} from '../../domain/chart-service/index.ts';
+import type { Actor } from '../../domain/chart-service/index.ts';
+import type { ChartServiceRepository, PublicServiceUserRecord, ServiceUserRecord } from './repository.ts';
+import { getAdminAuditLogEntries, type AdminAuditLogEntry } from './admin-audit.ts';
+import { getChartAccessSnapshot, type ChartAccessSnapshot } from './service.ts';
+import { toPublicServiceUserRecord } from './user-serialization.ts';
+
+export type AdminUserDirectoryItem = {
+  user: PublicServiceUserRecord;
+  subscription: SubscriptionRecord | null;
+  access: ChartAccessSnapshot;
+  latestPayment: PaymentRequestRecord | null;
+  paymentCount: number;
+  supportThreadCount: number;
+  unreadNotificationCount: number;
+};
+
+export type AdminUserDirectoryInput = {
+  query?: string;
+  role?: UserRole | 'all';
+  accountStatus?: UserAccountStatus | 'all';
+};
+
+export type AdminUserDetail = AdminUserDirectoryItem & {
+  payments: PaymentRequestRecord[];
+  supportThreads: SupportThreadRecord[];
+  notifications: NotificationRecord[];
+  auditEntries: AdminAuditLogEntry[];
+};
+
+const ADMIN_ROLES: UserRole[] = ['admin', 'super_admin'];
+
+export function getAdminUserDirectory(
+  repository: ChartServiceRepository,
+  input: AdminUserDirectoryInput = {},
+): AdminUserDirectoryItem[] {
+  const query = input.query?.trim().toLowerCase() ?? '';
+  const role = input.role && input.role !== 'all' ? input.role : null;
+  const accountStatus = input.accountStatus && input.accountStatus !== 'all'
+    ? input.accountStatus
+    : null;
+
+  return repository
+    .listUsers()
+    .filter((user) => !role || user.role === role)
+    .filter((user) => !accountStatus || user.accountStatus === accountStatus)
+    .filter((user) => (
+      !query ||
+      user.email.toLowerCase().includes(query) ||
+      user.name.toLowerCase().includes(query) ||
+      user.id.toLowerCase().includes(query)
+    ))
+    .sort((a, b) => a.email.localeCompare(b.email))
+    .map((user) => {
+      const payments = repository
+        .listPayments()
+        .filter((payment) => payment.userId === user.id)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      const notifications = repository.listNotificationsByUserId(user.id);
+
+      return {
+        user: toPublicServiceUserRecord(user),
+        subscription: repository.getSubscriptionByUserId(user.id),
+        access: getChartAccessSnapshot(repository, user.id),
+        latestPayment: payments[0] ?? null,
+        paymentCount: payments.length,
+        supportThreadCount: repository
+          .listSupportThreads()
+          .filter((thread) => thread.authorUserId === user.id)
+          .length,
+        unreadNotificationCount: notifications.filter((notification) => !notification.readAt).length,
+      };
+    });
+}
+
+export function getAdminUserDetail(
+  repository: ChartServiceRepository,
+  userId: string,
+): AdminUserDetail {
+  const user = repository.getUserById(userId);
+  if (!user) throw new Error(`User not found: ${userId}`);
+
+  const payments = repository
+    .listPayments()
+    .filter((payment) => payment.userId === user.id)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  const supportThreads = repository
+    .listSupportThreads()
+    .filter((thread) => thread.authorUserId === user.id)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  const notifications = repository.listNotificationsByUserId(user.id);
+  const subscription = repository.getSubscriptionByUserId(user.id);
+  const auditEntries = getAdminAuditLogEntries(repository)
+    .filter((entry) => isUserRelatedAuditLog(entry.log, {
+      userId: user.id,
+      paymentIds: new Set(payments.map((payment) => payment.id)),
+      subscriptionIds: new Set(subscription ? [subscription.id] : []),
+      supportThreadIds: new Set(supportThreads.map((thread) => thread.id)),
+    }))
+    .slice(0, 8);
+
+  return {
+    user: toPublicServiceUserRecord(user),
+    subscription,
+    access: getChartAccessSnapshot(repository, user.id),
+    latestPayment: payments[0] ?? null,
+    paymentCount: payments.length,
+    supportThreadCount: supportThreads.length,
+    unreadNotificationCount: notifications.filter((notification) => !notification.readAt).length,
+    payments,
+    supportThreads,
+    notifications,
+    auditEntries,
+  };
+}
+
+export function updateAdminUserRole(
+  repository: ChartServiceRepository,
+  input: { admin: Actor; userId: string; role: UserRole },
+): AdminUserDetail {
+  assertAdminActor(input.admin);
+  const user = repository.getUserById(input.userId);
+  if (!user) throw new Error(`User not found: ${input.userId}`);
+
+  if (requiresSuperAdmin(input.role) || requiresSuperAdmin(user.role)) {
+    assertSuperAdminActor(input.admin);
+  }
+
+  const updatedUser = {
+    ...user,
+    role: input.role,
+  };
+  repository.saveUser(updatedUser);
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.user.role.update',
+    targetType: 'user',
+    targetId: user.id,
+    beforeJson: { user },
+    afterJson: { user: updatedUser },
+  }));
+
+  return getAdminUserDetail(repository, user.id);
+}
+
+export function updateAdminUserAccountStatus(
+  repository: ChartServiceRepository,
+  input: { admin: Actor; userId: string; accountStatus: UserAccountStatus; reason: string },
+): AdminUserDetail {
+  assertAdminActor(input.admin);
+  const user = repository.getUserById(input.userId);
+  if (!user) throw new Error(`User not found: ${input.userId}`);
+  if (user.id === input.admin.id && input.accountStatus === USER_ACCOUNT_STATUSES.suspended) {
+    throw new Error('Cannot suspend your own account');
+  }
+  if (requiresSuperAdmin(user.role)) {
+    assertSuperAdminActor(input.admin);
+  }
+
+  const updatedUser = {
+    ...user,
+    accountStatus: input.accountStatus,
+  };
+  repository.saveUser(updatedUser);
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: input.accountStatus === USER_ACCOUNT_STATUSES.suspended
+      ? 'admin.user.account.suspend'
+      : 'admin.user.account.activate',
+    targetType: 'user',
+    targetId: user.id,
+    beforeJson: { user },
+    afterJson: { user: updatedUser, reason: input.reason.trim() },
+  }));
+
+  return getAdminUserDetail(repository, user.id);
+}
+
+function requiresSuperAdmin(role: UserRole): boolean {
+  return ADMIN_ROLES.includes(role);
+}
+
+function isUserRelatedAuditLog(
+  log: AuditLogDraft,
+  targets: {
+    userId: string;
+    paymentIds: Set<string>;
+    subscriptionIds: Set<string>;
+    supportThreadIds: Set<string>;
+  },
+): boolean {
+  if (log.targetType === 'user') return log.targetId === targets.userId;
+  if (log.targetType === 'payment_request') return targets.paymentIds.has(log.targetId);
+  if (log.targetType === 'subscription') return targets.subscriptionIds.has(log.targetId);
+  if (log.targetType === 'support_thread') return targets.supportThreadIds.has(log.targetId);
+  return false;
+}

@@ -1,0 +1,183 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {
+  confirmManualPaymentAndActivateSubscription,
+  createMockChartServiceRepository,
+  createSupportThread,
+  createUserNotification,
+  formatNotificationBadgeCount,
+  getNotificationSummaryForUser,
+  listNotificationsForUser,
+  markAllNotificationsReadForUser,
+  markNotificationReadForUser,
+  rejectManualPaymentRequest,
+  rejectSubscriptionRequest,
+  replyToSupportThreadAsAdmin,
+  requestSubscriptionCancellation,
+} from '../src/server/chart-service/index.ts';
+
+test('payment confirmation creates a user notification', () => {
+  const repository = createMockChartServiceRepository();
+
+  confirmManualPaymentAndActivateSubscription(repository, {
+    paymentId: 'pay_pending',
+    admin: { id: 'admin_1', role: 'admin' },
+    confirmedAt: '2026-05-23T13:00:00.000Z',
+    adminNote: '입금 확인 완료',
+  });
+
+  const notifications = listNotificationsForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  });
+
+  assert.equal(notifications.at(0)?.category, 'subscription');
+  assert.match(notifications.at(0)?.title ?? '', /구독/);
+});
+
+test('payment rejection creates a user notification with the admin note', () => {
+  const repository = createMockChartServiceRepository();
+
+  rejectManualPaymentRequest(repository, {
+    paymentId: 'pay_pending',
+    admin: { id: 'admin_1', role: 'admin' },
+    rejectedAt: '2026-05-23T13:00:00.000Z',
+    adminNote: '입금 내역 확인 불가',
+  });
+
+  const notifications = listNotificationsForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  });
+
+  assert.equal(notifications.at(0)?.category, 'payment');
+  assert.match(notifications.at(0)?.body ?? '', /입금 내역 확인 불가/);
+});
+
+test('subscription request rejection creates a user notification', () => {
+  const repository = createMockChartServiceRepository();
+  const requested = requestSubscriptionCancellation(repository, {
+    actor: { id: 'user_subscriber', role: 'member' },
+    requestedAt: '2026-05-23T13:00:00.000Z',
+  });
+
+  rejectSubscriptionRequest(repository, {
+    subscriptionId: requested.id,
+    admin: { id: 'admin_1', role: 'admin' },
+    rejectedAt: '2026-05-23T13:05:00.000Z',
+    adminNote: '요청 사유 확인 필요',
+  });
+
+  const notifications = listNotificationsForUser(repository, {
+    actor: { id: 'user_subscriber', role: 'member' },
+  });
+
+  assert.equal(notifications.at(0)?.category, 'subscription');
+  assert.match(notifications.at(0)?.body ?? '', /요청 사유 확인 필요/);
+});
+
+test('support admin reply creates a support notification for the thread owner', () => {
+  const repository = createMockChartServiceRepository();
+  const { thread } = createSupportThread(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'usage',
+    title: '차트 질문',
+    body: '사용법 문의입니다.',
+    visibility: 'private',
+    createdAt: '2026-05-23T13:00:00.000Z',
+  });
+
+  replyToSupportThreadAsAdmin(repository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    threadId: thread.id,
+    body: '답변 완료했습니다.',
+    createdAt: '2026-05-23T13:05:00.000Z',
+  });
+
+  const notifications = listNotificationsForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  });
+
+  assert.equal(notifications.at(0)?.category, 'support_reply');
+  assert.match(notifications.at(0)?.title ?? '', /고객센터/);
+});
+
+test('notification summary counts unread notifications for a user', () => {
+  const repository = createMockChartServiceRepository();
+  createUserNotification(repository, {
+    userId: 'user_member',
+    category: 'notice',
+    title: '첫 번째 알림',
+    body: '확인 필요',
+    createdAt: '2026-05-23T13:00:00.000Z',
+  });
+  createUserNotification(repository, {
+    userId: 'user_member',
+    category: 'notice',
+    title: '두 번째 알림',
+    body: '확인 필요',
+    createdAt: '2026-05-23T13:01:00.000Z',
+  });
+
+  const summary = getNotificationSummaryForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  });
+
+  assert.equal(summary.totalCount, 2);
+  assert.equal(summary.unreadCount, 2);
+});
+
+test('user can mark one own notification as read', () => {
+  const repository = createMockChartServiceRepository();
+  const notification = createUserNotification(repository, {
+    userId: 'user_member',
+    category: 'notice',
+    title: '읽음 처리 대상',
+    body: '확인 필요',
+    createdAt: '2026-05-23T13:00:00.000Z',
+  });
+
+  const result = markNotificationReadForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    notificationId: notification.id,
+    readAt: '2026-05-23T13:02:00.000Z',
+  });
+
+  assert.equal(result.readAt, '2026-05-23T13:02:00.000Z');
+  assert.equal(getNotificationSummaryForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  }).unreadCount, 0);
+});
+
+test('user can mark all own notifications as read', () => {
+  const repository = createMockChartServiceRepository();
+  createUserNotification(repository, {
+    userId: 'user_member',
+    category: 'notice',
+    title: '첫 번째 알림',
+    body: '확인 필요',
+    createdAt: '2026-05-23T13:00:00.000Z',
+  });
+  createUserNotification(repository, {
+    userId: 'user_member',
+    category: 'notice',
+    title: '두 번째 알림',
+    body: '확인 필요',
+    createdAt: '2026-05-23T13:01:00.000Z',
+  });
+
+  const result = markAllNotificationsReadForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    readAt: '2026-05-23T13:03:00.000Z',
+  });
+
+  assert.equal(result.updatedCount, 2);
+  assert.equal(getNotificationSummaryForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  }).unreadCount, 0);
+});
+
+test('notification badge count is hidden at zero and capped above 99', () => {
+  assert.equal(formatNotificationBadgeCount(0), null);
+  assert.equal(formatNotificationBadgeCount(1), '1');
+  assert.equal(formatNotificationBadgeCount(99), '99');
+  assert.equal(formatNotificationBadgeCount(100), '99+');
+});

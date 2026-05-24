@@ -1,0 +1,162 @@
+﻿import assert from 'node:assert/strict';
+import test from 'node:test';
+import fs from 'node:fs';
+import {
+  createAuthenticatedManualPaymentRequest,
+  createMockChartServiceRepository,
+  listAdminPaymentQueue,
+  rejectManualPaymentRequest,
+} from '../src/server/chart-service/index.ts';
+
+test('authenticated payment request uses the actor user id instead of trusting client supplied user ids', () => {
+  const repository = createMockChartServiceRepository();
+
+  const result = createAuthenticatedManualPaymentRequest(repository, {
+    actor: { id: 'user_trial', role: 'member' },
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T09:00:00.000Z',
+    depositorName: 'Trial User',
+  });
+
+  assert.equal(result.payment.userId, 'user_trial');
+  assert.equal(result.subscription.userId, 'user_trial');
+  assert.equal(result.payment.status, 'pending');
+  assert.equal(result.subscription.status, 'payment_pending');
+});
+
+test('admin payment queue joins payment, user, plan, and subscription status for operations UI', () => {
+  const repository = createMockChartServiceRepository();
+
+  const queue = listAdminPaymentQueue(repository);
+  const pending = queue.find((item) => item.payment.id === 'pay_pending');
+
+  assert.ok(pending);
+  assert.equal(pending.user.email, 'member@example.com');
+  assert.equal(pending.plan?.name, 'Monthly');
+  assert.equal(pending.subscription?.status, 'payment_pending');
+});
+
+test('admin payment queue API does not expose user password hashes', async () => {
+  const {
+    createSessionForUser,
+    getChartServiceRepository,
+    SESSION_COOKIE_NAME,
+  } = await import('../src/server/chart-service/index.ts');
+  const repository = getChartServiceRepository();
+  const adminSession = createSessionForUser(repository, {
+    userId: 'admin_1',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  }).session;
+  const { GET } = await import('../app/api/admin/payments/route.ts');
+
+  const response = await GET(new Request('http://localhost/api/admin/payments', {
+    headers: { cookie: `${SESSION_COOKIE_NAME}=${adminSession.id}` },
+  }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.payments[0].user.passwordHash, undefined);
+});
+
+test('admin can reject a pending payment request and cancel its pending subscription', () => {
+  const repository = createMockChartServiceRepository();
+
+  const result = rejectManualPaymentRequest(repository, {
+    paymentId: 'pay_pending',
+    admin: { id: 'admin_1', role: 'admin' },
+    rejectedAt: '2026-05-23T12:20:00.000Z',
+    adminNote: '입금 내역을 확인할 수 없습니다.',
+  });
+
+  assert.equal(result.payment.status, 'rejected');
+  assert.equal(result.subscription.status, 'cancelled');
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'payment.reject_and_subscription.cancel');
+});
+
+test('payment rejection requires an explicit admin note', () => {
+  const repository = createMockChartServiceRepository();
+
+  assert.throws(() => rejectManualPaymentRequest(repository, {
+    paymentId: 'pay_pending',
+    admin: { id: 'admin_1', role: 'admin' },
+    rejectedAt: '2026-05-23T12:20:00.000Z',
+    adminNote: '   ',
+  }), /Admin note required/);
+
+  assert.equal(repository.getPaymentById('pay_pending')?.status, 'pending');
+  assert.equal(repository.getSubscriptionById('sub_pending')?.status, 'payment_pending');
+  assert.equal(repository.listAuditLogs().length, 0);
+});
+
+test('payment reject API does not inject a hidden default admin note', async () => {
+  const {
+    createSessionForUser,
+    getChartServiceRepository,
+    SESSION_COOKIE_NAME,
+  } = await import('../src/server/chart-service/index.ts');
+  const { POST } = await import('../app/api/admin/payments/reject/route.ts');
+  const repository = getChartServiceRepository();
+  const { session } = createSessionForUser(repository, {
+    userId: 'admin_1',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  });
+
+  const response = await POST(new Request('http://localhost/api/admin/payments/reject', {
+    method: 'POST',
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${session.id}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ paymentId: 'pay_pending', adminNote: '   ' }),
+  }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.match(payload.message, /Admin note required/);
+});
+
+test('admin payment panel renders status quick filters before the table', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /PAYMENT_QUEUE_FILTER_PRESETS/);
+  assert.match(source, /aria-label="결제 요청 빠른 필터"/);
+  assert.match(source, /filteredPayments\.map/);
+});
+
+test('admin payment panel applies dashboard queue preset events', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /subscribeAdminQueuePresetEvent/);
+  assert.match(source, /detail\.panel !== 'payments'/);
+  assert.match(source, /const dashboardFilter = getPaymentQueueFilterPreset\(detail\.presetKey\)/);
+  assert.match(source, /setActiveFilterKey\(dashboardFilter\.key\)/);
+});
+
+test('admin payment panel renders operator-friendly payment status labels', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /formatPaymentStatusLabel/);
+});
+
+test('admin payment panel confirms irreversible payment operations before posting', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /useAdminActionConfirmation/);
+  assert.match(source, /await confirmAdminAction/);
+  assert.match(source, /\{confirmationDialog\}/);
+  assert.match(source, /`payment\.\$\{operation\}`/);
+  assert.doesNotMatch(source, /shouldRunAdminAction/);
+});
+
+test('admin payment panel refreshes its filtered queue after local operations without overwriting success context', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /type AdminPanelRefreshOptions = \{/);
+  assert.match(source, /nextMessage\?: string/);
+  assert.match(source, /detail\.source === 'payments'/);
+  assert.match(source, /void refresh\(\{ nextMessage: `\$\{paymentId\} 작업이 반영되었습니다\. 목록을 갱신했습니다\.` \}\)/);
+  assert.match(source, /dispatchAdminRefreshEvent\(\{ source: 'payments' \}\)/);
+});

@@ -1,0 +1,82 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { createMockChartServiceRepository } from '../src/server/chart-service/index.ts';
+
+test('postgres async repository exposes the full repository contract', async () => {
+  const { createPostgresAsyncChartServiceRepository } = await import('../src/server/chart-service/index.ts');
+  const executor = { query: async () => ({ rows: [] }) };
+  const repository = createPostgresAsyncChartServiceRepository(executor);
+  const expectedMethods = Object.keys(createMockChartServiceRepository());
+
+  for (const methodName of expectedMethods) {
+    assert.equal(typeof repository[methodName], 'function', `${methodName} should be implemented`);
+  }
+});
+
+test('postgres async repository uses parameterized statements for user reads and writes', async () => {
+  const { createPostgresAsyncChartServiceRepository } = await import('../src/server/chart-service/index.ts');
+  const calls = [];
+  const executor = {
+    async query(statement) {
+      calls.push(statement);
+      if (statement.sql === 'select * from users where id = $1') {
+        return {
+          rows: [{
+            id: 'user_1',
+            email: 'member@example.com',
+            name: 'Member',
+            role: 'member',
+            account_status: 'active',
+            password_hash: 'hash',
+          }],
+        };
+      }
+      return { rows: [] };
+    },
+  };
+  const repository = createPostgresAsyncChartServiceRepository(executor);
+
+  const user = await repository.getUserById('user_1');
+  await repository.saveUser({
+    id: 'user_1',
+    email: 'member@example.com',
+    name: 'Member',
+    role: 'member',
+    accountStatus: 'active',
+    passwordHash: 'hash',
+  });
+  await repository.deleteSession('session_1');
+
+  assert.equal(user?.email, 'member@example.com');
+  assert.deepEqual(calls[0].values, ['user_1']);
+  assert.match(calls[1].sql, /^insert into users /);
+  assert.match(calls[1].sql, /on conflict \(id\) do update/);
+  assert.equal(calls[1].values.includes('member@example.com'), true);
+  assert.equal(calls[2].sql, 'delete from auth_sessions where id = $1');
+  assert.deepEqual(calls[2].values, ['session_1']);
+});
+
+test('postgres async repository appends audit logs with insert-only SQL', async () => {
+  const { createPostgresAsyncChartServiceRepository } = await import('../src/server/chart-service/index.ts');
+  const calls = [];
+  const executor = {
+    async query(statement) {
+      calls.push(statement);
+      return { rows: [] };
+    },
+  };
+  const repository = createPostgresAsyncChartServiceRepository(executor);
+
+  await repository.appendAuditLog({
+    actorAdminId: 'admin_1',
+    action: 'payment.confirm',
+    targetType: 'payment',
+    targetId: 'pay_1',
+    beforeJson: { status: 'pending' },
+    afterJson: { status: 'confirmed' },
+  });
+
+  assert.match(calls[0].sql, /^insert into audit_logs /);
+  assert.doesNotMatch(calls[0].sql, /on conflict/i);
+  assert.deepEqual(calls[0].values.slice(0, 4), ['admin_1', 'payment.confirm', 'payment', 'pay_1']);
+});
