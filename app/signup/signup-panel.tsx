@@ -61,12 +61,12 @@ export function SignupPanel() {
           placeholder="Aa1!aaaa"
           required
         />
-        <label htmlFor="signupReferralCode">추천코드</label>
+        <label htmlFor="signupReferralCode">추천코드 (선택)</label>
         <input
           id="signupReferralCode"
           value={referralCode}
           onChange={(event) => setReferralCode(event.target.value)}
-          placeholder="추천코드가 있으면 입력"
+          placeholder="선택사항: 추천코드가 있으면 입력"
         />
         {referralCode && (
           <p className="notice">추천코드 {referralCode}가 회원가입에 적용됩니다.</p>

@@ -77,6 +77,20 @@ test('mock signup stores the referrer from a referral code', () => {
   assert.equal(repository.getUserByEmail('referred@example.com')?.referredByUserId, 'user_subscriber');
 });
 
+test('mock signup allows omitted referral codes without assigning a referrer', () => {
+  const repository = createMockChartServiceRepository();
+
+  const result = registerMockUserAccount(repository, {
+    email: 'no-referral@example.com',
+    name: 'No Referral',
+    password: 'Aa1!aaaa',
+    createdAt: '2026-05-23T10:00:00.000Z',
+  });
+
+  assert.equal(result.user.referredByUserId, null);
+  assert.equal(repository.getUserByEmail('no-referral@example.com')?.referredByUserId, null);
+});
+
 test('mock signup rejects an unknown referral code without creating the account', () => {
   const repository = createMockChartServiceRepository();
 
@@ -111,6 +125,22 @@ test('async signup stores the referrer from a referral code', async () => {
   assert.equal(syncRepository.getUserByEmail('async-referred@example.com')?.referredByUserId, 'user_subscriber');
 });
 
+test('async signup allows blank referral codes without assigning a referrer', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+
+  const result = await registerAsyncMockUserAccount(repository, {
+    email: 'async-no-referral@example.com',
+    name: 'Async No Referral',
+    password: 'Aa1!aaaa',
+    referralCode: '   ',
+    createdAt: '2026-05-23T10:00:00.000Z',
+  });
+
+  assert.equal(result.user.referredByUserId, null);
+  assert.equal(syncRepository.getUserByEmail('async-no-referral@example.com')?.referredByUserId, null);
+});
+
 test('signup API stores the referrer from a referral code', async () => {
   const {
     getChartServiceRepository,
@@ -139,6 +169,29 @@ test('signup API stores the referrer from a referral code', async () => {
   assert.match(payload.user.referralCode, /^[A-Z0-9]{6}$/);
 });
 
+test('signup API allows missing referral codes without assigning a referrer', async () => {
+  const { POST } = await import('../app/api/auth/signup/route.ts');
+
+  resetChartServiceRateLimits();
+  const response = await POST(new Request('http://localhost/api/auth/signup', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: `route-no-referral-${Date.now()}@example.com`,
+      name: 'Route No Referral User',
+      password: 'Aa1!aaaa',
+    }),
+  }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.user.referredByUserId, null);
+  assert.match(payload.user.referralCode, /^[A-Z0-9]{6}$/);
+});
+
 test('signup panel captures referral codes from the signup URL', () => {
   const source = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
 
@@ -147,6 +200,15 @@ test('signup panel captures referral codes from the signup URL', () => {
   assert.match(source, /referralCode/);
   assert.match(source, /signupReferralCode/);
   assert.match(source, /추천코드/);
+});
+
+test('signup panel labels referral code input as optional', () => {
+  const source = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
+  const referralField = source.match(/id="signupReferralCode"[\s\S]*?\/>/)?.[0] ?? '';
+
+  assert.match(source, /추천코드 \(선택\)/);
+  assert.match(source, /선택사항/);
+  assert.doesNotMatch(referralField, /\brequired\b/);
 });
 
 test('mock signup rejects duplicate email addresses case-insensitively', () => {
