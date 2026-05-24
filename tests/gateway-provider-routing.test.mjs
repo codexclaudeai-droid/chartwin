@@ -65,6 +65,16 @@ test('webhook commodity aliases resolve to stored candle symbols', () => {
   );
   assert.match(
     gatewayServerSource,
+    /function canonicalizeMarketForSymbol\(market, symbol\)/,
+    'stored candle keys should normalize commodity symbols out of the index market',
+  );
+  assert.match(
+    gatewayServerSource,
+    /market === 'index' && \/\^\(XAU\|XAG\|XPT\|USO\|WTI\|BRENT\)\//,
+    'XAGUSD and other commodity symbols should not stay under index keys after gateway load',
+  );
+  assert.match(
+    gatewayServerSource,
     /candleKey\('index', symbol, timeframe\)/,
     'legacy XAU/XAG rows stored under index should still be returned for commodity requests',
   );

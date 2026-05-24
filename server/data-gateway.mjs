@@ -37,8 +37,8 @@ let kisCollector = null;
 function splitCandleKey(key) {
   const parts = String(key || '').split(':');
   if (parts.length < 3) return null;
-  const market = parts[0];
-  const symbol = parts[1];
+  const symbol = normalizeSymbol(parts[1]);
+  const market = canonicalizeMarketForSymbol(parts[0], symbol);
   const timeframe = parts.slice(2).join(':');
   if (!market || !symbol || !timeframe) return null;
   return { market, symbol: canonicalizeSymbolByMarket(market, symbol), timeframe };
@@ -145,6 +145,12 @@ function canonicalizeSymbolByMarket(market, symbol) {
   if (market === 'commodity' && (normalized === 'XAUUSDT' || normalized === 'XAUUSDT.P')) return 'XAUUSD';
   if (market === 'commodity' && (normalized === 'XAGUSDT' || normalized === 'XAGUSDT.P')) return 'XAGUSD';
   return normalized;
+}
+
+function canonicalizeMarketForSymbol(market, symbol) {
+  const normalized = normalizeSymbol(symbol);
+  if (market === 'index' && /^(XAU|XAG|XPT|USO|WTI|BRENT)/.test(normalized)) return 'commodity';
+  return market;
 }
 
 const FX_QUOTES = ['USD', 'EUR', 'JPY', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD', 'KRW', 'CNH', 'HKD', 'SGD'];
