@@ -128,6 +128,12 @@ export function getChartServiceRuntimeReadiness(
       message: 'Postgres schema migration runner and deployment script are available.',
     });
     checks.push({
+      key: 'postgres_bootstrap_harness',
+      label: 'Postgres bootstrap harness',
+      status: 'pass',
+      message: 'Default plan seed and initial admin bootstrap script are available.',
+    });
+    checks.push({
       key: 'repository_adapter_implementation',
       label: 'Repository implementation',
       status: 'pass',

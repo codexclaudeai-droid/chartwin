@@ -1097,3 +1097,24 @@ Deferred scope:
 - Versioned incremental migrations after the first schema baseline.
 - Seed data import from the current mock repository.
 - Backup, restore, retention, and rollback runbooks.
+
+## 40. Postgres Bootstrap Harness Completion Criteria
+
+The Postgres bootstrap slice should prevent a newly migrated database from starting with missing public pricing plans or no administrator access path.
+
+Implemented scope:
+
+- Default subscription plans are defined in one bootstrap helper and reused by the mock repository.
+- Repository implementations now support `savePlan`, allowing the service to seed plans through the same repository contract used by runtime code.
+- `bootstrapAsyncChartServiceRepository` creates missing default plans without overwriting existing customized plan settings.
+- Optional initial super-admin creation is driven by `CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL`, `CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD`, and `CHART_SERVICE_BOOTSTRAP_ADMIN_NAME`.
+- Bootstrap validates the initial admin password policy, stores only the PBKDF2 password hash, and skips creation when the admin email already exists.
+- `npm run service:bootstrap` applies the Postgres schema migration first, then seeds default plans and the optional initial admin, then closes the `pg` pool.
+- Runtime readiness now reports that the Postgres bootstrap harness is available when the Postgres adapter is selected.
+
+Deferred scope:
+
+- Production-only one-time secret handling for bootstrap credentials.
+- Admin invitation and password-reset flow after the first bootstrap.
+- Seed import for notices, FAQs, symbols, strategies, and signal settings.
+- Idempotent versioned data migrations for future plan changes.

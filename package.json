@@ -10,6 +10,7 @@
     "service:dev": "next dev --hostname 127.0.0.1 --port 3000",
     "service:build": "node scripts/run-next-build.mjs",
     "service:check": "node scripts/check-production-readiness.mjs",
+    "service:bootstrap": "node scripts/bootstrap-chart-service.mjs",
     "service:migrate": "node scripts/run-chart-service-migration.mjs",
     "service:schema": "node scripts/write-chart-service-schema.mjs",
     "build": "tsc -p tsconfig.vite.json && vite build",

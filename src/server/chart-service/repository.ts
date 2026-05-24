@@ -34,6 +34,7 @@ export type ChartServiceRepository = {
   nextId(prefix: string): string;
   listPlans(): SubscriptionPlan[];
   getPlanById(id: string): SubscriptionPlan | null;
+  savePlan(plan: SubscriptionPlan): void;
   listUsers(): ServiceUserRecord[];
   getUserById(id: string): ServiceUserRecord | null;
   getUserByEmail(email: string): ServiceUserRecord | null;

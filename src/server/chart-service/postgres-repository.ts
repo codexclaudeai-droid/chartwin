@@ -24,6 +24,7 @@ import {
   mapPaymentFromPostgresRow,
   mapPaymentToPostgresRow,
   mapPlanFromPostgresRow,
+  mapPlanToPostgresRow,
   mapReferralLedgerFromPostgresRow,
   mapReferralLedgerToPostgresRow,
   mapSubscriptionFromPostgresRow,
@@ -86,6 +87,9 @@ export function createPostgresAsyncChartServiceRepository(
     },
     async getPlanById(id: string): Promise<SubscriptionPlan | null> {
       return selectOne('subscription_plans', mapPlanFromPostgresRow, { id });
+    },
+    async savePlan(plan: SubscriptionPlan): Promise<void> {
+      await execute(createPostgresUpsertStatement('subscription_plans', mapPlanToPostgresRow(plan), ['id']));
     },
     async listUsers(): Promise<ServiceUserRecord[]> {
       return selectMany('users', mapUserFromPostgresRow);

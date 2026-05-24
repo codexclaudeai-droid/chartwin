@@ -34,6 +34,7 @@ test('runtime readiness accepts configured postgres persistence with pg runtime 
   assert.equal(readiness.checks.some((check) => check.key === 'database_ssl' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'postgres_mapping_contract' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'postgres_schema_migration_harness' && check.status === 'pass'), true);
+  assert.equal(readiness.checks.some((check) => check.key === 'postgres_bootstrap_harness' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'repository_adapter_implementation' && check.status === 'pass'), true);
   assert.equal(readiness.ok, true);
 });

@@ -12,6 +12,7 @@ export * from './service.ts';
 export * from './singleton.ts';
 export * from './support.ts';
 export * from './notifications.ts';
+export * from './bootstrap.ts';
 export * from './dashboard.ts';
 export * from './admin-dashboard.ts';
 export * from './admin-users.ts';

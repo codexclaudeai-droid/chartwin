@@ -14,6 +14,7 @@ import {
 } from '../../domain/chart-service/index.ts';
 import type { ChartServiceRepository, ServiceUserRecord } from './repository.ts';
 import type { AuthSessionRecord } from './repository.ts';
+import { getDefaultChartServiceSubscriptionPlans } from './bootstrap.ts';
 import { createPasswordHash } from './passwords.ts';
 
 export type MockChartServiceState = {
@@ -41,11 +42,7 @@ export function createMockChartServiceState(): MockChartServiceState {
       createMockUser({ id: 'super_1', email: 'super@example.com', name: 'Super Admin', role: USER_ROLES.superAdmin }),
     ],
     sessions: [],
-    plans: [
-      { id: 'plan_monthly', name: 'Monthly', durationDays: 30, basePriceUsd: 199, discountPercent: 0, isActive: true },
-      { id: 'plan_half_year', name: 'Half Year', durationDays: 180, basePriceUsd: 1194, discountPercent: 15, isActive: true },
-      { id: 'plan_yearly', name: 'Yearly', durationDays: 365, basePriceUsd: 2388, discountPercent: 30, isActive: true },
-    ],
+    plans: getDefaultChartServiceSubscriptionPlans(),
     subscriptions: [
       createSubscriptionRecord({
         id: 'sub_pending',
@@ -158,6 +155,9 @@ export function createMockChartServiceRepository(
     },
     listPlans: () => state.plans.map((plan) => ({ ...plan })),
     getPlanById: (id) => cloneOrNull(state.plans.find((plan) => plan.id === id)),
+    savePlan(plan) {
+      upsertById(state.plans, plan);
+    },
     listUsers: () => state.users.map((user) => ({ ...user })),
     getUserById: (id) => cloneOrNull(state.users.find((user) => user.id === id)),
     getUserByEmail: (email) => cloneOrNull(state.users.find((user) => user.email.toLowerCase() === email.toLowerCase())),
