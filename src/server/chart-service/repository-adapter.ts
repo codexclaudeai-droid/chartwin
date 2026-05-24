@@ -11,6 +11,7 @@ import {
 } from './postgres-connection.ts';
 import {
   createPostgresAsyncChartServiceRepository,
+  isTransactionalPostgresQueryExecutor,
   type PostgresQueryExecutor,
 } from './postgres-repository.ts';
 import {
@@ -116,14 +117,26 @@ export function createAsyncChartServicePersistenceFromConfig(
   }
 
   const repository = createPostgresAsyncChartServiceRepository(queryExecutor);
-  const runOperation = async <T>(
+  const runRead = async <T>(
     operation: (repository: AsyncChartServiceRepository) => T | Promise<T>,
   ): Promise<Awaited<T>> => await operation(repository);
+  const runMutation = async <T>(
+    operation: (repository: AsyncChartServiceRepository) => T | Promise<T>,
+  ): Promise<Awaited<T>> => {
+    if (!isTransactionalPostgresQueryExecutor(queryExecutor)) {
+      return await operation(repository);
+    }
+
+    return await queryExecutor.transaction(async (transactionExecutor) => {
+      const transactionRepository = createPostgresAsyncChartServiceRepository(transactionExecutor);
+      return await operation(transactionRepository);
+    });
+  };
 
   return {
     repository,
-    runRead: runOperation,
-    runMutation: runOperation,
+    runRead,
+    runMutation,
   };
 }
 

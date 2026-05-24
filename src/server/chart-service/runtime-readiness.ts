@@ -134,6 +134,12 @@ export function getChartServiceRuntimeReadiness(
       message: 'Default plan seed and initial admin bootstrap script are available.',
     });
     checks.push({
+      key: 'postgres_transaction_boundary',
+      label: 'Postgres transaction boundary',
+      status: 'pass',
+      message: 'Postgres mutations can run through a transaction-scoped repository executor.',
+    });
+    checks.push({
       key: 'repository_adapter_implementation',
       label: 'Repository implementation',
       status: 'pass',

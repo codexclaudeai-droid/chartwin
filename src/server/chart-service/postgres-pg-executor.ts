@@ -1,9 +1,19 @@
 import type { PostgresConnectionSettings, PostgresSslMode } from './postgres-connection.ts';
-import type { PostgresQueryExecutor, PostgresQueryResult } from './postgres-repository.ts';
+import type {
+  PostgresQueryExecutor,
+  PostgresQueryResult,
+  TransactionalPostgresQueryExecutor,
+} from './postgres-repository.ts';
 import type { PostgresRow, PostgresStatement } from './postgres-mappers.ts';
+
+export type PgClientLike = {
+  query(sql: string, values?: unknown[]): Promise<{ rows: PostgresRow[] }>;
+  release?(): void;
+};
 
 export type PgPoolLike = {
   query(sql: string, values?: unknown[]): Promise<{ rows: PostgresRow[] }>;
+  connect?(): Promise<PgClientLike>;
 };
 
 export type PgPoolOptions = {
@@ -11,11 +21,34 @@ export type PgPoolOptions = {
   ssl?: false | { rejectUnauthorized: boolean };
 };
 
-export function createPgPostgresQueryExecutor(pool: PgPoolLike): PostgresQueryExecutor {
-  return {
+export function createPgPostgresQueryExecutor(pool: PgPoolLike): PostgresQueryExecutor | TransactionalPostgresQueryExecutor {
+  const executor: PostgresQueryExecutor = {
     async query(statement: PostgresStatement): Promise<PostgresQueryResult> {
       const result = await pool.query(statement.sql, statement.values);
       return { rows: result.rows };
+    },
+  };
+
+  if (typeof pool.connect !== 'function') {
+    return executor;
+  }
+
+  return {
+    ...executor,
+    async transaction<T>(operation: (executor: PostgresQueryExecutor) => Promise<T>): Promise<T> {
+      const client = await pool.connect!();
+      const transactionExecutor = createPgPostgresQueryExecutor(client);
+      await client.query('begin');
+      try {
+        const result = await operation(transactionExecutor);
+        await client.query('commit');
+        return result;
+      } catch (error) {
+        await client.query('rollback');
+        throw error;
+      } finally {
+        client.release?.();
+      }
     },
   };
 }

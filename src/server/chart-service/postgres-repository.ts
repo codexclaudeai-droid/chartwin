@@ -48,6 +48,16 @@ export type PostgresQueryExecutor = {
   query(statement: PostgresStatement): Promise<PostgresQueryResult>;
 };
 
+export type TransactionalPostgresQueryExecutor = PostgresQueryExecutor & {
+  transaction<T>(operation: (executor: PostgresQueryExecutor) => Promise<T>): Promise<T>;
+};
+
+export function isTransactionalPostgresQueryExecutor(
+  executor: PostgresQueryExecutor,
+): executor is TransactionalPostgresQueryExecutor {
+  return typeof (executor as Partial<TransactionalPostgresQueryExecutor>).transaction === 'function';
+}
+
 export function createPostgresAsyncChartServiceRepository(
   executor: PostgresQueryExecutor,
 ): AsyncChartServiceRepository {

@@ -4,9 +4,12 @@ import {
   createPgPoolOptions,
   createPgPostgresQueryExecutor,
 } from './postgres-pg-executor.ts';
-import type { PostgresQueryExecutor } from './postgres-repository.ts';
+import {
+  isTransactionalPostgresQueryExecutor,
+  type TransactionalPostgresQueryExecutor,
+} from './postgres-repository.ts';
 
-export type ClosablePostgresQueryExecutor = PostgresQueryExecutor & {
+export type ClosablePostgresQueryExecutor = TransactionalPostgresQueryExecutor & {
   close(): Promise<void>;
 };
 
@@ -15,6 +18,9 @@ export function createNodePgPostgresQueryExecutor(
 ): ClosablePostgresQueryExecutor {
   const pool = new Pool(createPgPoolOptions(settings) as PoolConfig);
   const executor = createPgPostgresQueryExecutor(pool);
+  if (!isTransactionalPostgresQueryExecutor(executor)) {
+    throw new Error('Node pg Pool must support transaction-capable client connections.');
+  }
 
   return {
     ...executor,

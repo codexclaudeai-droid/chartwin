@@ -1,6 +1,9 @@
 import { renderChartServicePostgresSchema } from './database-schema.ts';
 import type { PostgresStatement } from './postgres-mappers.ts';
-import type { PostgresQueryExecutor } from './postgres-repository.ts';
+import {
+  isTransactionalPostgresQueryExecutor,
+  type PostgresQueryExecutor,
+} from './postgres-repository.ts';
 
 export type ChartServicePostgresMigrationOptions = {
   schemaSql?: string;
@@ -58,6 +61,17 @@ export async function runChartServicePostgresSchemaMigration(
   const statements = splitPostgresMigrationStatements(options.schemaSql ?? renderChartServicePostgresSchema());
   const useTransaction = options.useTransaction ?? true;
 
+  if (useTransaction && isTransactionalPostgresQueryExecutor(executor)) {
+    return executor.transaction(async (transactionExecutor) => {
+      for (const statement of statements) {
+        await transactionExecutor.query(createPostgresMigrationStatement(statement));
+      }
+      return {
+        statementCount: statements.length,
+      };
+    });
+  }
+
   if (useTransaction) {
     await executor.query(createPostgresMigrationStatement('begin'));
   }
@@ -95,4 +109,3 @@ function pushStatement(statements: string[], sql: string): void {
     statements.push(normalized);
   }
 }
-

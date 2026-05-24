@@ -1118,3 +1118,23 @@ Deferred scope:
 - Admin invitation and password-reset flow after the first bootstrap.
 - Seed import for notices, FAQs, symbols, strategies, and signal settings.
 - Idempotent versioned data migrations for future plan changes.
+
+## 41. Postgres Transaction Boundary Completion Criteria
+
+The Postgres transaction slice should protect multi-step admin operations from partial writes once the service uses a live database.
+
+Implemented scope:
+
+- Postgres query executors can expose a `transaction(operation)` capability.
+- The Node `pg` runtime executor uses a pinned pool client for transactional work and releases the client after commit or rollback.
+- `runMutation` creates a transaction-scoped repository when the executor supports transactions.
+- `runRead` continues to use the normal repository executor and does not open unnecessary transactions.
+- The schema migration runner uses a transaction-capable executor when available, avoiding unsafe `Pool.query('begin')` style transaction assumptions.
+- Runtime readiness now reports that the Postgres transaction boundary is available.
+
+Deferred scope:
+
+- Retry policy for serialization failures and deadlocks.
+- Statement timeout and lock timeout configuration.
+- Per-operation isolation-level overrides for financial reconciliation jobs.
+- Observability spans around transaction duration and rollback reasons.

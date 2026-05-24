@@ -176,6 +176,93 @@ test('async persistence factory can create postgres persistence from an injected
   assert.deepEqual(calls[0].values, ['user_1']);
 });
 
+test('postgres async persistence runs mutations through a transaction-capable executor', async () => {
+  const calls = [];
+  const queryExecutor = {
+    async query(statement) {
+      calls.push(`read:${statement.sql}`);
+      return { rows: [] };
+    },
+    async transaction(operation) {
+      calls.push('begin');
+      const result = await operation({
+        async query(statement) {
+          calls.push(`tx:${statement.sql}`);
+          return { rows: [] };
+        },
+      });
+      calls.push('commit');
+      return result;
+    },
+  };
+  const persistence = createAsyncChartServicePersistenceFromConfig({
+    adapter: 'postgres',
+    databaseUrl: 'postgres://chart_app:secret@db.example.com/chart_service',
+    postgresQueryExecutor: queryExecutor,
+  });
+
+  await persistence.runRead((repository) => repository.listPlans());
+  await persistence.runMutation((repository) => repository.saveUser({
+    id: 'user_tx',
+    email: 'tx@example.com',
+    name: 'Tx User',
+    role: 'member',
+    accountStatus: 'active',
+    passwordHash: 'hash',
+  }));
+
+  assert.equal(calls[0], 'read:select * from subscription_plans');
+  assert.equal(calls[1], 'begin');
+  assert.match(calls[2], /^tx:insert into users /);
+  assert.equal(calls.at(-1), 'commit');
+});
+
+test('postgres async persistence rolls back transaction-capable mutations on failure', async () => {
+  const calls = [];
+  const persistence = createAsyncChartServicePersistenceFromConfig({
+    adapter: 'postgres',
+    databaseUrl: 'postgres://chart_app:secret@db.example.com/chart_service',
+    postgresQueryExecutor: {
+      async query() {
+        return { rows: [] };
+      },
+      async transaction(operation) {
+        calls.push('begin');
+        try {
+          return await operation({
+            async query(statement) {
+              calls.push(`tx:${statement.sql}`);
+              return { rows: [] };
+            },
+          });
+        } catch (error) {
+          calls.push('rollback');
+          throw error;
+        }
+      },
+    },
+  });
+
+  await assert.rejects(
+    persistence.runMutation(async (repository) => {
+      await repository.savePlan({
+        id: 'plan_tx',
+        name: 'Tx Plan',
+        durationDays: 30,
+        basePriceUsd: 99,
+        discountPercent: 0,
+        isActive: true,
+      });
+      throw new Error('stop transaction');
+    }),
+    /stop transaction/,
+  );
+
+  assert.equal(calls[0], 'begin');
+  assert.match(calls[1], /^tx:insert into subscription_plans /);
+  assert.equal(calls.at(-1), 'rollback');
+});
+
 test('async persistence factory can create postgres persistence from a pool factory', async () => {
   const poolCalls = [];
   const queryCalls = [];

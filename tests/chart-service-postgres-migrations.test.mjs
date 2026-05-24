@@ -75,6 +75,38 @@ test('postgres schema migration runner rolls back and rethrows when a statement 
   ]);
 });
 
+test('postgres schema migration runner uses a transaction-capable executor when available', async () => {
+  const { runChartServicePostgresSchemaMigration } = await import('../src/server/chart-service/index.ts');
+  const calls = [];
+  const executor = {
+    async query() {
+      throw new Error('base executor should not be used for transactional migrations');
+    },
+    async transaction(operation) {
+      calls.push('begin');
+      const result = await operation({
+        async query(statement) {
+          calls.push(statement.sql);
+          return { rows: [] };
+        },
+      });
+      calls.push('commit');
+      return result;
+    },
+  };
+
+  const result = await runChartServicePostgresSchemaMigration(executor, {
+    schemaSql: 'create table tx_table (id text);',
+  });
+
+  assert.equal(result.statementCount, 1);
+  assert.deepEqual(calls, [
+    'begin',
+    'create table tx_table (id text)',
+    'commit',
+  ]);
+});
+
 test('postgres migration harness is wired into package scripts and closes the pg executor', () => {
   const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   const script = fs.readFileSync(new URL('../scripts/run-chart-service-migration.mjs', import.meta.url), 'utf8');
@@ -85,4 +117,3 @@ test('postgres migration harness is wired into package scripts and closes the pg
   assert.match(script, /runChartServicePostgresSchemaMigration/);
   assert.match(script, /close/);
 });
-
