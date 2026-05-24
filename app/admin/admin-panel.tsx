@@ -15,6 +15,7 @@ import {
   getPaymentQueueFilterPreset,
   PAYMENT_QUEUE_FILTER_PRESETS,
 } from './payment-queue-filters';
+import { getAdminPaymentDomId } from './payment-links';
 import { createAdminSupportThreadUrl } from './support-thread-links';
 
 type AdminPaymentQueueItem = {
@@ -196,7 +197,7 @@ export function AdminPanel() {
         </thead>
         <tbody>
           {filteredPayments.map((item) => (
-            <tr key={item.payment.id}>
+            <tr className="admin-payment-row" id={getAdminPaymentDomId(item.payment.id)} key={item.payment.id}>
               <td>
                 {item.payment.id}
                 {item.supportThread && (

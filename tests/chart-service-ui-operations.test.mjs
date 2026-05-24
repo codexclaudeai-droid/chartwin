@@ -238,6 +238,22 @@ test('admin payment panel links deposit requests to the support thread reply vie
   assert.match(source, /입금확인 요청글/);
 });
 
+test('admin payment panel exposes direct anchors for payment queue items', async () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const {
+    createAdminPaymentUrl,
+    getAdminPaymentDomId,
+  } = await import('../app/admin/payment-links.ts');
+
+  assert.equal(getAdminPaymentDomId('pay_pending'), 'admin-payment-pay_pending');
+  assert.equal(createAdminPaymentUrl('pay_pending'), '/admin#admin-payment-pay_pending');
+  assert.equal(createAdminPaymentUrl('pay 1'), '/admin#admin-payment-pay%201');
+  assert.match(source, /getAdminPaymentDomId\(item\.payment\.id\)/);
+  assert.match(source, /id=\{getAdminPaymentDomId\(item\.payment\.id\)\}/);
+  assert.match(cssSource, /\.admin-payment-row:target/);
+});
+
 test('pricing copy makes deposit confirmation explicitly manual', () => {
   const pageSource = fs.readFileSync(new URL('../app/pricing/page.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');

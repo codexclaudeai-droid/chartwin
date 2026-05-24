@@ -28,6 +28,7 @@ import {
   getAssignableUserRoles,
 } from './admin-user-permissions';
 import { formatAuditLogSummary } from './audit-log-summary';
+import { createAdminPaymentUrl } from './payment-links';
 import { createAdminSupportThreadUrl } from './support-thread-links';
 import {
   getNotificationCategoryLabel,
@@ -555,6 +556,9 @@ export function UserAdminPanel() {
                           <span>${payment.amountUsd}</span>
                         </div>
                         <p>{payment.id}</p>
+                        <a className="text-link compact" href={createAdminPaymentUrl(payment.id)}>
+                          결제 큐에서 보기
+                        </a>
                         <small>{payment.updatedAt}</small>
                       </li>
                     ))}
