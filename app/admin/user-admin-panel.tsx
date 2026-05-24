@@ -28,6 +28,8 @@ import {
   getAssignableUserRoles,
 } from './admin-user-permissions';
 import { formatAuditLogSummary } from './audit-log-summary';
+import { createAdminSupportThreadUrl } from './support-thread-links';
+import { getNotificationCategoryLabel } from '../notifications/notification-display';
 
 const ROLE_OPTIONS: Array<{ value: UserRole; label: string }> = [
   { value: 'member', label: formatUserRoleLabel('member') },
@@ -85,7 +87,9 @@ type AdminUserDetail = AdminUserDirectoryItem & {
     updatedAt: string;
   }>;
   notifications: Array<{
+    category: string;
     id: string;
+    linkUrl: string | null;
     title: string;
     readAt: string | null;
     createdAt: string;
@@ -567,6 +571,9 @@ export function UserAdminPanel() {
                           <span>{formatSupportStatusLabel(thread.status)}</span>
                         </div>
                         <p>{thread.id}</p>
+                        <a className="text-link compact" href={createAdminSupportThreadUrl(thread.id)}>
+                          문의 답변 화면
+                        </a>
                         <small>{thread.updatedAt}</small>
                       </li>
                     ))}
@@ -585,7 +592,13 @@ export function UserAdminPanel() {
                           <strong>{notification.title}</strong>
                           <span>{notification.readAt ? '읽음' : '미확인'}</span>
                         </div>
+                        <span className="badge">{getNotificationCategoryLabel(notification.category)}</span>
                         <p>{notification.id}</p>
+                        {notification.linkUrl && (
+                          <a className="text-link compact" href={notification.linkUrl}>
+                            알림 대상 열기
+                          </a>
+                        )}
                         <small>{notification.createdAt}</small>
                       </li>
                     ))}
