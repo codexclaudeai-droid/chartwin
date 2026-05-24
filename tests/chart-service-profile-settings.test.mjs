@@ -166,6 +166,17 @@ test('profile edit controls move into a modal instead of inline summary edits', 
   assert.match(styleSource, /\.profile-edit-modal/);
 });
 
+test('profile edit modal closes from backdrop clicks and Escape key', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /handleProfileEditModalBackdropClick/);
+  assert.match(panelSource, /handleProfileEditModalKeyDown/);
+  assert.match(panelSource, /event\.currentTarget === event\.target/);
+  assert.match(panelSource, /event\.key === 'Escape'/);
+  assert.match(panelSource, /onClick=\{handleProfileEditModalBackdropClick\}/);
+  assert.match(panelSource, /onKeyDown=\{handleProfileEditModalKeyDown\}/);
+});
+
 test('profile panel renders my referral list with individual and total points', () => {
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
 

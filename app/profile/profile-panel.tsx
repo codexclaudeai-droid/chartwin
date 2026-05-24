@@ -215,6 +215,18 @@ export function ProfilePanel() {
     setIsProfileEditOpen(false);
   }
 
+  function handleProfileEditModalBackdropClick(event: React.MouseEvent<HTMLDivElement>) {
+    if (event.currentTarget === event.target) {
+      closeProfileEditModal();
+    }
+  }
+
+  function handleProfileEditModalKeyDown(event: React.KeyboardEvent<HTMLFormElement>) {
+    if (event.key === 'Escape') {
+      closeProfileEditModal();
+    }
+  }
+
   async function validateImagePolicy(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedImageFile) {
@@ -286,11 +298,16 @@ export function ProfilePanel() {
           </div>
         </div>
         {isProfileEditOpen && (
-          <div className="profile-edit-modal-backdrop" role="presentation">
+          <div
+            className="profile-edit-modal-backdrop"
+            onClick={handleProfileEditModalBackdropClick}
+            role="presentation"
+          >
             <form
               aria-labelledby="profileEditTitle"
               aria-modal="true"
               className="profile-edit-modal"
+              onKeyDown={handleProfileEditModalKeyDown}
               onSubmit={submitProfile}
               role="dialog"
             >
