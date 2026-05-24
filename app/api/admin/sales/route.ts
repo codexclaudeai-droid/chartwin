@@ -6,6 +6,7 @@ import {
   getAsyncAdminSalesManagementSummary,
   getAsyncChartServicePersistence,
   guardMutationRequest,
+  updateAsyncAdminCustomerSalesperson,
   updateAsyncAdminSalesCommissionPercent,
 } from '../../../../src/server/chart-service/index.ts';
 
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest) {
       return getAsyncAdminSalesManagementSummary(repository, {
         salespersonId: searchParams.get('salespersonId'),
         query: searchParams.get('query'),
+        customerQuery: searchParams.get('customerQuery'),
         from: searchParams.get('from'),
         to: searchParams.get('to'),
       });
@@ -44,6 +46,18 @@ export async function PATCH(request: NextRequest) {
   try {
     const summary = await persistence.runMutation(async (repository) => {
       const admin = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
+      if (body.action === 'assignCustomerSalesperson') {
+        await updateAsyncAdminCustomerSalesperson(repository, {
+          admin,
+          customerId: String(body.customerId || ''),
+          salespersonId: body.salespersonId ? String(body.salespersonId) : null,
+        });
+        return getAsyncAdminSalesManagementSummary(repository, {
+          salespersonId: body.salespersonId ? String(body.salespersonId) : null,
+          customerQuery: typeof body.customerQuery === 'string' ? body.customerQuery : null,
+        });
+      }
+
       await updateAsyncAdminSalesCommissionPercent(repository, {
         admin,
         salespersonId: String(body.salespersonId || ''),

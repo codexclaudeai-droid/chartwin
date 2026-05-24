@@ -8,6 +8,7 @@ import {
   getAdminSalesManagementSummary,
   getChartServiceRepository,
   SESSION_COOKIE_NAME,
+  updateAdminCustomerSalesperson,
   updateAdminSalesCommissionPercent,
 } from '../src/server/chart-service/index.ts';
 import { USER_ROLES } from '../src/domain/chart-service/index.ts';
@@ -87,6 +88,56 @@ test('super admin can apply individual salesperson commission percent', () => {
   assert.equal(summary.selectedSalesperson?.commissionPercent, 35);
 });
 
+test('admin can assign a customer to a salesperson and sales summary follows the assignment', () => {
+  const repository = createMockChartServiceRepository();
+  const oldSalesperson = repository.getUserById('user_subscriber');
+  const newSalesperson = repository.getUserById('user_trial');
+  const customer = repository.getUserById('user_member');
+  const payment = repository.getPaymentById('pay_pending');
+  if (!oldSalesperson || !newSalesperson || !customer || !payment) throw new Error('fixture records missing');
+  repository.saveUser({ ...oldSalesperson, role: USER_ROLES.salesperson });
+  repository.saveUser({ ...newSalesperson, role: USER_ROLES.salesperson });
+  repository.savePayment({
+    ...payment,
+    status: 'confirmed',
+    confirmedAt: '2026-05-24T03:00:00.000Z',
+    updatedAt: '2026-05-24T03:00:00.000Z',
+  });
+
+  const detail = updateAdminCustomerSalesperson(repository, {
+    admin: { id: 'admin_1', role: USER_ROLES.admin },
+    customerId: customer.id,
+    salespersonId: newSalesperson.id,
+  });
+  const oldSummary = getAdminSalesManagementSummary(repository, { salespersonId: oldSalesperson.id });
+  const newSummary = getAdminSalesManagementSummary(repository, { salespersonId: newSalesperson.id });
+
+  assert.equal(detail.customer.referredByUserId, newSalesperson.id);
+  assert.equal(detail.salesperson?.email, 'trial@example.com');
+  assert.equal(repository.getUserById(customer.id)?.referredByUserId, newSalesperson.id);
+  assert.equal(oldSummary.rows.length, 0);
+  assert.equal(newSummary.rows.length, 1);
+  assert.equal(newSummary.rows[0].email, 'member@example.com');
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'admin.sales.customer.assign');
+});
+
+test('admin sales management summary exposes customer assignment candidates', () => {
+  const repository = createMockChartServiceRepository();
+  const salesperson = repository.getUserById('user_subscriber');
+  if (!salesperson) throw new Error('fixture salesperson missing');
+  repository.saveUser({ ...salesperson, role: USER_ROLES.salesperson });
+
+  const summary = getAdminSalesManagementSummary(repository, {
+    salespersonId: salesperson.id,
+    customerQuery: 'member',
+  });
+
+  assert.equal(summary.customerQuery, 'member');
+  assert.equal(summary.customers.length, 1);
+  assert.equal(summary.customers[0].email, 'member@example.com');
+  assert.equal(summary.customers[0].salesperson?.email, 'subscriber@example.com');
+});
+
 test('admin sales API requires admin session and lets super admin update commission percent', async () => {
   const repository = getChartServiceRepository();
   const salesperson = repository.getUserById('user_subscriber');
@@ -112,12 +163,28 @@ test('admin sales API requires admin session and lets super admin update commiss
     },
     body: JSON.stringify({ salespersonId: salesperson.id, commissionPercent: 32 }),
   }));
+  const assigned = await PATCH(new Request('http://localhost/api/admin/sales', {
+    method: 'PATCH',
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${session.id}`,
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      action: 'assignCustomerSalesperson',
+      customerId: 'user_member',
+      salespersonId: salesperson.id,
+    }),
+  }));
   const payload = await patched.json();
+  const assignedPayload = await assigned.json();
 
   assert.equal(denied.status, 401);
   assert.equal(allowed.status, 200);
   assert.equal(patched.status, 200);
+  assert.equal(assigned.status, 200);
   assert.equal(payload.summary.selectedSalesperson.commissionPercent, 32);
+  assert.equal(assignedPayload.summary.customers.find((customer) => customer.id === 'user_member').salesperson.id, salesperson.id);
 });
 
 test('admin sales panel renders filters commission editing table totals and excel export', () => {
@@ -136,6 +203,10 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(panelSource, /매출일/);
   assert.match(panelSource, /적립포인트/);
   assert.match(panelSource, /downloadSalesExcel/);
+  assert.match(panelSource, /customerQuery/);
+  assert.match(panelSource, /selectedCustomerId/);
+  assert.match(panelSource, /assignCustomerSalesperson/);
   assert.match(cssSource, /\.sales-filter-grid/);
   assert.match(cssSource, /\.salesperson-list/);
+  assert.match(cssSource, /\.sales-customer-list/);
 });

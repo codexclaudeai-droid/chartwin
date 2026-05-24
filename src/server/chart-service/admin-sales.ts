@@ -15,6 +15,7 @@ export const DEFAULT_SALES_COMMISSION_PERCENT = 30;
 export type AdminSalesManagementInput = {
   salespersonId?: string | null;
   query?: string | null;
+  customerQuery?: string | null;
   from?: string | null;
   to?: string | null;
 };
@@ -37,21 +38,32 @@ export type AdminSalesManagementRow = {
   points: number;
 };
 
+export type AdminSalesCustomerItem = PublicServiceUserRecord & {
+  salesperson: PublicServiceUserRecord | null;
+};
+
 export type AdminSalesManagementSummary = {
   defaultPercent: number;
   salespersonQuery: string;
+  customerQuery: string;
   dateRange: {
     from: string | null;
     to: string | null;
   };
   salespeople: AdminSalespersonItem[];
   selectedSalesperson: AdminSalespersonItem | null;
+  customers: AdminSalesCustomerItem[];
   rows: AdminSalesManagementRow[];
   totals: {
     salesCount: number;
     salesUsd: number;
     points: number;
   };
+};
+
+export type AdminCustomerSalespersonAssignment = {
+  customer: PublicServiceUserRecord;
+  salesperson: PublicServiceUserRecord | null;
 };
 
 export type SalesCommissionSettings = {
@@ -160,11 +172,98 @@ export async function updateAsyncAdminSalesCommissionPercent(
   return settings;
 }
 
+export function updateAdminCustomerSalesperson(
+  repository: ChartServiceRepository,
+  input: {
+    admin: Actor;
+    customerId: string;
+    salespersonId: string | null;
+  },
+): AdminCustomerSalespersonAssignment {
+  assertAdminActor(input.admin);
+  const customer = repository.getUserById(input.customerId);
+  if (!customer || !isAssignableCustomerRole(customer.role)) {
+    throw new Error('Customer not found');
+  }
+  const salesperson = input.salespersonId
+    ? repository.getUserById(input.salespersonId)
+    : null;
+  if (input.salespersonId && (!salesperson || salesperson.role !== USER_ROLES.salesperson)) {
+    throw new Error('Salesperson not found');
+  }
+  if (salesperson?.id === customer.id) {
+    throw new Error('Customer cannot be assigned to self as salesperson');
+  }
+
+  const updatedCustomer = {
+    ...customer,
+    referredByUserId: salesperson?.id ?? null,
+  };
+  repository.saveUser(updatedCustomer);
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: salesperson ? 'admin.sales.customer.assign' : 'admin.sales.customer.unassign',
+    targetType: 'user',
+    targetId: customer.id,
+    beforeJson: { user: customer },
+    afterJson: { user: updatedCustomer, salespersonId: salesperson?.id ?? null },
+  }));
+
+  return {
+    customer: toPublicServiceUserRecord(updatedCustomer),
+    salesperson: salesperson ? toPublicServiceUserRecord(salesperson) : null,
+  };
+}
+
+export async function updateAsyncAdminCustomerSalesperson(
+  repository: AsyncChartServiceRepository,
+  input: {
+    admin: Actor;
+    customerId: string;
+    salespersonId: string | null;
+  },
+): Promise<AdminCustomerSalespersonAssignment> {
+  assertAdminActor(input.admin);
+  const customer = await repository.getUserById(input.customerId);
+  if (!customer || !isAssignableCustomerRole(customer.role)) {
+    throw new Error('Customer not found');
+  }
+  const salesperson = input.salespersonId
+    ? await repository.getUserById(input.salespersonId)
+    : null;
+  if (input.salespersonId && (!salesperson || salesperson.role !== USER_ROLES.salesperson)) {
+    throw new Error('Salesperson not found');
+  }
+  if (salesperson?.id === customer.id) {
+    throw new Error('Customer cannot be assigned to self as salesperson');
+  }
+
+  const updatedCustomer = {
+    ...customer,
+    referredByUserId: salesperson?.id ?? null,
+  };
+  await repository.saveUser(updatedCustomer);
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: salesperson ? 'admin.sales.customer.assign' : 'admin.sales.customer.unassign',
+    targetType: 'user',
+    targetId: customer.id,
+    beforeJson: { user: customer },
+    afterJson: { user: updatedCustomer, salespersonId: salesperson?.id ?? null },
+  }));
+
+  return {
+    customer: toPublicServiceUserRecord(updatedCustomer),
+    salesperson: salesperson ? toPublicServiceUserRecord(salesperson) : null,
+  };
+}
+
 function buildAdminSalesManagementSummary(
   source: SalesSource,
   input: AdminSalesManagementInput,
 ): AdminSalesManagementSummary {
   const salespersonQuery = input.query?.trim().toLowerCase() ?? '';
+  const customerQuery = input.customerQuery?.trim().toLowerCase() ?? '';
   const from = normalizeDateFilter(input.from);
   const to = normalizeDateFilter(input.to);
   const allSalespeople = source.users
@@ -195,12 +294,39 @@ function buildAdminSalesManagementSummary(
   return {
     defaultPercent: source.settings.defaultPercent,
     salespersonQuery,
+    customerQuery,
     dateRange: { from, to },
     salespeople: salespersonItems,
     selectedSalesperson: selectedSalespersonItem,
+    customers: buildSalesCustomerItems(source, customerQuery),
     rows,
     totals: summarizeRows(rows),
   };
+}
+
+function buildSalesCustomerItems(
+  source: SalesSource,
+  customerQuery: string,
+): AdminSalesCustomerItem[] {
+  const userById = new Map(source.users.map((user) => [user.id, user]));
+  return source.users
+    .filter((user) => isAssignableCustomerRole(user.role))
+    .filter((user) => (
+      !customerQuery ||
+      user.email.toLowerCase().includes(customerQuery) ||
+      user.name.toLowerCase().includes(customerQuery)
+    ))
+    .sort((a, b) => a.email.localeCompare(b.email))
+    .slice(0, 20)
+    .map((user) => {
+      const salesperson = user.referredByUserId
+        ? userById.get(user.referredByUserId)
+        : null;
+      return {
+        ...toPublicServiceUserRecord(user),
+        salesperson: salesperson ? toPublicServiceUserRecord(salesperson) : null,
+      };
+    });
 }
 
 function buildSalesRows(
@@ -317,6 +443,12 @@ function cloneSettings(settings: SalesCommissionSettings): SalesCommissionSettin
     ...settings,
     salespersonPercents: { ...settings.salespersonPercents },
   };
+}
+
+function isAssignableCustomerRole(role: string): boolean {
+  return role !== USER_ROLES.admin &&
+    role !== USER_ROLES.superAdmin &&
+    role !== USER_ROLES.salesperson;
 }
 
 function assertSalesAdminDataReady(repository: object): void {

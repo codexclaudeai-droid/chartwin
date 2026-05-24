@@ -980,6 +980,11 @@ a {
   margin: 16px 0;
 }
 
+.sales-filter-grid.compact {
+  grid-template-columns: minmax(220px, 1fr) auto;
+  margin: 12px 0;
+}
+
 .sales-filter-grid label,
 .sales-commission-row label {
   display: grid;
@@ -1043,6 +1048,43 @@ a {
 
 .salesperson-card span,
 .salesperson-card small {
+  color: var(--muted);
+}
+
+.sales-assignment-panel {
+  background: rgba(255, 253, 247, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  margin: 16px 0;
+  padding: 16px;
+}
+
+.sales-customer-list {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sales-customer-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  text-align: left;
+}
+
+.sales-customer-card.active,
+.sales-customer-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 10px 22px rgba(12, 102, 90, 0.1);
+}
+
+.sales-customer-card span,
+.sales-customer-card small {
   color: var(--muted);
 }
 
@@ -1570,7 +1612,12 @@ a {
   .summary-grid,
   .admin-history-grid,
   .dashboard-queue-grid,
-  .payment-flow-steps {
+  .payment-flow-steps,
+  .sales-filter-grid,
+  .sales-filter-grid.compact,
+  .sales-summary-grid,
+  .salesperson-list,
+  .sales-customer-list {
     grid-template-columns: 1fr;
   }
 

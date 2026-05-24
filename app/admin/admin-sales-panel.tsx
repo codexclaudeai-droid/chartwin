@@ -12,6 +12,18 @@ type SalespersonItem = {
   points: number;
 };
 
+type SalesCustomerItem = {
+  id: string;
+  email: string;
+  name: string;
+  referredByUserId: string | null;
+  salesperson: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
+};
+
 type SalesRow = {
   paymentId: string;
   salesDate: string;
@@ -26,12 +38,14 @@ type SalesRow = {
 type SalesSummary = {
   defaultPercent: number;
   salespersonQuery: string;
+  customerQuery: string;
   dateRange: {
     from: string | null;
     to: string | null;
   };
   salespeople: SalespersonItem[];
   selectedSalesperson: SalespersonItem | null;
+  customers: SalesCustomerItem[];
   rows: SalesRow[];
   totals: {
     salesCount: number;
@@ -49,9 +63,11 @@ type SalesResponse = {
 export function AdminSalesPanel() {
   const [summary, setSummary] = useState<SalesSummary | null>(null);
   const [query, setQuery] = useState('');
+  const [customerQuery, setCustomerQuery] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [selectedSalespersonId, setSelectedSalespersonId] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [commissionPercent, setCommissionPercent] = useState('30');
   const [message, setMessage] = useState('영업관리 데이터를 불러오는 중입니다.');
   const [isBusy, setIsBusy] = useState(false);
@@ -64,6 +80,7 @@ export function AdminSalesPanel() {
     setIsBusy(true);
     const searchParams = new URLSearchParams();
     if (query.trim()) searchParams.set('query', query.trim());
+    if (customerQuery.trim()) searchParams.set('customerQuery', customerQuery.trim());
     if (from) searchParams.set('from', from);
     if (to) searchParams.set('to', to);
     if (nextSalespersonId) searchParams.set('salespersonId', nextSalespersonId);
@@ -74,14 +91,11 @@ export function AdminSalesPanel() {
 
     if (!response.ok || !payload.summary) {
       setSummary(null);
-      setMessage(payload.message || '영업관리 데이터를 불러올 수 없습니다.');
+      setMessage(payload.message || '영업관리 데이터를 불러오지 못했습니다.');
       return;
     }
 
-    setSummary(payload.summary);
-    const nextSelectedId = payload.summary.selectedSalesperson?.id ?? '';
-    setSelectedSalespersonId(nextSelectedId);
-    setCommissionPercent(String(payload.summary.selectedSalesperson?.commissionPercent ?? payload.summary.defaultPercent));
+    applySummary(payload.summary);
     setMessage(`영업자 ${payload.summary.salespeople.length}명, 매출 ${payload.summary.totals.salesCount}건을 불러왔습니다.`);
   }
 
@@ -108,9 +122,49 @@ export function AdminSalesPanel() {
       return;
     }
 
-    setSummary(payload.summary);
-    setCommissionPercent(String(payload.summary.selectedSalesperson?.commissionPercent ?? payload.summary.defaultPercent));
+    applySummary(payload.summary);
     setMessage('개별 정산율을 저장했습니다. 최고관리자 권한으로만 변경할 수 있습니다.');
+  }
+
+  async function assignCustomerSalesperson() {
+    if (!selectedCustomerId || !selectedSalespersonId) {
+      setMessage('배정할 회원과 영업자를 모두 선택하세요.');
+      return;
+    }
+
+    setIsBusy(true);
+    const response = await fetch('/api/admin/sales', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'assignCustomerSalesperson',
+        customerId: selectedCustomerId,
+        salespersonId: selectedSalespersonId,
+        customerQuery,
+      }),
+    });
+    const payload = await response.json() as SalesResponse;
+    setIsBusy(false);
+
+    if (!response.ok || !payload.summary) {
+      setMessage(payload.message || '영업자 배정에 실패했습니다.');
+      return;
+    }
+
+    applySummary(payload.summary);
+    setMessage('선택 회원의 영업자를 변경했습니다. 이후 확정 매출은 새 영업자 집계에 반영됩니다.');
+  }
+
+  function applySummary(nextSummary: SalesSummary) {
+    setSummary(nextSummary);
+    const nextSelectedSalespersonId = nextSummary.selectedSalesperson?.id ?? '';
+    setSelectedSalespersonId(nextSelectedSalespersonId);
+    setSelectedCustomerId((currentCustomerId) => (
+      nextSummary.customers.some((customer) => customer.id === currentCustomerId)
+        ? currentCustomerId
+        : nextSummary.customers[0]?.id ?? ''
+    ));
+    setCommissionPercent(String(nextSummary.selectedSalesperson?.commissionPercent ?? nextSummary.defaultPercent));
   }
 
   function selectSalesperson(salespersonId: string) {
@@ -148,7 +202,7 @@ export function AdminSalesPanel() {
       <div className="toolbar">
         <div>
           <h2>영업관리</h2>
-          <p className="compact-copy">영업자별 매출 현황, 적립포인트, 개별 정산율을 관리합니다.</p>
+          <p className="compact-copy">영업자별 매출 현황, 적립포인트, 회원별 영업자 배정을 관리합니다.</p>
         </div>
         <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>
           새로고침
@@ -187,7 +241,7 @@ export function AdminSalesPanel() {
             <div className="mini-card">
               <span>선택 영업자</span>
               <strong>{summary.selectedSalesperson?.email ?? '영업자 없음'}</strong>
-              <p>{summary.selectedSalesperson ? `${summary.selectedSalesperson.name} / ${summary.selectedSalesperson.commissionPercent}%` : '영업자 역할 회원을 먼저 지정하세요.'}</p>
+              <p>{summary.selectedSalesperson ? `${summary.selectedSalesperson.name} / ${summary.selectedSalesperson.commissionPercent}%` : '영업 역할 회원을 먼저 지정하세요.'}</p>
             </div>
             <div className="mini-card">
               <span>집계</span>
@@ -210,8 +264,50 @@ export function AdminSalesPanel() {
               </button>
             ))}
             {summary.salespeople.length === 0 && (
-              <p className="notice compact">검색 조건에 맞는 영업자가 없습니다.</p>
+              <p className="notice compact">검색 조건에 맞는 영업자가 없습니다. 회원관리에서 회원 역할을 영업으로 변경하세요.</p>
             )}
+          </div>
+          <div className="sales-assignment-panel">
+            <div className="toolbar compact">
+              <div>
+                <h3>회원 영업자 배정</h3>
+                <p className="compact-copy">회원을 선택한 뒤 위 영업자를 선택하면 담당 영업자를 변경할 수 있습니다.</p>
+              </div>
+              <button className="button" type="button" onClick={() => void assignCustomerSalesperson()} disabled={isBusy || !selectedCustomerId || !selectedSalespersonId}>
+                선택 회원 배정
+              </button>
+            </div>
+            <div className="sales-filter-grid compact">
+              <label>
+                <span>회원 검색</span>
+                <input
+                  onChange={(event) => setCustomerQuery(event.target.value)}
+                  placeholder="회원 이메일 또는 이름"
+                  value={customerQuery}
+                />
+              </label>
+              <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>
+                회원 조회
+              </button>
+            </div>
+            <div className="sales-customer-list" aria-label="영업자 배정 회원 목록">
+              {summary.customers.map((customer) => (
+                <button
+                  aria-pressed={selectedCustomerId === customer.id}
+                  className={`sales-customer-card${selectedCustomerId === customer.id ? ' active' : ''}`}
+                  key={customer.id}
+                  onClick={() => setSelectedCustomerId(customer.id)}
+                  type="button"
+                >
+                  <strong>{customer.name}</strong>
+                  <span>{customer.email}</span>
+                  <small>현재 영업자: {customer.salesperson ? `${customer.salesperson.name} / ${customer.salesperson.email}` : '미배정'}</small>
+                </button>
+              ))}
+              {summary.customers.length === 0 && (
+                <p className="notice compact">검색 조건에 맞는 회원이 없습니다.</p>
+              )}
+            </div>
           </div>
           <div className="sales-commission-row">
             <label>
