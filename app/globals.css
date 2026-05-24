@@ -717,6 +717,12 @@ a {
   gap: 14px;
 }
 
+.payment-card.payment-card-target,
+.payment-card:target {
+  border-color: rgba(168, 76, 22, 0.44);
+  box-shadow: 0 0 0 4px rgba(168, 76, 22, 0.12);
+}
+
 .payment-flow-steps {
   display: grid;
   gap: 8px;
@@ -930,6 +936,12 @@ a {
 .thread-card p.admin-reply {
   color: var(--accent);
   font-weight: 700;
+}
+
+.thread-card.support-thread-target,
+.thread-card:target {
+  border-color: rgba(168, 76, 22, 0.44);
+  box-shadow: 0 0 0 4px rgba(168, 76, 22, 0.12);
 }
 
 .thread-meta {

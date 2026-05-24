@@ -44,6 +44,10 @@ import type {
   AdminSubscriptionQueueItem,
   ChartAccessSnapshot,
 } from './service.ts';
+import {
+  createProfilePaymentLink,
+  createSupportThreadLink,
+} from './notification-links.ts';
 import { notifyAsyncAdminsAboutSupportRequest } from './support-admin-notifications.ts';
 
 export async function getActorFromAsyncRequest(
@@ -318,7 +322,7 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
     category: 'payment',
     title: '입금확인 요청이 접수되었습니다',
     body: '관리자가 실제 입금 내역을 수동 확인한 뒤 구독 승인 단계로 진행합니다.',
-    linkUrl: '/profile',
+    linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.requestedAt,
   });
   return { payment, subscription, supportThread, supportMessage };
@@ -833,7 +837,7 @@ export async function confirmAsyncManualPaymentRequest(
     category: 'payment',
     title: '입금 확인이 완료되었습니다',
     body: adminNote ?? '입금 확인이 완료되었습니다. 관리자 구독 승인을 기다리는 중입니다.',
-    linkUrl: '/pricing',
+    linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.confirmedAt,
   });
 
@@ -876,7 +880,7 @@ export async function approveAsyncSubscriptionActivationRequest(
     category: 'subscription',
     title: '구독이 활성화되었습니다',
     body: adminNote ?? '구독 승인이 완료되어 차트 서비스를 이용할 수 있습니다.',
-    linkUrl: '/pricing',
+    linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.approvedAt,
   });
 
@@ -918,7 +922,7 @@ export async function rejectAsyncManualPaymentRequest(
     category: 'payment',
     title: '寃곗젣 ?붿껌??諛섎젮?섏뿀?듬땲??',
     body: adminNote,
-    linkUrl: '/pricing',
+    linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.rejectedAt,
   });
 
@@ -961,7 +965,7 @@ export async function refundAsyncManualPaymentAndSubscription(
     category: 'payment',
     title: '?섎텋 泥섎━媛 ?꾨즺?섏뿀?듬땲??',
     body: adminNote,
-    linkUrl: '/pricing',
+    linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.refundedAt,
   });
 
@@ -1042,7 +1046,7 @@ export async function approveAsyncSubscriptionRefundRequest(
     category: 'subscription',
     title: '?섎텋 ?붿껌???뱀씤?섏뿀?듬땲??',
     body: adminNote,
-    linkUrl: '/pricing',
+    linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.refundedAt,
   });
 
@@ -1131,7 +1135,7 @@ export async function replyAsyncToSupportThreadAsAdmin(
     category: 'support_reply',
     title: '怨좉컼?쇳꽣 ?듬????깅줉?섏뿀?듬땲??',
     body: input.body.trim(),
-    linkUrl: '/support',
+    linkUrl: createSupportThreadLink(thread.id),
     createdAt: input.createdAt,
   });
 

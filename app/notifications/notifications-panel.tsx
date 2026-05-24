@@ -166,7 +166,9 @@ export function NotificationsPanel() {
             <p>{notification.body}</p>
             <div className="actions compact">
               {notification.linkUrl && (
-                <a className="text-link" href={notification.linkUrl}>{getNotificationLinkLabel(notification)}</a>
+                <a className="text-link notification-action-link" href={notification.linkUrl}>
+                  {getNotificationLinkLabel(notification)}
+                </a>
               )}
               {!notification.readAt && (
                 <button className="button secondary" type="button" onClick={() => markOneRead(notification.id)} disabled={isBusy}>

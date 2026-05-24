@@ -111,3 +111,17 @@ test('admin support panel refreshes its filtered queue after local replies witho
   assert.match(source, /void refresh\(\{ nextMessage: `\$\{threadId\} 문의에 답변했습니다\. 목록을 갱신했습니다\.` \}\)/);
   assert.match(source, /dispatchAdminRefreshEvent\(\{ source: 'support' \}\)/);
 });
+
+test('member support panel supports notification deep links to a thread', () => {
+  const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/support/page.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /useSearchParams/);
+  assert.match(panelSource, /targetThreadId/);
+  assert.match(panelSource, /id=\{`support-\$\{item\.thread\.id\}`\}/);
+  assert.match(panelSource, /support-thread-target/);
+  assert.match(pageSource, /import \{ Suspense \} from 'react'/);
+  assert.match(pageSource, /<Suspense fallback=/);
+  assert.match(styleSource, /\.thread-card\.support-thread-target/);
+});

@@ -48,5 +48,19 @@ test('profile payment panel renders the payment progress timeline', () => {
 
   assert.match(source, /getProfilePaymentFlowSteps/);
   assert.match(source, /payment-flow-steps/);
+  assert.match(source, /id=\{`payment-\$\{payment\.id\}`\}/);
   assert.match(source, /aria-label=\{`\$\{payment\.id\} 결제 진행 단계`\}/);
+});
+
+test('profile payment target has a visual anchor treatment', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const source = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /targetPaymentId/);
+  assert.match(panelSource, /window\.location\.hash/);
+  assert.match(panelSource, /hashchange/);
+  assert.match(panelSource, /scrollIntoView/);
+  assert.match(panelSource, /payment-card-target/);
+  assert.match(source, /\.payment-card\.payment-card-target/);
+  assert.match(source, /\.payment-card:target/);
 });

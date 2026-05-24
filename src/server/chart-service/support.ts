@@ -10,6 +10,7 @@ import {
 } from '../../domain/chart-service/index.ts';
 import type { ChartServiceRepository, ServiceUserRecord } from './repository.ts';
 import { createUserNotification } from './notifications.ts';
+import { createSupportThreadLink } from './notification-links.ts';
 import { notifyAdminsAboutSupportRequest } from './support-admin-notifications.ts';
 
 export type SupportThreadListItem = {
@@ -117,7 +118,7 @@ export function replyToSupportThreadAsAdmin(
     category: 'support_reply',
     title: '고객센터 답변이 등록되었습니다',
     body: input.body.trim(),
-    linkUrl: '/support',
+    linkUrl: createSupportThreadLink(thread.id),
     createdAt: input.createdAt,
   });
 

@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { SupportPanel } from './support-panel';
 
 const SUPPORT_FLOW = [
@@ -29,7 +30,9 @@ export default function SupportPage() {
           </article>
         ))}
       </div>
-      <SupportPanel />
+      <Suspense fallback={<section className="card wide">문의 목록을 불러오는 중입니다.</section>}>
+        <SupportPanel />
+      </Suspense>
     </main>
   );
 }

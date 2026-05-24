@@ -46,7 +46,7 @@ test('manual payment request creates a receipt notification for the requesting u
   assert.equal(result.subscription.status, 'payment_pending');
   assert.ok(receipt);
   assert.match(receipt.body, /수동 확인/);
-  assert.equal(receipt.linkUrl, '/profile');
+  assert.equal(receipt.linkUrl, `/profile#payment-${result.payment.id}`);
 });
 
 test('async manual payment request creates a receipt notification for the requesting user', async () => {
@@ -73,7 +73,7 @@ test('async manual payment request creates a receipt notification for the reques
   assert.equal(result.subscription.status, 'payment_pending');
   assert.ok(receipt);
   assert.match(receipt.body, /수동 확인/);
-  assert.equal(receipt.linkUrl, '/profile');
+  assert.equal(receipt.linkUrl, `/profile#payment-${result.payment.id}`);
 });
 
 test('payment confirmation creates a user notification without activating subscription', () => {
@@ -93,6 +93,7 @@ test('payment confirmation creates a user notification without activating subscr
   assert.equal(result.subscription.status, 'payment_requested');
   assert.equal(notifications.at(0)?.category, 'payment');
   assert.match(notifications.at(0)?.title ?? '', /입금/);
+  assert.equal(notifications.at(0)?.linkUrl, '/profile#payment-pay_pending');
 });
 
 test('subscription activation approval creates a subscription notification', () => {
@@ -116,6 +117,7 @@ test('subscription activation approval creates a subscription notification', () 
 
   assert.equal(notifications.at(0)?.category, 'subscription');
   assert.match(notifications.at(0)?.title ?? '', /구독/);
+  assert.equal(notifications.at(0)?.linkUrl, '/profile#payment-pay_pending');
 });
 
 test('payment rejection creates a user notification with the admin note', () => {
@@ -134,6 +136,7 @@ test('payment rejection creates a user notification with the admin note', () => 
 
   assert.equal(notifications.at(0)?.category, 'payment');
   assert.match(notifications.at(0)?.body ?? '', /입금 내역 확인 불가/);
+  assert.equal(notifications.at(0)?.linkUrl, '/profile#payment-pay_pending');
 });
 
 test('subscription request rejection creates a user notification', () => {
@@ -182,6 +185,7 @@ test('support admin reply creates a support notification for the thread owner', 
 
   assert.equal(notifications.at(0)?.category, 'support_reply');
   assert.match(notifications.at(0)?.title ?? '', /고객센터/);
+  assert.equal(notifications.at(0)?.linkUrl, `/support?thread=${thread.id}#support-${thread.id}`);
 });
 
 test('notification summary counts unread notifications for a user', () => {

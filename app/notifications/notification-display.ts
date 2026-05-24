@@ -72,10 +72,9 @@ export function getUnreadNotificationsByTab<T extends FilterableNotification>(
 
 export function getNotificationLinkLabel(notification: NotificationDisplayInput): string {
   if (notification.category === 'support_request') return '문의 바로 답변하기';
-  if (notification.category === 'support_reply') return '답변 확인하기';
-  if (notification.category === 'payment' || notification.category === 'subscription') {
-    return '결제/구독 화면으로 이동';
-  }
+  if (notification.category === 'support_reply') return '문의 답변 확인하기';
+  if (notification.category === 'payment') return '결제 진행 상황 보기';
+  if (notification.category === 'subscription') return '구독 승인 상태 보기';
   if (notification.category === 'signal') return '시그널 확인하기';
   if (notification.category === 'expiry') return '구독 갱신 확인하기';
   return '관련 화면으로 이동';

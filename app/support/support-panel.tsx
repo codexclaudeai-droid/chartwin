@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   formatSupportCategoryLabel,
@@ -30,6 +31,7 @@ type SupportThreadListItem = {
 };
 
 export function SupportPanel() {
+  const searchParams = useSearchParams();
   const [threads, setThreads] = useState<SupportThreadListItem[]>([]);
   const [category, setCategory] = useState('general');
   const [title, setTitle] = useState('');
@@ -37,10 +39,18 @@ export function SupportPanel() {
   const [visibility, setVisibility] = useState('private');
   const [message, setMessage] = useState('로그인하면 1:1 문의를 남길 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
+  const targetThreadId = searchParams.get('thread');
 
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (!targetThreadId) return;
+
+    const target = document.getElementById(`support-${targetThreadId}`);
+    target?.scrollIntoView({ block: 'center' });
+  }, [targetThreadId, threads]);
 
   async function refresh() {
     setIsBusy(true);
@@ -127,7 +137,11 @@ export function SupportPanel() {
               <p>비공개 문의는 작성자와 관리자만 볼 수 있습니다.</p>
             </article>
           ) : threads.map((item) => (
-            <article className="thread-card" key={item.thread.id}>
+            <article
+              className={`thread-card${targetThreadId === item.thread.id ? ' support-thread-target' : ''}`}
+              id={`support-${item.thread.id}`}
+              key={item.thread.id}
+            >
               <div className="thread-meta">
                 <span className="badge">{formatSupportStatusLabel(item.thread.status)}</span>
                 <span>{formatSupportCategoryLabel(item.thread.category)}</span>

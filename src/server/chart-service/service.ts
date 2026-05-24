@@ -21,6 +21,7 @@ import {
 } from '../../domain/chart-service/index.ts';
 import type { ChartServiceRepository, PublicServiceUserRecord, ServiceUserRecord } from './repository.ts';
 import { createUserNotification } from './notifications.ts';
+import { createProfilePaymentLink } from './notification-links.ts';
 import { notifyAdminsAboutSupportRequest } from './support-admin-notifications.ts';
 import { toPublicServiceUserRecord } from './user-serialization.ts';
 
@@ -152,7 +153,7 @@ export function createManualPaymentRequest(
     category: 'payment',
     title: '입금확인 요청이 접수되었습니다',
     body: '관리자가 실제 입금 내역을 수동 확인한 뒤 구독 승인 단계로 진행합니다.',
-    linkUrl: '/profile',
+    linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.requestedAt,
   });
   return { payment, subscription, supportThread, supportMessage };
@@ -343,7 +344,7 @@ export function approveSubscriptionRefundRequest(
     category: 'subscription',
     title: '환불 요청이 승인되었습니다',
     body: adminNote,
-    linkUrl: '/pricing',
+    linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.refundedAt,
   });
 
@@ -436,7 +437,7 @@ export function confirmManualPaymentRequest(
     category: 'payment',
     title: '입금 확인이 완료되었습니다',
     body: adminNote ?? '입금 확인이 완료되었습니다. 관리자 구독 승인을 기다리는 중입니다.',
-    linkUrl: '/pricing',
+    linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.confirmedAt,
   });
 
@@ -481,7 +482,7 @@ export function approveSubscriptionActivationRequest(
     category: 'subscription',
     title: '구독이 활성화되었습니다',
     body: adminNote ?? '구독 승인이 완료되어 차트 서비스를 이용할 수 있습니다.',
-    linkUrl: '/pricing',
+    linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.approvedAt,
   });
 
@@ -523,7 +524,7 @@ export function rejectManualPaymentRequest(
     category: 'payment',
     title: '결제 요청이 반려되었습니다',
     body: adminNote,
-    linkUrl: '/pricing',
+    linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.rejectedAt,
   });
 
@@ -571,7 +572,7 @@ export function refundManualPaymentAndSubscription(
     category: 'payment',
     title: '환불 처리가 완료되었습니다',
     body: adminNote,
-    linkUrl: '/pricing',
+    linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.refundedAt,
   });
 

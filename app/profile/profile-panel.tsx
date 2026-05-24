@@ -66,6 +66,7 @@ export function ProfilePanel() {
   const [message, setMessage] = useState('계정 정보를 불러오는 중입니다.');
   const [settingsMessage, setSettingsMessage] = useState('프로필 이름과 이미지 업로드 가능 여부를 확인할 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
+  const [targetPaymentId, setTargetPaymentId] = useState(() => getTargetPaymentIdFromHash());
 
   useEffect(() => {
     void refresh();
@@ -75,6 +76,22 @@ export function ProfilePanel() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const updateTargetPaymentId = () => setTargetPaymentId(getTargetPaymentIdFromHash());
+
+    updateTargetPaymentId();
+    window.addEventListener('hashchange', updateTargetPaymentId);
+
+    return () => window.removeEventListener('hashchange', updateTargetPaymentId);
+  }, []);
+
+  useEffect(() => {
+    if (!targetPaymentId) return;
+
+    const target = document.getElementById(`payment-${targetPaymentId}`);
+    target?.scrollIntoView({ block: 'center' });
+  }, [dashboard, targetPaymentId]);
 
   async function refresh() {
     setIsBusy(true);
@@ -240,7 +257,11 @@ export function ProfilePanel() {
         {latestPayment ? (
           <div className="payment-list">
             {dashboard.payments.slice(0, 3).map((payment) => (
-              <article className="payment-card" key={payment.id}>
+              <article
+                className={`payment-card${targetPaymentId === payment.id ? ' payment-card-target' : ''}`}
+                id={`payment-${payment.id}`}
+                key={payment.id}
+              >
                 <div className="payment-card-summary">
                   <div>
                     <strong>{payment.id}</strong>
@@ -271,6 +292,16 @@ export function ProfilePanel() {
       </div>
     </section>
   );
+}
+
+function getTargetPaymentIdFromHash(): string | null {
+  if (typeof window === 'undefined') return null;
+
+  const prefix = '#payment-';
+  const hash = window.location.hash;
+  if (!hash.startsWith(prefix)) return null;
+
+  return decodeURIComponent(hash.slice(prefix.length));
 }
 
 function formatDateTime(value: string): string {

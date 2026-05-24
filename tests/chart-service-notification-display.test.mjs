@@ -19,8 +19,9 @@ test('notification display helpers translate categories and action labels', asyn
   assert.equal(getNotificationCategoryLabel('subscription'), '구독');
   assert.equal(getNotificationCategoryLabel('unknown_category'), 'unknown_category');
   assert.equal(getNotificationLinkLabel({ category: 'support_request', linkUrl: '/admin?supportThread=support_1#admin-support' }), '문의 바로 답변하기');
-  assert.equal(getNotificationLinkLabel({ category: 'support_reply', linkUrl: '/support' }), '답변 확인하기');
-  assert.equal(getNotificationLinkLabel({ category: 'payment', linkUrl: '/pricing' }), '결제/구독 화면으로 이동');
+  assert.equal(getNotificationLinkLabel({ category: 'support_reply', linkUrl: '/support?thread=support_1#support-support_1' }), '문의 답변 확인하기');
+  assert.equal(getNotificationLinkLabel({ category: 'payment', linkUrl: '/profile#payment-pay_1' }), '결제 진행 상황 보기');
+  assert.equal(getNotificationLinkLabel({ category: 'subscription', linkUrl: '/profile#payment-pay_1' }), '구독 승인 상태 보기');
   assert.equal(getNotificationLinkLabel({ category: 'notice', linkUrl: null }), '관련 화면으로 이동');
   assert.equal(formatNotificationReadState(null), '미확인');
   assert.equal(formatNotificationReadState('2026-05-24T14:00:00.000Z'), '읽음');
@@ -62,6 +63,7 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(pageSource, /운영 처리 결과와 고객센터 답변을 한곳에서 확인합니다/);
   assert.match(panelSource, /getNotificationCategoryLabel/);
   assert.match(panelSource, /getNotificationLinkLabel/);
+  assert.match(panelSource, /notification-action-link/);
   assert.match(panelSource, /formatNotificationReadState/);
   assert.match(panelSource, /formatNotificationSummaryMessage/);
   assert.match(panelSource, /NOTIFICATION_FILTER_TABS/);
