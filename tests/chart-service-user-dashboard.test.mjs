@@ -57,3 +57,25 @@ test('dashboard summary never includes another users private support threads or 
   assert.equal(summary.payments.every((payment) => payment.userId === 'user_subscriber'), true);
   assert.equal(summary.support.visibleThreadCount, 1);
 });
+
+test('dashboard summary backfills profile metadata for legacy user records', () => {
+  const repository = createMockChartServiceRepository();
+  const currentUser = repository.getUserById('user_member');
+  const {
+    phoneNumber: _phoneNumber,
+    referralCode: _referralCode,
+    referredByUserId: _referredByUserId,
+    createdAt: _createdAt,
+    ...legacyUser
+  } = currentUser;
+  repository.saveUser(legacyUser);
+
+  const summary = getUserDashboardSummary(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  });
+
+  assert.equal(summary.user.phoneNumber, null);
+  assert.equal(summary.user.referralCode, 'TC-USERMEMBER');
+  assert.equal(summary.user.referredByUserId, null);
+  assert.equal(summary.user.createdAt, '1970-01-01T00:00:00.000Z');
+});

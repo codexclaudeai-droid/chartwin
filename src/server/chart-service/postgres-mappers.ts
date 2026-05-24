@@ -23,13 +23,19 @@ export type PostgresStatement = {
 };
 
 export function mapUserFromPostgresRow(row: PostgresRow): ServiceUserRecord {
+  const id = readString(row.id);
+
   return {
-    id: readString(row.id),
+    id,
     email: readString(row.email),
     name: readString(row.name),
     passwordHash: readNullableString(row.password_hash),
     role: readString(row.role) as ServiceUserRecord['role'],
     accountStatus: readString(row.account_status) as ServiceUserRecord['accountStatus'],
+    phoneNumber: readNullableString(row.phone_number),
+    referralCode: readNullableString(row.referral_code) ?? createReferralCodeForUserId(id),
+    referredByUserId: readNullableString(row.referred_by_user_id),
+    createdAt: readNullableIsoString(row.created_at) ?? '1970-01-01T00:00:00.000Z',
   };
 }
 
@@ -41,6 +47,10 @@ export function mapUserToPostgresRow(record: ServiceUserRecord): PostgresRow {
     password_hash: record.passwordHash,
     role: record.role,
     account_status: record.accountStatus,
+    phone_number: record.phoneNumber,
+    referral_code: record.referralCode,
+    referred_by_user_id: record.referredByUserId,
+    created_at: record.createdAt,
   };
 }
 
@@ -470,4 +480,8 @@ function assertSafeIdentifier(identifier: string): void {
   if (!/^[a-z_][a-z0-9_]*$/i.test(identifier)) {
     throw new Error(`Unsafe postgres identifier: ${identifier}`);
   }
+}
+
+function createReferralCodeForUserId(userId: string): string {
+  return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
 }

@@ -19,6 +19,8 @@ type Dashboard = {
   user: {
     email: string;
     name: string;
+    phoneNumber: string | null;
+    referralCode: string;
     role: string;
   };
   access: {
@@ -63,9 +65,13 @@ type ProfileResponse = {
 export function ProfilePanel() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [nameDraft, setNameDraft] = useState('');
+  const [phoneDraft, setPhoneDraft] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
-  const [message, setMessage] = useState('계정 정보를 불러오는 중입니다.');
-  const [settingsMessage, setSettingsMessage] = useState('프로필 이름과 이미지 업로드 가능 여부를 확인할 수 있습니다.');
+  const [message, setMessage] = useState('마이프로필 정보를 불러오는 중입니다.');
+  const [settingsMessage, setSettingsMessage] = useState('연락번호, 비밀번호, 추천 정보를 관리할 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
   const [targetPaymentId, setTargetPaymentId] = useState(() => getTargetPaymentIdFromHash());
 
@@ -102,22 +108,33 @@ export function ProfilePanel() {
 
     if (!response.ok || !payload.dashboard) {
       setDashboard(null);
-      setMessage(payload.message || '로그인 후 내 계정을 확인할 수 있습니다.');
+      setMessage(payload.message || '로그인 후 마이프로필을 확인할 수 있습니다.');
       return;
     }
 
     setDashboard(payload.dashboard);
     setNameDraft(payload.dashboard.user.name);
+    setPhoneDraft(payload.dashboard.user.phoneNumber ?? '');
     setMessage('최신 계정 상태를 불러왔습니다.');
   }
 
   async function submitProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (newPassword && newPassword !== newPasswordConfirm) {
+      setSettingsMessage('새 비밀번호 확인이 일치하지 않습니다.');
+      return;
+    }
+
     setIsBusy(true);
     const response = await fetch('/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: nameDraft }),
+      body: JSON.stringify({
+        name: nameDraft,
+        phoneNumber: phoneDraft,
+        currentPassword,
+        newPassword,
+      }),
     });
     const payload = await response.json() as ProfileResponse;
     setIsBusy(false);
@@ -129,7 +146,11 @@ export function ProfilePanel() {
 
     setDashboard(payload.dashboard);
     setNameDraft(payload.dashboard.user.name);
-    setSettingsMessage('프로필 이름이 수정되었습니다.');
+    setPhoneDraft(payload.dashboard.user.phoneNumber ?? '');
+    setCurrentPassword('');
+    setNewPassword('');
+    setNewPasswordConfirm('');
+    setSettingsMessage('마이프로필 정보를 저장했습니다.');
   }
 
   async function validateImagePolicy(event: React.FormEvent<HTMLFormElement>) {
@@ -172,12 +193,13 @@ export function ProfilePanel() {
   const subscriptionStatus = dashboard.subscription?.status ?? dashboard.access.subscriptionStatus;
   const latestPayment = dashboard.payments[0] ?? null;
   const notificationCenterHref = getNotificationCenterHref(dashboard.notifications.unreadCount);
+  const referralLink = getReferralLink(dashboard.user.referralCode);
 
   return (
     <section className="profile-layout">
       <div className="card">
         <div className="toolbar">
-          <h2>회원 정보</h2>
+          <h2>마이프로필</h2>
           <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
         </div>
         <div className="status-list">
@@ -188,6 +210,10 @@ export function ProfilePanel() {
           <div className="status-row">
             <span>이메일</span>
             <strong>{dashboard.user.email}</strong>
+          </div>
+          <div className="status-row">
+            <span>연락번호</span>
+            <strong>{dashboard.user.phoneNumber || '미등록'}</strong>
           </div>
           <div className="status-row">
             <span>권한</span>
@@ -202,8 +228,48 @@ export function ProfilePanel() {
             onChange={(event) => setNameDraft(event.target.value)}
             placeholder="표시 이름"
           />
+          <label htmlFor="profilePhoneNumber">연락번호</label>
+          <input
+            id="profilePhoneNumber"
+            value={phoneDraft}
+            onChange={(event) => setPhoneDraft(event.target.value)}
+            placeholder="010-0000-0000"
+          />
+          <label htmlFor="profileCurrentPassword">현재 비밀번호</label>
+          <input
+            autoComplete="current-password"
+            id="profileCurrentPassword"
+            onChange={(event) => setCurrentPassword(event.target.value)}
+            placeholder="비밀번호 변경 시 입력"
+            type="password"
+            value={currentPassword}
+          />
+          <label htmlFor="profileNewPassword">새 비밀번호</label>
+          <input
+            autoComplete="new-password"
+            id="profileNewPassword"
+            onChange={(event) => setNewPassword(event.target.value)}
+            placeholder="새 비밀번호"
+            type="password"
+            value={newPassword}
+          />
+          <label htmlFor="profileNewPasswordConfirm">새 비밀번호 확인</label>
+          <input
+            autoComplete="new-password"
+            id="profileNewPasswordConfirm"
+            onChange={(event) => setNewPasswordConfirm(event.target.value)}
+            placeholder="새 비밀번호 확인"
+            type="password"
+            value={newPasswordConfirm}
+          />
           <button className="button" type="submit" disabled={isBusy}>프로필 저장</button>
         </form>
+        <div className="referral-card">
+          <span>추천 정보</span>
+          <strong>{dashboard.user.referralCode}</strong>
+          <p>{referralLink}</p>
+          <small>회원 초대 시 이 링크를 전달하면 추천인 정보를 추적할 수 있습니다.</small>
+        </div>
         <form className="form profile-settings-form" onSubmit={validateImagePolicy}>
           <label htmlFor="profileImageFile">프로필 이미지 파일</label>
           <input
@@ -311,4 +377,11 @@ function formatDateTime(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function getReferralLink(referralCode: string): string {
+  const path = `/signup?ref=${encodeURIComponent(referralCode)}`;
+  if (typeof window === 'undefined') return path;
+
+  return `${window.location.origin}${path}`;
 }

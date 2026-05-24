@@ -32,7 +32,7 @@ import {
 } from '../../domain/chart-service/index.ts';
 import { createSessionCookie, parseSessionCookieClaims } from './auth.ts';
 import type { AsyncChartServiceRepository } from './async-repository.ts';
-import type { AuthSessionRecord, ServiceUserRecord } from './repository.ts';
+import type { AuthSessionRecord, PublicServiceUserRecord, ServiceUserRecord } from './repository.ts';
 import { createPasswordHash, verifyPasswordHash } from './passwords.ts';
 import { toDashboardUserSummary, type UserDashboardSummary } from './dashboard.ts';
 import { redactAuditLogSensitiveFields, toPublicServiceUserRecord } from './user-serialization.ts';
@@ -140,7 +140,13 @@ export async function getAsyncUserDashboardSummary(
 
 export async function updateAsyncAuthenticatedUserProfile(
   repository: AsyncChartServiceRepository,
-  input: { actor: Actor; name: string },
+  input: {
+    actor: Actor;
+    name: string;
+    phoneNumber?: string | null;
+    currentPassword?: string;
+    newPassword?: string;
+  },
 ): Promise<ServiceUserRecord> {
   const user = await repository.getUserById(input.actor.id);
   if (!user) throw new Error(`User not found: ${input.actor.id}`);
@@ -148,10 +154,19 @@ export async function updateAsyncAuthenticatedUserProfile(
   const name = input.name.trim();
   if (!name) throw new Error('Profile name required');
   if (name.length > 80) throw new Error('Profile name too long');
+  const phoneNumber = Object.hasOwn(input, 'phoneNumber')
+    ? normalizeProfilePhoneNumber(input.phoneNumber)
+    : user.phoneNumber;
+  const passwordHash = getUpdatedPasswordHash(user, {
+    currentPassword: input.currentPassword,
+    newPassword: input.newPassword,
+  });
 
   const updatedUser = {
     ...user,
     name,
+    phoneNumber,
+    passwordHash,
   };
   await repository.saveUser(updatedUser);
   return updatedUser;
@@ -225,14 +240,50 @@ export async function registerAsyncMockUserAccount(
     name: input.name.trim() || email,
     role: USER_ROLES.member,
     accountStatus: USER_ACCOUNT_STATUSES.active,
+    phoneNumber: null,
+    referralCode: '',
+    referredByUserId: null,
+    createdAt: input.createdAt,
     passwordHash: createPasswordHash(input.password),
   };
+  user.referralCode = createReferralCodeForUserId(user.id);
   await repository.saveUser(user);
   const { session, cookie } = await createAsyncSessionForUser(repository, {
     userId: user.id,
     createdAt: input.createdAt,
   });
   return { user, session, cookie };
+}
+
+function createReferralCodeForUserId(userId: string): string {
+  return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
+}
+
+function normalizeProfilePhoneNumber(value: string | null | undefined): string | null {
+  const phoneNumber = String(value ?? '').trim();
+  if (!phoneNumber) return null;
+  if (phoneNumber.length > 30) throw new Error('Contact phone number too long');
+  if (!/^[0-9+\-().\s]{7,30}$/.test(phoneNumber)) {
+    throw new Error('Contact phone number invalid');
+  }
+  return phoneNumber;
+}
+
+function getUpdatedPasswordHash(
+  user: ServiceUserRecord,
+  input: { currentPassword?: string; newPassword?: string },
+): string | null {
+  const newPassword = input.newPassword?.trim() ?? '';
+  if (!newPassword) return user.passwordHash;
+
+  if (!verifyPasswordHash(input.currentPassword ?? '', user.passwordHash)) {
+    throw new Error('Current password is incorrect');
+  }
+  const policy = validatePasswordPolicy(newPassword);
+  if (!policy.ok) {
+    throw new Error(`Password policy failed: ${policy.missing.join(', ')}`);
+  }
+  return createPasswordHash(newPassword);
 }
 
 export async function createAsyncAuthenticatedManualPaymentRequest(
@@ -682,6 +733,7 @@ export async function getAsyncAdminUserDirectory(
 
     return {
       user: toPublicServiceUserRecord(user),
+      referrer: await getAsyncUserReferrer(repository, user, userPayments),
       subscription,
       access,
       latestPayment: userPayments[0] ?? null,
@@ -726,6 +778,7 @@ export async function getAsyncAdminUserDetail(
 
   return {
     user: toPublicServiceUserRecord(user),
+    referrer: await getAsyncUserReferrer(repository, user, userPayments),
     subscription,
     access: await getAsyncChartAccessSnapshot(repository, user.id),
     latestPayment: userPayments[0] ?? null,
@@ -1266,6 +1319,28 @@ function requiresSuperAdmin(role: UserRole): boolean {
 
 function isVisibleNotification(notification: NotificationRecord): boolean {
   return !notification.archivedAt;
+}
+
+async function getAsyncUserReferrer(
+  repository: AsyncChartServiceRepository,
+  user: ServiceUserRecord,
+  userPayments: PaymentRequestRecord[],
+): Promise<PublicServiceUserRecord | null> {
+  const directReferrer = user.referredByUserId
+    ? await repository.getUserById(user.referredByUserId)
+    : null;
+  if (directReferrer) return toPublicServiceUserRecord(directReferrer);
+
+  for (const payment of userPayments) {
+    const ledgers = await repository.listReferralLedgersByPaymentId(payment.id);
+    const referralLedger = ledgers.find((ledger) => ledger.referredUserId === user.id);
+    if (!referralLedger) continue;
+
+    const ledgerReferrer = await repository.getUserById(referralLedger.referrerUserId);
+    if (ledgerReferrer) return toPublicServiceUserRecord(ledgerReferrer);
+  }
+
+  return null;
 }
 
 function isUserRelatedAuditLog(

@@ -77,14 +77,23 @@ export function registerMockUserAccount(
     name: input.name.trim() || email,
     role: USER_ROLES.member,
     accountStatus: USER_ACCOUNT_STATUSES.active,
+    phoneNumber: null,
+    referralCode: '',
+    referredByUserId: null,
+    createdAt: input.createdAt,
     passwordHash: createPasswordHash(input.password),
   };
+  user.referralCode = createReferralCodeForUserId(user.id);
   repository.saveUser(user);
   const { session, cookie } = createSessionForUser(repository, {
     userId: user.id,
     createdAt: input.createdAt,
   });
   return { user, session, cookie };
+}
+
+function createReferralCodeForUserId(userId: string): string {
+  return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
 }
 
 export function authenticateUserWithPassword(

@@ -24,6 +24,19 @@ test('admin user directory filters users and attaches operational account state'
   assert.equal(result[0].access.paidSignals, true);
 });
 
+test('admin user directory includes contact referral and signup metadata', () => {
+  const repository = createMockChartServiceRepository();
+
+  const result = getAdminUserDirectory(repository, { query: 'member' });
+  const member = result.find((item) => item.user.email === 'member@example.com');
+
+  assert.equal(member?.user.name, 'Member');
+  assert.equal(member?.user.email, 'member@example.com');
+  assert.equal(member?.user.phoneNumber, '010-1000-2000');
+  assert.equal(member?.referrer?.email, 'subscriber@example.com');
+  assert.equal(member?.user.createdAt, '2026-05-23T00:00:00.000Z');
+});
+
 test('admin user directory can filter by role without hiding subscription state', () => {
   const repository = createMockChartServiceRepository();
 
@@ -119,6 +132,22 @@ test('admin user panel renders operator-friendly user state labels', () => {
   assert.match(source, /formatUserAccountStatusLabel/);
   assert.doesNotMatch(source, /\{item\.user\.role\}/);
   assert.doesNotMatch(source, /\{item\.user\.accountStatus\}/);
+});
+
+test('admin user panel renders member contact referral and signup metadata in the member column', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(source, /<th>연락번호<\/th>/);
+  assert.doesNotMatch(source, /<th>추천인<\/th>/);
+  assert.doesNotMatch(source, /<th>가입일<\/th>/);
+  assert.match(source, /className="member-directory-cell"/);
+  assert.match(source, /<span>연락번호/);
+  assert.match(source, /<span>추천인/);
+  assert.match(source, /<span>가입일/);
+  assert.match(source, /item\.user\.phoneNumber/);
+  assert.match(source, /item\.referrer\?\.email/);
+  assert.match(source, /formatDateTime\(item\.user\.createdAt\)/);
+  assert.match(source, /detail\.user\.phoneNumber/);
 });
 
 test('admin user panel exposes every supported role in the directory filter', () => {

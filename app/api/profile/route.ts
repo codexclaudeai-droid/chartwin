@@ -59,6 +59,9 @@ export async function PATCH(request: NextRequest) {
       await updateAsyncAuthenticatedUserProfile(repository, {
         actor,
         name: String(body.name || ''),
+        phoneNumber: Object.hasOwn(body, 'phoneNumber') ? String(body.phoneNumber || '') : undefined,
+        currentPassword: typeof body.currentPassword === 'string' ? body.currentPassword : undefined,
+        newPassword: typeof body.newPassword === 'string' ? body.newPassword : undefined,
       });
       return getAsyncUserDashboardSummary(repository, { actor });
     });

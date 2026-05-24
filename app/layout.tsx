@@ -22,7 +22,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <Link href="/chart">차트</Link>
               <Link href="/pricing">구독</Link>
               <Link href="/support">고객센터</Link>
-              <Link href="/profile">내 계정</Link>
+              <Link href="/profile">마이프로필</Link>
               <NotificationNavLink />
               <AdminNavLink />
             </nav>

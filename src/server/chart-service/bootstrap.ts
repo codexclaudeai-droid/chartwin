@@ -97,13 +97,22 @@ async function createInitialAdminUser(
   repository: AsyncChartServiceRepository,
   input: { email: string; password: string; name: string },
 ): Promise<ServiceUserRecord> {
-  return {
+  const user: ServiceUserRecord = {
     id: await repository.nextId('admin'),
     email: input.email,
     name: input.name,
     role: USER_ROLES.superAdmin,
     accountStatus: USER_ACCOUNT_STATUSES.active,
+    phoneNumber: null,
+    referralCode: '',
+    referredByUserId: null,
+    createdAt: new Date().toISOString(),
     passwordHash: createPasswordHash(input.password),
   };
+  user.referralCode = createReferralCodeForUserId(user.id);
+  return user;
 }
 
+function createReferralCodeForUserId(userId: string): string {
+  return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
+}

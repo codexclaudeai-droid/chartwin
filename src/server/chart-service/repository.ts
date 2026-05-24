@@ -18,6 +18,10 @@ export type ServiceUserRecord = {
   name: string;
   role: UserRole;
   accountStatus: UserAccountStatus;
+  phoneNumber: string | null;
+  referralCode: string;
+  referredByUserId: string | null;
+  createdAt: string;
   passwordHash: string | null;
 };
 

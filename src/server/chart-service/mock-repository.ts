@@ -43,7 +43,14 @@ export function createMockChartServiceState(): MockChartServiceState {
   return {
     idSeq: 100,
     users: [
-      createMockUser({ id: 'user_member', email: 'member@example.com', name: 'Member', role: USER_ROLES.member }),
+      createMockUser({
+        id: 'user_member',
+        email: 'member@example.com',
+        name: 'Member',
+        role: USER_ROLES.member,
+        phoneNumber: '010-1000-2000',
+        referredByUserId: 'user_subscriber',
+      }),
       createMockUser({ id: 'user_trial', email: 'trial@example.com', name: 'Trial', role: USER_ROLES.member }),
       createMockUser({ id: 'user_subscriber', email: 'subscriber@example.com', name: 'Subscriber', role: USER_ROLES.member }),
       createMockUser({ id: 'admin_1', email: 'admin@example.com', name: 'Admin', role: USER_ROLES.admin }),
@@ -144,6 +151,10 @@ function createMockUser(input: {
   name: string;
   role: ServiceUserRecord['role'];
   accountStatus?: ServiceUserRecord['accountStatus'];
+  phoneNumber?: string | null;
+  referralCode?: string;
+  referredByUserId?: string | null;
+  createdAt?: string;
 }): ServiceUserRecord {
   return {
     id: input.id,
@@ -151,8 +162,16 @@ function createMockUser(input: {
     name: input.name,
     role: input.role,
     accountStatus: input.accountStatus ?? USER_ACCOUNT_STATUSES.active,
+    phoneNumber: input.phoneNumber ?? null,
+    referralCode: input.referralCode ?? createReferralCodeForUserId(input.id),
+    referredByUserId: input.referredByUserId ?? null,
+    createdAt: input.createdAt ?? '2026-05-23T00:00:00.000Z',
     passwordHash: createPasswordHash('Demo1234!', { salt: `demo_${input.id}` }),
   };
+}
+
+function createReferralCodeForUserId(userId: string): string {
+  return `TC-${userId.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
 }
 
 export function createMockChartServiceRepository(

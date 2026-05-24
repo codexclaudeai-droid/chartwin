@@ -54,9 +54,18 @@ type AdminUserDirectoryItem = {
     id: string;
     email: string;
     name: string;
+    phoneNumber: string | null;
+    referralCode: string;
+    referredByUserId: string | null;
+    createdAt: string;
     role: string;
     accountStatus: UserAccountStatus;
   };
+  referrer: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
   subscription: {
     id: string;
     status: SubscriptionStatus;
@@ -452,7 +461,13 @@ export function UserAdminPanel() {
         <tbody>
           {users.map((item) => (
             <tr key={item.user.id}>
-              <td>{item.user.email}<br /><small>{item.user.name}</small></td>
+              <td className="member-directory-cell">
+                <strong>{item.user.name}</strong>
+                <small>{item.user.email}</small>
+                <span>연락번호 {item.user.phoneNumber || '미등록'}</span>
+                <span>추천인 {item.referrer?.email ?? '없음'}</span>
+                <span>가입일 {formatDateTime(item.user.createdAt)}</span>
+              </td>
               <td>
                 <span className="badge">{formatUserRoleLabel(item.user.role)}</span><br />
                 <small>{formatUserAccountStatusLabel(item.user.accountStatus)}</small>
@@ -491,6 +506,7 @@ export function UserAdminPanel() {
               <span className="badge">{formatUserRoleLabel(detail.user.role)}</span>
               <span>{formatUserAccountStatusLabel(detail.user.accountStatus)}</span>
               <span>{detail.user.email}</span>
+              <span>{detail.user.phoneNumber || '연락번호 미등록'}</span>
               <span>{detail.user.id}</span>
             </div>
             <h3>{detail.user.name}</h3>
@@ -525,6 +541,11 @@ export function UserAdminPanel() {
             </div>
             {accountPermissionNotice && <p className="notice">{accountPermissionNotice}</p>}
             <div className="summary-grid">
+              <article className="mini-card">
+                <span>회원 정보</span>
+                <strong>{detail.user.phoneNumber || '연락번호 미등록'}</strong>
+                <p>추천인: {detail.referrer?.email ?? '없음'} / 가입일: {formatDateTime(detail.user.createdAt)}</p>
+              </article>
               <article className="mini-card">
                 <span>구독 상태</span>
                 <strong>{detail.subscription ? formatSubscriptionStatusLabel(detail.subscription.status) : '구독 없음'}</strong>
@@ -671,4 +692,11 @@ export function UserAdminPanel() {
     {confirmationDialog}
     </>
   );
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat('ko-KR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
 }

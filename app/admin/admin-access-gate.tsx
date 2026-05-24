@@ -74,7 +74,7 @@ export function AdminAccessGate({ children }: Readonly<{ children: ReactNode }>)
       <div className="actions">
         {state === 'login_required' && <Link className="button" href="/login">로그인</Link>}
         <Link className="button secondary" href={state === 'login_required' ? '/' : '/profile'}>
-          {state === 'login_required' ? '홈으로 이동' : '내 계정 확인'}
+          {state === 'login_required' ? '홈으로 이동' : '마이프로필 확인'}
         </Link>
         <Link className="button secondary" href="/support">고객센터</Link>
       </div>

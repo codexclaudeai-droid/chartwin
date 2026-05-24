@@ -1,9 +1,16 @@
-import type { Actor } from '../../domain/chart-service/index.ts';
+import { validatePasswordPolicy, type Actor } from '../../domain/chart-service/index.ts';
+import { createPasswordHash, verifyPasswordHash } from './passwords.ts';
 import type { ChartServiceRepository, ServiceUserRecord } from './repository.ts';
 
 export function updateAuthenticatedUserProfile(
   repository: ChartServiceRepository,
-  input: { actor: Actor; name: string },
+  input: {
+    actor: Actor;
+    name: string;
+    phoneNumber?: string | null;
+    currentPassword?: string;
+    newPassword?: string;
+  },
 ): ServiceUserRecord {
   const user = repository.getUserById(input.actor.id);
   if (!user) throw new Error(`User not found: ${input.actor.id}`);
@@ -11,12 +18,47 @@ export function updateAuthenticatedUserProfile(
   const name = input.name.trim();
   if (!name) throw new Error('Profile name required');
   if (name.length > 80) throw new Error('Profile name too long');
+  const phoneNumber = Object.hasOwn(input, 'phoneNumber')
+    ? normalizeProfilePhoneNumber(input.phoneNumber)
+    : user.phoneNumber;
+  const passwordHash = getUpdatedPasswordHash(user, {
+    currentPassword: input.currentPassword,
+    newPassword: input.newPassword,
+  });
 
   const updatedUser = {
     ...user,
     name,
+    phoneNumber,
+    passwordHash,
   };
   repository.saveUser(updatedUser);
   return updatedUser;
 }
 
+function normalizeProfilePhoneNumber(value: string | null | undefined): string | null {
+  const phoneNumber = String(value ?? '').trim();
+  if (!phoneNumber) return null;
+  if (phoneNumber.length > 30) throw new Error('Contact phone number too long');
+  if (!/^[0-9+\-().\s]{7,30}$/.test(phoneNumber)) {
+    throw new Error('Contact phone number invalid');
+  }
+  return phoneNumber;
+}
+
+function getUpdatedPasswordHash(
+  user: ServiceUserRecord,
+  input: { currentPassword?: string; newPassword?: string },
+): string | null {
+  const newPassword = input.newPassword?.trim() ?? '';
+  if (!newPassword) return user.passwordHash;
+
+  if (!verifyPasswordHash(input.currentPassword ?? '', user.passwordHash)) {
+    throw new Error('Current password is incorrect');
+  }
+  const policy = validatePasswordPolicy(newPassword);
+  if (!policy.ok) {
+    throw new Error(`Password policy failed: ${policy.missing.join(', ')}`);
+  }
+  return createPasswordHash(newPassword);
+}

@@ -21,6 +21,7 @@ import { toPublicServiceUserRecord } from './user-serialization.ts';
 
 export type AdminUserDirectoryItem = {
   user: PublicServiceUserRecord;
+  referrer: PublicServiceUserRecord | null;
   subscription: SubscriptionRecord | null;
   access: ChartAccessSnapshot;
   latestPayment: PaymentRequestRecord | null;
@@ -74,6 +75,7 @@ export function getAdminUserDirectory(
 
       return {
         user: toPublicServiceUserRecord(user),
+        referrer: getUserReferrer(repository, user),
         subscription: repository.getSubscriptionByUserId(user.id),
         access: getChartAccessSnapshot(repository, user.id),
         latestPayment: payments[0] ?? null,
@@ -118,6 +120,7 @@ export function getAdminUserDetail(
 
   return {
     user: toPublicServiceUserRecord(user),
+    referrer: getUserReferrer(repository, user),
     subscription,
     access: getChartAccessSnapshot(repository, user.id),
     latestPayment: payments[0] ?? null,
@@ -132,6 +135,27 @@ export function getAdminUserDetail(
     notifications,
     auditEntries,
   };
+}
+
+function getUserReferrer(
+  repository: ChartServiceRepository,
+  user: ServiceUserRecord,
+): PublicServiceUserRecord | null {
+  const directReferrer = user.referredByUserId
+    ? repository.getUserById(user.referredByUserId)
+    : null;
+  if (directReferrer) return toPublicServiceUserRecord(directReferrer);
+
+  const referralLedger = repository
+    .listPayments()
+    .filter((payment) => payment.userId === user.id)
+    .flatMap((payment) => repository.listReferralLedgersByPaymentId(payment.id))
+    .find((ledger) => ledger.referredUserId === user.id);
+  const ledgerReferrer = referralLedger
+    ? repository.getUserById(referralLedger.referrerUserId)
+    : null;
+
+  return ledgerReferrer ? toPublicServiceUserRecord(ledgerReferrer) : null;
 }
 
 export function updateAdminUserRole(

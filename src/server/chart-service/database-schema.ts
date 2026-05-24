@@ -31,10 +31,16 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
           default: "'active'",
           check: "account_status in ('active', 'suspended')",
         },
+        phone_number: { type: 'text', nullable: true },
+        referral_code: { type: 'text' },
+        referred_by_user_id: { type: 'text', nullable: true, references: 'users.id' },
+        created_at: { type: 'timestamptz', default: 'now()' },
       },
       indexes: [
         { name: 'idx_users_email', columns: ['email'] },
         { name: 'idx_users_role', columns: ['role'] },
+        { name: 'idx_users_referral_code', columns: ['referral_code'] },
+        { name: 'idx_users_referred_by_user_id', columns: ['referred_by_user_id'] },
       ],
     },
     {
@@ -262,6 +268,14 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     'alter table if exists notifications add column if not exists archived_at timestamptz;',
     'alter table if exists payment_requests add column if not exists support_thread_id text;',
     'create index if not exists idx_payment_requests_support_thread_id on payment_requests (support_thread_id);',
+    'alter table if exists users add column if not exists phone_number text;',
+    'alter table if exists users add column if not exists referral_code text;',
+    'alter table if exists users add column if not exists referred_by_user_id text;',
+    'alter table if exists users add column if not exists created_at timestamptz;',
+    "update users set referral_code = concat('TC-', upper(regexp_replace(id, '[^a-zA-Z0-9]', '', 'g'))) where referral_code is null or referral_code = '';",
+    'update users set created_at = now() where created_at is null;',
+    'create index if not exists idx_users_referral_code on users (referral_code);',
+    'create index if not exists idx_users_referred_by_user_id on users (referred_by_user_id);',
   ];
 }
 
