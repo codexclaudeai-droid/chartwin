@@ -5,7 +5,7 @@ import { getDefaultSupportRequestDraft } from '../app/support/support-request-de
 test('default support request draft provides required title and body', () => {
   const draft = getDefaultSupportRequestDraft();
 
-  assert.match(draft.title, /문의/);
+  assert.match(draft.title, /서비스 이용 문의/);
   assert.match(draft.body, /확인/);
   assert.equal(draft.title.length > 2, true);
   assert.equal(draft.body.length > 10, true);

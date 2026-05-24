@@ -1220,3 +1220,24 @@ Deferred scope:
 - Production provider credential validation in readiness checks.
 - Retry scheduling for failed records.
 - Admin UI for failed mail replay and provider diagnostics.
+
+## 46. Customer Support UI Polish Completion Criteria
+
+The customer support UI polish slice should make the member-facing support page readable and trustworthy before deeper helpdesk features are added.
+
+Implemented scope:
+
+- `/support` now uses readable Korean copy for the customer support introduction and support categories.
+- Customer-facing support category, status, and visibility labels are centralized in a support display-label helper.
+- The support request form uses clear Korean labels for category, visibility, title, body, submit, quick submit, and refresh actions.
+- The support list displays translated status/category/visibility badges instead of raw internal enum values.
+- Empty support lists explain that private threads are visible only to the owner and admins.
+- The quick support request draft now uses readable Korean default title and body.
+- Browser smoke verified `/support` renders the readable customer support copy.
+
+Deferred scope:
+
+- Rich text editing and attachments.
+- Customer-side thread detail pages with direct URLs.
+- SLA labels, assignment, and close/reopen workflow.
+- FAQ publishing and searchable help articles.
