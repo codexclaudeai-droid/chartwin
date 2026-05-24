@@ -14,6 +14,7 @@ import {
   getNotificationEmptyStateMessage,
   getNotificationFilterKeyFromSearch,
   getNotificationLinkLabel,
+  getNotificationNavigationMessage,
   getNotificationSummaryFromList,
   getNotificationsWithoutIds,
   getNotificationsWithReadState,
@@ -147,6 +148,7 @@ export function NotificationsPanel() {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
 
     event.preventDefault();
+    setMessage(getNotificationNavigationMessage(notification));
     const wasMarkedRead = await markNotificationRead(notification.id, { refreshAfter: false });
     if (wasMarkedRead) {
       window.location.assign(notification.linkUrl);

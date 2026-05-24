@@ -14,6 +14,7 @@ test('notification display helpers translate categories and action labels', asyn
     getNotificationEmptyStateMessage,
     getNotificationFilterKeyFromSearch,
     getNotificationLinkLabel,
+    getNotificationNavigationMessage,
     getNotificationSummaryFromList,
     getNotificationsWithoutIds,
     getNotificationsWithReadState,
@@ -51,6 +52,10 @@ test('notification display helpers translate categories and action labels', asyn
       ['subscription', '구독'],
     ],
   );
+  assert.equal(getNotificationNavigationMessage({ category: 'support_reply', linkUrl: '/support?thread=support_1#support-support_1' }), '고객센터 답변을 읽음 처리하고 문의로 이동합니다.');
+  assert.equal(getNotificationNavigationMessage({ category: 'support_request', linkUrl: '/admin?supportThread=support_1#admin-support' }), '신규 문의 알림을 읽음 처리하고 답변 화면으로 이동합니다.');
+  assert.equal(getNotificationNavigationMessage({ category: 'payment', linkUrl: '/profile#payment-pay_1' }), '결제 알림을 읽음 처리하고 진행 상황으로 이동합니다.');
+  assert.equal(getNotificationNavigationMessage({ category: 'notice', linkUrl: null }), '알림을 읽음 처리합니다.');
   const notifications = [
     { id: 'n1', category: 'support_request', readAt: null },
     { id: 'n2', category: 'support_reply', readAt: '2026-05-24T14:00:00.000Z' },
@@ -105,6 +110,8 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /getNotificationEmptyStateMessage/);
   assert.match(panelSource, /getNotificationBulkActionHint/);
   assert.match(panelSource, /getNotificationLinkLabel/);
+  assert.match(panelSource, /getNotificationNavigationMessage/);
+  assert.match(panelSource, /setMessage\(getNotificationNavigationMessage\(notification\)\)/);
   assert.match(panelSource, /notification-action-link/);
   assert.match(panelSource, /formatNotificationReadState/);
   assert.match(panelSource, /formatNotificationSummaryMessage/);

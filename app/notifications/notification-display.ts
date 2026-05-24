@@ -168,6 +168,16 @@ export function getNotificationLinkLabel(notification: NotificationDisplayInput)
   return '관련 화면으로 이동';
 }
 
+export function getNotificationNavigationMessage(notification: NotificationDisplayInput): string {
+  if (notification.category === 'support_request') return '신규 문의 알림을 읽음 처리하고 답변 화면으로 이동합니다.';
+  if (notification.category === 'support_reply') return '고객센터 답변을 읽음 처리하고 문의로 이동합니다.';
+  if (notification.category === 'payment') return '결제 알림을 읽음 처리하고 진행 상황으로 이동합니다.';
+  if (notification.category === 'subscription') return '구독 알림을 읽음 처리하고 승인 상태로 이동합니다.';
+  if (notification.category === 'signal') return '시그널 알림을 읽음 처리하고 차트로 이동합니다.';
+  if (notification.category === 'expiry') return '만료 예정 알림을 읽음 처리하고 갱신 화면으로 이동합니다.';
+  return '알림을 읽음 처리합니다.';
+}
+
 export function formatNotificationReadState(readAt: string | null): string {
   return readAt ? '읽음' : '미확인';
 }
