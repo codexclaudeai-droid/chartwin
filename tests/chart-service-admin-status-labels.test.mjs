@@ -7,6 +7,8 @@ import {
   formatSupportVisibilityLabel,
   formatUserAccountStatusLabel,
   formatUserRoleLabel,
+  getAdminPaymentFlowBadge,
+  getAdminSubscriptionFlowBadge,
 } from '../app/admin/admin-status-labels.ts';
 
 test('admin status labels translate payment states for operators', () => {
@@ -49,4 +51,33 @@ test('admin status labels preserve unknown values for diagnostics', () => {
   assert.equal(formatSupportVisibilityLabel('internal'), 'internal');
   assert.equal(formatUserRoleLabel('custom_role'), 'custom_role');
   assert.equal(formatUserAccountStatusLabel('locked'), 'locked');
+});
+
+test('admin manual flow badges expose the two-step deposit and subscription approval state', () => {
+  assert.deepEqual(getAdminPaymentFlowBadge({
+    paymentStatus: 'pending',
+    subscriptionStatus: 'payment_pending',
+  }), {
+    label: '입금확인 대기',
+    description: '요청글과 실제 입금 내역을 대조하세요.',
+    tone: 'waiting',
+  });
+
+  assert.deepEqual(getAdminPaymentFlowBadge({
+    paymentStatus: 'confirmed',
+    subscriptionStatus: 'payment_requested',
+  }), {
+    label: '입금확인 완료 · 구독승인 대기',
+    description: '구독 요청 관리에서 최종 승인을 처리하세요.',
+    tone: 'ready',
+  });
+
+  assert.deepEqual(getAdminSubscriptionFlowBadge({
+    paymentStatus: 'confirmed',
+    subscriptionStatus: 'payment_requested',
+  }), {
+    label: '입금확인 완료 · 구독승인 대기',
+    description: '이 단계에서 구독 승인 버튼으로 최종 처리하세요.',
+    tone: 'ready',
+  });
 });

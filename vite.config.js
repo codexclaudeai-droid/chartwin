@@ -1,4 +1,8 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
+
+const indexHtml = fileURLToPath(new URL('./index.html', import.meta.url))
+const devHtml = fileURLToPath(new URL('./dev.html', import.meta.url))
 
 export default defineConfig({
   server: {
@@ -7,8 +11,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: 'index.html',
-        dev: 'dev.html',
+        main: indexHtml,
+        dev: devHtml,
       },
     },
   },

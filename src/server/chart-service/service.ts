@@ -147,6 +147,14 @@ export function createManualPaymentRequest(
     author: user,
     createdAt: input.requestedAt,
   });
+  createUserNotification(repository, {
+    userId: payment.userId,
+    category: 'payment',
+    title: '입금확인 요청이 접수되었습니다',
+    body: '관리자가 실제 입금 내역을 수동 확인한 뒤 구독 승인 단계로 진행합니다.',
+    linkUrl: '/profile',
+    createdAt: input.requestedAt,
+  });
   return { payment, subscription, supportThread, supportMessage };
 }
 

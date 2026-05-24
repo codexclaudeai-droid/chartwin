@@ -9,6 +9,7 @@ import { dispatchAdminRefreshEvent, subscribeAdminRefreshEvent } from './admin-r
 import {
   formatPaymentStatusLabel,
   formatSubscriptionStatusLabel,
+  getAdminSubscriptionFlowBadge,
 } from './admin-status-labels';
 import {
   filterSubscriptionQueueItems,
@@ -131,6 +132,21 @@ export function SubscriptionAdminPanel() {
     setActiveFilterKey('all');
   }
 
+  function renderSubscriptionFlowStatus(item: AdminSubscriptionQueueItem) {
+    const flowBadge = getAdminSubscriptionFlowBadge({
+      subscriptionStatus: item.subscription.status,
+      paymentStatus: item.payment?.status ?? null,
+    });
+
+    return (
+      <div className="manual-flow-cell">
+        <span className={`badge manual-flow-badge ${flowBadge.tone}`}>{flowBadge.label}</span>
+        <small className="manual-flow-description">{flowBadge.description}</small>
+        <small className="manual-flow-raw-status">구독 상태: {formatSubscriptionStatusLabel(item.subscription.status)}</small>
+      </div>
+    );
+  }
+
   const activeFilter = getSubscriptionQueueFilterPreset(activeFilterKey);
   const filteredItems = filterSubscriptionQueueItems(items, activeFilterKey);
 
@@ -180,7 +196,7 @@ export function SubscriptionAdminPanel() {
               <td>{item.subscription.id}</td>
               <td>{item.user.email}<br /><small>{item.user.name}</small></td>
               <td>{item.plan?.name ?? '-'}</td>
-              <td><span className="badge">{formatSubscriptionStatusLabel(item.subscription.status)}</span></td>
+              <td>{renderSubscriptionFlowStatus(item)}</td>
               <td>{item.payment ? `${item.payment.id} / ${formatPaymentStatusLabel(item.payment.status)}` : '-'}</td>
               <td>
                 <input

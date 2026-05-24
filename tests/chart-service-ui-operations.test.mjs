@@ -201,6 +201,18 @@ test('admin payment panel renders operator-friendly payment status labels', () =
   assert.match(source, /formatPaymentStatusLabel/);
 });
 
+test('admin operation panels render strengthened manual flow badges', () => {
+  const paymentSource = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+  const subscriptionSource = fs.readFileSync(new URL('../app/admin/subscription-admin-panel.tsx', import.meta.url), 'utf8');
+  const labelSource = fs.readFileSync(new URL('../app/admin/admin-status-labels.ts', import.meta.url), 'utf8');
+
+  assert.match(paymentSource, /getAdminPaymentFlowBadge/);
+  assert.match(subscriptionSource, /getAdminSubscriptionFlowBadge/);
+  assert.match(paymentSource, /manual-flow-badge/);
+  assert.match(subscriptionSource, /manual-flow-description/);
+  assert.match(labelSource, /입금확인 완료 · 구독승인 대기/);
+});
+
 test('admin payment panel confirms irreversible payment operations before posting', () => {
   const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
 

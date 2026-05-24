@@ -5,7 +5,9 @@ import {
   archiveNotificationForUser,
   approveSubscriptionActivationRequest,
   confirmManualPaymentRequest,
+  createAsyncAuthenticatedManualPaymentRequest,
   createAsyncChartServiceRepository,
+  createManualPaymentRequest,
   createMockChartServiceRepository,
   createSupportThread,
   createUserNotification,
@@ -20,6 +22,59 @@ import {
   replyToSupportThreadAsAdmin,
   requestSubscriptionCancellation,
 } from '../src/server/chart-service/index.ts';
+
+test('manual payment request creates a receipt notification for the requesting user', () => {
+  const repository = createMockChartServiceRepository();
+
+  const result = createManualPaymentRequest(repository, {
+    userId: 'user_member',
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T12:00:00.000Z',
+    depositorName: 'Member User',
+  });
+
+  const notifications = listNotificationsForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  });
+  const receipt = notifications.find((notification) => (
+    notification.category === 'payment' &&
+    notification.title.includes('입금확인 요청')
+  ));
+
+  assert.equal(result.payment.status, 'pending');
+  assert.equal(result.subscription.status, 'payment_pending');
+  assert.ok(receipt);
+  assert.match(receipt.body, /수동 확인/);
+  assert.equal(receipt.linkUrl, '/profile');
+});
+
+test('async manual payment request creates a receipt notification for the requesting user', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+
+  const result = await createAsyncAuthenticatedManualPaymentRequest(repository, {
+    actor: { id: 'user_trial', role: 'member' },
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T12:00:00.000Z',
+    depositorName: 'Trial User',
+  });
+
+  const notifications = await listAsyncNotificationsForUser(repository, {
+    actor: { id: 'user_trial', role: 'member' },
+  });
+  const receipt = notifications.find((notification) => (
+    notification.category === 'payment' &&
+    notification.title.includes('입금확인 요청')
+  ));
+
+  assert.equal(result.payment.status, 'pending');
+  assert.equal(result.subscription.status, 'payment_pending');
+  assert.ok(receipt);
+  assert.match(receipt.body, /수동 확인/);
+  assert.equal(receipt.linkUrl, '/profile');
+});
 
 test('payment confirmation creates a user notification without activating subscription', () => {
   const repository = createMockChartServiceRepository();

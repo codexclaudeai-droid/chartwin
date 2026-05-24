@@ -6,7 +6,10 @@ import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
 import { canSubmitAdminOperationNote, normalizeAdminOperationNote } from './admin-operation-note';
 import { subscribeAdminQueuePresetEvent } from './admin-queue-preset-events';
 import { dispatchAdminRefreshEvent, subscribeAdminRefreshEvent } from './admin-refresh-events';
-import { formatPaymentStatusLabel } from './admin-status-labels';
+import {
+  formatPaymentStatusLabel,
+  getAdminPaymentFlowBadge,
+} from './admin-status-labels';
 import {
   filterPaymentQueueItems,
   getPaymentQueueFilterPreset,
@@ -131,6 +134,21 @@ export function AdminPanel() {
     setActiveFilterKey('all');
   }
 
+  function renderPaymentFlowStatus(item: AdminPaymentQueueItem) {
+    const flowBadge = getAdminPaymentFlowBadge({
+      paymentStatus: item.payment.status,
+      subscriptionStatus: item.subscription?.status ?? null,
+    });
+
+    return (
+      <div className="manual-flow-cell">
+        <span className={`badge manual-flow-badge ${flowBadge.tone}`}>{flowBadge.label}</span>
+        <small className="manual-flow-description">{flowBadge.description}</small>
+        <small className="manual-flow-raw-status">결제 상태: {formatPaymentStatusLabel(item.payment.status)}</small>
+      </div>
+    );
+  }
+
   const activeFilter = getPaymentQueueFilterPreset(activeFilterKey);
   const filteredPayments = filterPaymentQueueItems(payments, activeFilterKey);
 
@@ -193,7 +211,7 @@ export function AdminPanel() {
               <td>{item.user.email}<br /><small>{item.payment.depositorName || item.user.name}</small></td>
               <td>{item.plan?.name ?? 'Unknown'}</td>
               <td>${item.payment.amountUsd}</td>
-              <td><span className="badge">{formatPaymentStatusLabel(item.payment.status)}</span></td>
+              <td>{renderPaymentFlowStatus(item)}</td>
               <td>
                 <input
                   aria-label={`${item.payment.id} 관리자 처리 메모`}
