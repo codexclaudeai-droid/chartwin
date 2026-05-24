@@ -518,6 +518,40 @@ a {
   font-weight: 850;
 }
 
+.payment-method-tabs {
+  background: rgba(25, 23, 18, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 6px;
+}
+
+.payment-method-tab {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 850;
+  min-height: 42px;
+  padding: 0 16px;
+  transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.payment-method-tab.active {
+  background: var(--ink);
+  box-shadow: 0 12px 24px rgba(25, 23, 18, 0.18);
+  color: #fffdf7;
+}
+
+.krw-payment-amount {
+  color: var(--accent);
+  font-size: 18px;
+}
+
 .settings-grid label {
   display: grid;
   gap: 8px;

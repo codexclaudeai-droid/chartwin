@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { dispatchNotificationsRefreshEvent } from '../notification-events';
 
 type Plan = {
@@ -29,6 +29,14 @@ type PaymentResult = {
   message?: string;
 };
 
+type ExchangeRateResult = {
+  ok?: boolean;
+  provider?: string;
+  rate?: number;
+  fetchedAt?: string;
+  message?: string;
+};
+
 export function PricingPanel({
   plans,
   paymentSettings,
@@ -40,8 +48,40 @@ export function PricingPanel({
   const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'usdt'>('bank_transfer');
   const [depositorName, setDepositorName] = useState('');
   const [transactionId, setTransactionId] = useState('');
+  const [naverExchangeRate, setNaverExchangeRate] = useState<number | null>(null);
+  const [exchangeRateMessage, setExchangeRateMessage] = useState('네이버 환율을 불러오는 중입니다.');
   const [message, setMessage] = useState('로그인 후 입금확인 요청을 남기면 관리자 수동 입금 확인 후 승인합니다.');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const selectedPlan = plans.find((plan) => plan.id === selectedPlanId) ?? plans[0] ?? null;
+  const selectedPlanAmountUsd = selectedPlan ? discountedAmount(selectedPlan) : 0;
+  const selectedPlanAmountKrw = naverExchangeRate
+    ? Math.round(selectedPlanAmountUsd * naverExchangeRate)
+    : null;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadNaverExchangeRate() {
+      try {
+        const response = await fetch('/api/exchange-rate/usd-krw');
+        const payload = await response.json() as ExchangeRateResult;
+        if (!isMounted) return;
+        if (!response.ok || !payload.rate) {
+          setExchangeRateMessage(payload.message || '네이버 환율을 불러오지 못했습니다.');
+          return;
+        }
+        setNaverExchangeRate(payload.rate);
+        setExchangeRateMessage(`네이버 환율 ${payload.rate.toLocaleString('ko-KR')}원 적용`);
+      } catch {
+        if (isMounted) setExchangeRateMessage('네이버 환율을 불러오지 못했습니다.');
+      }
+    }
+
+    void loadNaverExchangeRate();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   async function requestPayment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -53,6 +93,7 @@ export function PricingPanel({
         planId: selectedPlanId,
         method: paymentMethod,
         depositorName,
+        exchangeRate: paymentMethod === 'bank_transfer' ? naverExchangeRate : undefined,
         transactionId: paymentMethod === 'usdt' ? transactionId : undefined,
       }),
     });
@@ -93,19 +134,33 @@ export function PricingPanel({
             </label>
           ))}
         </div>
-        <label htmlFor="paymentMethod">결제 방식</label>
-        <select
-          id="paymentMethod"
-          value={paymentMethod}
-          onChange={(event) => setPaymentMethod(event.target.value === 'usdt' ? 'usdt' : 'bank_transfer')}
-        >
-          <option value="bank_transfer">은행 입금</option>
-          <option value="usdt">USDT 테더 이체</option>
-        </select>
+        <span className="form-section-label">결제 방식</span>
+        <div className="payment-method-tabs" role="tablist" aria-label="결제 방식 선택">
+          <button
+            aria-pressed={paymentMethod === 'bank_transfer'}
+            className={`payment-method-tab${paymentMethod === 'bank_transfer' ? ' active' : ''}`}
+            onClick={() => setPaymentMethod('bank_transfer')}
+            type="button"
+          >
+            은행이체
+          </button>
+          <button
+            aria-pressed={paymentMethod === 'usdt'}
+            className={`payment-method-tab${paymentMethod === 'usdt' ? ' active' : ''}`}
+            onClick={() => setPaymentMethod('usdt')}
+            type="button"
+          >
+            가상화폐
+          </button>
+        </div>
         <div className="payment-transfer-info">
           {paymentMethod === 'bank_transfer' ? (
             <>
               <strong>은행 입금 정보</strong>
+              <strong className="krw-payment-amount">
+                결제금액: {selectedPlanAmountKrw ? `${selectedPlanAmountKrw.toLocaleString('ko-KR')}원` : '환율 확인 중'}
+              </strong>
+              <span>{exchangeRateMessage}</span>
               <img
                 alt={`${paymentSettings.bankName} 로고`}
                 className="bank-logo-image"

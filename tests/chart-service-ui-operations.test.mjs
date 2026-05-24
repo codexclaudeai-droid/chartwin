@@ -281,6 +281,30 @@ test('pricing payment request shows admin configured bank and USDT transfer inst
   assert.match(panelSource, /method: paymentMethod/);
 });
 
+test('pricing payment method switches with bank and crypto tabs instead of a select', () => {
+  const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /payment-method-tabs/);
+  assert.match(panelSource, /은행이체/);
+  assert.match(panelSource, /가상화폐/);
+  assert.match(panelSource, /aria-pressed=\{paymentMethod === 'bank_transfer'\}/);
+  assert.match(panelSource, /aria-pressed=\{paymentMethod === 'usdt'\}/);
+  assert.doesNotMatch(panelSource, /<select[\s\S]*id="paymentMethod"/);
+  assert.match(cssSource, /\.payment-method-tabs/);
+});
+
+test('pricing bank transfer shows Naver exchange rate KRW amount and submits the rate', () => {
+  const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /\/api\/exchange-rate\/usd-krw/);
+  assert.match(panelSource, /naverExchangeRate/);
+  assert.match(panelSource, /selectedPlanAmountKrw/);
+  assert.match(panelSource, /네이버 환율/);
+  assert.match(panelSource, /결제금액/);
+  assert.match(panelSource, /exchangeRate: paymentMethod === 'bank_transfer'/);
+});
+
 test('pricing USDT payment request captures and submits the TXID value', () => {
   const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
 
