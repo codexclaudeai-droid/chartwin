@@ -360,3 +360,11 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(cssSource, /\.sales-team-grid/);
   assert.match(cssSource, /\.sales-team-table/);
 });
+
+test('admin sales panel keeps management sections visible before summary data loads', () => {
+  const panelSource = fs.readFileSync(new URL('../app/admin/admin-sales-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /EMPTY_SALES_SUMMARY/);
+  assert.match(panelSource, /const visibleSummary = summary \?\? EMPTY_SALES_SUMMARY/);
+  assert.doesNotMatch(panelSource, /\{summary && \(/);
+});

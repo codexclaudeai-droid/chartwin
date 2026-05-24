@@ -86,6 +86,35 @@ type SalesResponse = {
   summary?: SalesSummary;
 };
 
+const EMPTY_SALES_SUMMARY: SalesSummary = {
+  defaultPercent: 30,
+  defaultTeamPercent: 30,
+  teamPageSize: 10,
+  salespersonQuery: '',
+  customerQuery: '',
+  dateRange: {
+    from: null,
+    to: null,
+  },
+  salespeople: [],
+  selectedSalesperson: null,
+  customers: [],
+  teams: [],
+  selectedTeam: null,
+  selectedTeamSalespeople: [],
+  teamTotals: {
+    salesCount: 0,
+    salesUsd: 0,
+    points: 0,
+  },
+  rows: [],
+  totals: {
+    salesCount: 0,
+    salesUsd: 0,
+    points: 0,
+  },
+};
+
 export function AdminSalesPanel() {
   const [summary, setSummary] = useState<SalesSummary | null>(null);
   const [query, setQuery] = useState('');
@@ -322,6 +351,8 @@ export function AdminSalesPanel() {
     URL.revokeObjectURL(url);
   }
 
+  const visibleSummary = summary ?? EMPTY_SALES_SUMMARY;
+
   return (
     <section className="card wide" id="admin-sales">
       <div className="toolbar">
@@ -355,23 +386,22 @@ export function AdminSalesPanel() {
           조회
         </button>
       </div>
-      {summary && (
-        <>
+      <div className="sales-management-body">
           <div className="sales-summary-grid">
             <div className="mini-card">
               <span>기본 팀 정산율</span>
-              <strong>{summary.defaultTeamPercent}%</strong>
+              <strong>{visibleSummary.defaultTeamPercent}%</strong>
               <p>팀 정산율은 슈퍼관리자만 변경할 수 있습니다.</p>
             </div>
             <div className="mini-card">
               <span>선택 영업팀</span>
-              <strong>{summary.selectedTeam?.name ?? '영업팀 없음'}</strong>
-              <p>{summary.selectedTeam ? `${summary.selectedTeam.salespersonCount}명 / ${summary.selectedTeam.commissionPercent}%` : '영업팀을 먼저 등록하세요.'}</p>
+              <strong>{visibleSummary.selectedTeam?.name ?? '영업팀 없음'}</strong>
+              <p>{visibleSummary.selectedTeam ? `${visibleSummary.selectedTeam.salespersonCount}명 / ${visibleSummary.selectedTeam.commissionPercent}%` : '영업팀을 먼저 등록하세요.'}</p>
             </div>
             <div className="mini-card">
               <span>팀 매출집계</span>
-              <strong>{formatUsd(summary.teamTotals.salesUsd)}</strong>
-              <p>포인트 {formatPoint(summary.teamTotals.points)} / 매출 {summary.teamTotals.salesCount}건</p>
+              <strong>{formatUsd(visibleSummary.teamTotals.salesUsd)}</strong>
+              <p>포인트 {formatPoint(visibleSummary.teamTotals.points)} / 매출 {visibleSummary.teamTotals.salesCount}건</p>
             </div>
           </div>
 
@@ -379,7 +409,7 @@ export function AdminSalesPanel() {
             <div className="toolbar compact">
               <div>
                 <h3>영업팀 등록 및 배치</h3>
-                <p className="compact-copy">영업팀을 만들고 선택한 영업자를 팀에 배치합니다. 영업자 리스트는 기본 {summary.teamPageSize}개 단위로 표시합니다.</p>
+                <p className="compact-copy">영업팀을 만들고 선택한 영업자를 팀에 배치합니다. 영업자 리스트는 기본 {visibleSummary.teamPageSize}개 단위로 표시합니다.</p>
               </div>
               <button className="button" type="button" onClick={() => void createSalesTeam()} disabled={isBusy}>
                 영업팀 등록
@@ -399,7 +429,7 @@ export function AdminSalesPanel() {
               </button>
             </div>
             <div className="sales-team-grid" aria-label="영업팀 목록">
-              {summary.teams.map((team) => (
+              {visibleSummary.teams.map((team) => (
                 <button
                   aria-pressed={selectedTeamId === team.id}
                   className={`sales-team-card${selectedTeamId === team.id ? ' active' : ''}`}
@@ -412,7 +442,7 @@ export function AdminSalesPanel() {
                   <small>{formatUsd(team.salesUsd)} / {formatPoint(team.points)} 포인트</small>
                 </button>
               ))}
-              {summary.teams.length === 0 && (
+              {visibleSummary.teams.length === 0 && (
                 <p className="notice compact">등록된 영업팀이 없습니다. 팀명을 입력하고 영업팀 등록을 누르세요.</p>
               )}
             </div>
@@ -428,7 +458,7 @@ export function AdminSalesPanel() {
                   value={teamCommissionPercent}
                 />
               </label>
-              <button className="button" type="button" onClick={() => void saveTeamCommissionPercent()} disabled={isBusy || !summary.selectedTeam}>
+              <button className="button" type="button" onClick={() => void saveTeamCommissionPercent()} disabled={isBusy || !visibleSummary.selectedTeam}>
                 팀 정산율 저장
               </button>
             </div>
@@ -443,7 +473,7 @@ export function AdminSalesPanel() {
                 </tr>
               </thead>
               <tbody>
-                {summary.selectedTeamSalespeople.map((salesperson) => (
+                {visibleSummary.selectedTeamSalespeople.map((salesperson) => (
                   <tr key={salesperson.id}>
                     <td>{salesperson.sequence}</td>
                     <td>{salesperson.name}<br /><small>{salesperson.email}</small></td>
@@ -452,7 +482,7 @@ export function AdminSalesPanel() {
                     <td>{formatPoint(salesperson.points)}</td>
                   </tr>
                 ))}
-                {summary.selectedTeamSalespeople.length === 0 && (
+                {visibleSummary.selectedTeamSalespeople.length === 0 && (
                   <tr>
                     <td colSpan={5}>선택한 영업팀에 배치된 영업자가 없습니다.</td>
                   </tr>
@@ -464,22 +494,22 @@ export function AdminSalesPanel() {
           <div className="sales-summary-grid">
             <div className="mini-card">
               <span>개별 기본 정산율</span>
-              <strong>{summary.defaultPercent}%</strong>
+              <strong>{visibleSummary.defaultPercent}%</strong>
               <p>영업자별 매출 집계는 개별 정산율을 기준으로 계산합니다.</p>
             </div>
             <div className="mini-card">
               <span>선택 영업자</span>
-              <strong>{summary.selectedSalesperson?.email ?? '영업자 없음'}</strong>
-              <p>{summary.selectedSalesperson ? `${summary.selectedSalesperson.name} / ${summary.selectedSalesperson.commissionPercent}%` : '회원관리에서 역할을 영업으로 지정하세요.'}</p>
+              <strong>{visibleSummary.selectedSalesperson?.email ?? '영업자 없음'}</strong>
+              <p>{visibleSummary.selectedSalesperson ? `${visibleSummary.selectedSalesperson.name} / ${visibleSummary.selectedSalesperson.commissionPercent}%` : '회원관리에서 역할을 영업으로 지정하세요.'}</p>
             </div>
             <div className="mini-card">
               <span>개별 집계</span>
-              <strong>{formatUsd(summary.totals.salesUsd)}</strong>
-              <p>포인트 {formatPoint(summary.totals.points)} / 매출 {summary.totals.salesCount}건</p>
+              <strong>{formatUsd(visibleSummary.totals.salesUsd)}</strong>
+              <p>포인트 {formatPoint(visibleSummary.totals.points)} / 매출 {visibleSummary.totals.salesCount}건</p>
             </div>
           </div>
           <div className="salesperson-list" aria-label="영업자 목록">
-            {summary.salespeople.map((salesperson) => (
+            {visibleSummary.salespeople.map((salesperson) => (
               <button
                 aria-pressed={selectedSalespersonId === salesperson.id}
                 className={`salesperson-card${selectedSalespersonId === salesperson.id ? ' active' : ''}`}
@@ -492,7 +522,7 @@ export function AdminSalesPanel() {
                 <small>{salesperson.commissionPercent}% / {formatUsd(salesperson.salesUsd)} / {formatPoint(salesperson.points)}</small>
               </button>
             ))}
-            {summary.salespeople.length === 0 && (
+            {visibleSummary.salespeople.length === 0 && (
               <p className="notice compact">검색 조건에 맞는 영업자가 없습니다. 회원관리에서 회원 역할을 영업으로 변경하세요.</p>
             )}
           </div>
@@ -520,7 +550,7 @@ export function AdminSalesPanel() {
               </button>
             </div>
             <div className="sales-customer-list" aria-label="영업자 배정 회원 목록">
-              {summary.customers.map((customer) => (
+              {visibleSummary.customers.map((customer) => (
                 <button
                   aria-pressed={selectedCustomerId === customer.id}
                   className={`sales-customer-card${selectedCustomerId === customer.id ? ' active' : ''}`}
@@ -533,7 +563,7 @@ export function AdminSalesPanel() {
                   <small>현재 영업자: {customer.salesperson ? `${customer.salesperson.name} / ${customer.salesperson.email}` : '미배정'}</small>
                 </button>
               ))}
-              {summary.customers.length === 0 && (
+              {visibleSummary.customers.length === 0 && (
                 <p className="notice compact">검색 조건에 맞는 회원이 없습니다.</p>
               )}
             </div>
@@ -550,10 +580,10 @@ export function AdminSalesPanel() {
                 value={commissionPercent}
               />
             </label>
-            <button className="button" type="button" onClick={() => void saveCommissionPercent()} disabled={isBusy || !summary.selectedSalesperson}>
+            <button className="button" type="button" onClick={() => void saveCommissionPercent()} disabled={isBusy || !visibleSummary.selectedSalesperson}>
               정산율 저장
             </button>
-            <button className="button secondary" type="button" onClick={downloadSalesExcel} disabled={summary.rows.length === 0}>
+            <button className="button secondary" type="button" onClick={downloadSalesExcel} disabled={visibleSummary.rows.length === 0}>
               엑셀출력
             </button>
           </div>
@@ -569,7 +599,7 @@ export function AdminSalesPanel() {
               </tr>
             </thead>
             <tbody>
-              {summary.rows.map((row) => (
+              {visibleSummary.rows.map((row) => (
                 <tr key={row.paymentId}>
                   <td>{row.salesDate}</td>
                   <td>{row.email}<br /><small>{row.customerName}</small></td>
@@ -579,7 +609,7 @@ export function AdminSalesPanel() {
                   <td>{formatPoint(row.points)}</td>
                 </tr>
               ))}
-              {summary.rows.length === 0 && (
+              {visibleSummary.rows.length === 0 && (
                 <tr>
                   <td colSpan={6}>선택한 기간과 영업자에 해당하는 매출이 없습니다.</td>
                 </tr>
@@ -588,14 +618,13 @@ export function AdminSalesPanel() {
             <tfoot>
               <tr>
                 <th colSpan={3}>합계</th>
-                <th>{formatUsd(summary.totals.salesUsd)}</th>
-                <th>{summary.selectedSalesperson?.commissionPercent ?? summary.defaultPercent}%</th>
-                <th>{formatPoint(summary.totals.points)}</th>
+                <th>{formatUsd(visibleSummary.totals.salesUsd)}</th>
+                <th>{visibleSummary.selectedSalesperson?.commissionPercent ?? visibleSummary.defaultPercent}%</th>
+                <th>{formatPoint(visibleSummary.totals.points)}</th>
               </tr>
             </tfoot>
           </table>
-        </>
-      )}
+      </div>
     </section>
   );
 }
