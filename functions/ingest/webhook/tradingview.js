@@ -119,6 +119,13 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); }
   catch { return Response.json({ ok: false, message: 'invalid json' }, { status: 400, headers: CORS }); }
 
+  if (!env.CANDLES_KV) {
+    return Response.json({
+      ok: false,
+      message: 'CANDLES_KV binding missing',
+    }, { status: 503, headers: CORS });
+  }
+
   const expected = env.WEBHOOK_PASSPHRASE || '';
   if (!expected || String(body.passphrase || '') !== expected) {
     return Response.json({ ok: false, message: 'invalid passphrase' }, { status: 401, headers: CORS });

@@ -101,6 +101,20 @@ async function getCandleRows(env, market, symbol, timeframe, requestedSymbol) {
   return { rows: [], key: null, keys, errors };
 }
 
+function missingKvResponse(debug = false) {
+  const payload = {
+    ok: false,
+    message: 'CANDLES_KV binding missing',
+  };
+  if (debug) {
+    payload.debug = {
+      kvBound: false,
+      hint: 'Bind the candle KV namespace as CANDLES_KV in Cloudflare Pages production settings.',
+    };
+  }
+  return Response.json(payload, { status: 503, headers: CORS });
+}
+
 function aggregateFrom1m(candles1m, targetTfSec) {
   const map = new Map();
   for (const c of candles1m) {
@@ -143,6 +157,7 @@ export async function onRequestGet({ request, env }) {
   if (!market || !symbol || !timeframe) {
     return Response.json({ ok: false, message: 'market/symbol/timeframe required' }, { status: 400, headers: CORS });
   }
+  if (!env.CANDLES_KV) return missingKvResponse(debug);
 
   let candles = [];
   let source = 'stored';

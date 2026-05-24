@@ -102,6 +102,16 @@ test('Cloudflare Pages functions use the same webhook symbol aliases', () => {
     /kvBound: Boolean\(env\.CANDLES_KV\)/,
     'diagnostics should reveal whether the production KV binding is available',
   );
+  assert.match(
+    pagesCandlesSource,
+    /CANDLES_KV binding missing/,
+    'Cloudflare /candles should fail loudly instead of returning ok:true with empty candles when KV is unbound',
+  );
+  assert.match(
+    pagesWebhookSource,
+    /CANDLES_KV binding missing/,
+    'Cloudflare webhook ingest should fail loudly when the production candle KV is unbound',
+  );
   assert.doesNotMatch(pagesWebhookSource, /XAUUSDT\.P'[\s\S]*return 'XAUUSD'/);
   assert.doesNotMatch(pagesWebhookSource, /XAGUSDT\.P'[\s\S]*return 'XAGUSD'/);
 });
