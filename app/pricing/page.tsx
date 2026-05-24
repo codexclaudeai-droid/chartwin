@@ -9,7 +9,7 @@ export default function PricingPage() {
     <main className="page">
       <h1>구독 플랜</h1>
       <p className="lede">
-        결제는 자동 승인하지 않습니다. 사용자가 입금 확인 요청을 남기면 관리자가 관리자페이지에서 승인, 환불, 취소를 처리합니다.
+        결제는 자동 승인하지 않습니다. 사용자가 입금 확인 요청을 남기면 관리자가 실제 입금 내역을 수동 확인한 뒤 구독 승인, 환불, 취소를 처리합니다.
       </p>
       <table className="table">
         <thead>

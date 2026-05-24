@@ -45,6 +45,7 @@ test('authenticated payment request creates a private deposit support thread', (
   assert.match(result.supportMessage.body, new RegExp(result.payment.id));
   assert.match(result.supportMessage.body, /Trial User/);
   assert.match(result.supportMessage.body, /Monthly/);
+  assert.match(result.supportMessage.body, /관리자가 실제 입금 내역을 수동 확인/);
 });
 
 test('admin payment queue joins payment, user, plan, and subscription status for operations UI', () => {
@@ -223,6 +224,16 @@ test('admin payment panel links deposit requests to the support thread reply vie
   assert.match(source, /createAdminSupportThreadUrl/);
   assert.match(source, /item\.supportThread/);
   assert.match(source, /입금확인 요청글/);
+});
+
+test('pricing copy makes deposit confirmation explicitly manual', () => {
+  const pageSource = fs.readFileSync(new URL('../app/pricing/page.tsx', import.meta.url), 'utf8');
+  const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(pageSource, /관리자가 실제 입금 내역을 수동 확인/);
+  assert.match(panelSource, /관리자 수동 입금 확인/);
+  assert.doesNotMatch(pageSource, /자동 입금 확인/);
+  assert.doesNotMatch(panelSource, /자동 입금 확인/);
 });
 
 test('admin payment panel refreshes its filtered queue after local operations without overwriting success context', () => {

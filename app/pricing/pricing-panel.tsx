@@ -22,7 +22,7 @@ type PaymentResult = {
 export function PricingPanel({ plans }: { plans: Plan[] }) {
   const [selectedPlanId, setSelectedPlanId] = useState(plans[0]?.id ?? 'plan_monthly');
   const [depositorName, setDepositorName] = useState('');
-  const [message, setMessage] = useState('로그인 후 결제 요청을 남기면 관리자가 입금 확인 뒤 승인합니다.');
+  const [message, setMessage] = useState('로그인 후 입금확인 요청을 남기면 관리자가 수동 입금 확인 뒤 승인합니다.');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function requestPayment(event: React.FormEvent<HTMLFormElement>) {
@@ -40,7 +40,7 @@ export function PricingPanel({ plans }: { plans: Plan[] }) {
     const payload = await response.json() as PaymentResult;
     setIsSubmitting(false);
     setMessage(response.ok && payload.payment
-      ? `결제 요청 ${payload.payment.id}이 접수되었습니다. 상태: ${payload.payment.status}`
+      ? `입금확인 요청 ${payload.payment.id}이 접수되었습니다. 관리자 수동 입금 확인 전까지 상태: ${payload.payment.status}`
       : payload.message || '결제 요청에 실패했습니다. 먼저 로그인해 주세요.');
   }
 

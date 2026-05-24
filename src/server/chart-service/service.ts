@@ -606,7 +606,7 @@ function createDepositSupportThreadDraft(input: {
       `결제 방식: ${input.method === 'usdt' ? 'USDT' : '무통장 입금'}`,
       `입금자명: ${input.depositorName || '미입력'}`,
       `결제 금액: $${input.amountUsd}`,
-      '관리자 입금 확인 후 구독 승인을 진행해주세요.',
+      '관리자가 실제 입금 내역을 수동 확인한 뒤 구독 승인을 진행해주세요.',
     ].join('\n'),
     isAdminReply: false,
     createdAt: input.createdAt,
