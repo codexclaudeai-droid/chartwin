@@ -798,6 +798,12 @@ a {
   max-width: 260px;
 }
 
+.subscription-actions-inline {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
 .grid-panel {
   display: grid;
   gap: 22px;

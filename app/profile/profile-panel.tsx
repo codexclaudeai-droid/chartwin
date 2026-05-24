@@ -14,6 +14,7 @@ import {
 } from '../../src/domain/chart-service/index.ts';
 import { createProfileImagePolicyPayload } from './profile-image-policy';
 import { getProfilePaymentFlowSteps } from './profile-payment-flow';
+import { getSubscriptionActionAvailability } from './subscription-action-policy';
 
 type Dashboard = {
   user: {
@@ -257,6 +258,26 @@ export function ProfilePanel() {
       : `프로필 이미지 정책 실패: ${payload.policy?.reason || payload.message || 'unknown'}`);
   }
 
+  async function requestSubscriptionAction(action: 'cancel' | 'refund') {
+    setIsBusy(true);
+    const endpoint = action === 'cancel'
+      ? '/api/subscription/cancel-request'
+      : '/api/subscription/refund-request';
+    const response = await fetch(endpoint, { method: 'POST' });
+    const payload = await response.json();
+    setIsBusy(false);
+    if (!response.ok || !payload.subscription) {
+      setMessage(payload.message || '구독 요청 처리에 실패했습니다.');
+      return;
+    }
+    setDashboard((currentDashboard) => currentDashboard
+      ? { ...currentDashboard, subscription: payload.subscription }
+      : currentDashboard);
+    setMessage(action === 'cancel'
+      ? '구독 취소 요청이 관리자 확인 대기 상태로 접수되었습니다.'
+      : '환불 요청이 관리자 확인 대기 상태로 접수되었습니다.');
+  }
+
   if (!dashboard) {
     return (
       <section className="card wide">
@@ -274,6 +295,7 @@ export function ProfilePanel() {
   }
 
   const subscriptionStatus = dashboard.subscription?.status ?? dashboard.access.subscriptionStatus;
+  const subscriptionActionAvailability = getSubscriptionActionAvailability(subscriptionStatus);
   const latestPayment = dashboard.payments[0] ?? null;
   const notificationCenterHref = getNotificationCenterHref(dashboard.notifications.unreadCount);
   const referralLink = getReferralLink(dashboard.user.referralCode);
@@ -491,6 +513,25 @@ export function ProfilePanel() {
           <Link className="button secondary" href={notificationCenterHref}>알림 보기</Link>
           <Link className="button secondary" href="/support">고객센터</Link>
         </div>
+        <div className="actions compact subscription-actions-inline">
+          <button
+            className="button secondary"
+            disabled={isBusy || !subscriptionActionAvailability.canCancel}
+            onClick={() => void requestSubscriptionAction('cancel')}
+            type="button"
+          >
+            취소 요청
+          </button>
+          <button
+            className="button danger"
+            disabled={isBusy || !subscriptionActionAvailability.canRefund}
+            onClick={() => void requestSubscriptionAction('refund')}
+            type="button"
+          >
+            환불 요청
+          </button>
+        </div>
+        <p className="notice compact">{subscriptionActionAvailability.reason}</p>
       </div>
 
       <div className="card wide">

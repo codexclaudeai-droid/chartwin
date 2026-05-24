@@ -10,6 +10,7 @@ import {
   verifyPasswordHash,
 } from '../src/server/chart-service/index.ts';
 import { createProfileImagePolicyPayload } from '../app/profile/profile-image-policy.ts';
+import { getSubscriptionActionAvailability } from '../app/profile/subscription-action-policy.ts';
 
 test('profile settings update only the authenticated users display name', () => {
   const repository = createMockChartServiceRepository();
@@ -153,14 +154,43 @@ test('profile page and panel expose my profile edit modal and referral controls'
   assert.match(panelSource, /\/signup\?ref=/);
 });
 
-test('profile page owns the member subscription status actions', () => {
+test('profile page no longer renders the standalone subscription actions panel', () => {
   const pricingSource = fs.readFileSync(new URL('../app/pricing/page.tsx', import.meta.url), 'utf8');
   const profileSource = fs.readFileSync(new URL('../app/profile/page.tsx', import.meta.url), 'utf8');
-  const subscriptionActionsSource = fs.readFileSync(new URL('../app/profile/subscription-actions-panel.tsx', import.meta.url), 'utf8');
 
   assert.doesNotMatch(pricingSource, /SubscriptionActionsPanel/);
-  assert.match(profileSource, /SubscriptionActionsPanel/);
-  assert.match(subscriptionActionsSource, /내 구독 상태/);
+  assert.doesNotMatch(profileSource, /SubscriptionActionsPanel/);
+});
+
+test('profile service status card includes subscription request actions without rendering a duplicate card', () => {
+  const profileSource = fs.readFileSync(new URL('../app/profile/page.tsx', import.meta.url), 'utf8');
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(profileSource, /<SubscriptionActionsPanel/);
+  assert.match(panelSource, /getSubscriptionActionAvailability/);
+  assert.match(panelSource, /requestSubscriptionAction/);
+  assert.match(panelSource, /\/api\/subscription\/cancel-request/);
+  assert.match(panelSource, /\/api\/subscription\/refund-request/);
+  assert.match(panelSource, /disabled=\{isBusy \|\| !subscriptionActionAvailability\.canCancel\}/);
+  assert.match(panelSource, /disabled=\{isBusy \|\| !subscriptionActionAvailability\.canRefund\}/);
+});
+
+test('profile subscription action policy enables buttons only for active subscriptions', () => {
+  assert.deepEqual(getSubscriptionActionAvailability('active'), {
+    canCancel: true,
+    canRefund: true,
+    reason: '활성 구독은 취소 또는 환불 요청을 접수할 수 있습니다.',
+  });
+  assert.deepEqual(getSubscriptionActionAvailability('expiring'), {
+    canCancel: true,
+    canRefund: true,
+    reason: '만료 예정 구독은 취소 또는 환불 요청을 접수할 수 있습니다.',
+  });
+  assert.equal(getSubscriptionActionAvailability('payment_pending').canCancel, false);
+  assert.equal(getSubscriptionActionAvailability('payment_requested').canRefund, false);
+  assert.match(getSubscriptionActionAvailability('cancel_requested').reason, /이미 취소 요청/);
+  assert.match(getSubscriptionActionAvailability('refund_requested').reason, /이미 환불 요청/);
+  assert.match(getSubscriptionActionAvailability('none').reason, /활성 구독이 없습니다/);
 });
 
 test('profile edit controls move into a modal instead of inline summary edits', () => {

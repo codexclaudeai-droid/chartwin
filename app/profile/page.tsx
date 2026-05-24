@@ -1,5 +1,4 @@
 import { ProfilePanel } from './profile-panel';
-import { SubscriptionActionsPanel } from './subscription-actions-panel';
 
 export default function ProfilePage() {
   return (
@@ -10,7 +9,6 @@ export default function ProfilePage() {
         관리자 확인이 필요한 작업은 현재 대기 상태와 다음 이동 경로를 함께 표시합니다.
       </p>
       <ProfilePanel />
-      <SubscriptionActionsPanel />
     </main>
   );
 }
