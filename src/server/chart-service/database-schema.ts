@@ -184,10 +184,12 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
         body: { type: 'text' },
         link_url: { type: 'text', nullable: true },
         read_at: { type: 'timestamptz', nullable: true },
+        archived_at: { type: 'timestamptz', nullable: true },
         created_at: { type: 'timestamptz' },
       },
       indexes: [
         { name: 'idx_notifications_user_id_read_at', columns: ['user_id', 'read_at'] },
+        { name: 'idx_notifications_user_id_archived_at', columns: ['user_id', 'archived_at'] },
       ],
     },
     {
@@ -250,7 +252,13 @@ export function renderChartServicePostgresSchema(): string {
     return [tableSql, ...indexSql];
   });
 
-  return `${statements.join('\n\n')}\n`;
+  return `${[...statements, ...getChartServiceSchemaUpgradeStatements()].join('\n\n')}\n`;
+}
+
+function getChartServiceSchemaUpgradeStatements(): string[] {
+  return [
+    'alter table if exists notifications add column if not exists archived_at timestamptz;',
+  ];
 }
 
 function renderColumn(name: string, column: DatabaseColumn): string {

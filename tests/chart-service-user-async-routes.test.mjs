@@ -12,6 +12,7 @@ const userMutationRoutes = [
   '../app/api/subscription/refund-request/route.ts',
   '../app/api/notifications/read-all/route.ts',
   '../app/api/notifications/[id]/read/route.ts',
+  '../app/api/notifications/[id]/archive/route.ts',
   '../app/api/support/threads/route.ts',
 ];
 

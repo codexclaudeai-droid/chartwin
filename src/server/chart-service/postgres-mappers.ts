@@ -301,6 +301,7 @@ export function mapNotificationFromPostgresRow(row: PostgresRow): NotificationRe
     body: readString(row.body),
     linkUrl: readNullableString(row.link_url),
     readAt: readNullableIsoString(row.read_at),
+    archivedAt: readNullableIsoString(row.archived_at),
     createdAt: readIsoString(row.created_at),
   };
 }
@@ -314,6 +315,7 @@ export function mapNotificationToPostgresRow(record: NotificationRecord): Postgr
     body: record.body,
     link_url: record.linkUrl,
     read_at: record.readAt,
+    archived_at: record.archivedAt,
     created_at: record.createdAt,
   };
 }

@@ -20,6 +20,7 @@ type NotificationRecord = {
   body: string;
   linkUrl: string | null;
   readAt: string | null;
+  archivedAt: string | null;
   createdAt: string;
 };
 
@@ -68,6 +69,20 @@ export function NotificationsPanel() {
     }
     dispatchNotificationsRefreshEvent();
     await refresh();
+  }
+
+  async function archiveNotification(notificationId: string) {
+    setIsBusy(true);
+    const response = await fetch(`/api/notifications/${notificationId}/archive`, { method: 'POST' });
+    const payload = await response.json();
+    setIsBusy(false);
+    if (!response.ok) {
+      setMessage(payload.message || '알림 숨김 처리에 실패했습니다.');
+      return;
+    }
+    dispatchNotificationsRefreshEvent();
+    await refresh();
+    setMessage('알림을 목록에서 숨겼습니다.');
   }
 
   async function markAllRead() {
@@ -158,6 +173,9 @@ export function NotificationsPanel() {
                   읽음 처리
                 </button>
               )}
+              <button className="button secondary" type="button" onClick={() => archiveNotification(notification.id)} disabled={isBusy}>
+                숨기기
+              </button>
             </div>
           </article>
         ))}

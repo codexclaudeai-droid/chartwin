@@ -113,6 +113,7 @@ export async function getAsyncUserDashboardSummary(
     input.actor.role === USER_ROLES.admin ||
     input.actor.role === USER_ROLES.superAdmin
   ));
+  const visibleNotifications = notifications.filter(isVisibleNotification);
 
   return {
     user: toDashboardUserSummary(user),
@@ -122,8 +123,8 @@ export async function getAsyncUserDashboardSummary(
       .filter((payment) => payment.userId === input.actor.id)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     notifications: {
-      totalCount: notifications.length,
-      unreadCount: notifications.filter((notification) => !notification.readAt).length,
+      totalCount: visibleNotifications.length,
+      unreadCount: visibleNotifications.filter((notification) => !notification.readAt).length,
     },
     support: {
       visibleThreadCount: visibleSupportThreads.length,
@@ -333,6 +334,7 @@ export async function listAsyncNotificationsForUser(
   input: { actor: Actor },
 ): Promise<NotificationRecord[]> {
   return (await repository.listNotificationsByUserId(input.actor.id))
+    .filter(isVisibleNotification)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
@@ -340,7 +342,8 @@ export async function getAsyncNotificationSummaryForUser(
   repository: AsyncChartServiceRepository,
   input: { actor: Actor },
 ): Promise<{ totalCount: number; unreadCount: number }> {
-  const notifications = await repository.listNotificationsByUserId(input.actor.id);
+  const notifications = (await repository.listNotificationsByUserId(input.actor.id))
+    .filter(isVisibleNotification);
   return {
     totalCount: notifications.length,
     unreadCount: notifications.filter((notification) => !notification.readAt).length,
@@ -352,6 +355,7 @@ export async function markAsyncNotificationReadForUser(
   input: { actor: Actor; notificationId: string; readAt: string },
 ): Promise<NotificationRecord> {
   const notification = (await repository.listNotificationsByUserId(input.actor.id))
+    .filter(isVisibleNotification)
     .find((item) => item.id === input.notificationId);
   if (!notification) {
     throw new Error(`Notification not found: ${input.notificationId}`);
@@ -365,11 +369,30 @@ export async function markAsyncNotificationReadForUser(
   return readNotification;
 }
 
+export async function archiveAsyncNotificationForUser(
+  repository: AsyncChartServiceRepository,
+  input: { actor: Actor; notificationId: string; archivedAt: string },
+): Promise<NotificationRecord> {
+  const notification = (await repository.listNotificationsByUserId(input.actor.id))
+    .find((item) => item.id === input.notificationId);
+  if (!notification) {
+    throw new Error(`Notification not found: ${input.notificationId}`);
+  }
+
+  const archivedNotification = {
+    ...notification,
+    archivedAt: notification.archivedAt ?? input.archivedAt,
+  };
+  await repository.saveNotification(archivedNotification);
+  return archivedNotification;
+}
+
 export async function markAllAsyncNotificationsReadForUser(
   repository: AsyncChartServiceRepository,
   input: { actor: Actor; readAt: string },
 ): Promise<{ updatedCount: number }> {
   const unreadNotifications = (await repository.listNotificationsByUserId(input.actor.id))
+    .filter(isVisibleNotification)
     .filter((notification) => !notification.readAt);
 
   await Promise.all(unreadNotifications.map((notification) => repository.saveNotification({
@@ -622,7 +645,10 @@ export async function getAsyncAdminUserDirectory(
       supportThreadCount: supportThreads
         .filter((thread) => thread.authorUserId === user.id)
         .length,
-      unreadNotificationCount: notifications.filter((notification) => !notification.readAt).length,
+      unreadNotificationCount: notifications
+        .filter(isVisibleNotification)
+        .filter((notification) => !notification.readAt)
+        .length,
     };
   }));
 }
@@ -661,7 +687,10 @@ export async function getAsyncAdminUserDetail(
     latestPayment: userPayments[0] ?? null,
     paymentCount: userPayments.length,
     supportThreadCount: userSupportThreads.length,
-    unreadNotificationCount: notifications.filter((notification) => !notification.readAt).length,
+    unreadNotificationCount: notifications
+      .filter(isVisibleNotification)
+      .filter((notification) => !notification.readAt)
+      .length,
     payments: userPayments,
     supportThreads: userSupportThreads,
     notifications,
@@ -1056,6 +1085,7 @@ async function createAsyncUserNotification(
     body: input.body,
     linkUrl: input.linkUrl ?? null,
     readAt: null,
+    archivedAt: null,
     createdAt: input.createdAt,
   };
   await repository.saveNotification(notification);
@@ -1106,6 +1136,10 @@ const ADMIN_ROLES: UserRole[] = ['admin', 'super_admin'];
 
 function requiresSuperAdmin(role: UserRole): boolean {
   return ADMIN_ROLES.includes(role);
+}
+
+function isVisibleNotification(notification: NotificationRecord): boolean {
+  return !notification.archivedAt;
 }
 
 function isUserRelatedAuditLog(

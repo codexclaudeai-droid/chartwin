@@ -64,6 +64,7 @@ function createSupportRequestAdminNotification(
     body: formatSupportRequestSummary(input),
     linkUrl: createAdminSupportThreadPath(input.thread.id),
     readAt: null,
+    archivedAt: null,
     createdAt: input.createdAt,
   };
 }
@@ -86,6 +87,7 @@ async function createAsyncSupportRequestAdminNotification(
     body: formatSupportRequestSummary(input),
     linkUrl: createAdminSupportThreadPath(input.thread.id),
     readAt: null,
+    archivedAt: null,
     createdAt: input.createdAt,
   };
 }

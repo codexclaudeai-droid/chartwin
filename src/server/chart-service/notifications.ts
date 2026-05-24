@@ -29,6 +29,7 @@ export function createUserNotification(
     body: input.body,
     linkUrl: input.linkUrl ?? null,
     readAt: null,
+    archivedAt: null,
     createdAt: input.createdAt,
   };
   repository.saveNotification(notification);
@@ -41,6 +42,7 @@ export function listNotificationsForUser(
 ): NotificationRecord[] {
   return repository
     .listNotificationsByUserId(input.actor.id)
+    .filter(isVisibleNotification)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
@@ -48,7 +50,9 @@ export function getNotificationSummaryForUser(
   repository: ChartServiceRepository,
   input: { actor: Actor },
 ): { totalCount: number; unreadCount: number } {
-  const notifications = repository.listNotificationsByUserId(input.actor.id);
+  const notifications = repository
+    .listNotificationsByUserId(input.actor.id)
+    .filter(isVisibleNotification);
   return {
     totalCount: notifications.length,
     unreadCount: notifications.filter((notification) => !notification.readAt).length,
@@ -61,6 +65,7 @@ export function markNotificationReadForUser(
 ): NotificationRecord {
   const notification = repository
     .listNotificationsByUserId(input.actor.id)
+    .filter(isVisibleNotification)
     .find((item) => item.id === input.notificationId);
   if (!notification) {
     throw new Error(`Notification not found: ${input.notificationId}`);
@@ -74,12 +79,32 @@ export function markNotificationReadForUser(
   return readNotification;
 }
 
+export function archiveNotificationForUser(
+  repository: ChartServiceRepository,
+  input: { actor: Actor; notificationId: string; archivedAt: string },
+): NotificationRecord {
+  const notification = repository
+    .listNotificationsByUserId(input.actor.id)
+    .find((item) => item.id === input.notificationId);
+  if (!notification) {
+    throw new Error(`Notification not found: ${input.notificationId}`);
+  }
+
+  const archivedNotification = {
+    ...notification,
+    archivedAt: notification.archivedAt ?? input.archivedAt,
+  };
+  repository.saveNotification(archivedNotification);
+  return archivedNotification;
+}
+
 export function markAllNotificationsReadForUser(
   repository: ChartServiceRepository,
   input: { actor: Actor; readAt: string },
 ): { updatedCount: number } {
   const unreadNotifications = repository
     .listNotificationsByUserId(input.actor.id)
+    .filter(isVisibleNotification)
     .filter((notification) => !notification.readAt);
 
   unreadNotifications.forEach((notification) => {
@@ -90,4 +115,8 @@ export function markAllNotificationsReadForUser(
   });
 
   return { updatedCount: unreadNotifications.length };
+}
+
+function isVisibleNotification(notification: NotificationRecord): boolean {
+  return !notification.archivedAt;
 }

@@ -213,10 +213,13 @@ test('postgres plan referral support and notification mappers preserve repositor
     body: '승인되었습니다.',
     link_url: '/profile',
     read_at: null,
+    archived_at: '2026-05-23T00:10:00.000Z',
     created_at: '2026-05-23T00:00:00.000Z',
   });
   assert.equal(notification.linkUrl, '/profile');
+  assert.equal(notification.archivedAt, '2026-05-23T00:10:00.000Z');
   assert.equal(mapNotificationToPostgresRow(notification).read_at, null);
+  assert.equal(mapNotificationToPostgresRow(notification).archived_at, '2026-05-23T00:10:00.000Z');
 });
 
 test('postgres select and delete statement builders keep filters parameterized', () => {

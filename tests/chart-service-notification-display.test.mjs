@@ -70,6 +70,9 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /filteredUnreadNotifications/);
   assert.match(panelSource, /getUnreadNotificationsByTab/);
   assert.match(panelSource, /markFilteredRead/);
+  assert.match(panelSource, /archiveNotification/);
+  assert.match(panelSource, /\/api\/notifications\/\$\{notificationId\}\/archive/);
+  assert.match(panelSource, /dispatchNotificationsRefreshEvent/);
   assert.match(panelSource, /현재 필터 읽음/);
   assert.match(panelSource, /Promise\.all/);
   assert.match(panelSource, /notification\.id/);

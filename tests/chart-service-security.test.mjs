@@ -143,6 +143,7 @@ test('state-changing API routes enforce same-origin mutation checks', () => {
     '../app/api/subscription/refund-request/route.ts',
     '../app/api/notifications/read-all/route.ts',
     '../app/api/notifications/[id]/read/route.ts',
+    '../app/api/notifications/[id]/archive/route.ts',
     '../app/api/admin/users/[id]/route.ts',
     '../app/api/admin/payments/confirm/route.ts',
     '../app/api/admin/payments/refund/route.ts',

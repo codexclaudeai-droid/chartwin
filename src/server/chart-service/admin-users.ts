@@ -82,7 +82,10 @@ export function getAdminUserDirectory(
           .listSupportThreads()
           .filter((thread) => thread.authorUserId === user.id)
           .length,
-        unreadNotificationCount: notifications.filter((notification) => !notification.readAt).length,
+        unreadNotificationCount: notifications
+          .filter(isVisibleNotification)
+          .filter((notification) => !notification.readAt)
+          .length,
       };
     });
 }
@@ -120,7 +123,10 @@ export function getAdminUserDetail(
     latestPayment: payments[0] ?? null,
     paymentCount: payments.length,
     supportThreadCount: supportThreads.length,
-    unreadNotificationCount: notifications.filter((notification) => !notification.readAt).length,
+    unreadNotificationCount: notifications
+      .filter(isVisibleNotification)
+      .filter((notification) => !notification.readAt)
+      .length,
     payments,
     supportThreads,
     notifications,
@@ -192,6 +198,10 @@ export function updateAdminUserAccountStatus(
 
 function requiresSuperAdmin(role: UserRole): boolean {
   return ADMIN_ROLES.includes(role);
+}
+
+function isVisibleNotification(notification: NotificationRecord): boolean {
+  return !notification.archivedAt;
 }
 
 function isUserRelatedAuditLog(

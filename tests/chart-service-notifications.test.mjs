@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  archiveAsyncNotificationForUser,
+  archiveNotificationForUser,
   confirmManualPaymentAndActivateSubscription,
+  createAsyncChartServiceRepository,
   createMockChartServiceRepository,
   createSupportThread,
   createUserNotification,
   formatNotificationBadgeCount,
+  listAsyncNotificationsForUser,
   getNotificationSummaryForUser,
   listNotificationsForUser,
   markAllNotificationsReadForUser,
@@ -125,6 +129,41 @@ test('notification summary counts unread notifications for a user', () => {
   assert.equal(summary.unreadCount, 2);
 });
 
+test('archived notifications are hidden from user lists and summaries', () => {
+  const repository = createMockChartServiceRepository();
+  const archivedSource = createUserNotification(repository, {
+    userId: 'user_member',
+    category: 'notice',
+    title: 'Archive me',
+    body: 'This notification is done.',
+    createdAt: '2026-05-23T13:00:00.000Z',
+  });
+  const visibleSource = createUserNotification(repository, {
+    userId: 'user_member',
+    category: 'payment',
+    title: 'Keep visible',
+    body: 'This notification still needs attention.',
+    createdAt: '2026-05-23T13:01:00.000Z',
+  });
+
+  const archived = archiveNotificationForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    notificationId: archivedSource.id,
+    archivedAt: '2026-05-23T13:02:00.000Z',
+  });
+  const notifications = listNotificationsForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  });
+  const summary = getNotificationSummaryForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  });
+
+  assert.equal(archived.archivedAt, '2026-05-23T13:02:00.000Z');
+  assert.deepEqual(notifications.map((notification) => notification.id), [visibleSource.id]);
+  assert.equal(summary.totalCount, 1);
+  assert.equal(summary.unreadCount, 1);
+});
+
 test('user can mark one own notification as read', () => {
   const repository = createMockChartServiceRepository();
   const notification = createUserNotification(repository, {
@@ -145,6 +184,40 @@ test('user can mark one own notification as read', () => {
   assert.equal(getNotificationSummaryForUser(repository, {
     actor: { id: 'user_member', role: 'member' },
   }).unreadCount, 0);
+});
+
+test('mark all read ignores archived notifications', () => {
+  const repository = createMockChartServiceRepository();
+  const archivedSource = createUserNotification(repository, {
+    userId: 'user_member',
+    category: 'notice',
+    title: 'Archived unread',
+    body: 'This one should stay unread while archived.',
+    createdAt: '2026-05-23T13:00:00.000Z',
+  });
+  createUserNotification(repository, {
+    userId: 'user_member',
+    category: 'notice',
+    title: 'Visible unread',
+    body: 'This one should be marked read.',
+    createdAt: '2026-05-23T13:01:00.000Z',
+  });
+  archiveNotificationForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    notificationId: archivedSource.id,
+    archivedAt: '2026-05-23T13:02:00.000Z',
+  });
+
+  const result = markAllNotificationsReadForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    readAt: '2026-05-23T13:03:00.000Z',
+  });
+  const storedArchived = repository
+    .listNotificationsByUserId('user_member')
+    .find((notification) => notification.id === archivedSource.id);
+
+  assert.equal(result.updatedCount, 1);
+  assert.equal(storedArchived?.readAt, null);
 });
 
 test('user can mark all own notifications as read', () => {
@@ -180,4 +253,28 @@ test('notification badge count is hidden at zero and capped above 99', () => {
   assert.equal(formatNotificationBadgeCount(1), '1');
   assert.equal(formatNotificationBadgeCount(99), '99');
   assert.equal(formatNotificationBadgeCount(100), '99+');
+});
+
+test('async notification archive hides a notification from async user lists', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const notification = createUserNotification(syncRepository, {
+    userId: 'user_member',
+    category: 'notice',
+    title: 'Async archive me',
+    body: 'This notification is done.',
+    createdAt: '2026-05-23T13:00:00.000Z',
+  });
+  const repository = createAsyncChartServiceRepository(syncRepository);
+
+  const archived = await archiveAsyncNotificationForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    notificationId: notification.id,
+    archivedAt: '2026-05-23T13:02:00.000Z',
+  });
+  const notifications = await listAsyncNotificationsForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+  });
+
+  assert.equal(archived.archivedAt, '2026-05-23T13:02:00.000Z');
+  assert.deepEqual(notifications, []);
 });

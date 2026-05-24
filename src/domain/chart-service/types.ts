@@ -168,5 +168,6 @@ export type NotificationRecord = {
   body: string;
   linkUrl: string | null;
   readAt: string | null;
+  archivedAt: string | null;
   createdAt: string;
 };
