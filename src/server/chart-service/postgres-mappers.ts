@@ -8,7 +8,12 @@ import type {
   SupportMessageRecord,
   SupportThreadRecord,
 } from '../../domain/chart-service/index.ts';
-import type { AuthSessionRecord, PasswordResetTokenRecord, ServiceUserRecord } from './repository.ts';
+import type {
+  AuthSessionRecord,
+  EmailOutboxRecord,
+  PasswordResetTokenRecord,
+  ServiceUserRecord,
+} from './repository.ts';
 
 export type PostgresRow = Record<string, unknown>;
 
@@ -98,6 +103,34 @@ export function mapPasswordResetTokenToPostgresRow(record: PasswordResetTokenRec
     created_at: record.createdAt,
     expires_at: record.expiresAt,
     used_at: record.usedAt,
+  };
+}
+
+export function mapEmailOutboxFromPostgresRow(row: PostgresRow): EmailOutboxRecord {
+  return {
+    id: readString(row.id),
+    recipientEmail: readString(row.recipient_email),
+    template: readString(row.template),
+    subject: readString(row.subject),
+    body: readString(row.body),
+    status: readString(row.status) as EmailOutboxRecord['status'],
+    createdAt: readIsoString(row.created_at),
+    sentAt: readNullableIsoString(row.sent_at),
+    lastError: readNullableString(row.last_error),
+  };
+}
+
+export function mapEmailOutboxToPostgresRow(record: EmailOutboxRecord): PostgresRow {
+  return {
+    id: record.id,
+    recipient_email: record.recipientEmail,
+    template: record.template,
+    subject: record.subject,
+    body: record.body,
+    status: record.status,
+    created_at: record.createdAt,
+    sent_at: record.sentAt,
+    last_error: record.lastError,
   };
 }
 

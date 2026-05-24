@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { validatePasswordPolicy } from '../../domain/chart-service/index.ts';
 import type { AsyncChartServiceRepository } from './async-repository.ts';
 import { createPasswordHash } from './passwords.ts';
-import type { PasswordResetTokenRecord, ServiceUserRecord } from './repository.ts';
+import type { EmailOutboxRecord, PasswordResetTokenRecord, ServiceUserRecord } from './repository.ts';
 
 const DEFAULT_PASSWORD_RESET_TTL_SECONDS = 60 * 60;
 
@@ -11,6 +11,7 @@ export type PasswordResetRequestResult = {
   created: boolean;
   token: string | null;
   expiresAt: string | null;
+  emailOutboxId: string | null;
 };
 
 export function createPasswordResetTokenHash(token: string): string {
@@ -38,6 +39,7 @@ export async function requestAsyncPasswordReset(
       created: false,
       token: null,
       expiresAt: null,
+      emailOutboxId: null,
     };
   }
 
@@ -54,11 +56,31 @@ export async function requestAsyncPasswordReset(
   };
 
   await repository.savePasswordResetToken(record);
+  const emailOutboxId = await repository.nextId('email');
+  const emailRecord: EmailOutboxRecord = {
+    id: emailOutboxId,
+    recipientEmail: user.email,
+    template: 'password_reset',
+    subject: 'Reset your TC Chart password',
+    body: [
+      'Use this reset token to set a new password:',
+      token,
+      '',
+      `This token expires at ${expiresAt}.`,
+    ].join('\n'),
+    status: 'queued',
+    createdAt: input.requestedAt,
+    sentAt: null,
+    lastError: null,
+  };
+  await repository.saveEmailOutboxRecord(emailRecord);
+
   return {
     accepted: true,
     created: true,
     token,
     expiresAt,
+    emailOutboxId,
   };
 }
 
@@ -107,4 +129,3 @@ export async function resetAsyncPasswordWithToken(
     user: updatedUser,
   };
 }
-

@@ -36,6 +36,7 @@ test('runtime readiness accepts configured postgres persistence with pg runtime 
   assert.equal(readiness.checks.some((check) => check.key === 'postgres_schema_migration_harness' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'postgres_bootstrap_harness' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'postgres_transaction_boundary' && check.status === 'pass'), true);
+  assert.equal(readiness.checks.some((check) => check.key === 'transactional_email_outbox' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'repository_adapter_implementation' && check.status === 'pass'), true);
   assert.equal(readiness.ok, true);
 });

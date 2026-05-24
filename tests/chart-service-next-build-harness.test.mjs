@@ -8,6 +8,7 @@ test('next service build harness uses a deterministic dist directory that tsconf
 
   assert.doesNotMatch(script, /randomUUID/);
   assert.match(script, /const distDir = ['"]\.tmp\/next-service-build['"]/);
+  assert.match(script, /rmSync\(distDir/);
   assert.match(tsconfig, /"\.tmp\/next-service-build\/types\/\*\*\/\*\.ts"/);
   assert.match(tsconfig, /"\.tmp\/next-service-build\/dev\/types\/\*\*\/\*\.ts"/);
 });

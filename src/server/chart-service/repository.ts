@@ -39,6 +39,24 @@ export type PasswordResetTokenRecord = {
   usedAt: string | null;
 };
 
+export type EmailOutboxStatus = 'queued' | 'sent' | 'failed';
+
+export type EmailOutboxRecord = {
+  id: string;
+  recipientEmail: string;
+  template: string;
+  subject: string;
+  body: string;
+  status: EmailOutboxStatus;
+  createdAt: string;
+  sentAt: string | null;
+  lastError: string | null;
+};
+
+export type EmailOutboxFilter = {
+  status?: EmailOutboxStatus;
+};
+
 export type ChartServiceRepository = {
   nextId(prefix: string): string;
   listPlans(): SubscriptionPlan[];
@@ -54,6 +72,8 @@ export type ChartServiceRepository = {
   deleteSession(id: string): void;
   getPasswordResetTokenByTokenHash(tokenHash: string): PasswordResetTokenRecord | null;
   savePasswordResetToken(token: PasswordResetTokenRecord): void;
+  listEmailOutboxRecords(filter?: EmailOutboxFilter): EmailOutboxRecord[];
+  saveEmailOutboxRecord(record: EmailOutboxRecord): void;
   getSubscriptionById(id: string): SubscriptionRecord | null;
   getSubscriptionByUserId(userId: string): SubscriptionRecord | null;
   listSubscriptions(): SubscriptionRecord[];

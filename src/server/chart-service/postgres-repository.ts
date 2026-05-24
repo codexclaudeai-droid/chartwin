@@ -19,6 +19,8 @@ import {
   mapAuditLogDraftToPostgresRow,
   mapAuthSessionFromPostgresRow,
   mapAuthSessionToPostgresRow,
+  mapEmailOutboxFromPostgresRow,
+  mapEmailOutboxToPostgresRow,
   mapNotificationFromPostgresRow,
   mapNotificationToPostgresRow,
   mapPasswordResetTokenFromPostgresRow,
@@ -40,7 +42,13 @@ import {
   type PostgresRow,
   type PostgresStatement,
 } from './postgres-mappers.ts';
-import type { AuthSessionRecord, PasswordResetTokenRecord, ServiceUserRecord } from './repository.ts';
+import type {
+  AuthSessionRecord,
+  EmailOutboxFilter,
+  EmailOutboxRecord,
+  PasswordResetTokenRecord,
+  ServiceUserRecord,
+} from './repository.ts';
 
 export type PostgresQueryResult = {
   rows: PostgresRow[];
@@ -138,6 +146,21 @@ export function createPostgresAsyncChartServiceRepository(
       await execute(createPostgresUpsertStatement(
         'password_reset_tokens',
         mapPasswordResetTokenToPostgresRow(token),
+        ['id'],
+      ));
+    },
+    async listEmailOutboxRecords(filter: EmailOutboxFilter = {}): Promise<EmailOutboxRecord[]> {
+      return selectMany(
+        'email_outbox',
+        mapEmailOutboxFromPostgresRow,
+        filter.status ? { status: filter.status } : {},
+        { orderBy: ['created_at'], direction: 'asc' },
+      );
+    },
+    async saveEmailOutboxRecord(record: EmailOutboxRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'email_outbox',
+        mapEmailOutboxToPostgresRow(record),
         ['id'],
       ));
     },

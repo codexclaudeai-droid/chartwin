@@ -21,6 +21,7 @@ test('chart service database schema covers repository-backed core tables', () =>
     'support_threads',
     'support_messages',
     'notifications',
+    'email_outbox',
     'audit_logs',
   ]);
   assert.equal(tables.find((table) => table.name === 'users')?.columns.account_status.type, 'text');
@@ -29,6 +30,7 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'password_reset_tokens')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'subscriptions')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.subscription_id.references, 'subscriptions.id');
+  assert.equal(tables.find((table) => table.name === 'email_outbox')?.columns.recipient_email.type, 'text');
   assert.equal(tables.find((table) => table.name === 'audit_logs')?.columns.actor_admin_id.references, 'users.id');
 });
 
@@ -44,6 +46,8 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /foreign key \(user_id\) references users\(id\)/i);
   assert.match(sql, /create index if not exists idx_payment_requests_user_id/i);
   assert.match(sql, /create index if not exists idx_notifications_user_id_read_at/i);
+  assert.match(sql, /create table if not exists email_outbox/i);
+  assert.match(sql, /create index if not exists idx_email_outbox_status_created_at/i);
 });
 
 test('database schema export harness is available for production migration prep', () => {

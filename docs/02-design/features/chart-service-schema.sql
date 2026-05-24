@@ -162,6 +162,21 @@ create table if not exists notifications (
 
 create index if not exists idx_notifications_user_id_read_at on notifications (user_id, read_at);
 
+create table if not exists email_outbox (
+  id text primary key,
+  recipient_email text not null,
+  template text not null,
+  subject text not null,
+  body text not null,
+  status text not null,
+  created_at timestamptz not null,
+  sent_at timestamptz,
+  last_error text,
+  constraint chk_email_outbox_status check (status in ('queued', 'sent', 'failed'))
+);
+
+create index if not exists idx_email_outbox_status_created_at on email_outbox (status, created_at);
+
 create table if not exists audit_logs (
   id bigserial primary key,
   actor_admin_id text not null,

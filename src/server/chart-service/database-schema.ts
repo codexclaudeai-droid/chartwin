@@ -191,6 +191,23 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       ],
     },
     {
+      name: 'email_outbox',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        recipient_email: { type: 'text' },
+        template: { type: 'text' },
+        subject: { type: 'text' },
+        body: { type: 'text' },
+        status: { type: 'text', check: "status in ('queued', 'sent', 'failed')" },
+        created_at: { type: 'timestamptz' },
+        sent_at: { type: 'timestamptz', nullable: true },
+        last_error: { type: 'text', nullable: true },
+      },
+      indexes: [
+        { name: 'idx_email_outbox_status_created_at', columns: ['status', 'created_at'] },
+      ],
+    },
+    {
       name: 'audit_logs',
       columns: {
         id: { type: 'bigserial', primaryKey: true },

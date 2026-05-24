@@ -15,6 +15,8 @@ import {
 import type {
   AuthSessionRecord,
   ChartServiceRepository,
+  EmailOutboxRecord,
+  EmailOutboxFilter,
   PasswordResetTokenRecord,
   ServiceUserRecord,
 } from './repository.ts';
@@ -26,6 +28,7 @@ export type MockChartServiceState = {
   users: ServiceUserRecord[];
   sessions: AuthSessionRecord[];
   passwordResetTokens: PasswordResetTokenRecord[];
+  emailOutbox: EmailOutboxRecord[];
   plans: SubscriptionPlan[];
   subscriptions: SubscriptionRecord[];
   payments: PaymentRequestRecord[];
@@ -48,6 +51,7 @@ export function createMockChartServiceState(): MockChartServiceState {
     ],
     sessions: [],
     passwordResetTokens: [],
+    emailOutbox: [],
     plans: getDefaultChartServiceSubscriptionPlans(),
     subscriptions: [
       createSubscriptionRecord({
@@ -155,6 +159,7 @@ export function createMockChartServiceRepository(
   state: MockChartServiceState = createMockChartServiceState(),
 ): ChartServiceRepository {
   state.passwordResetTokens ??= [];
+  state.emailOutbox ??= [];
 
   return {
     nextId(prefix: string): string {
@@ -189,6 +194,14 @@ export function createMockChartServiceRepository(
     },
     savePasswordResetToken(token) {
       upsertById(state.passwordResetTokens, token);
+    },
+    listEmailOutboxRecords(filter: EmailOutboxFilter = {}) {
+      return state.emailOutbox
+        .filter((record) => !filter.status || record.status === filter.status)
+        .map((record) => ({ ...record }));
+    },
+    saveEmailOutboxRecord(record) {
+      upsertById(state.emailOutbox, record);
     },
     getSubscriptionById: (id) => cloneOrNull(state.subscriptions.find((subscription) => subscription.id === id)),
     getSubscriptionByUserId: (userId) => cloneOrNull(state.subscriptions.find((subscription) => subscription.userId === userId)),

@@ -1178,3 +1178,23 @@ Deferred scope:
 - Branded reset email template and localization polish.
 - Token revocation for all older reset tokens after one token is consumed.
 - Abuse monitoring beyond the shared mutation rate limiter.
+
+## 44. Transactional Email Outbox Completion Criteria
+
+The transactional email outbox slice should create a safe handoff point between account actions and the future mail delivery provider.
+
+Implemented scope:
+
+- Email outbox records are part of the repository contract and Postgres schema.
+- Password reset requests for existing accounts save a queued `password_reset` email outbox record.
+- Unknown-account password reset requests still return the same public response and do not create outbox records.
+- Outbox records can be filtered by delivery status and updated from `queued` to `sent` or `failed` by a future worker.
+- Runtime readiness reports the transactional email outbox when the Postgres adapter is selected.
+- The rendered schema export now includes the `email_outbox` table and status/created-at index.
+
+Deferred scope:
+
+- SMTP, Resend, SES, or SendGrid delivery worker integration.
+- Branded localized email templates.
+- Retry/backoff scheduling and max-attempt handling.
+- Admin mail delivery monitoring and manual replay controls.

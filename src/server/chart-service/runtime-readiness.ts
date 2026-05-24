@@ -140,6 +140,12 @@ export function getChartServiceRuntimeReadiness(
       message: 'Postgres mutations can run through a transaction-scoped repository executor.',
     });
     checks.push({
+      key: 'transactional_email_outbox',
+      label: 'Transactional email outbox',
+      status: 'pass',
+      message: 'Password reset emails can be queued in a repository-backed delivery outbox.',
+    });
+    checks.push({
       key: 'repository_adapter_implementation',
       label: 'Repository implementation',
       status: 'pass',
