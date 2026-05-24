@@ -1279,3 +1279,23 @@ Deferred scope:
 - Admin-side notification filtering by support queue category.
 - Email provider-specific branded support request template.
 - Thread assignment, SLA ownership, and escalation state.
+
+## 49. Notification Center Display Polish Completion Criteria
+
+The notification center display slice should make operational alerts readable without exposing internal category values to users or admins.
+
+Implemented scope:
+
+- `/notifications` now uses readable Korean page copy headed by `알림센터`.
+- Notification category labels are centralized in `app/notifications/notification-display.ts`.
+- `support_request` notifications render as `신규 문의` instead of the raw internal category.
+- Link CTA labels are selected by notification category, including `문의 바로 답변하기` for admin support handoffs.
+- Read state labels now use `미확인` and `읽음`.
+- Summary text is centralized as `전체 알림 N건 중 미확인 알림 M건이 있습니다.`
+
+Deferred scope:
+
+- Notification filtering tabs by category and unread state.
+- Bulk archive/delete controls.
+- Per-notification icons and visual severity treatment.
+- Server-side localization for notification titles and bodies.

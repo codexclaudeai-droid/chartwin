@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { dispatchNotificationsRefreshEvent } from '../notification-events';
+import {
+  formatNotificationReadState,
+  formatNotificationSummaryMessage,
+  getNotificationCategoryLabel,
+  getNotificationLinkLabel,
+} from './notification-display';
 
 type NotificationRecord = {
   id: string;
@@ -21,7 +27,7 @@ type NotificationSummary = {
 export function NotificationsPanel() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [summary, setSummary] = useState<NotificationSummary>({ totalCount: 0, unreadCount: 0 });
-  const [message, setMessage] = useState('로그인하면 관리자 처리 결과와 고객센터 답변 알림을 확인할 수 있습니다.');
+  const [message, setMessage] = useState('로그인하면 결제 승인, 구독 상태, 고객센터 답변 알림을 확인할 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
@@ -41,7 +47,7 @@ export function NotificationsPanel() {
     }
     setNotifications(payload.notifications || []);
     setSummary(payload.summary || { totalCount: 0, unreadCount: 0 });
-    setMessage(`알림 ${payload.summary?.totalCount ?? 0}건 중 안 읽은 알림 ${payload.summary?.unreadCount ?? 0}건이 있습니다.`);
+    setMessage(formatNotificationSummaryMessage(payload.summary || { totalCount: 0, unreadCount: 0 }));
   }
 
   async function markOneRead(notificationId: string) {
@@ -63,7 +69,7 @@ export function NotificationsPanel() {
     const payload = await response.json();
     setIsBusy(false);
     if (!response.ok) {
-      setMessage(payload.message || '전체 읽음 처리에 실패했습니다.');
+      setMessage(payload.message || '전체 알림 읽음 처리에 실패했습니다.');
       return;
     }
     setMessage(`${payload.updatedCount}건을 읽음 처리했습니다.`);
@@ -74,7 +80,7 @@ export function NotificationsPanel() {
   return (
     <section className="card wide">
       <div className="toolbar">
-        <h2>내 알림</h2>
+        <h2>알림센터</h2>
         <div className="actions compact">
           <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
           <button className="button" type="button" onClick={markAllRead} disabled={isBusy || summary.unreadCount === 0}>
@@ -87,14 +93,16 @@ export function NotificationsPanel() {
         {notifications.map((notification) => (
           <article className="thread-card" key={notification.id}>
             <div className="thread-meta">
-              <span className="badge">{notification.category}</span>
-              <span>{notification.readAt ? '읽음' : '안 읽음'}</span>
+              <span className="badge">{getNotificationCategoryLabel(notification.category)}</span>
+              <span>{formatNotificationReadState(notification.readAt)}</span>
               <span>{new Date(notification.createdAt).toLocaleString()}</span>
             </div>
             <h3>{notification.title}</h3>
             <p>{notification.body}</p>
             <div className="actions compact">
-              {notification.linkUrl && <a className="text-link" href={notification.linkUrl}>관련 화면으로 이동</a>}
+              {notification.linkUrl && (
+                <a className="text-link" href={notification.linkUrl}>{getNotificationLinkLabel(notification)}</a>
+              )}
               {!notification.readAt && (
                 <button className="button secondary" type="button" onClick={() => markOneRead(notification.id)} disabled={isBusy}>
                   읽음 처리
