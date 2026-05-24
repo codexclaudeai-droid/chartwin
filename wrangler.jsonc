@@ -2,5 +2,11 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "chartwin",
   "compatibility_date": "2026-05-20",
-  "pages_build_output_dir": "./dist"
+  "pages_build_output_dir": "./dist",
+  "kv_namespaces": [
+    {
+      "binding": "CANDLES_KV",
+      "id": "7dae3d119aba44a8a8a268d82b4e0fe7"
+    }
+  ]
 }
