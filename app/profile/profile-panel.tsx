@@ -107,8 +107,8 @@ export function ProfilePanel() {
   const [settingsMessage, setSettingsMessage] = useState('연락번호, 비밀번호, 추천 정보를 관리할 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
   const [targetPaymentId, setTargetPaymentId] = useState(() => getTargetPaymentIdFromHash());
-  const [isPhoneEditorActive, setIsPhoneEditorActive] = useState(false);
-  const phoneInputRef = useRef<HTMLInputElement | null>(null);
+  const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
+  const profileNameInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     void refresh();
@@ -185,16 +185,34 @@ export function ProfilePanel() {
     setCurrentPassword('');
     setNewPassword('');
     setNewPasswordConfirm('');
+    setIsProfileEditOpen(false);
     setSettingsMessage('마이프로필 정보를 저장했습니다.');
   }
 
-  function focusPhoneNumberEditor() {
-    setIsPhoneEditorActive(true);
-    setSettingsMessage('연락번호를 수정한 뒤 프로필 저장을 눌러주세요.');
+  function openProfileEditModal() {
+    if (dashboard) {
+      setNameDraft(dashboard.user.name);
+      setPhoneDraft(dashboard.user.phoneNumber ?? '');
+    }
+    setCurrentPassword('');
+    setNewPassword('');
+    setNewPasswordConfirm('');
+    setIsProfileEditOpen(true);
+    setSettingsMessage('프로필 팝업에서 이름, 연락번호, 비밀번호를 수정할 수 있습니다.');
     window.requestAnimationFrame(() => {
-      phoneInputRef.current?.scrollIntoView({ block: 'center' });
-      phoneInputRef.current?.focus();
+      profileNameInputRef.current?.focus();
     });
+  }
+
+  function closeProfileEditModal() {
+    if (dashboard) {
+      setNameDraft(dashboard.user.name);
+      setPhoneDraft(dashboard.user.phoneNumber ?? '');
+    }
+    setCurrentPassword('');
+    setNewPassword('');
+    setNewPasswordConfirm('');
+    setIsProfileEditOpen(false);
   }
 
   async function validateImagePolicy(event: React.FormEvent<HTMLFormElement>) {
@@ -244,7 +262,10 @@ export function ProfilePanel() {
       <div className="card">
         <div className="toolbar">
           <h2>마이프로필</h2>
-          <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
+          <div className="toolbar-actions">
+            <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
+            <button className="button" type="button" onClick={openProfileEditModal}>프로필수정</button>
+          </div>
         </div>
         <div className="status-list">
           <div className="status-row">
@@ -257,69 +278,78 @@ export function ProfilePanel() {
           </div>
           <div className="status-row">
             <span>연락번호</span>
-            <div className="status-row-actions">
-              <strong>{dashboard.user.phoneNumber || '미등록'}</strong>
-              <button
-                aria-label="연락번호 수정"
-                className="inline-edit-button"
-                onClick={focusPhoneNumberEditor}
-                type="button"
-              >
-                수정
-              </button>
-            </div>
+            <strong>{dashboard.user.phoneNumber || '미등록'}</strong>
           </div>
           <div className="status-row">
             <span>권한</span>
             <strong>{dashboard.user.role}</strong>
           </div>
         </div>
-        <form className="form profile-settings-form" onSubmit={submitProfile}>
-          <label htmlFor="profileName">표시 이름</label>
-          <input
-            id="profileName"
-            value={nameDraft}
-            onChange={(event) => setNameDraft(event.target.value)}
-            placeholder="표시 이름"
-          />
-          <label htmlFor="profilePhoneNumber">연락번호</label>
-          <input
-            className={isPhoneEditorActive ? 'profile-phone-input is-edit-target' : 'profile-phone-input'}
-            id="profilePhoneNumber"
-            ref={phoneInputRef}
-            value={phoneDraft}
-            onChange={(event) => setPhoneDraft(event.target.value)}
-            placeholder="010-0000-0000"
-          />
-          <label htmlFor="profileCurrentPassword">현재 비밀번호</label>
-          <input
-            autoComplete="current-password"
-            id="profileCurrentPassword"
-            onChange={(event) => setCurrentPassword(event.target.value)}
-            placeholder="비밀번호 변경 시 입력"
-            type="password"
-            value={currentPassword}
-          />
-          <label htmlFor="profileNewPassword">새 비밀번호</label>
-          <input
-            autoComplete="new-password"
-            id="profileNewPassword"
-            onChange={(event) => setNewPassword(event.target.value)}
-            placeholder="새 비밀번호"
-            type="password"
-            value={newPassword}
-          />
-          <label htmlFor="profileNewPasswordConfirm">새 비밀번호 확인</label>
-          <input
-            autoComplete="new-password"
-            id="profileNewPasswordConfirm"
-            onChange={(event) => setNewPasswordConfirm(event.target.value)}
-            placeholder="새 비밀번호 확인"
-            type="password"
-            value={newPasswordConfirm}
-          />
-          <button className="button" type="submit" disabled={isBusy}>프로필 저장</button>
-        </form>
+        {isProfileEditOpen && (
+          <div className="profile-edit-modal-backdrop" role="presentation">
+            <form
+              aria-labelledby="profileEditTitle"
+              aria-modal="true"
+              className="profile-edit-modal"
+              onSubmit={submitProfile}
+              role="dialog"
+            >
+              <div className="toolbar compact">
+                <div>
+                  <span>마이프로필</span>
+                  <h3 id="profileEditTitle">프로필 수정</h3>
+                </div>
+                <button className="button secondary" type="button" onClick={closeProfileEditModal}>닫기</button>
+              </div>
+              <label htmlFor="profileName">이름</label>
+              <input
+                id="profileName"
+                ref={profileNameInputRef}
+                value={nameDraft}
+                onChange={(event) => setNameDraft(event.target.value)}
+                placeholder="이름"
+              />
+              <label htmlFor="profilePhoneNumber">연락번호</label>
+              <input
+                id="profilePhoneNumber"
+                value={phoneDraft}
+                onChange={(event) => setPhoneDraft(event.target.value)}
+                placeholder="010-0000-0000"
+              />
+              <label htmlFor="profileCurrentPassword">현재 비밀번호</label>
+              <input
+                autoComplete="current-password"
+                id="profileCurrentPassword"
+                onChange={(event) => setCurrentPassword(event.target.value)}
+                placeholder="비밀번호 변경 시 입력"
+                type="password"
+                value={currentPassword}
+              />
+              <label htmlFor="profileNewPassword">새 비밀번호</label>
+              <input
+                autoComplete="new-password"
+                id="profileNewPassword"
+                onChange={(event) => setNewPassword(event.target.value)}
+                placeholder="새 비밀번호"
+                type="password"
+                value={newPassword}
+              />
+              <label htmlFor="profileNewPasswordConfirm">새 비밀번호 확인</label>
+              <input
+                autoComplete="new-password"
+                id="profileNewPasswordConfirm"
+                onChange={(event) => setNewPasswordConfirm(event.target.value)}
+                placeholder="새 비밀번호 확인"
+                type="password"
+                value={newPasswordConfirm}
+              />
+              <div className="actions compact">
+                <button className="button" type="submit" disabled={isBusy}>프로필 저장</button>
+                <button className="button secondary" type="button" onClick={closeProfileEditModal}>취소</button>
+              </div>
+            </form>
+          </div>
+        )}
         <div className="referral-card">
           <span>추천 정보</span>
           <strong>{dashboard.user.referralCode}</strong>

@@ -133,10 +133,15 @@ test('profile patch API updates contact number and password', async () => {
   assert.equal(verifyPasswordHash('NextDemo1234!', repository.getUserById('user_member')?.passwordHash), true);
 });
 
-test('profile page and panel expose my profile contact password and referral controls', () => {
+test('profile page and panel expose my profile edit modal and referral controls', () => {
   const layoutSource = fs.readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8');
   const pageSource = fs.readFileSync(new URL('../app/profile/page.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /isProfileEditOpen/);
+  assert.match(panelSource, /openProfileEditModal/);
+  assert.match(panelSource, /프로필수정/);
+  assert.match(panelSource, /role="dialog"/);
 
   assert.match(layoutSource, /마이프로필/);
   assert.match(pageSource, /마이프로필/);
@@ -148,15 +153,17 @@ test('profile page and panel expose my profile contact password and referral con
   assert.match(panelSource, /\/signup\?ref=/);
 });
 
-test('profile contact summary exposes an edit button that targets the phone input', () => {
+test('profile edit controls move into a modal instead of inline summary edits', () => {
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
   const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
-  assert.match(panelSource, /phoneInputRef/);
-  assert.match(panelSource, /focusPhoneNumberEditor/);
-  assert.match(panelSource, /aria-label="연락번호 수정"/);
-  assert.match(panelSource, /연락번호를 수정한 뒤 프로필 저장을 눌러주세요/);
-  assert.match(styleSource, /\.status-row-actions/);
+  assert.doesNotMatch(panelSource, /focusPhoneNumberEditor/);
+  assert.doesNotMatch(panelSource, /aria-label="연락번호 수정"/);
+  assert.match(panelSource, /profile-edit-modal-backdrop/);
+  assert.match(panelSource, /profile-edit-modal/);
+  assert.match(panelSource, /closeProfileEditModal/);
+  assert.match(styleSource, /\.profile-edit-modal-backdrop/);
+  assert.match(styleSource, /\.profile-edit-modal/);
 });
 
 test('profile panel renders my referral list with individual and total points', () => {
