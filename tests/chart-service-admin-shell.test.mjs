@@ -13,6 +13,7 @@ test('admin dashboard sections define the professional sidebar order', () => {
     'statistics',
     'sales',
     'users',
+    'paymentSettings',
     'payments',
     'subscriptions',
     'support',
@@ -28,6 +29,7 @@ test('admin dashboard shell maps legacy anchors and deep links to sidebar sectio
   assert.equal(getAdminDashboardSectionFromLocation('#admin-statistics'), 'statistics');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-sales'), 'sales');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-users'), 'users');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-payment-settings'), 'paymentSettings');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-payments'), 'payments');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-payment-pay_pending'), 'payments');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-subscriptions'), 'subscriptions');
@@ -48,6 +50,7 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.match(pageSource, /AdminDashboardShellSection sectionKey="overview"/);
   assert.match(pageSource, /AdminDashboardShellSection sectionKey="statistics"/);
   assert.match(pageSource, /AdminDashboardShellSection sectionKey="sales"/);
+  assert.match(pageSource, /AdminDashboardShellSection sectionKey="paymentSettings"/);
   assert.match(pageSource, /AdminDashboardShellSection sectionKey="payments"/);
   assert.match(pageSource, /AdminDashboardShellSection sectionKey="subscriptions"/);
   assert.match(pageSource, /AdminDashboardShellSection sectionKey="support"/);

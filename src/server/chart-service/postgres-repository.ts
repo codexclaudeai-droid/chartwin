@@ -27,6 +27,8 @@ import {
   mapPasswordResetTokenToPostgresRow,
   mapPaymentFromPostgresRow,
   mapPaymentToPostgresRow,
+  mapPaymentTransferSettingsFromPostgresRow,
+  mapPaymentTransferSettingsToPostgresRow,
   mapPlanFromPostgresRow,
   mapPlanToPostgresRow,
   mapReferralProgramSettingsFromPostgresRow,
@@ -51,6 +53,7 @@ import type {
   EmailOutboxFilter,
   EmailOutboxRecord,
   PasswordResetTokenRecord,
+  PaymentTransferSettingsRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
@@ -216,6 +219,16 @@ export function createPostgresAsyncChartServiceRepository(
     },
     async saveSalesTeam(team: SalesTeamRecord): Promise<void> {
       await execute(createPostgresUpsertStatement('sales_teams', mapSalesTeamToPostgresRow(team), ['id']));
+    },
+    async getPaymentTransferSettings(): Promise<PaymentTransferSettingsRecord | null> {
+      return selectOne('payment_transfer_settings', mapPaymentTransferSettingsFromPostgresRow, { id: 'default' });
+    },
+    async savePaymentTransferSettings(settings: PaymentTransferSettingsRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'payment_transfer_settings',
+        mapPaymentTransferSettingsToPostgresRow(settings),
+        ['id'],
+      ));
     },
     async listReferralLedgersByPaymentId(paymentRequestId: string): Promise<ReferralLedgerRecord[]> {
       return selectMany('referral_ledgers', mapReferralLedgerFromPostgresRow, {

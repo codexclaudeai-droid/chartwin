@@ -26,6 +26,7 @@ export * from './admin-audit.ts';
 export * from './profile-settings.ts';
 export * from './referral-codes.ts';
 export * from './referral-program.ts';
+export * from './payment-settings.ts';
 export * from './database-schema.ts';
 export * from './postgres-mappers.ts';
 export * from './postgres-connection.ts';

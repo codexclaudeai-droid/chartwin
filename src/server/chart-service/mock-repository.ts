@@ -18,6 +18,7 @@ import type {
   EmailOutboxRecord,
   EmailOutboxFilter,
   PasswordResetTokenRecord,
+  PaymentTransferSettingsRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
@@ -37,6 +38,7 @@ export type MockChartServiceState = {
   payments: PaymentRequestRecord[];
   referralProgramSettings: ReferralProgramSettingsRecord | null;
   salesTeams: SalesTeamRecord[];
+  paymentTransferSettings: PaymentTransferSettingsRecord | null;
   referralLedgers: ReferralLedgerRecord[];
   supportThreads: SupportThreadRecord[];
   supportMessages: SupportMessageRecord[];
@@ -109,6 +111,7 @@ export function createMockChartServiceState(): MockChartServiceState {
     ],
     referralProgramSettings: null,
     salesTeams: [],
+    paymentTransferSettings: null,
     referralLedgers: [
       {
         id: 'ref_ledger_pending',
@@ -184,6 +187,7 @@ export function createMockChartServiceRepository(
   state.emailOutbox ??= [];
   state.referralProgramSettings ??= null;
   state.salesTeams ??= [];
+  state.paymentTransferSettings ??= null;
 
   return {
     nextId(prefix: string): string {
@@ -249,6 +253,12 @@ export function createMockChartServiceRepository(
     },
     saveSalesTeam(team) {
       upsertById(state.salesTeams, team);
+    },
+    getPaymentTransferSettings() {
+      return cloneOrNull(state.paymentTransferSettings);
+    },
+    savePaymentTransferSettings(settings) {
+      state.paymentTransferSettings = { ...settings };
     },
     listReferralLedgersByPaymentId(paymentRequestId) {
       return state.referralLedgers

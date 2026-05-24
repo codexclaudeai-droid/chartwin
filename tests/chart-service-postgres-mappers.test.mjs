@@ -11,6 +11,8 @@ import {
   mapNotificationToPostgresRow,
   mapPaymentFromPostgresRow,
   mapPaymentToPostgresRow,
+  mapPaymentTransferSettingsFromPostgresRow,
+  mapPaymentTransferSettingsToPostgresRow,
   mapPlanFromPostgresRow,
   mapPlanToPostgresRow,
   mapReferralProgramSettingsFromPostgresRow,
@@ -282,6 +284,40 @@ test('postgres sales team mapper preserves team commission and member assignment
     created_at: '2026-05-25T00:00:00.000Z',
     updated_at: '2026-05-25T01:00:00.000Z',
     updated_by_admin_id: 'super_1',
+  });
+});
+
+test('postgres payment transfer settings mapper preserves bank and USDT instructions', () => {
+  const settings = mapPaymentTransferSettingsFromPostgresRow({
+    id: 'default',
+    bank_name: 'KB국민은행',
+    bank_account_number: '123-456-7890',
+    bank_account_holder: 'TC Chart',
+    usdt_address: 'TXYZ123456789',
+    usdt_network: 'TRC20',
+    updated_by_admin_id: 'admin_1',
+    updated_at: '2026-05-25T02:00:00.000Z',
+  });
+
+  assert.deepEqual(settings, {
+    id: 'default',
+    bankName: 'KB국민은행',
+    bankAccountNumber: '123-456-7890',
+    bankAccountHolder: 'TC Chart',
+    usdtAddress: 'TXYZ123456789',
+    usdtNetwork: 'TRC20',
+    updatedByAdminId: 'admin_1',
+    updatedAt: '2026-05-25T02:00:00.000Z',
+  });
+  assert.deepEqual(mapPaymentTransferSettingsToPostgresRow(settings), {
+    id: 'default',
+    bank_name: 'KB국민은행',
+    bank_account_number: '123-456-7890',
+    bank_account_holder: 'TC Chart',
+    usdt_address: 'TXYZ123456789',
+    usdt_network: 'TRC20',
+    updated_by_admin_id: 'admin_1',
+    updated_at: '2026-05-25T02:00:00.000Z',
   });
 });
 

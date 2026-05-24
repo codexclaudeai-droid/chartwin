@@ -12,6 +12,7 @@ import type {
   AuthSessionRecord,
   EmailOutboxRecord,
   PasswordResetTokenRecord,
+  PaymentTransferSettingsRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
@@ -298,6 +299,32 @@ export function mapSalesTeamToPostgresRow(record: SalesTeamRecord): PostgresRow 
     created_at: record.createdAt,
     updated_at: record.updatedAt,
     updated_by_admin_id: record.updatedByAdminId,
+  };
+}
+
+export function mapPaymentTransferSettingsFromPostgresRow(row: PostgresRow): PaymentTransferSettingsRecord {
+  return {
+    id: readString(row.id),
+    bankName: readString(row.bank_name),
+    bankAccountNumber: readString(row.bank_account_number),
+    bankAccountHolder: readString(row.bank_account_holder),
+    usdtAddress: readString(row.usdt_address),
+    usdtNetwork: readString(row.usdt_network),
+    updatedByAdminId: readNullableString(row.updated_by_admin_id),
+    updatedAt: readIsoString(row.updated_at),
+  };
+}
+
+export function mapPaymentTransferSettingsToPostgresRow(record: PaymentTransferSettingsRecord): PostgresRow {
+  return {
+    id: record.id,
+    bank_name: record.bankName,
+    bank_account_number: record.bankAccountNumber,
+    bank_account_holder: record.bankAccountHolder,
+    usdt_address: record.usdtAddress,
+    usdt_network: record.usdtNetwork,
+    updated_by_admin_id: record.updatedByAdminId,
+    updated_at: record.updatedAt,
   };
 }
 

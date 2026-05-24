@@ -265,6 +265,35 @@ test('pricing copy makes deposit confirmation explicitly manual', () => {
   assert.doesNotMatch(panelSource, /자동 입금 확인/);
 });
 
+test('pricing payment request shows admin configured bank and USDT transfer instructions', () => {
+  const pageSource = fs.readFileSync(new URL('../app/pricing/page.tsx', import.meta.url), 'utf8');
+  const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(pageSource, /getPaymentTransferSettingsForDisplay/);
+  assert.match(pageSource, /paymentSettings=\{paymentSettings\}/);
+  assert.match(panelSource, /paymentMethod/);
+  assert.match(panelSource, /bankAccountNumber/);
+  assert.match(panelSource, /bankAccountHolder/);
+  assert.match(panelSource, /usdtAddress/);
+  assert.match(panelSource, /usdtNetwork/);
+  assert.match(panelSource, /method: paymentMethod/);
+});
+
+test('admin payment settings panel and route are wired into operations UI', () => {
+  const pageSource = fs.readFileSync(new URL('../app/admin/page.tsx', import.meta.url), 'utf8');
+  const panelSource = fs.readFileSync(new URL('../app/admin/admin-payment-settings-panel.tsx', import.meta.url), 'utf8');
+  const routeSource = fs.readFileSync(new URL('../app/api/admin/payment-settings/route.ts', import.meta.url), 'utf8');
+
+  assert.match(pageSource, /AdminPaymentSettingsPanel/);
+  assert.match(pageSource, /sectionKey="paymentSettings"/);
+  assert.match(panelSource, /admin-payment-settings/);
+  assert.match(panelSource, /bankAccountNumber/);
+  assert.match(panelSource, /bankAccountHolder/);
+  assert.match(panelSource, /usdtAddress/);
+  assert.match(panelSource, /usdtNetwork/);
+  assert.match(routeSource, /updateAsyncPaymentTransferSettings/);
+});
+
 test('admin payment panel refreshes its filtered queue after local operations without overwriting success context', () => {
   const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
 

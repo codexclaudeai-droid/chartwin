@@ -184,6 +184,20 @@ create table if not exists sales_teams (
 
 create index if not exists idx_sales_teams_updated_by_admin_id on sales_teams (updated_by_admin_id);
 
+create table if not exists payment_transfer_settings (
+  id text primary key,
+  bank_name text not null,
+  bank_account_number text not null,
+  bank_account_holder text not null,
+  usdt_address text not null,
+  usdt_network text not null,
+  updated_by_admin_id text,
+  updated_at timestamptz not null default now(),
+  foreign key (updated_by_admin_id) references users(id)
+);
+
+create index if not exists idx_payment_transfer_settings_updated_by_admin_id on payment_transfer_settings (updated_by_admin_id);
+
 create table if not exists notifications (
   id text primary key,
   user_id text not null,
@@ -281,3 +295,21 @@ alter table if exists sales_teams add column if not exists updated_by_admin_id t
 update sales_teams set salesperson_ids = '[]'::jsonb where salesperson_ids is null;
 
 create index if not exists idx_sales_teams_updated_by_admin_id on sales_teams (updated_by_admin_id);
+
+create table if not exists payment_transfer_settings (id text primary key, bank_name text not null, bank_account_number text not null, bank_account_holder text not null, usdt_address text not null, usdt_network text not null, updated_by_admin_id text, updated_at timestamptz not null default now());
+
+alter table if exists payment_transfer_settings add column if not exists bank_name text;
+
+alter table if exists payment_transfer_settings add column if not exists bank_account_number text;
+
+alter table if exists payment_transfer_settings add column if not exists bank_account_holder text;
+
+alter table if exists payment_transfer_settings add column if not exists usdt_address text;
+
+alter table if exists payment_transfer_settings add column if not exists usdt_network text;
+
+alter table if exists payment_transfer_settings add column if not exists updated_by_admin_id text;
+
+alter table if exists payment_transfer_settings add column if not exists updated_at timestamptz;
+
+create index if not exists idx_payment_transfer_settings_updated_by_admin_id on payment_transfer_settings (updated_by_admin_id);

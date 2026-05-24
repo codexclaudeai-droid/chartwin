@@ -1,6 +1,7 @@
 import { AdminAccessGate } from './admin-access-gate';
 import { AdminDashboardShell, AdminDashboardShellSection } from './admin-dashboard-shell';
 import { AdminDashboardPanel } from './admin-dashboard-panel';
+import { AdminPaymentSettingsPanel } from './admin-payment-settings-panel';
 import { AdminSalesPanel } from './admin-sales-panel';
 import { AdminStatisticsPanel } from './admin-statistics-panel';
 import { AdminPanel } from './admin-panel';
@@ -34,6 +35,9 @@ export default function AdminPage() {
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="users">
             <UserAdminPanel />
+          </AdminDashboardShellSection>
+          <AdminDashboardShellSection sectionKey="paymentSettings">
+            <AdminPaymentSettingsPanel />
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="payments">
             <AdminPanel />

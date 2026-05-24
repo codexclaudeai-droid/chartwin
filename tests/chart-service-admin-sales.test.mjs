@@ -27,6 +27,7 @@ test('admin dashboard sections include sales management menu entry', () => {
     'statistics',
     'sales',
     'users',
+    'paymentSettings',
     'payments',
     'subscriptions',
     'support',

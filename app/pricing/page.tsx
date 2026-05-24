@@ -1,9 +1,14 @@
-import { getChartServiceRepository } from '../../src/server/chart-service/index.ts';
+import {
+  getChartServiceRepository,
+  getPaymentTransferSettingsForDisplay,
+} from '../../src/server/chart-service/index.ts';
 import { PricingPanel } from './pricing-panel';
 import { SubscriptionActionsPanel } from './subscription-actions-panel';
 
 export default function PricingPage() {
-  const plans = getChartServiceRepository().listPlans();
+  const repository = getChartServiceRepository();
+  const plans = repository.listPlans();
+  const paymentSettings = getPaymentTransferSettingsForDisplay(repository);
 
   return (
     <main className="page">
@@ -31,7 +36,7 @@ export default function PricingPage() {
           ))}
         </tbody>
       </table>
-      <PricingPanel plans={plans} />
+      <PricingPanel plans={plans} paymentSettings={paymentSettings} />
       <SubscriptionActionsPanel />
     </main>
   );

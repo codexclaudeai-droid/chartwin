@@ -20,6 +20,7 @@ test('admin dashboard sections include a statistics menu entry', () => {
     'statistics',
     'sales',
     'users',
+    'paymentSettings',
     'payments',
     'subscriptions',
     'support',

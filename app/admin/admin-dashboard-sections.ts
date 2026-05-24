@@ -3,6 +3,7 @@ export type AdminDashboardSectionKey =
   | 'statistics'
   | 'sales'
   | 'users'
+  | 'paymentSettings'
   | 'payments'
   | 'subscriptions'
   | 'support'
@@ -44,6 +45,13 @@ export const ADMIN_DASHBOARD_SECTIONS: AdminDashboardSection[] = [
     label: '회원 관리',
     description: '회원 상태, 권한, 관련 이력을 확인합니다.',
     href: '#admin-users',
+  },
+  {
+    key: 'paymentSettings',
+    eyebrow: 'Payment Info',
+    label: '결제정보 입력',
+    description: '은행 입금 계좌와 USDT 지갑 주소, 네트워크를 관리합니다.',
+    href: '#admin-payment-settings',
   },
   {
     key: 'payments',
@@ -121,6 +129,10 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
 
   if (targetId === 'admin-users' || targetId.startsWith('admin-user-')) {
     return 'users';
+  }
+
+  if (targetId === 'admin-payment-settings') {
+    return 'paymentSettings';
   }
 
   if (targetId === 'admin-payments' || targetId.startsWith('admin-payment-')) {

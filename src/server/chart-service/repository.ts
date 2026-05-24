@@ -74,6 +74,17 @@ export type SalesTeamRecord = {
   updatedByAdminId: string | null;
 };
 
+export type PaymentTransferSettingsRecord = {
+  id: string;
+  bankName: string;
+  bankAccountNumber: string;
+  bankAccountHolder: string;
+  usdtAddress: string;
+  usdtNetwork: string;
+  updatedByAdminId: string | null;
+  updatedAt: string;
+};
+
 export type EmailOutboxFilter = {
   status?: EmailOutboxStatus;
 };
@@ -106,6 +117,8 @@ export type ChartServiceRepository = {
   saveReferralProgramSettings(settings: ReferralProgramSettingsRecord): void;
   listSalesTeams(): SalesTeamRecord[];
   saveSalesTeam(team: SalesTeamRecord): void;
+  getPaymentTransferSettings(): PaymentTransferSettingsRecord | null;
+  savePaymentTransferSettings(settings: PaymentTransferSettingsRecord): void;
   listReferralLedgersByPaymentId(paymentRequestId: string): ReferralLedgerRecord[];
   saveReferralLedger(ledger: ReferralLedgerRecord): void;
   getSupportThreadById(id: string): SupportThreadRecord | null;

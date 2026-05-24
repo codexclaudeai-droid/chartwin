@@ -11,6 +11,14 @@ type Plan = {
   discountPercent: number;
 };
 
+type PaymentTransferSettings = {
+  bankName: string;
+  bankAccountNumber: string;
+  bankAccountHolder: string;
+  usdtAddress: string;
+  usdtNetwork: string;
+};
+
 type PaymentResult = {
   payment?: {
     id: string;
@@ -20,10 +28,17 @@ type PaymentResult = {
   message?: string;
 };
 
-export function PricingPanel({ plans }: { plans: Plan[] }) {
+export function PricingPanel({
+  plans,
+  paymentSettings,
+}: {
+  plans: Plan[];
+  paymentSettings: PaymentTransferSettings;
+}) {
   const [selectedPlanId, setSelectedPlanId] = useState(plans[0]?.id ?? 'plan_monthly');
+  const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'usdt'>('bank_transfer');
   const [depositorName, setDepositorName] = useState('');
-  const [message, setMessage] = useState('로그인 후 입금확인 요청을 남기면 관리자가 수동 입금 확인 뒤 승인합니다.');
+  const [message, setMessage] = useState('로그인 후 입금확인 요청을 남기면 관리자 수동 입금 확인 후 승인합니다.');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function requestPayment(event: React.FormEvent<HTMLFormElement>) {
@@ -34,7 +49,7 @@ export function PricingPanel({ plans }: { plans: Plan[] }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         planId: selectedPlanId,
-        method: 'bank_transfer',
+        method: paymentMethod,
         depositorName,
       }),
     });
@@ -59,6 +74,31 @@ export function PricingPanel({ plans }: { plans: Plan[] }) {
             </option>
           ))}
         </select>
+        <label htmlFor="paymentMethod">결제 방식</label>
+        <select
+          id="paymentMethod"
+          value={paymentMethod}
+          onChange={(event) => setPaymentMethod(event.target.value === 'usdt' ? 'usdt' : 'bank_transfer')}
+        >
+          <option value="bank_transfer">은행 입금</option>
+          <option value="usdt">USDT 테더 이체</option>
+        </select>
+        <div className="payment-transfer-info">
+          {paymentMethod === 'bank_transfer' ? (
+            <>
+              <strong>은행 입금 정보</strong>
+              <span>은행: {paymentSettings.bankName}</span>
+              <span>계좌번호: {paymentSettings.bankAccountNumber}</span>
+              <span>계좌주: {paymentSettings.bankAccountHolder}</span>
+            </>
+          ) : (
+            <>
+              <strong>USDT 테더 이체 정보</strong>
+              <span>테더주소: {paymentSettings.usdtAddress}</span>
+              <span>네트워크: {paymentSettings.usdtNetwork}</span>
+            </>
+          )}
+        </div>
         <label htmlFor="depositorName">입금자명</label>
         <input
           id="depositorName"

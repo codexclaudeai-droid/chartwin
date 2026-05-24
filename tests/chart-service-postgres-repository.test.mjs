@@ -122,3 +122,55 @@ test('postgres async repository persists sales team records with upsert SQL', as
   assert.match(calls[1].sql, /on conflict \(id\) do update/);
   assert.deepEqual(calls[1].values.slice(0, 4), ['sales_team_1', 'Alpha Team', 30, ['user_sales_1']]);
 });
+
+test('postgres async repository persists payment transfer settings with upsert SQL', async () => {
+  const { createPostgresAsyncChartServiceRepository } = await import('../src/server/chart-service/index.ts');
+  const calls = [];
+  const executor = {
+    async query(statement) {
+      calls.push(statement);
+      if (statement.sql === 'select * from payment_transfer_settings where id = $1') {
+        return {
+          rows: [{
+            id: 'default',
+            bank_name: 'KB국민은행',
+            bank_account_number: '123-456-7890',
+            bank_account_holder: 'TC Chart',
+            usdt_address: 'TXYZ123456789',
+            usdt_network: 'TRC20',
+            updated_by_admin_id: 'admin_1',
+            updated_at: '2026-05-25T02:00:00.000Z',
+          }],
+        };
+      }
+      return { rows: [] };
+    },
+  };
+  const repository = createPostgresAsyncChartServiceRepository(executor);
+
+  const settings = await repository.getPaymentTransferSettings();
+  await repository.savePaymentTransferSettings({
+    id: 'default',
+    bankName: 'KB국민은행',
+    bankAccountNumber: '123-456-7890',
+    bankAccountHolder: 'TC Chart',
+    usdtAddress: 'TXYZ123456789',
+    usdtNetwork: 'TRC20',
+    updatedByAdminId: 'admin_1',
+    updatedAt: '2026-05-25T02:00:00.000Z',
+  });
+
+  assert.equal(settings?.usdtNetwork, 'TRC20');
+  assert.equal(calls[0].sql, 'select * from payment_transfer_settings where id = $1');
+  assert.deepEqual(calls[0].values, ['default']);
+  assert.match(calls[1].sql, /^insert into payment_transfer_settings /);
+  assert.match(calls[1].sql, /on conflict \(id\) do update/);
+  assert.deepEqual(calls[1].values.slice(0, 6), [
+    'default',
+    'KB국민은행',
+    '123-456-7890',
+    'TC Chart',
+    'TXYZ123456789',
+    'TRC20',
+  ]);
+});
