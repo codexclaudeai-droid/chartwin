@@ -141,6 +141,9 @@ function canonicalizeSymbolByMarket(market, symbol) {
   const normalized = normalizeSymbol(symbol);
   if (market === 'index' && (normalized === 'NAS100' || normalized === 'NQ')) return 'NQ1!';
   if (market === 'index' && normalized === '^IXIC') return 'NASDAQ';
+  if (market === 'commodity' && normalized === 'WTI') return 'WTI1!';
+  if (market === 'commodity' && (normalized === 'XAUUSDT' || normalized === 'XAUUSDT.P')) return 'XAUUSD';
+  if (market === 'commodity' && (normalized === 'XAGUSDT' || normalized === 'XAGUSDT.P')) return 'XAGUSD';
   return normalized;
 }
 
@@ -295,6 +298,15 @@ function fillMissingCandles(rows, timeframe, maxGapBars = 180) {
 
 function candleKey(market, symbol, timeframe) {
   return `${market}:${symbol}:${timeframe}`;
+}
+
+function getCandleRowsWithLegacyFallback(market, symbol, timeframe) {
+  const primaryRows = candleStore.get(candleKey(market, symbol, timeframe));
+  if (primaryRows?.length) return primaryRows;
+  if (market === 'commodity' && /^(XAU|XAG)/.test(symbol)) {
+    return candleStore.get(candleKey('index', symbol, timeframe)) || [];
+  }
+  return primaryRows || [];
 }
 
 function parseBody(req) {
@@ -694,9 +706,8 @@ function handleGetCandles(req, res, url) {
     return;
   }
 
-  const key = candleKey(market, symbol, timeframe);
-  const requestedRows = candleStore.get(key) || [];
-  const oneMinuteRows = candleStore.get(candleKey(market, symbol, '1m')) || [];
+  const requestedRows = getCandleRowsWithLegacyFallback(market, symbol, timeframe);
+  const oneMinuteRows = getCandleRowsWithLegacyFallback(market, symbol, '1m');
   const aggregatedRows = canAggregateFromOneMinute(timeframe) && oneMinuteRows.length
     ? aggregateCandles(oneMinuteRows, timeframe)
     : requestedRows;

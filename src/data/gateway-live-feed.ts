@@ -90,6 +90,9 @@ function normalizeSymbol(symbol: string): string {
   const normalized = symbol.replace(/\s+/g, '').toUpperCase();
   if (normalized === 'NAS100' || normalized === 'NQ') return 'NQ1!';
   if (normalized === '^IXIC') return 'NASDAQ';
+  if (normalized === 'WTI') return 'WTI1!';
+  if (normalized === 'XAUUSDT' || normalized === 'XAUUSDT.P') return 'XAUUSD';
+  if (normalized === 'XAGUSDT' || normalized === 'XAGUSDT.P') return 'XAGUSD';
   return normalized;
 }
 
@@ -116,7 +119,7 @@ function isCommodityLikeSymbol(symbol: string): boolean {
 }
 
 export function shouldUseBinanceDirect(symbol: string): boolean {
-  return isCryptoLikeSymbol(symbol);
+  return isCryptoLikeSymbol(symbol) && !isCommodityLikeSymbol(symbol);
 }
 
 export function inferGatewayMarket(symbol: string): 'futures' | 'index' | 'commodity' | 'fx' {
