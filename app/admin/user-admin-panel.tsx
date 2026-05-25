@@ -339,7 +339,9 @@ export function UserAdminPanel() {
 
     setDetail(payload.detail);
     setSelectedRole(payload.detail.user.role as UserRole);
-    setDetailMessage(`${payload.detail.user.email} 역할을 ${formatUserRoleLabel(payload.detail.user.role)}(으)로 변경했습니다.`);
+    setDetailMessage(payload.detail.user.role === 'salesperson'
+      ? `${payload.detail.user.email} 회원을 영업자로 지정했습니다. 영업관리에서 회원 배정을 이어가세요.`
+      : `${payload.detail.user.email} 역할을 ${formatUserRoleLabel(payload.detail.user.role)}(으)로 변경했습니다.`);
     void refresh({ nextMessage: '회원 목록을 갱신했습니다.' });
     dispatchAdminRefreshEvent({ source: 'users' });
   }
@@ -441,6 +443,7 @@ export function UserAdminPanel() {
       nextRole: selectedRole,
     })
     : null;
+  const showSalespersonHandoff = detail?.user.role === 'salesperson';
   const accountPermissionNotice = detail && (!canSuspendAccount || !canActivateAccount)
     ? getAdminUserAccountStatusPermissionNotice({
       actorId: currentAdmin?.id,
@@ -595,6 +598,15 @@ export function UserAdminPanel() {
               <button className="button" type="button" onClick={updateRole} disabled={isBusy || !canSubmitRole}>역할 변경</button>
             </div>
             {rolePermissionNotice && <p className="notice">{rolePermissionNotice}</p>}
+            {showSalespersonHandoff && (
+              <div className="notice compact admin-user-sales-handoff" role="status">
+                <strong>영업자 지정 완료</strong>
+                <span>이제 영업관리에서 담당 회원 배정과 매출 집계를 이어갈 수 있습니다.</span>
+                <a className="button secondary" href="#admin-sales-assignments">
+                  영업관리 회원배정으로 이동
+                </a>
+              </div>
+            )}
             <div className="admin-filter-row">
               <input
                 aria-label="계정 상태 변경 사유"

@@ -241,7 +241,11 @@ test('admin user panel applies dashboard queue preset events', () => {
   assert.match(source, /전체 회원에서 영업자 지정/);
   assert.match(source, /openDetail\(item\.user\.id, 'salesperson'\)/);
   assert.match(source, /영업자로 지정할 준비가 되었습니다/);
+  assert.match(source, /showSalespersonHandoff/);
+  assert.match(source, /영업관리 회원배정으로 이동/);
+  assert.match(source, /href="#admin-sales-assignments"/);
   assert.match(cssSource, /\.admin-user-preset-guide/);
+  assert.match(cssSource, /\.admin-user-sales-handoff/);
 });
 
 test('admin user panel confirms role and account status changes before patching', () => {
