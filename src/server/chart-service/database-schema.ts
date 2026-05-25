@@ -253,6 +253,26 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       ],
     },
     {
+      name: 'signup_agreements',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        user_id: { type: 'text', references: 'users.id' },
+        terms_accepted_at: { type: 'timestamptz' },
+        privacy_accepted_at: { type: 'timestamptz' },
+        terms_content: { type: 'text' },
+        privacy_content: { type: 'text' },
+        terms_settings_updated_at: { type: 'timestamptz' },
+        privacy_settings_updated_at: { type: 'timestamptz' },
+        ip_address: { type: 'text', nullable: true },
+        user_agent: { type: 'text', nullable: true },
+        created_at: { type: 'timestamptz', default: 'now()' },
+      },
+      indexes: [
+        { name: 'idx_signup_agreements_user_id', columns: ['user_id'] },
+        { name: 'idx_signup_agreements_created_at', columns: ['created_at'] },
+      ],
+    },
+    {
       name: 'notifications',
       columns: {
         id: { type: 'text', primaryKey: true },
@@ -383,6 +403,19 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     'alter table if exists web_info_settings add column if not exists updated_at timestamptz;',
     "insert into web_info_settings (id, terms_content, privacy_content, updated_at) values ('default', 'TC Chart 서비스 이용약관', 'TC Chart 개인정보보호정책', now()) on conflict (id) do nothing;",
     'create index if not exists idx_web_info_settings_updated_by_admin_id on web_info_settings (updated_by_admin_id);',
+    'create table if not exists signup_agreements (id text primary key, user_id text not null, terms_accepted_at timestamptz not null, privacy_accepted_at timestamptz not null, terms_content text not null, privacy_content text not null, terms_settings_updated_at timestamptz not null, privacy_settings_updated_at timestamptz not null, ip_address text, user_agent text, created_at timestamptz not null default now());',
+    'alter table if exists signup_agreements add column if not exists user_id text;',
+    'alter table if exists signup_agreements add column if not exists terms_accepted_at timestamptz;',
+    'alter table if exists signup_agreements add column if not exists privacy_accepted_at timestamptz;',
+    'alter table if exists signup_agreements add column if not exists terms_content text;',
+    'alter table if exists signup_agreements add column if not exists privacy_content text;',
+    'alter table if exists signup_agreements add column if not exists terms_settings_updated_at timestamptz;',
+    'alter table if exists signup_agreements add column if not exists privacy_settings_updated_at timestamptz;',
+    'alter table if exists signup_agreements add column if not exists ip_address text;',
+    'alter table if exists signup_agreements add column if not exists user_agent text;',
+    'alter table if exists signup_agreements add column if not exists created_at timestamptz;',
+    'create index if not exists idx_signup_agreements_user_id on signup_agreements (user_id);',
+    'create index if not exists idx_signup_agreements_created_at on signup_agreements (created_at);',
   ];
 }
 

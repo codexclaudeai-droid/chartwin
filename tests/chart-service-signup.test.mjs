@@ -178,6 +178,56 @@ test('signup API stores the referrer from a referral code', async () => {
   assert.match(payload.user.referralCode, /^[A-Z0-9]{6}$/);
 });
 
+test('signup API stores policy agreement evidence for the created account', async () => {
+  const {
+    getChartServiceRepository,
+  } = await import('../src/server/chart-service/index.ts');
+  const { POST } = await import('../app/api/auth/signup/route.ts');
+  const repository = getChartServiceRepository();
+
+  repository.saveWebInfoSettings({
+    id: 'default',
+    termsContent: '가입약관 증거 본문 v2',
+    privacyContent: '개인정보보호정책 증거 본문 v2',
+    updatedByAdminId: 'super_1',
+    updatedAt: '2026-05-25T08:00:00.000Z',
+  });
+
+  resetChartServiceRateLimits();
+  const response = await POST(new Request('http://localhost/api/auth/signup', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+      'user-agent': 'signup-agreement-test-agent',
+      'x-forwarded-for': '203.0.113.10, 10.0.0.1',
+    },
+    body: JSON.stringify({
+      email: `route-agreement-evidence-${Date.now()}@example.com`,
+      name: 'Agreement Evidence User',
+      password: 'Aa1!aaaa',
+      passwordConfirm: 'Aa1!aaaa',
+      phoneNumber: '010-1212-3434',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  }));
+  const payload = await response.json();
+  const agreements = repository.listSignupAgreementsByUserId(payload.user.id);
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.agreement.userId, payload.user.id);
+  assert.equal(agreements.length, 1);
+  assert.equal(agreements[0].id, payload.agreement.id);
+  assert.equal(agreements[0].termsContent, '가입약관 증거 본문 v2');
+  assert.equal(agreements[0].privacyContent, '개인정보보호정책 증거 본문 v2');
+  assert.equal(agreements[0].termsSettingsUpdatedAt, '2026-05-25T08:00:00.000Z');
+  assert.equal(agreements[0].privacySettingsUpdatedAt, '2026-05-25T08:00:00.000Z');
+  assert.equal(agreements[0].ipAddress, '203.0.113.10');
+  assert.equal(agreements[0].userAgent, 'signup-agreement-test-agent');
+  assert.equal(agreements[0].termsAcceptedAt, agreements[0].privacyAcceptedAt);
+});
+
 test('signup API rejects password confirmation mismatch and missing policy agreements', async () => {
   const { POST } = await import('../app/api/auth/signup/route.ts');
 

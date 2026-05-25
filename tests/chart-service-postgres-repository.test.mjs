@@ -220,3 +220,59 @@ test('postgres async repository persists web info settings with upsert SQL', asy
     'admin_1',
   ]);
 });
+
+test('postgres async repository persists signup agreement evidence with upsert SQL', async () => {
+  const { createPostgresAsyncChartServiceRepository } = await import('../src/server/chart-service/index.ts');
+  const calls = [];
+  const executor = {
+    async query(statement) {
+      calls.push(statement);
+      if (statement.sql === 'select * from signup_agreements where user_id = $1 order by created_at desc') {
+        return {
+          rows: [{
+            id: 'signup_agreement_1',
+            user_id: 'user_1',
+            terms_accepted_at: '2026-05-25T08:10:00.000Z',
+            privacy_accepted_at: '2026-05-25T08:10:00.000Z',
+            terms_content: 'Terms snapshot',
+            privacy_content: 'Privacy snapshot',
+            terms_settings_updated_at: '2026-05-25T08:00:00.000Z',
+            privacy_settings_updated_at: '2026-05-25T08:00:00.000Z',
+            ip_address: '203.0.113.10',
+            user_agent: 'signup-test-agent',
+            created_at: '2026-05-25T08:10:00.000Z',
+          }],
+        };
+      }
+      return { rows: [] };
+    },
+  };
+  const repository = createPostgresAsyncChartServiceRepository(executor);
+
+  const agreements = await repository.listSignupAgreementsByUserId('user_1');
+  await repository.saveSignupAgreement({
+    id: 'signup_agreement_1',
+    userId: 'user_1',
+    termsAcceptedAt: '2026-05-25T08:10:00.000Z',
+    privacyAcceptedAt: '2026-05-25T08:10:00.000Z',
+    termsContent: 'Terms snapshot',
+    privacyContent: 'Privacy snapshot',
+    termsSettingsUpdatedAt: '2026-05-25T08:00:00.000Z',
+    privacySettingsUpdatedAt: '2026-05-25T08:00:00.000Z',
+    ipAddress: '203.0.113.10',
+    userAgent: 'signup-test-agent',
+    createdAt: '2026-05-25T08:10:00.000Z',
+  });
+
+  assert.equal(agreements[0].termsContent, 'Terms snapshot');
+  assert.equal(calls[0].sql, 'select * from signup_agreements where user_id = $1 order by created_at desc');
+  assert.deepEqual(calls[0].values, ['user_1']);
+  assert.match(calls[1].sql, /^insert into signup_agreements /);
+  assert.match(calls[1].sql, /on conflict \(id\) do update/);
+  assert.deepEqual(calls[1].values.slice(0, 4), [
+    'signup_agreement_1',
+    'user_1',
+    '2026-05-25T08:10:00.000Z',
+    '2026-05-25T08:10:00.000Z',
+  ]);
+});

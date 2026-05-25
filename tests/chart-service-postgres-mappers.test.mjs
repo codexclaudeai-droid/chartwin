@@ -21,6 +21,8 @@ import {
   mapReferralLedgerToPostgresRow,
   mapSalesTeamFromPostgresRow,
   mapSalesTeamToPostgresRow,
+  mapSignupAgreementFromPostgresRow,
+  mapSignupAgreementToPostgresRow,
   mapSubscriptionFromPostgresRow,
   mapSubscriptionToPostgresRow,
   mapSupportMessageFromPostgresRow,
@@ -360,6 +362,49 @@ test('postgres web info settings mapper preserves signup policy content', () => 
     privacy_content: 'Privacy content',
     updated_by_admin_id: 'admin_1',
     updated_at: '2026-05-25T05:00:00.000Z',
+  });
+});
+
+test('postgres signup agreement mapper preserves policy evidence snapshots', () => {
+  const agreement = mapSignupAgreementFromPostgresRow({
+    id: 'signup_agreement_1',
+    user_id: 'user_1',
+    terms_accepted_at: '2026-05-25T08:10:00.000Z',
+    privacy_accepted_at: '2026-05-25T08:10:00.000Z',
+    terms_content: 'Terms snapshot',
+    privacy_content: 'Privacy snapshot',
+    terms_settings_updated_at: '2026-05-25T08:00:00.000Z',
+    privacy_settings_updated_at: '2026-05-25T08:00:00.000Z',
+    ip_address: '203.0.113.10',
+    user_agent: 'signup-test-agent',
+    created_at: '2026-05-25T08:10:00.000Z',
+  });
+
+  assert.deepEqual(agreement, {
+    id: 'signup_agreement_1',
+    userId: 'user_1',
+    termsAcceptedAt: '2026-05-25T08:10:00.000Z',
+    privacyAcceptedAt: '2026-05-25T08:10:00.000Z',
+    termsContent: 'Terms snapshot',
+    privacyContent: 'Privacy snapshot',
+    termsSettingsUpdatedAt: '2026-05-25T08:00:00.000Z',
+    privacySettingsUpdatedAt: '2026-05-25T08:00:00.000Z',
+    ipAddress: '203.0.113.10',
+    userAgent: 'signup-test-agent',
+    createdAt: '2026-05-25T08:10:00.000Z',
+  });
+  assert.deepEqual(mapSignupAgreementToPostgresRow(agreement), {
+    id: 'signup_agreement_1',
+    user_id: 'user_1',
+    terms_accepted_at: '2026-05-25T08:10:00.000Z',
+    privacy_accepted_at: '2026-05-25T08:10:00.000Z',
+    terms_content: 'Terms snapshot',
+    privacy_content: 'Privacy snapshot',
+    terms_settings_updated_at: '2026-05-25T08:00:00.000Z',
+    privacy_settings_updated_at: '2026-05-25T08:00:00.000Z',
+    ip_address: '203.0.113.10',
+    user_agent: 'signup-test-agent',
+    created_at: '2026-05-25T08:10:00.000Z',
   });
 });
 

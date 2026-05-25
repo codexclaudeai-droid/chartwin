@@ -16,6 +16,7 @@ import type {
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
+  SignupAgreementRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 import { createStableFallbackReferralCode } from './referral-codes.ts';
@@ -358,6 +359,38 @@ export function mapWebInfoSettingsToPostgresRow(record: WebInfoSettingsRecord): 
     privacy_content: record.privacyContent,
     updated_by_admin_id: record.updatedByAdminId,
     updated_at: record.updatedAt,
+  };
+}
+
+export function mapSignupAgreementFromPostgresRow(row: PostgresRow): SignupAgreementRecord {
+  return {
+    id: readString(row.id),
+    userId: readString(row.user_id),
+    termsAcceptedAt: readIsoString(row.terms_accepted_at),
+    privacyAcceptedAt: readIsoString(row.privacy_accepted_at),
+    termsContent: readString(row.terms_content),
+    privacyContent: readString(row.privacy_content),
+    termsSettingsUpdatedAt: readIsoString(row.terms_settings_updated_at),
+    privacySettingsUpdatedAt: readIsoString(row.privacy_settings_updated_at),
+    ipAddress: readNullableString(row.ip_address),
+    userAgent: readNullableString(row.user_agent),
+    createdAt: readIsoString(row.created_at),
+  };
+}
+
+export function mapSignupAgreementToPostgresRow(record: SignupAgreementRecord): PostgresRow {
+  return {
+    id: record.id,
+    user_id: record.userId,
+    terms_accepted_at: record.termsAcceptedAt,
+    privacy_accepted_at: record.privacyAcceptedAt,
+    terms_content: record.termsContent,
+    privacy_content: record.privacyContent,
+    terms_settings_updated_at: record.termsSettingsUpdatedAt,
+    privacy_settings_updated_at: record.privacySettingsUpdatedAt,
+    ip_address: record.ipAddress,
+    user_agent: record.userAgent,
+    created_at: record.createdAt,
   };
 }
 

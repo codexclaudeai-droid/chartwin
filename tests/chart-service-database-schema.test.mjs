@@ -24,6 +24,7 @@ test('chart service database schema covers repository-backed core tables', () =>
     'sales_teams',
     'payment_transfer_settings',
     'web_info_settings',
+    'signup_agreements',
     'notifications',
     'email_outbox',
     'audit_logs',
@@ -57,6 +58,11 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'web_info_settings')?.columns.terms_content.type, 'text');
   assert.equal(tables.find((table) => table.name === 'web_info_settings')?.columns.privacy_content.type, 'text');
   assert.equal(tables.find((table) => table.name === 'web_info_settings')?.columns.updated_by_admin_id.references, 'users.id');
+  assert.equal(tables.find((table) => table.name === 'signup_agreements')?.columns.user_id.references, 'users.id');
+  assert.equal(tables.find((table) => table.name === 'signup_agreements')?.columns.terms_content.type, 'text');
+  assert.equal(tables.find((table) => table.name === 'signup_agreements')?.columns.privacy_content.type, 'text');
+  assert.equal(tables.find((table) => table.name === 'signup_agreements')?.columns.ip_address.nullable, true);
+  assert.equal(tables.find((table) => table.name === 'signup_agreements')?.columns.user_agent.nullable, true);
   assert.equal(tables.find((table) => table.name === 'notifications')?.columns.archived_at.nullable, true);
   assert.equal(tables.find((table) => table.name === 'email_outbox')?.columns.recipient_email.type, 'text');
   assert.equal(tables.find((table) => table.name === 'audit_logs')?.columns.actor_admin_id.references, 'users.id');
@@ -97,6 +103,13 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /terms_content text not null/i);
   assert.match(sql, /privacy_content text not null/i);
   assert.match(sql, /alter table if exists web_info_settings add column if not exists terms_content text/i);
+  assert.match(sql, /create table if not exists signup_agreements/i);
+  assert.match(sql, /terms_accepted_at timestamptz not null/i);
+  assert.match(sql, /privacy_accepted_at timestamptz not null/i);
+  assert.match(sql, /terms_settings_updated_at timestamptz not null/i);
+  assert.match(sql, /privacy_settings_updated_at timestamptz not null/i);
+  assert.match(sql, /create index if not exists idx_signup_agreements_user_id/i);
+  assert.match(sql, /alter table if exists signup_agreements add column if not exists ip_address text/i);
   assert.match(sql, /create index if not exists idx_notifications_user_id_read_at/i);
   assert.match(sql, /archived_at timestamptz/i);
   assert.match(sql, /create index if not exists idx_notifications_user_id_archived_at/i);

@@ -37,6 +37,8 @@ import {
   mapReferralLedgerToPostgresRow,
   mapSalesTeamFromPostgresRow,
   mapSalesTeamToPostgresRow,
+  mapSignupAgreementFromPostgresRow,
+  mapSignupAgreementToPostgresRow,
   mapSubscriptionFromPostgresRow,
   mapSubscriptionToPostgresRow,
   mapSupportMessageFromPostgresRow,
@@ -59,6 +61,7 @@ import type {
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
+  SignupAgreementRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 
@@ -240,6 +243,19 @@ export function createPostgresAsyncChartServiceRepository(
       await execute(createPostgresUpsertStatement(
         'web_info_settings',
         mapWebInfoSettingsToPostgresRow(settings),
+        ['id'],
+      ));
+    },
+    async listSignupAgreementsByUserId(userId: string): Promise<SignupAgreementRecord[]> {
+      return selectMany('signup_agreements', mapSignupAgreementFromPostgresRow, { user_id: userId }, {
+        orderBy: ['created_at'],
+        direction: 'desc',
+      });
+    },
+    async saveSignupAgreement(agreement: SignupAgreementRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'signup_agreements',
+        mapSignupAgreementToPostgresRow(agreement),
         ['id'],
       ));
     },

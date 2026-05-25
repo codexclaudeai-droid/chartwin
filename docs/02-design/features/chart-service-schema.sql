@@ -204,6 +204,36 @@ create table if not exists payment_transfer_settings (
 
 create index if not exists idx_payment_transfer_settings_updated_by_admin_id on payment_transfer_settings (updated_by_admin_id);
 
+create table if not exists web_info_settings (
+  id text primary key,
+  terms_content text not null,
+  privacy_content text not null,
+  updated_by_admin_id text,
+  updated_at timestamptz not null default now(),
+  foreign key (updated_by_admin_id) references users(id)
+);
+
+create index if not exists idx_web_info_settings_updated_by_admin_id on web_info_settings (updated_by_admin_id);
+
+create table if not exists signup_agreements (
+  id text primary key,
+  user_id text not null,
+  terms_accepted_at timestamptz not null,
+  privacy_accepted_at timestamptz not null,
+  terms_content text not null,
+  privacy_content text not null,
+  terms_settings_updated_at timestamptz not null,
+  privacy_settings_updated_at timestamptz not null,
+  ip_address text,
+  user_agent text,
+  created_at timestamptz not null default now(),
+  foreign key (user_id) references users(id)
+);
+
+create index if not exists idx_signup_agreements_user_id on signup_agreements (user_id);
+
+create index if not exists idx_signup_agreements_created_at on signup_agreements (created_at);
+
 create table if not exists notifications (
   id text primary key,
   user_id text not null,
@@ -333,3 +363,43 @@ alter table if exists payment_transfer_settings add column if not exists updated
 update payment_transfer_settings set bank_logo_url = '/bank-logos/generic-bank.svg' where bank_logo_url is null or bank_logo_url = '';
 
 create index if not exists idx_payment_transfer_settings_updated_by_admin_id on payment_transfer_settings (updated_by_admin_id);
+
+create table if not exists web_info_settings (id text primary key, terms_content text not null, privacy_content text not null, updated_by_admin_id text, updated_at timestamptz not null default now());
+
+alter table if exists web_info_settings add column if not exists terms_content text;
+
+alter table if exists web_info_settings add column if not exists privacy_content text;
+
+alter table if exists web_info_settings add column if not exists updated_by_admin_id text;
+
+alter table if exists web_info_settings add column if not exists updated_at timestamptz;
+
+insert into web_info_settings (id, terms_content, privacy_content, updated_at) values ('default', 'TC Chart 서비스 이용약관', 'TC Chart 개인정보보호정책', now()) on conflict (id) do nothing;
+
+create index if not exists idx_web_info_settings_updated_by_admin_id on web_info_settings (updated_by_admin_id);
+
+create table if not exists signup_agreements (id text primary key, user_id text not null, terms_accepted_at timestamptz not null, privacy_accepted_at timestamptz not null, terms_content text not null, privacy_content text not null, terms_settings_updated_at timestamptz not null, privacy_settings_updated_at timestamptz not null, ip_address text, user_agent text, created_at timestamptz not null default now());
+
+alter table if exists signup_agreements add column if not exists user_id text;
+
+alter table if exists signup_agreements add column if not exists terms_accepted_at timestamptz;
+
+alter table if exists signup_agreements add column if not exists privacy_accepted_at timestamptz;
+
+alter table if exists signup_agreements add column if not exists terms_content text;
+
+alter table if exists signup_agreements add column if not exists privacy_content text;
+
+alter table if exists signup_agreements add column if not exists terms_settings_updated_at timestamptz;
+
+alter table if exists signup_agreements add column if not exists privacy_settings_updated_at timestamptz;
+
+alter table if exists signup_agreements add column if not exists ip_address text;
+
+alter table if exists signup_agreements add column if not exists user_agent text;
+
+alter table if exists signup_agreements add column if not exists created_at timestamptz;
+
+create index if not exists idx_signup_agreements_user_id on signup_agreements (user_id);
+
+create index if not exists idx_signup_agreements_created_at on signup_agreements (created_at);

@@ -94,6 +94,20 @@ export type WebInfoSettingsRecord = {
   updatedAt: string;
 };
 
+export type SignupAgreementRecord = {
+  id: string;
+  userId: string;
+  termsAcceptedAt: string;
+  privacyAcceptedAt: string;
+  termsContent: string;
+  privacyContent: string;
+  termsSettingsUpdatedAt: string;
+  privacySettingsUpdatedAt: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+};
+
 export type EmailOutboxFilter = {
   status?: EmailOutboxStatus;
 };
@@ -130,6 +144,8 @@ export type ChartServiceRepository = {
   savePaymentTransferSettings(settings: PaymentTransferSettingsRecord): void;
   getWebInfoSettings(): WebInfoSettingsRecord | null;
   saveWebInfoSettings(settings: WebInfoSettingsRecord): void;
+  listSignupAgreementsByUserId(userId: string): SignupAgreementRecord[];
+  saveSignupAgreement(agreement: SignupAgreementRecord): void;
   listReferralLedgersByPaymentId(paymentRequestId: string): ReferralLedgerRecord[];
   saveReferralLedger(ledger: ReferralLedgerRecord): void;
   getSupportThreadById(id: string): SupportThreadRecord | null;

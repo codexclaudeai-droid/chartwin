@@ -23,6 +23,7 @@ import type {
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
+  SignupAgreementRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 import { getDefaultChartServiceSubscriptionPlans } from './bootstrap.ts';
@@ -42,6 +43,7 @@ export type MockChartServiceState = {
   salesTeams: SalesTeamRecord[];
   paymentTransferSettings: PaymentTransferSettingsRecord | null;
   webInfoSettings: WebInfoSettingsRecord | null;
+  signupAgreements: SignupAgreementRecord[];
   referralLedgers: ReferralLedgerRecord[];
   supportThreads: SupportThreadRecord[];
   supportMessages: SupportMessageRecord[];
@@ -116,6 +118,7 @@ export function createMockChartServiceState(): MockChartServiceState {
     salesTeams: [],
     paymentTransferSettings: null,
     webInfoSettings: null,
+    signupAgreements: [],
     referralLedgers: [
       {
         id: 'ref_ledger_pending',
@@ -193,6 +196,7 @@ export function createMockChartServiceRepository(
   state.salesTeams ??= [];
   state.paymentTransferSettings ??= null;
   state.webInfoSettings ??= null;
+  state.signupAgreements ??= [];
 
   return {
     nextId(prefix: string): string {
@@ -270,6 +274,15 @@ export function createMockChartServiceRepository(
     },
     saveWebInfoSettings(settings) {
       state.webInfoSettings = { ...settings };
+    },
+    listSignupAgreementsByUserId(userId) {
+      return state.signupAgreements
+        .filter((agreement) => agreement.userId === userId)
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+        .map((agreement) => ({ ...agreement }));
+    },
+    saveSignupAgreement(agreement) {
+      upsertById(state.signupAgreements, agreement);
     },
     listReferralLedgersByPaymentId(paymentRequestId) {
       return state.referralLedgers
