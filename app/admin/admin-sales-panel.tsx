@@ -425,6 +425,8 @@ export function AdminSalesPanel() {
   const visibleSummary = summary ?? EMPTY_SALES_SUMMARY;
   const activePageMeta = SALES_SUBMENU.find((item) => item.key === activePage) ?? SALES_SUBMENU[0];
   const salespersonSearchResults = getSalespersonSearchResults(visibleSummary.salespeople, query);
+  const shouldShowSalespersonSearchPanel = isSalespersonSearchOpen
+    && (salespersonSearchResults.length > 0 || query.trim().length > 0);
   const clampedSalespersonIndex = Math.min(
     highlightedSalespersonIndex,
     Math.max(0, salespersonSearchResults.length - 1),
@@ -460,7 +462,7 @@ export function AdminSalesPanel() {
           <span>영업자 검색</span>
           <input
             aria-autocomplete="list"
-            aria-expanded={isSalespersonSearchOpen && salespersonSearchResults.length > 0}
+            aria-expanded={shouldShowSalespersonSearchPanel}
             aria-controls="salesperson-search-results"
             aria-activedescendant={isSalespersonSearchOpen && salespersonSearchResults.length > 0
               ? `salesperson-search-option-${clampedSalespersonIndex}`
@@ -479,7 +481,7 @@ export function AdminSalesPanel() {
             placeholder="이메일 또는 이름"
             value={query}
           />
-          {isSalespersonSearchOpen && salespersonSearchResults.length > 0 && (
+          {shouldShowSalespersonSearchPanel && (
             <div className="salesperson-search-results" id="salesperson-search-results" role="listbox">
               {salespersonSearchResults.map((salesperson, index) => (
                 <button
@@ -501,6 +503,13 @@ export function AdminSalesPanel() {
                   <small>{salesperson.commissionPercent}% / {formatUsd(salesperson.salesUsd)} / {formatPoint(salesperson.points)}</small>
                 </button>
               ))}
+              {salespersonSearchResults.length === 0 && (
+                <div className="salesperson-search-empty" role="status">
+                  <strong>검색 결과 없음</strong>
+                  <p>일치하는 영업자가 없습니다. 회원관리에서 해당 회원의 역할을 영업자로 변경한 뒤 다시 검색하세요.</p>
+                  <a href="#admin-users">회원관리로 이동</a>
+                </div>
+              )}
             </div>
           )}
         </label>

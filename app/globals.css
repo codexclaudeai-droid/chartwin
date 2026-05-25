@@ -1497,6 +1497,40 @@ a {
   font-size: 12px;
 }
 
+.salesperson-search-empty {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.salesperson-search-empty strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.salesperson-search-empty p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.salesperson-search-empty a {
+  align-self: start;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 850;
+  justify-self: start;
+  padding: 7px 10px;
+}
+
+.salesperson-search-empty a:hover {
+  background: var(--ink);
+  color: #fffdf7;
+}
+
 .sales-summary-grid {
   display: grid;
   gap: 14px;
