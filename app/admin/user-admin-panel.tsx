@@ -283,7 +283,7 @@ export function UserAdminPanel() {
     setMessage(filterOverride.nextMessage ?? `회원 ${payload.users.length}명을 불러왔습니다.`);
   }
 
-  async function openDetail(userId: string) {
+  async function openDetail(userId: string, nextRole?: UserRole) {
     setIsBusy(true);
     const response = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, { cache: 'no-store' });
     const payload = await response.json() as AdminUserDetailResponse;
@@ -296,8 +296,10 @@ export function UserAdminPanel() {
     }
 
     setDetail(payload.detail);
-    setSelectedRole(payload.detail.user.role as UserRole);
-    setDetailMessage(`${payload.detail.user.email} 상세 정보를 불러왔습니다.`);
+    setSelectedRole(nextRole ?? payload.detail.user.role as UserRole);
+    setDetailMessage(nextRole === 'salesperson' && payload.detail.user.role !== 'salesperson'
+      ? `${payload.detail.user.email} 회원을 영업자로 지정할 준비가 되었습니다. 역할 변경 버튼을 누르세요.`
+      : `${payload.detail.user.email} 상세 정보를 불러왔습니다.`);
   }
 
   async function updateRole() {
@@ -395,6 +397,17 @@ export function UserAdminPanel() {
     void refresh({ role: 'all', accountStatus: 'all' });
   }
 
+  function showAllMembersForSalespersonAssignment() {
+    setDashboardFilterNotice(null);
+    setRole('all');
+    setAccountStatus('all');
+    void refresh({
+      role: 'all',
+      accountStatus: 'all',
+      nextMessage: "전체 회원 목록입니다. 영업자로 변경할 회원의 '영업자 지정'을 누르세요.",
+    });
+  }
+
   const assignableRoles = getAssignableUserRoles(currentAdmin?.role);
   const canSubmitRole = detail
     ? canChangeAdminUserRole({
@@ -488,6 +501,15 @@ export function UserAdminPanel() {
         label={dashboardFilterNotice}
         onClear={clearDashboardFilterNotice}
       />
+      {dashboardFilterNotice === formatUserRoleLabel('salesperson') && (
+        <div className="notice compact admin-user-preset-guide" role="status">
+          <strong>영업자 역할 변경이 필요하신가요?</strong>
+          <span>기존 회원을 영업자로 바꾸려면 전체 회원 목록에서 대상을 선택해야 합니다.</span>
+          <button className="button secondary" type="button" onClick={showAllMembersForSalespersonAssignment} disabled={isBusy}>
+            전체 회원에서 영업자 지정
+          </button>
+        </div>
+      )}
       <p className="notice">{message}</p>
       <table className="table">
         <thead>
@@ -531,6 +553,11 @@ export function UserAdminPanel() {
                 <button className="button secondary" type="button" onClick={() => openDetail(item.user.id)} disabled={isBusy}>
                   상세
                 </button>
+                {item.user.role !== 'salesperson' && (
+                  <button className="button secondary" type="button" onClick={() => openDetail(item.user.id, 'salesperson')} disabled={isBusy}>
+                    영업자 지정
+                  </button>
+                )}
               </td>
             </tr>
           ))}

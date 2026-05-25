@@ -228,6 +228,7 @@ test('admin user panel renders related audit entries in user detail', () => {
 
 test('admin user panel applies dashboard queue preset events', () => {
   const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(source, /subscribeAdminQueuePresetEvent/);
   assert.match(source, /detail\.panel !== 'users'/);
@@ -236,6 +237,11 @@ test('admin user panel applies dashboard queue preset events', () => {
   assert.match(source, /영업 역할 필터를 적용했습니다\. 영업자 회원만 표시합니다\./);
   assert.match(source, /setRole\(nextRole\)/);
   assert.match(source, /refresh\(\{ role: nextRole, accountStatus: nextAccountStatus, nextMessage \}\)/);
+  assert.match(source, /showAllMembersForSalespersonAssignment/);
+  assert.match(source, /전체 회원에서 영업자 지정/);
+  assert.match(source, /openDetail\(item\.user\.id, 'salesperson'\)/);
+  assert.match(source, /영업자로 지정할 준비가 되었습니다/);
+  assert.match(cssSource, /\.admin-user-preset-guide/);
 });
 
 test('admin user panel confirms role and account status changes before patching', () => {
