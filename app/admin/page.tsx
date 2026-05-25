@@ -30,6 +30,7 @@ export default function AdminPage() {
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="webInfo">
             <AdminWebInfoPanel />
+            <AdminPaymentSettingsPanel />
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="users">
             <UserAdminPanel />
@@ -51,9 +52,6 @@ export default function AdminPage() {
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="audit">
             <AuditLogPanel />
-          </AdminDashboardShellSection>
-          <AdminDashboardShellSection sectionKey="paymentSettings">
-            <AdminPaymentSettingsPanel />
           </AdminDashboardShellSection>
         </AdminDashboardShell>
       </AdminAccessGate>

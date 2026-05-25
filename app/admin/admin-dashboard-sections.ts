@@ -4,7 +4,6 @@ export type AdminDashboardSectionKey =
   | 'statistics'
   | 'sales'
   | 'users'
-  | 'paymentSettings'
   | 'payments'
   | 'subscriptions'
   | 'support'
@@ -46,6 +45,7 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
     children: [
       { label: '가입약관', href: '#admin-web-info-terms' },
       { label: '개인정보보호정책', href: '#admin-web-info-privacy' },
+      { label: '입금정보관리', href: '#admin-payment-settings' },
     ],
   },
   support: {
@@ -89,13 +89,6 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
     label: '감사로그',
     description: '관리자 조치와 변경 전후 데이터를 추적합니다.',
     href: '#admin-audit-logs',
-  },
-  paymentSettings: {
-    key: 'paymentSettings',
-    eyebrow: 'Payment Info',
-    label: '결제정보 입력',
-    description: '은행 입금 계좌와 USDT 지갑 주소, 네트워크를 관리합니다.',
-    href: '#admin-payment-settings',
   },
 };
 
@@ -147,7 +140,11 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
     return 'overview';
   }
 
-  if (targetId === 'admin-web-info' || targetId.startsWith('admin-web-info-')) {
+  if (
+    targetId === 'admin-web-info'
+    || targetId.startsWith('admin-web-info-')
+    || targetId === 'admin-payment-settings'
+  ) {
     return 'webInfo';
   }
 
@@ -161,10 +158,6 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
 
   if (targetId === 'admin-users' || targetId.startsWith('admin-user-')) {
     return 'users';
-  }
-
-  if (targetId === 'admin-payment-settings') {
-    return 'paymentSettings';
   }
 
   if (targetId === 'admin-payments' || targetId.startsWith('admin-payment-')) {

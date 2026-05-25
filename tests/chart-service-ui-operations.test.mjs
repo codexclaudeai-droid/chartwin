@@ -365,11 +365,16 @@ test('pricing payment request advances through step-based checkout states', () =
 
 test('admin payment settings panel and route are wired into operations UI', () => {
   const pageSource = fs.readFileSync(new URL('../app/admin/page.tsx', import.meta.url), 'utf8');
+  const sectionsSource = fs.readFileSync(new URL('../app/admin/admin-dashboard-sections.ts', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-payment-settings-panel.tsx', import.meta.url), 'utf8');
   const routeSource = fs.readFileSync(new URL('../app/api/admin/payment-settings/route.ts', import.meta.url), 'utf8');
 
   assert.match(pageSource, /AdminPaymentSettingsPanel/);
-  assert.match(pageSource, /sectionKey="paymentSettings"/);
+  assert.doesNotMatch(pageSource, /sectionKey="paymentSettings"/);
+  assert.match(pageSource, /sectionKey="webInfo"[\s\S]*AdminWebInfoPanel[\s\S]*AdminPaymentSettingsPanel/);
+  assert.match(sectionsSource, /입금정보관리/);
+  assert.match(sectionsSource, /href: '#admin-payment-settings'/);
+  assert.doesNotMatch(sectionsSource, /key: 'paymentSettings'/);
   assert.match(panelSource, /admin-payment-settings/);
   assert.match(panelSource, /handleBankLogoUpload/);
   assert.match(panelSource, /readBankLogoFileAsDataUrl/);
