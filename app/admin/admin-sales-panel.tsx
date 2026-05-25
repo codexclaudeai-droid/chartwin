@@ -356,6 +356,10 @@ export function AdminSalesPanel() {
     selectSalesperson(salesperson.id);
   }
 
+  function applySalespersonUserFilter() {
+    dispatchAdminQueuePresetEvent({ panel: 'users', presetKey: 'salesperson' });
+  }
+
   function handleSalespersonSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Escape') {
       setIsSalespersonSearchOpen(false);
@@ -510,7 +514,7 @@ export function AdminSalesPanel() {
                   <p>일치하는 영업자가 없습니다. 회원관리에서 해당 회원의 역할을 영업자로 변경한 뒤 다시 검색하세요.</p>
                   <a
                     href="#admin-users"
-                    onClick={() => dispatchAdminQueuePresetEvent({ panel: 'users', presetKey: 'salesperson' })}
+                    onClick={applySalespersonUserFilter}
                   >
                     회원관리로 이동
                   </a>
@@ -656,6 +660,11 @@ export function AdminSalesPanel() {
               <span>선택 영업자</span>
               <strong>{visibleSummary.selectedSalesperson?.name ?? '영업자 없음'}</strong>
               <p>{visibleSummary.selectedSalesperson ? `${visibleSummary.selectedSalesperson.email} / ${visibleSummary.selectedSalesperson.commissionPercent}%` : '회원관리에서 역할을 영업으로 지정하세요.'}</p>
+              {!visibleSummary.selectedSalesperson && (
+                <a className="text-link compact" href="#admin-users" onClick={applySalespersonUserFilter}>
+                  회원관리에서 영업자 지정
+                </a>
+              )}
             </div>
             <div className="mini-card">
               <span>개별 집계</span>
@@ -678,7 +687,13 @@ export function AdminSalesPanel() {
               </button>
             ))}
             {visibleSummary.salespeople.length === 0 && (
-              <p className="notice compact">검색 조건에 맞는 영업자가 없습니다. 회원관리에서 회원 역할을 영업으로 변경하세요.</p>
+              <p className="notice compact">
+                검색 조건에 맞는 영업자가 없습니다. 회원관리에서 회원 역할을 영업으로 변경하세요.
+                {' '}
+                <a className="text-link compact" href="#admin-users" onClick={applySalespersonUserFilter}>
+                  회원관리로 이동
+                </a>
+              </p>
             )}
           </div>
           <div className="sales-commission-row">
