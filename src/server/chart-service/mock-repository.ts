@@ -23,6 +23,7 @@ import type {
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
+  WebInfoSettingsRecord,
 } from './repository.ts';
 import { getDefaultChartServiceSubscriptionPlans } from './bootstrap.ts';
 import { createPasswordHash } from './passwords.ts';
@@ -40,6 +41,7 @@ export type MockChartServiceState = {
   referralProgramSettings: ReferralProgramSettingsRecord | null;
   salesTeams: SalesTeamRecord[];
   paymentTransferSettings: PaymentTransferSettingsRecord | null;
+  webInfoSettings: WebInfoSettingsRecord | null;
   referralLedgers: ReferralLedgerRecord[];
   supportThreads: SupportThreadRecord[];
   supportMessages: SupportMessageRecord[];
@@ -113,6 +115,7 @@ export function createMockChartServiceState(): MockChartServiceState {
     referralProgramSettings: null,
     salesTeams: [],
     paymentTransferSettings: null,
+    webInfoSettings: null,
     referralLedgers: [
       {
         id: 'ref_ledger_pending',
@@ -189,6 +192,7 @@ export function createMockChartServiceRepository(
   state.referralProgramSettings ??= null;
   state.salesTeams ??= [];
   state.paymentTransferSettings ??= null;
+  state.webInfoSettings ??= null;
 
   return {
     nextId(prefix: string): string {
@@ -260,6 +264,12 @@ export function createMockChartServiceRepository(
     },
     savePaymentTransferSettings(settings) {
       state.paymentTransferSettings = { ...settings };
+    },
+    getWebInfoSettings() {
+      return cloneOrNull(state.webInfoSettings);
+    },
+    saveWebInfoSettings(settings) {
+      state.webInfoSettings = { ...settings };
     },
     listReferralLedgersByPaymentId(paymentRequestId) {
       return state.referralLedgers

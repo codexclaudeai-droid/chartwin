@@ -45,6 +45,8 @@ import {
   mapSupportThreadToPostgresRow,
   mapUserFromPostgresRow,
   mapUserToPostgresRow,
+  mapWebInfoSettingsFromPostgresRow,
+  mapWebInfoSettingsToPostgresRow,
   type PostgresRow,
   type PostgresStatement,
 } from './postgres-mappers.ts';
@@ -57,6 +59,7 @@ import type {
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
+  WebInfoSettingsRecord,
 } from './repository.ts';
 
 export type PostgresQueryResult = {
@@ -227,6 +230,16 @@ export function createPostgresAsyncChartServiceRepository(
       await execute(createPostgresUpsertStatement(
         'payment_transfer_settings',
         mapPaymentTransferSettingsToPostgresRow(settings),
+        ['id'],
+      ));
+    },
+    async getWebInfoSettings(): Promise<WebInfoSettingsRecord | null> {
+      return selectOne('web_info_settings', mapWebInfoSettingsFromPostgresRow, { id: 'default' });
+    },
+    async saveWebInfoSettings(settings: WebInfoSettingsRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'web_info_settings',
+        mapWebInfoSettingsToPostgresRow(settings),
         ['id'],
       ));
     },

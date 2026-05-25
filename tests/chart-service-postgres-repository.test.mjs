@@ -176,3 +176,47 @@ test('postgres async repository persists payment transfer settings with upsert S
     'TXYZ123456789',
   ]);
 });
+
+test('postgres async repository persists web info settings with upsert SQL', async () => {
+  const { createPostgresAsyncChartServiceRepository } = await import('../src/server/chart-service/index.ts');
+  const calls = [];
+  const executor = {
+    async query(statement) {
+      calls.push(statement);
+      if (statement.sql === 'select * from web_info_settings where id = $1') {
+        return {
+          rows: [{
+            id: 'default',
+            terms_content: 'Terms content',
+            privacy_content: 'Privacy content',
+            updated_by_admin_id: 'admin_1',
+            updated_at: '2026-05-25T05:00:00.000Z',
+          }],
+        };
+      }
+      return { rows: [] };
+    },
+  };
+  const repository = createPostgresAsyncChartServiceRepository(executor);
+
+  const settings = await repository.getWebInfoSettings();
+  await repository.saveWebInfoSettings({
+    id: 'default',
+    termsContent: 'Terms content',
+    privacyContent: 'Privacy content',
+    updatedByAdminId: 'admin_1',
+    updatedAt: '2026-05-25T05:00:00.000Z',
+  });
+
+  assert.equal(settings?.termsContent, 'Terms content');
+  assert.equal(calls[0].sql, 'select * from web_info_settings where id = $1');
+  assert.deepEqual(calls[0].values, ['default']);
+  assert.match(calls[1].sql, /^insert into web_info_settings /);
+  assert.match(calls[1].sql, /on conflict \(id\) do update/);
+  assert.deepEqual(calls[1].values.slice(0, 4), [
+    'default',
+    'Terms content',
+    'Privacy content',
+    'admin_1',
+  ]);
+});

@@ -29,6 +29,8 @@ import {
   mapSupportThreadToPostgresRow,
   mapUserFromPostgresRow,
   mapUserToPostgresRow,
+  mapWebInfoSettingsFromPostgresRow,
+  mapWebInfoSettingsToPostgresRow,
 } from '../src/server/chart-service/index.ts';
 
 test('postgres user mapper preserves auth and account fields', () => {
@@ -333,6 +335,31 @@ test('postgres payment transfer settings mapper preserves bank and USDT instruct
     usdt_network: 'TRC20',
     updated_by_admin_id: 'admin_1',
     updated_at: '2026-05-25T02:00:00.000Z',
+  });
+});
+
+test('postgres web info settings mapper preserves signup policy content', () => {
+  const settings = mapWebInfoSettingsFromPostgresRow({
+    id: 'default',
+    terms_content: 'Terms content',
+    privacy_content: 'Privacy content',
+    updated_by_admin_id: 'admin_1',
+    updated_at: '2026-05-25T05:00:00.000Z',
+  });
+
+  assert.deepEqual(settings, {
+    id: 'default',
+    termsContent: 'Terms content',
+    privacyContent: 'Privacy content',
+    updatedByAdminId: 'admin_1',
+    updatedAt: '2026-05-25T05:00:00.000Z',
+  });
+  assert.deepEqual(mapWebInfoSettingsToPostgresRow(settings), {
+    id: 'default',
+    terms_content: 'Terms content',
+    privacy_content: 'Privacy content',
+    updated_by_admin_id: 'admin_1',
+    updated_at: '2026-05-25T05:00:00.000Z',
   });
 });
 

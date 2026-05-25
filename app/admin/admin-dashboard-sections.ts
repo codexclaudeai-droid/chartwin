@@ -1,5 +1,6 @@
 export type AdminDashboardSectionKey =
   | 'overview'
+  | 'webInfo'
   | 'statistics'
   | 'sales'
   | 'users'
@@ -15,6 +16,10 @@ export type AdminDashboardSection = {
   label: string;
   description: string;
   href: string;
+  children?: Array<{
+    label: string;
+    href: string;
+  }>;
 };
 
 const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashboardSection> = {
@@ -31,6 +36,17 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
     label: '회원관리',
     description: '회원 상태, 권한, 추천 이력을 확인합니다.',
     href: '#admin-users',
+  },
+  webInfo: {
+    key: 'webInfo',
+    eyebrow: 'Web Info',
+    label: '웹정보관리',
+    description: '회원가입 약관과 개인정보보호정책 문구를 관리합니다.',
+    href: '#admin-web-info',
+    children: [
+      { label: '가입약관', href: '#admin-web-info-terms' },
+      { label: '개인정보보호정책', href: '#admin-web-info-privacy' },
+    ],
   },
   support: {
     key: 'support',
@@ -85,6 +101,7 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
 
 export const ADMIN_DASHBOARD_SECTIONS: AdminDashboardSection[] = [
   ADMIN_DASHBOARD_SECTION_META.overview,
+  ADMIN_DASHBOARD_SECTION_META.webInfo,
   ADMIN_DASHBOARD_SECTION_META.users,
   ADMIN_DASHBOARD_SECTION_META.support,
   ADMIN_DASHBOARD_SECTION_META.payments,
@@ -128,6 +145,10 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
 
   if (targetId === 'admin-overview') {
     return 'overview';
+  }
+
+  if (targetId === 'admin-web-info' || targetId.startsWith('admin-web-info-')) {
+    return 'webInfo';
   }
 
   if (targetId === 'admin-statistics') {

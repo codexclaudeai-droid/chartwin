@@ -32,11 +32,13 @@ test('mock signup creates a member account and httpOnly session cookie', () => {
     email: 'NEW@example.com',
     name: 'New User',
     password: 'Aa1!aaaa',
+    phoneNumber: '010-2222-3333',
     createdAt: '2026-05-23T10:00:00.000Z',
   });
 
   assert.equal(result.user.email, 'new@example.com');
   assert.equal(result.user.role, 'member');
+  assert.equal(result.user.phoneNumber, '010-2222-3333');
   assert.equal(result.user.passwordHash?.includes('Aa1!aaaa'), false);
   assert.match(result.user.referralCode, /^[A-Z0-9]{6}$/);
   assert.doesNotMatch(result.user.referralCode, /^TC-/);
@@ -116,11 +118,13 @@ test('async signup stores the referrer from a referral code', async () => {
     email: 'async-referred@example.com',
     name: 'Async Referred User',
     password: 'Aa1!aaaa',
+    phoneNumber: '010-4444-5555',
     referralCode: referrer?.referralCode,
     createdAt: '2026-05-23T10:00:00.000Z',
   });
 
   assert.equal(result.user.referredByUserId, 'user_subscriber');
+  assert.equal(result.user.phoneNumber, '010-4444-5555');
   assert.match(result.user.referralCode, /^[A-Z0-9]{6}$/);
   assert.equal(syncRepository.getUserByEmail('async-referred@example.com')?.referredByUserId, 'user_subscriber');
 });
@@ -159,6 +163,10 @@ test('signup API stores the referrer from a referral code', async () => {
       email: `route-referred-${Date.now()}@example.com`,
       name: 'Route Referred User',
       password: 'Aa1!aaaa',
+      passwordConfirm: 'Aa1!aaaa',
+      phoneNumber: '010-7777-8888',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
       referralCode: referrer?.referralCode,
     }),
   }));
@@ -166,7 +174,51 @@ test('signup API stores the referrer from a referral code', async () => {
 
   assert.equal(response.status, 200);
   assert.equal(payload.user.referredByUserId, 'user_subscriber');
+  assert.equal(payload.user.phoneNumber, '010-7777-8888');
   assert.match(payload.user.referralCode, /^[A-Z0-9]{6}$/);
+});
+
+test('signup API rejects password confirmation mismatch and missing policy agreements', async () => {
+  const { POST } = await import('../app/api/auth/signup/route.ts');
+
+  resetChartServiceRateLimits();
+  const mismatch = await POST(new Request('http://localhost/api/auth/signup', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: `route-mismatch-${Date.now()}@example.com`,
+      name: 'Mismatch User',
+      password: 'Aa1!aaaa',
+      passwordConfirm: 'Aa1!aaab',
+      phoneNumber: '010-1111-2222',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  }));
+  const missingAgreement = await POST(new Request('http://localhost/api/auth/signup', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: `route-agreement-${Date.now()}@example.com`,
+      name: 'Agreement User',
+      password: 'Aa1!aaaa',
+      passwordConfirm: 'Aa1!aaaa',
+      phoneNumber: '010-1111-3333',
+      acceptedTerms: false,
+      acceptedPrivacy: true,
+    }),
+  }));
+
+  assert.equal(mismatch.status, 400);
+  assert.match((await mismatch.json()).message, /Password confirmation does not match/);
+  assert.equal(missingAgreement.status, 400);
+  assert.match((await missingAgreement.json()).message, /Required signup agreements/);
 });
 
 test('signup API allows missing referral codes without assigning a referrer', async () => {
@@ -183,6 +235,10 @@ test('signup API allows missing referral codes without assigning a referrer', as
       email: `route-no-referral-${Date.now()}@example.com`,
       name: 'Route No Referral User',
       password: 'Aa1!aaaa',
+      passwordConfirm: 'Aa1!aaaa',
+      phoneNumber: '010-9999-0000',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
     }),
   }));
   const payload = await response.json();
@@ -209,6 +265,21 @@ test('signup panel labels referral code input as optional', () => {
   assert.match(source, /추천코드 \(선택\)/);
   assert.match(source, /선택사항/);
   assert.doesNotMatch(referralField, /\brequired\b/);
+});
+
+test('signup panel requires phone password confirmation and policy agreement dropdowns', () => {
+  const source = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /signupPhoneNumber/);
+  assert.match(source, /phoneNumber/);
+  assert.match(source, /signupPasswordConfirm/);
+  assert.match(source, /passwordConfirm/);
+  assert.match(source, /acceptedTerms/);
+  assert.match(source, /acceptedPrivacy/);
+  assert.match(source, /signupTermsAgreement/);
+  assert.match(source, /signupPrivacyAgreement/);
+  assert.match(source, /<details/);
+  assert.match(source, /\/api\/web-info/);
 });
 
 test('mock signup rejects duplicate email addresses case-insensitively', () => {

@@ -61,7 +61,14 @@ export function createSessionForUser(
 
 export function registerMockUserAccount(
   repository: ChartServiceRepository,
-  input: { email: string; name: string; password: string; createdAt: string; referralCode?: string | null },
+  input: {
+    email: string;
+    name: string;
+    password: string;
+    createdAt: string;
+    referralCode?: string | null;
+    phoneNumber?: string | null;
+  },
 ): { user: ServiceUserRecord; session: AuthSessionRecord; cookie: string } {
   const email = input.email.trim().toLowerCase();
   if (!email.includes('@')) {
@@ -82,7 +89,7 @@ export function registerMockUserAccount(
     name: input.name.trim() || email,
     role: USER_ROLES.member,
     accountStatus: USER_ACCOUNT_STATUSES.active,
-    phoneNumber: null,
+    phoneNumber: normalizeSignupPhoneNumber(input.phoneNumber),
     referralCode: '',
     referredByUserId,
     createdAt: input.createdAt,
@@ -114,6 +121,16 @@ function getReferrerUserIdByReferralCode(
 
 function normalizeSignupReferralCode(value: string | null | undefined): string {
   return normalizeReferralCode(value);
+}
+
+function normalizeSignupPhoneNumber(value: string | null | undefined): string | null {
+  const phoneNumber = String(value ?? '').trim();
+  if (!phoneNumber) return null;
+  if (phoneNumber.length > 30) throw new Error('Contact phone number too long');
+  if (!/^[0-9+\-().\s]{7,30}$/.test(phoneNumber)) {
+    throw new Error('Contact phone number invalid');
+  }
+  return phoneNumber;
 }
 
 export function authenticateUserWithPassword(

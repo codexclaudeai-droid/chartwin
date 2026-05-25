@@ -17,6 +17,7 @@ import {
 test('admin dashboard sections include a statistics menu entry', () => {
   assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.map((section) => section.key), [
     'overview',
+    'webInfo',
     'users',
     'support',
     'payments',

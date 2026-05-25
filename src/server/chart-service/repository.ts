@@ -86,6 +86,14 @@ export type PaymentTransferSettingsRecord = {
   updatedAt: string;
 };
 
+export type WebInfoSettingsRecord = {
+  id: string;
+  termsContent: string;
+  privacyContent: string;
+  updatedByAdminId: string | null;
+  updatedAt: string;
+};
+
 export type EmailOutboxFilter = {
   status?: EmailOutboxStatus;
 };
@@ -120,6 +128,8 @@ export type ChartServiceRepository = {
   saveSalesTeam(team: SalesTeamRecord): void;
   getPaymentTransferSettings(): PaymentTransferSettingsRecord | null;
   savePaymentTransferSettings(settings: PaymentTransferSettingsRecord): void;
+  getWebInfoSettings(): WebInfoSettingsRecord | null;
+  saveWebInfoSettings(settings: WebInfoSettingsRecord): void;
   listReferralLedgersByPaymentId(paymentRequestId: string): ReferralLedgerRecord[];
   saveReferralLedger(ledger: ReferralLedgerRecord): void;
   getSupportThreadById(id: string): SupportThreadRecord | null;

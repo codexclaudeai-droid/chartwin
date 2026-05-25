@@ -10,6 +10,7 @@ import {
 test('admin dashboard sections define the professional sidebar order', () => {
   assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.map((section) => section.key), [
     'overview',
+    'webInfo',
     'users',
     'support',
     'payments',
@@ -26,6 +27,9 @@ test('admin dashboard sections define the professional sidebar order', () => {
 test('admin dashboard shell maps legacy anchors and deep links to sidebar sections', () => {
   assert.equal(getAdminDashboardSectionFromLocation(''), 'overview');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-overview'), 'overview');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info'), 'webInfo');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info-terms'), 'webInfo');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info-privacy'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-statistics'), 'statistics');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-sales'), 'sales');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-users'), 'users');
@@ -47,7 +51,7 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(pageSource, /AdminDashboardShell/);
-  assert.match(pageSource, /sectionKey="overview"[\s\S]*sectionKey="users"[\s\S]*sectionKey="support"[\s\S]*sectionKey="payments"[\s\S]*sectionKey="subscriptions"[\s\S]*sectionKey="sales"[\s\S]*sectionKey="statistics"[\s\S]*sectionKey="audit"/);
+  assert.match(pageSource, /sectionKey="overview"[\s\S]*sectionKey="webInfo"[\s\S]*sectionKey="users"[\s\S]*sectionKey="support"[\s\S]*sectionKey="payments"[\s\S]*sectionKey="subscriptions"[\s\S]*sectionKey="sales"[\s\S]*sectionKey="statistics"[\s\S]*sectionKey="audit"/);
   assert.match(pageSource, /AdminDashboardShellSection sectionKey="paymentSettings"/);
   assert.match(shellSource, /admin-dashboard-sidebar/);
   assert.doesNotMatch(shellSource, /admin-dashboard-workspace-header/);

@@ -240,7 +240,14 @@ export async function authenticateAsyncUserWithPassword(
 
 export async function registerAsyncMockUserAccount(
   repository: AsyncChartServiceRepository,
-  input: { email: string; name: string; password: string; createdAt: string; referralCode?: string | null },
+  input: {
+    email: string;
+    name: string;
+    password: string;
+    createdAt: string;
+    referralCode?: string | null;
+    phoneNumber?: string | null;
+  },
 ) {
   const email = input.email.trim().toLowerCase();
   if (!email.includes('@')) {
@@ -261,7 +268,7 @@ export async function registerAsyncMockUserAccount(
     name: input.name.trim() || email,
     role: USER_ROLES.member,
     accountStatus: USER_ACCOUNT_STATUSES.active,
-    phoneNumber: null,
+    phoneNumber: normalizeProfilePhoneNumber(input.phoneNumber),
     referralCode: '',
     referredByUserId,
     createdAt: input.createdAt,

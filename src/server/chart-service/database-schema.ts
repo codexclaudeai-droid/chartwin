@@ -240,6 +240,19 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       ],
     },
     {
+      name: 'web_info_settings',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        terms_content: { type: 'text' },
+        privacy_content: { type: 'text' },
+        updated_by_admin_id: { type: 'text', nullable: true, references: 'users.id' },
+        updated_at: { type: 'timestamptz', default: 'now()' },
+      },
+      indexes: [
+        { name: 'idx_web_info_settings_updated_by_admin_id', columns: ['updated_by_admin_id'] },
+      ],
+    },
+    {
       name: 'notifications',
       columns: {
         id: { type: 'text', primaryKey: true },
@@ -363,6 +376,13 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     'alter table if exists payment_transfer_settings add column if not exists updated_at timestamptz;',
     "update payment_transfer_settings set bank_logo_url = '/bank-logos/generic-bank.svg' where bank_logo_url is null or bank_logo_url = '';",
     'create index if not exists idx_payment_transfer_settings_updated_by_admin_id on payment_transfer_settings (updated_by_admin_id);',
+    "create table if not exists web_info_settings (id text primary key, terms_content text not null, privacy_content text not null, updated_by_admin_id text, updated_at timestamptz not null default now());",
+    'alter table if exists web_info_settings add column if not exists terms_content text;',
+    'alter table if exists web_info_settings add column if not exists privacy_content text;',
+    'alter table if exists web_info_settings add column if not exists updated_by_admin_id text;',
+    'alter table if exists web_info_settings add column if not exists updated_at timestamptz;',
+    "insert into web_info_settings (id, terms_content, privacy_content, updated_at) values ('default', 'TC Chart 서비스 이용약관', 'TC Chart 개인정보보호정책', now()) on conflict (id) do nothing;",
+    'create index if not exists idx_web_info_settings_updated_by_admin_id on web_info_settings (updated_by_admin_id);',
   ];
 }
 

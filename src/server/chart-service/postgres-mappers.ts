@@ -16,6 +16,7 @@ import type {
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
+  WebInfoSettingsRecord,
 } from './repository.ts';
 import { createStableFallbackReferralCode } from './referral-codes.ts';
 
@@ -335,6 +336,26 @@ export function mapPaymentTransferSettingsToPostgresRow(record: PaymentTransferS
     bank_logo_url: record.bankLogoUrl,
     usdt_address: record.usdtAddress,
     usdt_network: record.usdtNetwork,
+    updated_by_admin_id: record.updatedByAdminId,
+    updated_at: record.updatedAt,
+  };
+}
+
+export function mapWebInfoSettingsFromPostgresRow(row: PostgresRow): WebInfoSettingsRecord {
+  return {
+    id: readString(row.id),
+    termsContent: readString(row.terms_content),
+    privacyContent: readString(row.privacy_content),
+    updatedByAdminId: readNullableString(row.updated_by_admin_id),
+    updatedAt: readIsoString(row.updated_at),
+  };
+}
+
+export function mapWebInfoSettingsToPostgresRow(record: WebInfoSettingsRecord): PostgresRow {
+  return {
+    id: record.id,
+    terms_content: record.termsContent,
+    privacy_content: record.privacyContent,
     updated_by_admin_id: record.updatedByAdminId,
     updated_at: record.updatedAt,
   };

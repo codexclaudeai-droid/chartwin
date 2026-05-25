@@ -366,8 +366,30 @@ a {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
+.admin-dashboard-menu-group {
+  display: grid;
+  gap: 6px;
+}
+
 .admin-dashboard-menu-item strong {
   font-size: 15px;
+}
+
+.admin-dashboard-submenu {
+  display: grid;
+  gap: 4px;
+  margin: -4px 0 6px 18px;
+}
+
+.admin-dashboard-submenu a {
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  padding: 4px 0 4px 10px;
+}
+
+.admin-dashboard-submenu a:hover {
+  color: #fff;
 }
 
 .admin-dashboard-workspace {
@@ -438,6 +460,52 @@ a {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-web-info-form textarea {
+  min-height: 220px;
+  resize: vertical;
+}
+
+.signup-policy-box {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.signup-policy-box details {
+  background: rgba(255, 253, 247, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.signup-policy-box summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.signup-policy-box pre {
+  color: var(--muted);
+  font-family: inherit;
+  line-height: 1.6;
+  margin: 12px 0 0;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.checkbox-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.checkbox-row input {
+  width: auto;
 }
 
 .plan-card-grid {

@@ -23,10 +23,20 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const persistence = getAsyncChartServicePersistence();
   try {
+    const password = String(body.password || '');
+    const passwordConfirm = String(body.passwordConfirm || '');
+    if (password !== passwordConfirm) {
+      throw new Error('Password confirmation does not match');
+    }
+    if (body.acceptedTerms !== true || body.acceptedPrivacy !== true) {
+      throw new Error('Required signup agreements must be accepted');
+    }
+
     const result = await persistence.runMutation((repository) => registerAsyncMockUserAccount(repository, {
       email: String(body.email || ''),
       name: String(body.name || ''),
-      password: String(body.password || ''),
+      password,
+      phoneNumber: String(body.phoneNumber || ''),
       referralCode: typeof body.referralCode === 'string' ? body.referralCode : '',
       createdAt: new Date().toISOString(),
     }));

@@ -4,6 +4,7 @@ import { AdminDashboardPanel } from './admin-dashboard-panel';
 import { AdminPaymentSettingsPanel } from './admin-payment-settings-panel';
 import { AdminSalesPanel } from './admin-sales-panel';
 import { AdminStatisticsPanel } from './admin-statistics-panel';
+import { AdminWebInfoPanel } from './admin-web-info-panel';
 import { AdminPanel } from './admin-panel';
 import { AuditLogPanel } from './audit-log-panel';
 import { SubscriptionAdminPanel } from './subscription-admin-panel';
@@ -26,6 +27,9 @@ export default function AdminPage() {
             <div id="admin-overview">
               <AdminDashboardPanel />
             </div>
+          </AdminDashboardShellSection>
+          <AdminDashboardShellSection sectionKey="webInfo">
+            <AdminWebInfoPanel />
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="users">
             <UserAdminPanel />

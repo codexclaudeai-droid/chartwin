@@ -66,6 +66,10 @@ test('auth responses do not expose password hashes', async () => {
       email: `new-user-${Date.now()}@example.com`,
       name: 'New User',
       password: 'Aa1!aaaa',
+      passwordConfirm: 'Aa1!aaaa',
+      phoneNumber: '010-1212-3434',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
     }),
   }));
   const signupPayload = await signupResponse.json();

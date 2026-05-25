@@ -53,15 +53,23 @@ export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode
             {ADMIN_DASHBOARD_SECTIONS.map((section) => {
               const isActive = section.key === activeSection;
               return (
-                <a
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`admin-dashboard-menu-item${isActive ? ' active' : ''}`}
-                  href={section.href}
-                  key={section.key}
-                >
-                  <span>{section.eyebrow}</span>
-                  <strong>{section.label}</strong>
-                </a>
+                <div className="admin-dashboard-menu-group" key={section.key}>
+                  <a
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`admin-dashboard-menu-item${isActive ? ' active' : ''}`}
+                    href={section.href}
+                  >
+                    <span>{section.eyebrow}</span>
+                    <strong>{section.label}</strong>
+                  </a>
+                  {section.children?.length && (
+                  <div className="admin-dashboard-submenu">
+                    {section.children.map((child) => (
+                      <a href={child.href} key={child.href}>{child.label}</a>
+                    ))}
+                  </div>
+                  )}
+                </div>
               );
             })}
           </nav>
