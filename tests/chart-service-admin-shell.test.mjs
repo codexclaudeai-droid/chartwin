@@ -10,17 +10,17 @@ import {
 test('admin dashboard sections define the professional sidebar order', () => {
   assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.map((section) => section.key), [
     'overview',
-    'statistics',
-    'sales',
     'users',
-    'paymentSettings',
+    'support',
     'payments',
     'subscriptions',
-    'support',
+    'sales',
+    'statistics',
     'audit',
   ]);
   assert.equal(ADMIN_DASHBOARD_SECTIONS[0].href, '#admin-overview');
   assert.equal(ADMIN_DASHBOARD_SECTIONS.at(-1).href, '#admin-audit-logs');
+  assert.equal(ADMIN_DASHBOARD_SECTIONS.some((section) => section.key === 'paymentSettings'), false);
 });
 
 test('admin dashboard shell maps legacy anchors and deep links to sidebar sections', () => {
@@ -47,14 +47,8 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(pageSource, /AdminDashboardShell/);
-  assert.match(pageSource, /AdminDashboardShellSection sectionKey="overview"/);
-  assert.match(pageSource, /AdminDashboardShellSection sectionKey="statistics"/);
-  assert.match(pageSource, /AdminDashboardShellSection sectionKey="sales"/);
+  assert.match(pageSource, /sectionKey="overview"[\s\S]*sectionKey="users"[\s\S]*sectionKey="support"[\s\S]*sectionKey="payments"[\s\S]*sectionKey="subscriptions"[\s\S]*sectionKey="sales"[\s\S]*sectionKey="statistics"[\s\S]*sectionKey="audit"/);
   assert.match(pageSource, /AdminDashboardShellSection sectionKey="paymentSettings"/);
-  assert.match(pageSource, /AdminDashboardShellSection sectionKey="payments"/);
-  assert.match(pageSource, /AdminDashboardShellSection sectionKey="subscriptions"/);
-  assert.match(pageSource, /AdminDashboardShellSection sectionKey="support"/);
-  assert.match(pageSource, /AdminDashboardShellSection sectionKey="audit"/);
   assert.match(shellSource, /admin-dashboard-sidebar/);
   assert.match(shellSource, /data-active-admin-section=\{activeSection\}/);
   assert.match(shellSource, /scrollIntoView\(\{ block: 'start'/);

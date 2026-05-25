@@ -27,17 +27,11 @@ export default function AdminPage() {
               <AdminDashboardPanel />
             </div>
           </AdminDashboardShellSection>
-          <AdminDashboardShellSection sectionKey="statistics">
-            <AdminStatisticsPanel />
-          </AdminDashboardShellSection>
-          <AdminDashboardShellSection sectionKey="sales">
-            <AdminSalesPanel />
-          </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="users">
             <UserAdminPanel />
           </AdminDashboardShellSection>
-          <AdminDashboardShellSection sectionKey="paymentSettings">
-            <AdminPaymentSettingsPanel />
+          <AdminDashboardShellSection sectionKey="support">
+            <SupportAdminPanel />
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="payments">
             <AdminPanel />
@@ -45,11 +39,17 @@ export default function AdminPage() {
           <AdminDashboardShellSection sectionKey="subscriptions">
             <SubscriptionAdminPanel />
           </AdminDashboardShellSection>
-          <AdminDashboardShellSection sectionKey="support">
-            <SupportAdminPanel />
+          <AdminDashboardShellSection sectionKey="sales">
+            <AdminSalesPanel />
+          </AdminDashboardShellSection>
+          <AdminDashboardShellSection sectionKey="statistics">
+            <AdminStatisticsPanel />
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="audit">
             <AuditLogPanel />
+          </AdminDashboardShellSection>
+          <AdminDashboardShellSection sectionKey="paymentSettings">
+            <AdminPaymentSettingsPanel />
           </AdminDashboardShellSection>
         </AdminDashboardShell>
       </AdminAccessGate>

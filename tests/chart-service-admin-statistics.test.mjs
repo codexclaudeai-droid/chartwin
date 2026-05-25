@@ -17,13 +17,12 @@ import {
 test('admin dashboard sections include a statistics menu entry', () => {
   assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.map((section) => section.key), [
     'overview',
-    'statistics',
-    'sales',
     'users',
-    'paymentSettings',
+    'support',
     'payments',
     'subscriptions',
-    'support',
+    'sales',
+    'statistics',
     'audit',
   ]);
   assert.equal(getAdminDashboardSectionFromLocation('#admin-statistics'), 'statistics');

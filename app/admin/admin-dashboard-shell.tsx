@@ -10,6 +10,7 @@ import {
 import {
   ADMIN_DASHBOARD_SECTIONS,
   getAdminDashboardSectionFromLocation,
+  getAdminDashboardSectionMeta,
   type AdminDashboardSectionKey,
 } from './admin-dashboard-sections.ts';
 
@@ -17,8 +18,7 @@ const AdminDashboardShellContext = createContext<AdminDashboardSectionKey>('over
 
 export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode }>) {
   const [activeSection, setActiveSection] = useState<AdminDashboardSectionKey>('overview');
-  const activeSectionMeta = ADMIN_DASHBOARD_SECTIONS.find((section) => section.key === activeSection)
-    ?? ADMIN_DASHBOARD_SECTIONS[0];
+  const activeSectionMeta = getAdminDashboardSectionMeta(activeSection);
 
   useEffect(() => {
     function syncActiveSection() {

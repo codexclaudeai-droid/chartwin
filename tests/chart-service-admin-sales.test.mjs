@@ -24,13 +24,12 @@ import {
 test('admin dashboard sections include sales management menu entry', () => {
   assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.map((section) => section.key), [
     'overview',
-    'statistics',
-    'sales',
     'users',
-    'paymentSettings',
+    'support',
     'payments',
     'subscriptions',
-    'support',
+    'sales',
+    'statistics',
     'audit',
   ]);
   assert.equal(getAdminDashboardSectionFromLocation('#admin-sales'), 'sales');

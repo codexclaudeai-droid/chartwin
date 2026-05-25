@@ -17,71 +17,86 @@ export type AdminDashboardSection = {
   href: string;
 };
 
-export const ADMIN_DASHBOARD_SECTIONS: AdminDashboardSection[] = [
-  {
+const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashboardSection> = {
+  overview: {
     key: 'overview',
     eyebrow: 'Overview',
-    label: '운영 개요',
+    label: '운영개요',
     description: '대기 작업과 서비스 상태를 한눈에 확인합니다.',
     href: '#admin-overview',
   },
-  {
-    key: 'statistics',
-    eyebrow: 'Analytics',
-    label: '통계',
-    description: '매출, 가입자, 방문자 흐름을 일별, 월별, 년도별 차트로 확인합니다.',
-    href: '#admin-statistics',
-  },
-  {
-    key: 'sales',
-    eyebrow: 'Sales',
-    label: '영업관리',
-    description: '영업자별 매출, 적립포인트, 개별 정산율을 관리합니다.',
-    href: '#admin-sales',
-  },
-  {
+  users: {
     key: 'users',
     eyebrow: 'Members',
-    label: '회원 관리',
-    description: '회원 상태, 권한, 관련 이력을 확인합니다.',
+    label: '회원관리',
+    description: '회원 상태, 권한, 추천 이력을 확인합니다.',
     href: '#admin-users',
   },
-  {
-    key: 'paymentSettings',
-    eyebrow: 'Payment Info',
-    label: '결제정보 입력',
-    description: '은행 입금 계좌와 USDT 지갑 주소, 네트워크를 관리합니다.',
-    href: '#admin-payment-settings',
-  },
-  {
-    key: 'payments',
-    eyebrow: 'Deposits',
-    label: '입금 확인',
-    description: '입금확인 요청과 결제 반려를 수동 처리합니다.',
-    href: '#admin-payments',
-  },
-  {
-    key: 'subscriptions',
-    eyebrow: 'Subscriptions',
-    label: '구독 승인',
-    description: '입금확인 이후 구독 승인, 환불, 취소를 처리합니다.',
-    href: '#admin-subscriptions',
-  },
-  {
+  support: {
     key: 'support',
     eyebrow: 'Support',
     label: '고객센터',
     description: '문의 게시글과 입금확인 요청에 답변합니다.',
     href: '#admin-support',
   },
-  {
+  payments: {
+    key: 'payments',
+    eyebrow: 'Deposits',
+    label: '입금확인',
+    description: '입금확인 요청과 결제 반려를 수동 처리합니다.',
+    href: '#admin-payments',
+  },
+  subscriptions: {
+    key: 'subscriptions',
+    eyebrow: 'Subscriptions',
+    label: '구독관리',
+    description: '입금확인 이후 구독 승인, 환불, 취소를 처리합니다.',
+    href: '#admin-subscriptions',
+  },
+  sales: {
+    key: 'sales',
+    eyebrow: 'Sales',
+    label: '영업관리',
+    description: '영업자별 매출, 적립포인트, 개별 정산율을 관리합니다.',
+    href: '#admin-sales',
+  },
+  statistics: {
+    key: 'statistics',
+    eyebrow: 'Analytics',
+    label: '통계',
+    description: '매출, 가입자, 방문자 흐름을 일별, 월별, 연도별 차트로 확인합니다.',
+    href: '#admin-statistics',
+  },
+  audit: {
     key: 'audit',
     eyebrow: 'Audit',
-    label: '감사 로그',
+    label: '감사로그',
     description: '관리자 조치와 변경 전후 데이터를 추적합니다.',
     href: '#admin-audit-logs',
   },
+  paymentSettings: {
+    key: 'paymentSettings',
+    eyebrow: 'Payment Info',
+    label: '결제정보 입력',
+    description: '은행 입금 계좌와 USDT 지갑 주소, 네트워크를 관리합니다.',
+    href: '#admin-payment-settings',
+  },
+};
+
+export const ADMIN_DASHBOARD_SECTIONS: AdminDashboardSection[] = [
+  ADMIN_DASHBOARD_SECTION_META.overview,
+  ADMIN_DASHBOARD_SECTION_META.users,
+  ADMIN_DASHBOARD_SECTION_META.support,
+  ADMIN_DASHBOARD_SECTION_META.payments,
+  ADMIN_DASHBOARD_SECTION_META.subscriptions,
+  ADMIN_DASHBOARD_SECTION_META.sales,
+  ADMIN_DASHBOARD_SECTION_META.statistics,
+  ADMIN_DASHBOARD_SECTION_META.audit,
 ];
+
+export function getAdminDashboardSectionMeta(sectionKey: AdminDashboardSectionKey): AdminDashboardSection {
+  return ADMIN_DASHBOARD_SECTION_META[sectionKey];
+}
 
 export function getAdminDashboardSectionFromLocation(
   hash: string,
