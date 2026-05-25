@@ -385,7 +385,9 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(panelSource, /영업자 검색/);
   assert.match(panelSource, /기간 범위/);
   assert.match(panelSource, /sales-date-range-field/);
-  assert.match(panelSource, /calendar-icon/);
+  assert.doesNotMatch(panelSource, /calendar-icon/);
+  assert.equal((panelSource.match(/type="date"/g) ?? []).length, 2);
+  assert.doesNotMatch(panelSource, /<label>\s*<span className="calendar-icon"/);
   assert.match(panelSource, /sales-date-range-separator/);
   assert.match(panelSource, /aria-label="기간 범위 시작"/);
   assert.match(panelSource, /aria-label="기간 범위 종료"/);

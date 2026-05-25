@@ -561,12 +561,10 @@ export function AdminSalesPanel() {
         <fieldset className="sales-date-range-field">
           <legend>기간 범위</legend>
           <label>
-            <span className="calendar-icon" aria-hidden="true">▦</span>
             <input aria-label="기간 범위 시작" type="date" onChange={(event) => setFrom(event.target.value)} value={from} />
           </label>
           <span className="sales-date-range-separator" aria-hidden="true">~</span>
           <label>
-            <span className="calendar-icon" aria-hidden="true">▦</span>
             <input aria-label="기간 범위 종료" type="date" onChange={(event) => setTo(event.target.value)} value={to} />
           </label>
         </fieldset>
