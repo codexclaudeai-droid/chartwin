@@ -225,10 +225,14 @@ export function UserAdminPanel() {
         : nextAccountStatus !== 'all'
           ? formatUserAccountStatusLabel(nextAccountStatus)
           : null;
+      const nextMessage = getUserDirectoryPresetMessage({
+        role: nextRole,
+        accountStatus: nextAccountStatus,
+      });
       setRole(nextRole);
       setAccountStatus(nextAccountStatus);
       setDashboardFilterNotice(nextFilterLabel);
-      void refresh({ role: nextRole, accountStatus: nextAccountStatus });
+      void refresh({ role: nextRole, accountStatus: nextAccountStatus, nextMessage });
     });
     const unsubscribeAuth = subscribeAuthSessionChangedEvent(() => {
       void refresh();
@@ -778,4 +782,16 @@ function formatReferralPoints(value: number): string {
     maximumFractionDigits: 2,
     minimumFractionDigits: value % 1 === 0 ? 0 : 1,
   })}P`;
+}
+
+function getUserDirectoryPresetMessage(input: { role: string; accountStatus: string }): string | undefined {
+  if (input.role === 'salesperson') {
+    return '영업 역할 필터를 적용했습니다. 영업자 회원만 표시합니다.';
+  }
+
+  if (input.accountStatus === 'suspended') {
+    return '정지 계정 필터를 적용했습니다. 정지 회원만 표시합니다.';
+  }
+
+  return undefined;
 }

@@ -232,8 +232,10 @@ test('admin user panel applies dashboard queue preset events', () => {
   assert.match(source, /subscribeAdminQueuePresetEvent/);
   assert.match(source, /detail\.panel !== 'users'/);
   assert.match(source, /detail\.presetKey === 'salesperson'/);
+  assert.match(source, /getUserDirectoryPresetMessage/);
+  assert.match(source, /영업 역할 필터를 적용했습니다\. 영업자 회원만 표시합니다\./);
   assert.match(source, /setRole\(nextRole\)/);
-  assert.match(source, /refresh\(\{ role: nextRole, accountStatus: nextAccountStatus \}\)/);
+  assert.match(source, /refresh\(\{ role: nextRole, accountStatus: nextAccountStatus, nextMessage \}\)/);
 });
 
 test('admin user panel confirms role and account status changes before patching', () => {
