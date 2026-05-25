@@ -45,21 +45,33 @@ test('web info settings reject blank policy content', () => {
 
 test('admin web info panel and routes are wired into operations UI', () => {
   const pageSource = fs.readFileSync(new URL('../app/admin/page.tsx', import.meta.url), 'utf8');
+  const sectionSource = fs.readFileSync(new URL('../app/admin/admin-web-info-section.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-web-info-panel.tsx', import.meta.url), 'utf8');
   const adminRouteSource = fs.readFileSync(new URL('../app/api/admin/web-info/route.ts', import.meta.url), 'utf8');
   const publicRouteSource = fs.readFileSync(new URL('../app/api/web-info/route.ts', import.meta.url), 'utf8');
 
-  assert.match(pageSource, /AdminWebInfoPanel/);
-  assert.match(pageSource, /AdminPointSettingsPanel/);
+  assert.match(pageSource, /AdminWebInfoSection/);
   assert.match(pageSource, /sectionKey="webInfo"/);
-  assert.match(pageSource, /admin-web-info-group/);
-  assert.match(pageSource, /aria-label="웹정보관리 세부 메뉴"/);
-  assert.match(pageSource, /가입약관/);
-  assert.match(pageSource, /개인정보보호정책/);
-  assert.match(pageSource, /입금정보관리/);
-  assert.match(pageSource, /포인트관리/);
-  assert.match(pageSource, /href="#admin-point-settings"/);
+  assert.doesNotMatch(pageSource, /AdminPaymentSettingsPanel/);
+  assert.match(sectionSource, /AdminWebInfoPanel/);
+  assert.match(sectionSource, /AdminPaymentSettingsPanel/);
+  assert.match(sectionSource, /AdminPointSettingsPanel/);
+  assert.match(sectionSource, /admin-web-info-group/);
+  assert.match(sectionSource, /aria-label="웹정보관리 세부 메뉴"/);
+  assert.match(sectionSource, /가입약관/);
+  assert.match(sectionSource, /개인정보보호정책/);
+  assert.match(sectionSource, /입금정보관리/);
+  assert.match(sectionSource, /포인트관리/);
+  assert.match(sectionSource, /href: '#admin-point-settings'/);
+  assert.match(sectionSource, /getWebInfoPageFromHash/);
+  assert.match(sectionSource, /hashchange/);
+  assert.match(sectionSource, /activePage === 'terms'/);
+  assert.match(sectionSource, /activePage === 'privacy'/);
+  assert.match(sectionSource, /activePage === 'payments'/);
+  assert.match(sectionSource, /activePage === 'points'/);
   assert.match(panelSource, /admin-web-info/);
+  assert.match(panelSource, /mode: 'terms' \| 'privacy'/);
+  assert.match(panelSource, /mode === 'terms'/);
   assert.match(panelSource, /termsContent/);
   assert.match(panelSource, /privacyContent/);
   assert.match(panelSource, /\/api\/admin\/web-info/);

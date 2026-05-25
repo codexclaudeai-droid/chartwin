@@ -14,7 +14,7 @@ const emptySettings: WebInfoSettings = {
   updatedAt: '',
 };
 
-export function AdminWebInfoPanel() {
+export function AdminWebInfoPanel({ mode }: Readonly<{ mode: 'terms' | 'privacy' }>) {
   const [settings, setSettings] = useState<WebInfoSettings>(emptySettings);
   const [message, setMessage] = useState('웹정보 설정을 불러오는 중입니다.');
   const [isBusy, setIsBusy] = useState(false);
@@ -58,40 +58,36 @@ export function AdminWebInfoPanel() {
     setSettings((current) => ({ ...current, [field]: value }));
   }
 
+  const title = mode === 'terms' ? '가입약관' : '개인정보보호정책';
+  const description = mode === 'terms'
+    ? '회원가입 화면에 표시되는 가입약관 내용을 수정합니다.'
+    : '회원가입 화면에 표시되는 개인정보보호정책 내용을 수정합니다.';
+  const fieldName = mode === 'terms' ? 'termsContent' : 'privacyContent';
+
   return (
-    <section className="card wide" id="admin-web-info">
+    <section className="card wide" id={mode === 'terms' ? 'admin-web-info-terms' : 'admin-web-info-privacy'}>
       <div className="toolbar">
         <div>
-          <h2>웹정보관리</h2>
-          <p className="notice compact">회원가입 화면의 가입약관과 개인정보보호정책 내용을 수정합니다.</p>
+          <h2>{title}</h2>
+          <p className="notice compact">{description}</p>
         </div>
         <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>
           새로고침
         </button>
       </div>
       <form className="form admin-web-info-form" onSubmit={saveSettings}>
-        <label htmlFor="admin-web-info-terms">
-          가입약관
+        <label htmlFor={`${mode}-content`}>
+          {title}
           <textarea
-            id="admin-web-info-terms"
-            rows={10}
-            value={settings.termsContent}
-            onChange={(event) => updateField('termsContent', event.target.value)}
-            required
-          />
-        </label>
-        <label htmlFor="admin-web-info-privacy">
-          개인정보보호정책
-          <textarea
-            id="admin-web-info-privacy"
-            rows={10}
-            value={settings.privacyContent}
-            onChange={(event) => updateField('privacyContent', event.target.value)}
+            id={`${mode}-content`}
+            rows={14}
+            value={settings[fieldName]}
+            onChange={(event) => updateField(fieldName, event.target.value)}
             required
           />
         </label>
         <button className="button" type="submit" disabled={isBusy}>
-          웹정보 저장
+          {title} 저장
         </button>
       </form>
       <p className="notice">{message}</p>
