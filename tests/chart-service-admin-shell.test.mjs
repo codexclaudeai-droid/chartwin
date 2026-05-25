@@ -28,6 +28,12 @@ test('admin dashboard sections define the professional sidebar order', () => {
     { label: '입금정보관리', href: '#admin-payment-settings' },
     { label: '포인트관리', href: '#admin-point-settings' },
   ]);
+  assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.find((section) => section.key === 'sales')?.children, [
+    { label: '영업팀', href: '#admin-sales-teams' },
+    { label: '영업자', href: '#admin-sales-people' },
+    { label: '회원배정', href: '#admin-sales-assignments' },
+    { label: '매출현황', href: '#admin-sales-revenue' },
+  ]);
 });
 
 test('admin dashboard shell maps legacy anchors and deep links to sidebar sections', () => {
@@ -38,6 +44,10 @@ test('admin dashboard shell maps legacy anchors and deep links to sidebar sectio
   assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info-privacy'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-statistics'), 'statistics');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-sales'), 'sales');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-sales-teams'), 'sales');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-sales-people'), 'sales');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-sales-assignments'), 'sales');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-sales-revenue'), 'sales');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-users'), 'users');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-payment-settings'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-point-settings'), 'webInfo');
@@ -71,8 +81,8 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.match(shellSource, /getActiveChildHref/);
   assert.match(shellSource, /aria-current=\{isChildActive \? 'page' : undefined\}/);
   assert.match(shellSource, /className=\{isChildActive \? 'active' : ''\}/);
-  assert.match(shellSource, /activeTargetId === 'admin-web-info'[\s\S]*'#admin-web-info-terms'/);
-  assert.match(shellSource, /activeTargetId === 'admin-statistics'[\s\S]*'#admin-statistics-sales'/);
+  assert.match(shellSource, /section\.href === `#\$\{activeTargetId\}`/);
+  assert.match(shellSource, /section\.children\[0\]\?\.href/);
   assert.match(shellSource, /scrollIntoView\(\{ block: 'start'/);
   assert.match(cssSource, /\.admin-dashboard-shell/);
   assert.match(cssSource, /\.admin-dashboard-sidebar/);

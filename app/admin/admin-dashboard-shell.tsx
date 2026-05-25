@@ -142,8 +142,7 @@ function getActiveChildHref(
   const exactChild = section.children.find((child) => child.href === `#${activeTargetId}`);
   if (exactChild) return exactChild.href;
 
-  if (activeTargetId === 'admin-web-info') return '#admin-web-info-terms';
-  if (activeTargetId === 'admin-statistics') return '#admin-statistics-sales';
+  if (section.href === `#${activeTargetId}`) return section.children[0]?.href ?? null;
 
   return null;
 }

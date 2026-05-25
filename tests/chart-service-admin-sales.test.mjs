@@ -35,6 +35,16 @@ test('admin dashboard sections include sales management menu entry', () => {
     'audit',
   ]);
   assert.equal(getAdminDashboardSectionFromLocation('#admin-sales'), 'sales');
+  assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.find((section) => section.key === 'sales')?.children, [
+    { label: '영업팀', href: '#admin-sales-teams' },
+    { label: '영업자', href: '#admin-sales-people' },
+    { label: '회원배정', href: '#admin-sales-assignments' },
+    { label: '매출현황', href: '#admin-sales-revenue' },
+  ]);
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-sales-teams'), 'sales');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-sales-people'), 'sales');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-sales-assignments'), 'sales');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-sales-revenue'), 'sales');
 });
 
 test('admin sales management summary lists salesperson revenue rows and totals', () => {
@@ -379,6 +389,17 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(panelSource, /매출일/);
   assert.match(panelSource, /적립포인트/);
   assert.match(panelSource, /downloadSalesExcel/);
+  assert.match(panelSource, /SALES_SUBMENU/);
+  assert.match(panelSource, /admin-sales-teams/);
+  assert.match(panelSource, /admin-sales-people/);
+  assert.match(panelSource, /admin-sales-assignments/);
+  assert.match(panelSource, /admin-sales-revenue/);
+  assert.match(panelSource, /getSalesPageFromHash/);
+  assert.match(panelSource, /hashchange/);
+  assert.match(panelSource, /activePage === 'teams'/);
+  assert.match(panelSource, /activePage === 'people'/);
+  assert.match(panelSource, /activePage === 'assignments'/);
+  assert.match(panelSource, /activePage === 'revenue'/);
   assert.match(panelSource, /customerQuery/);
   assert.match(panelSource, /selectedCustomerId/);
   assert.match(panelSource, /assignCustomerSalesperson/);
@@ -392,6 +413,7 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(cssSource, /\.sales-customer-list/);
   assert.match(cssSource, /\.sales-team-grid/);
   assert.match(cssSource, /\.sales-team-table/);
+  assert.match(cssSource, /\.sales-submenu-tabs/);
 });
 
 test('admin sales panel keeps management sections visible before summary data loads', () => {

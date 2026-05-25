@@ -76,6 +76,12 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
     label: '영업관리',
     description: '영업자별 매출, 적립포인트, 개별 정산율을 관리합니다.',
     href: '#admin-sales',
+    children: [
+      { label: '영업팀', href: '#admin-sales-teams' },
+      { label: '영업자', href: '#admin-sales-people' },
+      { label: '회원배정', href: '#admin-sales-assignments' },
+      { label: '매출현황', href: '#admin-sales-revenue' },
+    ],
   },
   statistics: {
     key: 'statistics',
@@ -159,7 +165,7 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
     return 'statistics';
   }
 
-  if (targetId === 'admin-sales') {
+  if (targetId === 'admin-sales' || targetId.startsWith('admin-sales-')) {
     return 'sales';
   }
 

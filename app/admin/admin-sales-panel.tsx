@@ -86,6 +86,8 @@ type SalesResponse = {
   summary?: SalesSummary;
 };
 
+type SalesPageKey = 'teams' | 'people' | 'assignments' | 'revenue';
+
 const EMPTY_SALES_SUMMARY: SalesSummary = {
   defaultPercent: 30,
   defaultTeamPercent: 30,
@@ -115,8 +117,21 @@ const EMPTY_SALES_SUMMARY: SalesSummary = {
   },
 };
 
+const SALES_SUBMENU: Array<{
+  key: SalesPageKey;
+  label: string;
+  description: string;
+  anchorId: string;
+}> = [
+  { key: 'teams', label: '영업팀', description: '영업팀 등록, 팀별 영업자 배치, 팀 정산율 관리', anchorId: 'admin-sales-teams' },
+  { key: 'people', label: '영업자', description: '영업자별 매출 집계와 개별 정산율 관리', anchorId: 'admin-sales-people' },
+  { key: 'assignments', label: '회원배정', description: '회원별 담당 영업자 검색과 변경', anchorId: 'admin-sales-assignments' },
+  { key: 'revenue', label: '매출현황', description: '기간별 매출 리스트, 포인트 집계, 엑셀 출력', anchorId: 'admin-sales-revenue' },
+];
+
 export function AdminSalesPanel() {
   const [summary, setSummary] = useState<SalesSummary | null>(null);
+  const [activePage, setActivePage] = useState<SalesPageKey>('teams');
   const [query, setQuery] = useState('');
   const [customerQuery, setCustomerQuery] = useState('');
   const [from, setFrom] = useState('');
@@ -132,6 +147,16 @@ export function AdminSalesPanel() {
 
   useEffect(() => {
     void refresh();
+  }, []);
+
+  useEffect(() => {
+    function syncPageFromHash() {
+      setActivePage(getSalesPageFromHash(window.location.hash));
+    }
+
+    syncPageFromHash();
+    window.addEventListener('hashchange', syncPageFromHash);
+    return () => window.removeEventListener('hashchange', syncPageFromHash);
   }, []);
 
   async function refresh(
@@ -352,19 +377,33 @@ export function AdminSalesPanel() {
   }
 
   const visibleSummary = summary ?? EMPTY_SALES_SUMMARY;
+  const activePageMeta = SALES_SUBMENU.find((item) => item.key === activePage) ?? SALES_SUBMENU[0];
 
   return (
     <section className="card wide" id="admin-sales">
+      <div className="statistics-subpage-anchor" id={activePageMeta.anchorId} />
       <div className="toolbar">
         <div>
-          <h2>영업관리</h2>
-          <p className="compact-copy">영업팀, 영업자 배치, 팀별 매출과 정산율을 한 곳에서 관리합니다.</p>
+          <h2>{activePageMeta.label}</h2>
+          <p className="compact-copy">{activePageMeta.description}을 관리합니다.</p>
         </div>
         <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>
           새로고침
         </button>
       </div>
       <p className="notice">{message}</p>
+      <nav className="admin-web-info-tabs sales-submenu-tabs" aria-label="영업관리 세부 메뉴">
+        {SALES_SUBMENU.map((item) => (
+          <a
+            aria-current={activePage === item.key ? 'page' : undefined}
+            className={activePage === item.key ? 'active' : ''}
+            href={`#${item.anchorId}`}
+            key={item.key}
+          >
+            {item.label}
+          </a>
+        ))}
+      </nav>
       <div className="sales-filter-grid" aria-label="영업관리 필터">
         <label>
           <span>영업자 검색</span>
@@ -387,6 +426,8 @@ export function AdminSalesPanel() {
         </button>
       </div>
       <div className="sales-management-body">
+        {activePage === 'teams' && (
+        <>
           <div className="sales-summary-grid">
             <div className="mini-card">
               <span>기본 팀 정산율</span>
@@ -490,7 +531,11 @@ export function AdminSalesPanel() {
               </tbody>
             </table>
           </div>
+        </>
+        )}
 
+        {activePage === 'people' && (
+        <>
           <div className="sales-summary-grid">
             <div className="mini-card">
               <span>개별 기본 정산율</span>
@@ -526,6 +571,26 @@ export function AdminSalesPanel() {
               <p className="notice compact">검색 조건에 맞는 영업자가 없습니다. 회원관리에서 회원 역할을 영업으로 변경하세요.</p>
             )}
           </div>
+          <div className="sales-commission-row">
+            <label>
+              <span>개별 정산율</span>
+              <input
+                max="100"
+                min="0"
+                onChange={(event) => setCommissionPercent(event.target.value)}
+                step="0.1"
+                type="number"
+                value={commissionPercent}
+              />
+            </label>
+            <button className="button" type="button" onClick={() => void saveCommissionPercent()} disabled={isBusy || !visibleSummary.selectedSalesperson}>
+              정산율 저장
+            </button>
+          </div>
+        </>
+        )}
+
+        {activePage === 'assignments' && (
           <div className="sales-assignment-panel">
             <div className="toolbar compact">
               <div>
@@ -568,21 +633,28 @@ export function AdminSalesPanel() {
               )}
             </div>
           </div>
+        )}
+
+        {activePage === 'revenue' && (
+        <>
+          <div className="sales-summary-grid">
+            <div className="mini-card">
+              <span>선택 영업자</span>
+              <strong>{visibleSummary.selectedSalesperson?.email ?? '영업자 없음'}</strong>
+              <p>{visibleSummary.selectedSalesperson ? `${visibleSummary.selectedSalesperson.name} / ${visibleSummary.selectedSalesperson.commissionPercent}%` : '영업자를 선택하면 매출 리스트가 좁혀집니다.'}</p>
+            </div>
+            <div className="mini-card">
+              <span>매출 집계</span>
+              <strong>{formatUsd(visibleSummary.totals.salesUsd)}</strong>
+              <p>매출 {visibleSummary.totals.salesCount}건 / 포인트 {formatPoint(visibleSummary.totals.points)}</p>
+            </div>
+            <div className="mini-card">
+              <span>조회 기간</span>
+              <strong>{from || to ? `${from || '시작'} ~ ${to || '종료'}` : '전체 기간'}</strong>
+              <p>상단 기간 범위와 영업자 검색 조건을 적용합니다.</p>
+            </div>
+          </div>
           <div className="sales-commission-row">
-            <label>
-              <span>개별 정산율</span>
-              <input
-                max="100"
-                min="0"
-                onChange={(event) => setCommissionPercent(event.target.value)}
-                step="0.1"
-                type="number"
-                value={commissionPercent}
-              />
-            </label>
-            <button className="button" type="button" onClick={() => void saveCommissionPercent()} disabled={isBusy || !visibleSummary.selectedSalesperson}>
-              정산율 저장
-            </button>
             <button className="button secondary" type="button" onClick={downloadSalesExcel} disabled={visibleSummary.rows.length === 0}>
               엑셀출력
             </button>
@@ -624,6 +696,8 @@ export function AdminSalesPanel() {
               </tr>
             </tfoot>
           </table>
+        </>
+        )}
       </div>
     </section>
   );
@@ -635,4 +709,9 @@ function formatUsd(value: number): string {
 
 function formatPoint(value: number): string {
   return value.toLocaleString('ko-KR');
+}
+
+function getSalesPageFromHash(hash: string): SalesPageKey {
+  const targetId = hash.startsWith('#') ? hash.slice(1) : hash;
+  return SALES_SUBMENU.find((item) => item.anchorId === targetId)?.key ?? 'teams';
 }
