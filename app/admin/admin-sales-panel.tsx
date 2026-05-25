@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 
 type SalespersonItem = {
   id: string;
@@ -143,6 +143,7 @@ export function AdminSalesPanel() {
   const [teamCommissionPercent, setTeamCommissionPercent] = useState('30');
   const [teamName, setTeamName] = useState('');
   const [isSalespersonSearchOpen, setIsSalespersonSearchOpen] = useState(false);
+  const [highlightedSalespersonIndex, setHighlightedSalespersonIndex] = useState(0);
   const [message, setMessage] = useState('영업관리 데이터를 불러오는 중입니다.');
   const [isBusy, setIsBusy] = useState(false);
 
@@ -350,7 +351,45 @@ export function AdminSalesPanel() {
   function selectSalespersonFromSearch(salesperson: SalespersonItem) {
     setQuery(`${salesperson.name} ${salesperson.email}`);
     setIsSalespersonSearchOpen(false);
+    setHighlightedSalespersonIndex(0);
     selectSalesperson(salesperson.id);
+  }
+
+  function handleSalespersonSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Escape') {
+      setIsSalespersonSearchOpen(false);
+      return;
+    }
+
+    if (salespersonSearchResults.length === 0) {
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setIsSalespersonSearchOpen(true);
+      setHighlightedSalespersonIndex((currentIndex) => (currentIndex + 1) % salespersonSearchResults.length);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setIsSalespersonSearchOpen(true);
+      setHighlightedSalespersonIndex((currentIndex) => (
+        currentIndex - 1 + salespersonSearchResults.length
+      ) % salespersonSearchResults.length);
+      return;
+    }
+
+    if (event.key === 'Enter' && isSalespersonSearchOpen) {
+      event.preventDefault();
+      const nextSalesperson = salespersonSearchResults[
+        Math.min(highlightedSalespersonIndex, salespersonSearchResults.length - 1)
+      ];
+      if (nextSalesperson) {
+        selectSalespersonFromSearch(nextSalesperson);
+      }
+    }
   }
 
   function selectTeam(teamId: string) {
@@ -386,6 +425,10 @@ export function AdminSalesPanel() {
   const visibleSummary = summary ?? EMPTY_SALES_SUMMARY;
   const activePageMeta = SALES_SUBMENU.find((item) => item.key === activePage) ?? SALES_SUBMENU[0];
   const salespersonSearchResults = getSalespersonSearchResults(visibleSummary.salespeople, query);
+  const clampedSalespersonIndex = Math.min(
+    highlightedSalespersonIndex,
+    Math.max(0, salespersonSearchResults.length - 1),
+  );
 
   return (
     <section className="card wide" id="admin-sales">
@@ -419,23 +462,36 @@ export function AdminSalesPanel() {
             aria-autocomplete="list"
             aria-expanded={isSalespersonSearchOpen && salespersonSearchResults.length > 0}
             aria-controls="salesperson-search-results"
+            aria-activedescendant={isSalespersonSearchOpen && salespersonSearchResults.length > 0
+              ? `salesperson-search-option-${clampedSalespersonIndex}`
+              : undefined}
             onBlur={() => window.setTimeout(() => setIsSalespersonSearchOpen(false), 120)}
             onChange={(event) => {
               setQuery(event.target.value);
               setIsSalespersonSearchOpen(true);
+              setHighlightedSalespersonIndex(0);
             }}
-            onFocus={() => setIsSalespersonSearchOpen(true)}
+            onFocus={() => {
+              setIsSalespersonSearchOpen(true);
+              setHighlightedSalespersonIndex(0);
+            }}
+            onKeyDown={handleSalespersonSearchKeyDown}
             placeholder="이메일 또는 이름"
             value={query}
           />
           {isSalespersonSearchOpen && salespersonSearchResults.length > 0 && (
             <div className="salesperson-search-results" id="salesperson-search-results" role="listbox">
-              {salespersonSearchResults.map((salesperson) => (
+              {salespersonSearchResults.map((salesperson, index) => (
                 <button
                   aria-selected={selectedSalespersonId === salesperson.id}
-                  className={selectedSalespersonId === salesperson.id ? 'active' : ''}
+                  className={[
+                    selectedSalespersonId === salesperson.id ? 'active' : '',
+                    index === clampedSalespersonIndex ? 'highlighted' : '',
+                  ].filter(Boolean).join(' ')}
+                  id={`salesperson-search-option-${index}`}
                   key={salesperson.id}
                   onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => setHighlightedSalespersonIndex(index)}
                   onClick={() => selectSalespersonFromSearch(salesperson)}
                   role="option"
                   type="button"

@@ -1480,6 +1480,7 @@ a {
 }
 
 .salesperson-search-results button:hover,
+.salesperson-search-results button.highlighted,
 .salesperson-search-results button.active,
 .salesperson-search-results button[aria-selected="true"] {
   background: rgba(12, 102, 90, 0.08);

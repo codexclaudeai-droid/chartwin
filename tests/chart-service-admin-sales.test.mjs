@@ -409,7 +409,14 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(panelSource, /salespersonSearchResults/);
   assert.match(panelSource, /salesperson-search-results/);
   assert.match(panelSource, /selectSalespersonFromSearch/);
+  assert.match(panelSource, /highlightedSalespersonIndex/);
+  assert.match(panelSource, /handleSalespersonSearchKeyDown/);
+  assert.match(panelSource, /ArrowDown/);
+  assert.match(panelSource, /ArrowUp/);
+  assert.match(panelSource, /Escape/);
+  assert.match(panelSource, /event\.key === 'Enter'/);
   assert.match(panelSource, /aria-autocomplete="list"/);
+  assert.match(panelSource, /aria-activedescendant/);
   assert.match(panelSource, /role="listbox"/);
   assert.match(panelSource, /role="option"/);
   assert.match(panelSource, /customerQuery/);
@@ -428,6 +435,7 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(cssSource, /\.sales-submenu-tabs/);
   assert.match(cssSource, /\.salesperson-search-field/);
   assert.match(cssSource, /\.salesperson-search-results/);
+  assert.match(cssSource, /\.salesperson-search-results button\.highlighted/);
 });
 
 test('admin sales panel keeps management sections visible before summary data loads', () => {
