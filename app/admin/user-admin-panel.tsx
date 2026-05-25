@@ -194,6 +194,14 @@ type UserDirectoryRefreshOptions = UserDirectoryFilterOverride & {
   nextMessage?: string;
 };
 
+type UserDirectorySummary = {
+  totalCount: number;
+  activeCount: number;
+  suspendedCount: number;
+  salespersonCount: number;
+  adminCount: number;
+};
+
 export function UserAdminPanel() {
   const [users, setUsers] = useState<AdminUserDirectoryItem[]>([]);
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
@@ -453,6 +461,7 @@ export function UserAdminPanel() {
       nextAccountStatus: canSuspendAccount ? 'active' : 'suspended',
     })
     : null;
+  const userDirectorySummary = getUserDirectorySummary(users);
   return (
     <>
     <section className="card wide" id="admin-users">
@@ -504,6 +513,23 @@ export function UserAdminPanel() {
         label={dashboardFilterNotice}
         onClear={clearDashboardFilterNotice}
       />
+      <div className="admin-user-summary-strip" aria-label="현재 표시 회원 요약">
+        <span className="admin-user-summary-pill">
+          전체 <strong>{userDirectorySummary.totalCount.toLocaleString('ko-KR')}</strong>
+        </span>
+        <span className="admin-user-summary-pill">
+          정상 <strong>{userDirectorySummary.activeCount.toLocaleString('ko-KR')}</strong>
+        </span>
+        <span className="admin-user-summary-pill warning">
+          정지 <strong>{userDirectorySummary.suspendedCount.toLocaleString('ko-KR')}</strong>
+        </span>
+        <span className="admin-user-summary-pill">
+          영업자 <strong>{userDirectorySummary.salespersonCount.toLocaleString('ko-KR')}</strong>
+        </span>
+        <span className="admin-user-summary-pill">
+          관리자 <strong>{userDirectorySummary.adminCount.toLocaleString('ko-KR')}</strong>
+        </span>
+      </div>
       {dashboardFilterNotice === formatUserRoleLabel('salesperson') && (
         <div className="notice compact admin-user-preset-guide" role="status">
           <strong>영업자 역할 변경이 필요하신가요?</strong>
@@ -833,4 +859,21 @@ function getUserDirectoryPresetMessage(input: { role: string; accountStatus: str
   }
 
   return undefined;
+}
+
+function getUserDirectorySummary(items: AdminUserDirectoryItem[]): UserDirectorySummary {
+  return items.reduce<UserDirectorySummary>((summary, item) => {
+    summary.totalCount += 1;
+    if (item.user.accountStatus === 'active') summary.activeCount += 1;
+    if (item.user.accountStatus === 'suspended') summary.suspendedCount += 1;
+    if (item.user.role === 'salesperson') summary.salespersonCount += 1;
+    if (item.user.role === 'admin' || item.user.role === 'super_admin') summary.adminCount += 1;
+    return summary;
+  }, {
+    totalCount: 0,
+    activeCount: 0,
+    suspendedCount: 0,
+    salespersonCount: 0,
+    adminCount: 0,
+  });
 }

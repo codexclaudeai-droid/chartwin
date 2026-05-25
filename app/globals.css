@@ -2036,6 +2036,37 @@ a {
   color: inherit;
 }
 
+.admin-user-summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.admin-user-summary-pill {
+  align-items: center;
+  background: rgba(12, 102, 90, 0.08);
+  border: 1px solid rgba(12, 102, 90, 0.18);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 11px;
+}
+
+.admin-user-summary-pill strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.admin-user-summary-pill.warning {
+  background: rgba(180, 83, 9, 0.08);
+  border-color: rgba(180, 83, 9, 0.2);
+}
+
 .admin-filter-row input,
 .admin-filter-row select {
   background: #fff;

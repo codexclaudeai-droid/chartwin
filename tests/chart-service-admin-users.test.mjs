@@ -178,11 +178,18 @@ test('admin user panel exposes every supported role in the directory filter', ()
 
 test('admin user panel exposes account status filter controls', () => {
   const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(source, /accountStatus/);
   assert.match(source, /aria-label="계정 상태"/);
   assert.match(source, /<option value="active">/);
   assert.match(source, /<option value="suspended">/);
+  assert.match(source, /getUserDirectorySummary/);
+  assert.match(source, /userDirectorySummary/);
+  assert.match(source, /admin-user-summary-strip/);
+  assert.match(source, /admin-user-summary-pill/);
+  assert.match(cssSource, /\.admin-user-summary-strip/);
+  assert.match(cssSource, /\.admin-user-summary-pill/);
 });
 
 test('admin user panel labels the latest support thread status in user detail', () => {
