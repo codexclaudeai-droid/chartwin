@@ -547,6 +547,105 @@ a {
   color: #fffdf7;
 }
 
+.pricing-checkout-card {
+  max-width: 980px;
+}
+
+.checkout-stepper {
+  counter-reset: checkout-step;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+}
+
+.checkout-step {
+  background: rgba(109, 105, 94, 0.08);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: grid;
+  gap: 5px;
+  min-height: 112px;
+  padding: 12px;
+}
+
+.checkout-step > span {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 850;
+  height: 26px;
+  justify-content: center;
+  width: 26px;
+}
+
+.checkout-step strong {
+  font-size: 14px;
+}
+
+.checkout-step small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.checkout-step.current {
+  background: color-mix(in srgb, var(--accent) 12%, #fff 88%);
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--line) 64%);
+  box-shadow: 0 16px 34px rgba(12, 102, 90, 0.12);
+}
+
+.checkout-step.current > span,
+.checkout-step.done > span {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.checkout-step.done {
+  background: rgba(12, 102, 90, 0.08);
+  border-color: rgba(12, 102, 90, 0.24);
+}
+
+.checkout-step-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.checkout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.checkout-confirm-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.checkout-complete-panel {
+  background: color-mix(in srgb, var(--accent) 9%, #fff 91%);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line) 72%);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.checkout-complete-panel h2 {
+  margin: 0;
+}
+
+.checkout-complete-panel p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
 .krw-payment-amount {
   color: var(--accent);
   font-size: 18px;
@@ -1830,6 +1929,8 @@ a {
   .admin-dashboard-shell,
   .admin-filter-row,
   .summary-grid,
+  .checkout-stepper,
+  .checkout-confirm-grid,
   .admin-history-grid,
   .dashboard-queue-grid,
   .payment-flow-steps,

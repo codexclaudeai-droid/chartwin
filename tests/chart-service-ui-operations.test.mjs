@@ -329,6 +329,25 @@ test('pricing payment request lets members choose a subscription plan from cards
   assert.match(cssSource, /\.plan-card\.selected/);
 });
 
+test('pricing payment request advances through step-based checkout states', () => {
+  const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /type CheckoutStep = 'plan' \| 'payment' \| 'confirm' \| 'submitted'/);
+  assert.match(panelSource, /checkoutStep/);
+  assert.match(panelSource, /setCheckoutStep\('payment'\)/);
+  assert.match(panelSource, /setCheckoutStep\('confirm'\)/);
+  assert.match(panelSource, /setCheckoutStep\('submitted'\)/);
+  assert.match(panelSource, /플랜 선택/);
+  assert.match(panelSource, /결제방식 및 결제금액 확인/);
+  assert.match(panelSource, /구독확정/);
+  assert.match(panelSource, /입금확인 요청 완료/);
+  assert.match(panelSource, /checkout-stepper/);
+  assert.match(cssSource, /\.checkout-stepper/);
+  assert.match(cssSource, /\.checkout-step-panel/);
+  assert.match(cssSource, /\.checkout-confirm-grid/);
+});
+
 test('admin payment settings panel and route are wired into operations UI', () => {
   const pageSource = fs.readFileSync(new URL('../app/admin/page.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-payment-settings-panel.tsx', import.meta.url), 'utf8');
