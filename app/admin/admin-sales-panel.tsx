@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { dispatchAdminQueuePresetEvent } from './admin-queue-preset-events';
 
 type SalespersonItem = {
@@ -147,6 +147,7 @@ export function AdminSalesPanel() {
   const [highlightedSalespersonIndex, setHighlightedSalespersonIndex] = useState(0);
   const [message, setMessage] = useState('영업관리 데이터를 불러오는 중입니다.');
   const [isBusy, setIsBusy] = useState(false);
+  const customerSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const initialSalespersonId = getSalespersonIdFromSearch(window.location.search);
@@ -178,6 +179,19 @@ export function AdminSalesPanel() {
       window.removeEventListener('popstate', syncPageFromHash);
     };
   }, []);
+
+  useEffect(() => {
+    const handoffSalespersonId = getSalespersonIdFromSearch(window.location.search);
+    if (activePage !== 'assignments' || !handoffSalespersonId || selectedSalespersonId !== handoffSalespersonId) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      customerSearchInputRef.current?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [activePage, selectedSalespersonId]);
 
   async function refresh(
     nextSalespersonId = selectedSalespersonId,
@@ -771,6 +785,7 @@ export function AdminSalesPanel() {
                 <input
                   onChange={(event) => setCustomerQuery(event.target.value)}
                   placeholder="회원 이메일 또는 이름"
+                  ref={customerSearchInputRef}
                   value={customerQuery}
                 />
               </label>
