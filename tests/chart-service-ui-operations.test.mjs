@@ -183,6 +183,8 @@ test('admin payment panel renders status quick filters before the table', () => 
 
   assert.match(source, /PAYMENT_QUEUE_FILTER_PRESETS/);
   assert.match(source, /aria-label="결제 요청 빠른 필터"/);
+  assert.match(source, /getPaymentQueueFilterCount/);
+  assert.match(source, /quick-filter-count/);
   assert.match(source, /filteredPayments\.map/);
 });
 

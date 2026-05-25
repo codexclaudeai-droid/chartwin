@@ -12,6 +12,7 @@ import {
 } from './admin-status-labels';
 import {
   filterPaymentQueueItems,
+  getPaymentQueueFilterCount,
   getPaymentQueueFilterPreset,
   PAYMENT_QUEUE_FILTER_PRESETS,
 } from './payment-queue-filters';
@@ -212,7 +213,8 @@ export function AdminPanel() {
               aria-pressed={isActive}
               onClick={() => applyQuickFilter(preset.key)}
             >
-              {preset.label}
+              <span>{preset.label}</span>
+              <strong className="quick-filter-count">{getPaymentQueueFilterCount(payments, preset.key)}</strong>
             </button>
           );
         })}

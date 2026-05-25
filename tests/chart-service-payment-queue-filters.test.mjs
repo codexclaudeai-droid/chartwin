@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   filterPaymentQueueItems,
+  getPaymentQueueFilterCount,
   getPaymentQueueFilterPreset,
   PAYMENT_QUEUE_FILTER_PRESETS,
 } from '../app/admin/payment-queue-filters.ts';
@@ -33,6 +34,13 @@ test('payment queue filters narrow items by payment status', () => {
   assert.deepEqual(filterPaymentQueueItems(payments, 'pending').map((item) => item.payment.id), ['pay_pending']);
   assert.deepEqual(filterPaymentQueueItems(payments, 'refunded').map((item) => item.payment.id), ['pay_refunded']);
   assert.deepEqual(filterPaymentQueueItems(payments, 'rejected').map((item) => item.payment.id), ['pay_rejected']);
+});
+
+test('payment queue filter counts summarize each preset', () => {
+  assert.equal(getPaymentQueueFilterCount(payments, 'all'), 4);
+  assert.equal(getPaymentQueueFilterCount(payments, 'pending'), 1);
+  assert.equal(getPaymentQueueFilterCount(payments, 'confirmed'), 1);
+  assert.equal(getPaymentQueueFilterCount(payments, 'missing'), 4);
 });
 
 test('unknown payment queue filter falls back to all payments', () => {

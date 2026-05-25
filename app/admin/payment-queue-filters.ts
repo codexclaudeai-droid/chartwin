@@ -28,3 +28,7 @@ export function filterPaymentQueueItems<T extends FilterablePaymentQueueItem>(it
     ? items.filter((item) => item.payment.status === preset.status)
     : items;
 }
+
+export function getPaymentQueueFilterCount<T extends FilterablePaymentQueueItem>(items: T[], key: string): number {
+  return filterPaymentQueueItems(items, key).length;
+}
