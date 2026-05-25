@@ -528,6 +528,14 @@ a {
   transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 
+.plan-card.recommended {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(12, 102, 90, 0.16), transparent 32%),
+    linear-gradient(145deg, rgba(255, 253, 247, 1), rgba(239, 247, 241, 0.9));
+  border-color: rgba(12, 102, 90, 0.5);
+  box-shadow: 0 18px 38px rgba(12, 102, 90, 0.12);
+}
+
 .plan-card:hover,
 .plan-card.selected {
   border-color: var(--accent);
@@ -535,10 +543,26 @@ a {
   transform: translateY(-1px);
 }
 
+.plan-card.recommended.selected {
+  box-shadow: 0 20px 42px rgba(12, 102, 90, 0.22);
+}
+
 .plan-card input {
   opacity: 0;
   pointer-events: none;
   position: absolute;
+}
+
+.plan-card-badge {
+  align-self: start;
+  background: var(--accent);
+  border-radius: 999px;
+  color: #fffdf7;
+  font-size: 11px;
+  font-weight: 900;
+  justify-self: start;
+  letter-spacing: 0.08em;
+  padding: 5px 9px;
 }
 
 .plan-card-kicker,
@@ -557,6 +581,27 @@ a {
   color: var(--accent);
   font-size: 24px;
   font-weight: 850;
+}
+
+.plan-card-select-button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  margin-top: 6px;
+  min-height: 38px;
+  padding: 9px 12px;
+}
+
+.plan-card-select-button:hover,
+.plan-card-select-button.selected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fffdf7;
 }
 
 .payment-method-tabs {

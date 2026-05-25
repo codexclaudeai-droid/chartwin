@@ -69,6 +69,16 @@ export function PricingPanel({
     ? Math.round(selectedPlanAmountUsd * naverExchangeRate)
     : null;
 
+  function selectPlan(planId: string) {
+    setSelectedPlanId(planId);
+  }
+
+  function handlePlanCardKeyDown(event: React.KeyboardEvent<HTMLDivElement>, planId: string) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    selectPlan(planId);
+  }
+
   useEffect(() => {
     let isMounted = true;
 
@@ -163,27 +173,49 @@ export function PricingPanel({
           <div className="checkout-step-panel">
             <span className="form-section-label">플랜 선택</span>
             <div className="plan-card-grid" role="radiogroup" aria-label="구독 플랜 선택">
-              {plans.map((plan) => (
-                <label
-                  className={`plan-card${selectedPlanId === plan.id ? ' selected' : ''}`}
-                  key={plan.id}
-                >
-                  <input
-                    type="radio"
-                    name="planId"
-                    value={plan.id}
-                    checked={selectedPlanId === plan.id}
-                    onChange={() => setSelectedPlanId(plan.id)}
-                  />
-                  <span className="plan-card-kicker">{plan.durationDays}일 이용권</span>
-                  <strong>{plan.name}</strong>
-                  <span className="plan-card-price">${discountedAmount(plan)}</span>
-                  <span className="plan-card-meta">
-                    정가 ${plan.basePriceUsd}
-                    {plan.discountPercent > 0 ? ` / ${plan.discountPercent}% 할인` : ' / 기본가'}
-                  </span>
-                </label>
-              ))}
+              {plans.map((plan) => {
+                const isSelected = selectedPlanId === plan.id;
+                const isRecommended = isRecommendedPlan(plan);
+                return (
+                  <div
+                    aria-checked={isSelected}
+                    className={`plan-card${isSelected ? ' selected' : ''}${isRecommended ? ' recommended' : ''}`}
+                    key={plan.id}
+                    onClick={() => selectPlan(plan.id)}
+                    onKeyDown={(event) => handlePlanCardKeyDown(event, plan.id)}
+                    role="radio"
+                    tabIndex={0}
+                  >
+                    <input
+                      aria-hidden="true"
+                      type="radio"
+                      name="planId"
+                      value={plan.id}
+                      checked={selectedPlanId === plan.id}
+                      onChange={() => setSelectedPlanId(plan.id)}
+                      tabIndex={-1}
+                    />
+                    {isRecommended ? <span className="plan-card-badge">추천 플랜</span> : null}
+                    <span className="plan-card-kicker">{plan.durationDays}일 이용권</span>
+                    <strong>{plan.name}</strong>
+                    <span className="plan-card-price">${discountedAmount(plan)}</span>
+                    <span className="plan-card-meta">
+                      정가 ${plan.basePriceUsd}
+                      {plan.discountPercent > 0 ? ` / ${plan.discountPercent}% 할인` : ' / 기본가'}
+                    </span>
+                    <button
+                      className={`plan-card-select-button${isSelected ? ' selected' : ''}`}
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        selectPlan(plan.id);
+                      }}
+                    >
+                      {isSelected ? '선택됨' : '이 플랜 선택'}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
             <div className="checkout-actions">
               <button className="button" type="button" onClick={moveToPaymentStep}>
@@ -382,4 +414,8 @@ function getStepStateClass(step: CheckoutStep, currentStep: CheckoutStep): strin
 
 function discountedAmount(plan: Plan): number {
   return Math.round(plan.basePriceUsd * (1 - plan.discountPercent / 100) * 100) / 100;
+}
+
+function isRecommendedPlan(plan: Plan): boolean {
+  return plan.id === 'plan_half_year';
 }

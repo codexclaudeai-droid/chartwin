@@ -329,6 +329,21 @@ test('pricing payment request lets members choose a subscription plan from cards
   assert.match(cssSource, /\.plan-card\.selected/);
 });
 
+test('pricing plan cards place selection buttons inside each card and highlight the half-year plan', () => {
+  const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /isRecommendedPlan\(plan\)/);
+  assert.match(panelSource, /plan\.id === 'plan_half_year'/);
+  assert.match(panelSource, /plan-card-select-button/);
+  assert.match(panelSource, /추천 플랜/);
+  assert.match(panelSource, /이 플랜 선택/);
+  assert.match(panelSource, /선택됨/);
+  assert.match(cssSource, /\.plan-card\.recommended/);
+  assert.match(cssSource, /\.plan-card-badge/);
+  assert.match(cssSource, /\.plan-card-select-button/);
+});
+
 test('pricing payment request advances through step-based checkout states', () => {
   const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
