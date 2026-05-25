@@ -53,7 +53,10 @@ test('admin user panel shows and clears dashboard account-status filter notices'
 
   assert.match(source, /AdminDashboardFilterNotice/);
   assert.match(source, /dashboardFilterNotice/);
-  assert.match(source, /setDashboardFilterNotice\(formatUserAccountStatusLabel\('suspended'\)\)/);
+  assert.match(source, /const nextFilterLabel = nextRole !== 'all'/);
+  assert.match(source, /formatUserAccountStatusLabel\(nextAccountStatus\)/);
+  assert.match(source, /setDashboardFilterNotice\(nextFilterLabel\)/);
   assert.match(source, /function clearDashboardFilterNotice/);
-  assert.match(source, /refresh\(\{ accountStatus: 'all' \}\)/);
+  assert.match(source, /setRole\('all'\)/);
+  assert.match(source, /refresh\(\{ role: 'all', accountStatus: 'all' \}\)/);
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type KeyboardEvent } from 'react';
+import { dispatchAdminQueuePresetEvent } from './admin-queue-preset-events';
 
 type SalespersonItem = {
   id: string;
@@ -507,7 +508,12 @@ export function AdminSalesPanel() {
                 <div className="salesperson-search-empty" role="status">
                   <strong>검색 결과 없음</strong>
                   <p>일치하는 영업자가 없습니다. 회원관리에서 해당 회원의 역할을 영업자로 변경한 뒤 다시 검색하세요.</p>
-                  <a href="#admin-users">회원관리로 이동</a>
+                  <a
+                    href="#admin-users"
+                    onClick={() => dispatchAdminQueuePresetEvent({ panel: 'users', presetKey: 'salesperson' })}
+                  >
+                    회원관리로 이동
+                  </a>
                 </div>
               )}
             </div>

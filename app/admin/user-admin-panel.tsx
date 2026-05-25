@@ -218,14 +218,17 @@ export function UserAdminPanel() {
     });
     const unsubscribeQueuePreset = subscribeAdminQueuePresetEvent((detail) => {
       if (detail.panel !== 'users') return;
+      const nextRole = detail.presetKey === 'salesperson' ? 'salesperson' : 'all';
       const nextAccountStatus = detail.presetKey === 'suspended' ? 'suspended' : 'all';
+      const nextFilterLabel = nextRole !== 'all'
+        ? formatUserRoleLabel(nextRole)
+        : nextAccountStatus !== 'all'
+          ? formatUserAccountStatusLabel(nextAccountStatus)
+          : null;
+      setRole(nextRole);
       setAccountStatus(nextAccountStatus);
-      if (nextAccountStatus === 'suspended') {
-        setDashboardFilterNotice(formatUserAccountStatusLabel('suspended'));
-      } else {
-        setDashboardFilterNotice(null);
-      }
-      void refresh({ accountStatus: nextAccountStatus });
+      setDashboardFilterNotice(nextFilterLabel);
+      void refresh({ role: nextRole, accountStatus: nextAccountStatus });
     });
     const unsubscribeAuth = subscribeAuthSessionChangedEvent(() => {
       void refresh();
@@ -383,8 +386,9 @@ export function UserAdminPanel() {
 
   function clearDashboardFilterNotice() {
     setDashboardFilterNotice(null);
+    setRole('all');
     setAccountStatus('all');
-    void refresh({ accountStatus: 'all' });
+    void refresh({ role: 'all', accountStatus: 'all' });
   }
 
   const assignableRoles = getAssignableUserRoles(currentAdmin?.role);

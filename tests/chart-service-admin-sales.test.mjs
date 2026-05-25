@@ -418,6 +418,8 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(panelSource, /검색 결과 없음/);
   assert.match(panelSource, /회원관리로 이동/);
   assert.match(panelSource, /href="#admin-users"/);
+  assert.match(panelSource, /dispatchAdminQueuePresetEvent/);
+  assert.match(panelSource, /presetKey: 'salesperson'/);
   assert.match(panelSource, /selectSalespersonFromSearch/);
   assert.match(panelSource, /highlightedSalespersonIndex/);
   assert.match(panelSource, /handleSalespersonSearchKeyDown/);

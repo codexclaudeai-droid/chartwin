@@ -231,7 +231,9 @@ test('admin user panel applies dashboard queue preset events', () => {
 
   assert.match(source, /subscribeAdminQueuePresetEvent/);
   assert.match(source, /detail\.panel !== 'users'/);
-  assert.match(source, /refresh\(\{ accountStatus: nextAccountStatus \}\)/);
+  assert.match(source, /detail\.presetKey === 'salesperson'/);
+  assert.match(source, /setRole\(nextRole\)/);
+  assert.match(source, /refresh\(\{ role: nextRole, accountStatus: nextAccountStatus \}\)/);
 });
 
 test('admin user panel confirms role and account status changes before patching', () => {
