@@ -225,6 +225,20 @@ test('admin payment panel confirms irreversible payment operations before postin
   assert.doesNotMatch(source, /shouldRunAdminAction/);
 });
 
+test('admin payment panel exposes quick memo buttons for required admin notes', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /PAYMENT_QUICK_MEMOS/);
+  assert.match(source, /applyQuickMemo/);
+  assert.match(source, /quick-memo-row/);
+  assert.match(source, /입금자명\/금액 일치 확인/);
+  assert.match(source, /TXID 수신주소\/금액 일치 확인/);
+  assert.match(source, /입금 내역 확인 불가/);
+  assert.match(source, /환불 사유 확인 후 처리/);
+  assert.match(cssSource, /\.quick-memo-row/);
+});
+
 test('admin payment panel labels confirmation as deposit confirmation only', () => {
   const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
 

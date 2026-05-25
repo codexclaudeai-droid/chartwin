@@ -53,6 +53,40 @@ type AdminPanelRefreshOptions = {
   nextMessage?: string;
 };
 
+type PaymentQuickMemo = {
+  key: string;
+  label: string;
+  note: string;
+  supports: (item: AdminPaymentQueueItem) => boolean;
+};
+
+const PAYMENT_QUICK_MEMOS: PaymentQuickMemo[] = [
+  {
+    key: 'bank-confirmed',
+    label: '은행 입금 확인',
+    note: '입금자명/금액 일치 확인',
+    supports: (item) => (item.payment.status === 'pending' || item.payment.status === 'requested') && item.payment.method !== 'usdt',
+  },
+  {
+    key: 'txid-confirmed',
+    label: 'TXID 확인',
+    note: 'TXID 수신주소/금액 일치 확인',
+    supports: (item) => (item.payment.status === 'pending' || item.payment.status === 'requested') && item.payment.method === 'usdt',
+  },
+  {
+    key: 'deposit-rejected',
+    label: '입금 반려',
+    note: '입금 내역 확인 불가',
+    supports: (item) => item.payment.status === 'pending' || item.payment.status === 'requested',
+  },
+  {
+    key: 'refund-processed',
+    label: '환불 처리',
+    note: '환불 사유 확인 후 처리',
+    supports: (item) => item.payment.status === 'confirmed',
+  },
+];
+
 export function AdminPanel() {
   const [payments, setPayments] = useState<AdminPaymentQueueItem[]>([]);
   const [activeFilterKey, setActiveFilterKey] = useState('all');
@@ -156,6 +190,13 @@ export function AdminPanel() {
   function clearDashboardFilterNotice() {
     setDashboardFilterNotice(null);
     setActiveFilterKey('all');
+  }
+
+  function applyQuickMemo(paymentId: string, note: string) {
+    setOperationNotes((currentNotes) => ({
+      ...currentNotes,
+      [paymentId]: note,
+    }));
   }
 
   function renderPaymentFlowStatus(item: AdminPaymentQueueItem) {
@@ -297,6 +338,19 @@ export function AdminPanel() {
                   placeholder="처리 메모 입력"
                   value={operationNotes[item.payment.id] || ''}
                 />
+                <div className="quick-memo-row" aria-label={`${item.payment.id} 빠른 메모`}>
+                  <span>빠른 메모</span>
+                  {PAYMENT_QUICK_MEMOS.filter((memo) => memo.supports(item)).map((memo) => (
+                    <button
+                      className="quick-memo-button"
+                      key={memo.key}
+                      onClick={() => applyQuickMemo(item.payment.id, memo.note)}
+                      type="button"
+                    >
+                      {memo.label}
+                    </button>
+                  ))}
+                </div>
                 <div className="actions compact">
                   {(item.payment.status === 'pending' || item.payment.status === 'requested') && (
                     <button className="button" type="button" onClick={() => runOperation(item.payment.id, 'confirm')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
