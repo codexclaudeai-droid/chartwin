@@ -34,10 +34,15 @@ type StatisticsResponse = {
   statistics?: StatisticsSummary;
 };
 
-const METRIC_OPTIONS: Array<{ key: StatisticsMetricKey; label: string; description: string }> = [
-  { key: 'sales', label: '매출통계', description: '입금 확인 완료 기준 매출 흐름' },
-  { key: 'signups', label: '가입자통계', description: '회원 가입일 기준 신규 가입 흐름' },
-  { key: 'visitors', label: '방문자통계', description: '방문 로그 연동 전 추정 방문 흐름' },
+const METRIC_OPTIONS: Array<{
+  key: StatisticsMetricKey;
+  label: string;
+  description: string;
+  anchorId: string;
+}> = [
+  { key: 'sales', label: '매출통계', description: '입금 확인 완료 기준 매출 흐름', anchorId: 'admin-statistics-sales' },
+  { key: 'signups', label: '가입자통계', description: '회원 가입일 기준 신규 가입 흐름', anchorId: 'admin-statistics-signups' },
+  { key: 'visitors', label: '방문자통계', description: '방문 로그 연동 전 추정 방문 흐름', anchorId: 'admin-statistics-visitors' },
 ];
 
 const PERIOD_OPTIONS: Array<{ key: StatisticsPeriodKey; label: string }> = [
@@ -55,6 +60,16 @@ export function AdminStatisticsPanel() {
 
   useEffect(() => {
     void refresh();
+  }, []);
+
+  useEffect(() => {
+    function syncMetricFromHash() {
+      setActiveMetric(getMetricFromHash(window.location.hash));
+    }
+
+    syncMetricFromHash();
+    window.addEventListener('hashchange', syncMetricFromHash);
+    return () => window.removeEventListener('hashchange', syncMetricFromHash);
   }, []);
 
   async function refresh() {
@@ -78,29 +93,29 @@ export function AdminStatisticsPanel() {
 
   return (
     <section className="card wide" id="admin-statistics">
+      <div className="statistics-subpage-anchor" id={activeMetricMeta.anchorId} />
       <div className="toolbar">
         <div>
-          <h2>통계</h2>
-          <p className="compact-copy">매출통계 / 가입자통계 / 방문자통계를 일별, 월별, 년도별로 확인합니다.</p>
+          <h2>{activeMetricMeta.label}</h2>
+          <p className="compact-copy">{activeMetricMeta.description}을 일별, 월별, 년도별로 확인합니다.</p>
         </div>
         <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>
           새로고침
         </button>
       </div>
       <p className="notice">{message}</p>
-      <div className="quick-filter-row" aria-label="통계 종류">
+      <nav className="admin-web-info-tabs statistics-submenu-tabs" aria-label="통계 세부 메뉴">
         {METRIC_OPTIONS.map((option) => (
-          <button
-            aria-pressed={activeMetric === option.key}
-            className={`button secondary${activeMetric === option.key ? ' active' : ''}`}
+          <a
+            aria-current={activeMetric === option.key ? 'page' : undefined}
+            className={activeMetric === option.key ? 'active' : ''}
+            href={`#${option.anchorId}`}
             key={option.key}
-            onClick={() => setActiveMetric(option.key)}
-            type="button"
           >
             {option.label}
-          </button>
+          </a>
         ))}
-      </div>
+      </nav>
       <div className="quick-filter-row" aria-label="통계 기간 단위">
         {PERIOD_OPTIONS.map((option) => (
           <button
@@ -184,6 +199,11 @@ export function AdminStatisticsPanel() {
       )}
     </section>
   );
+}
+
+function getMetricFromHash(hash: string): StatisticsMetricKey {
+  const targetId = hash.startsWith('#') ? hash.slice(1) : hash;
+  return METRIC_OPTIONS.find((option) => option.anchorId === targetId)?.key ?? 'sales';
 }
 
 function getBarHeight(value: number, maxValue: number): number {

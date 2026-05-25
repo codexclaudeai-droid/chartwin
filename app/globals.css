@@ -454,10 +454,20 @@ a {
 }
 
 .admin-web-info-tabs a:hover,
-.admin-web-info-tabs a:focus-visible {
+.admin-web-info-tabs a:focus-visible,
+.admin-web-info-tabs a.active,
+.admin-web-info-tabs a[aria-current="page"] {
   background: var(--ink);
   color: #fffdf7;
   transform: translateY(-1px);
+}
+
+.statistics-submenu-tabs {
+  margin: 12px 0;
+}
+
+.statistics-subpage-anchor {
+  scroll-margin-top: 90px;
 }
 
 .card {

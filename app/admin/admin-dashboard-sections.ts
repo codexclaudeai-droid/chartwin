@@ -83,6 +83,11 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
     label: '통계',
     description: '매출, 가입자, 방문자 흐름을 일별, 월별, 연도별 차트로 확인합니다.',
     href: '#admin-statistics',
+    children: [
+      { label: '매출통계', href: '#admin-statistics-sales' },
+      { label: '가입자통계', href: '#admin-statistics-signups' },
+      { label: '방문자통계', href: '#admin-statistics-visitors' },
+    ],
   },
   audit: {
     key: 'audit',
@@ -150,7 +155,7 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
     return 'webInfo';
   }
 
-  if (targetId === 'admin-statistics') {
+  if (targetId === 'admin-statistics' || targetId.startsWith('admin-statistics-')) {
     return 'statistics';
   }
 

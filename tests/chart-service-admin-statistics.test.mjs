@@ -27,6 +27,14 @@ test('admin dashboard sections include a statistics menu entry', () => {
     'audit',
   ]);
   assert.equal(getAdminDashboardSectionFromLocation('#admin-statistics'), 'statistics');
+  assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.find((section) => section.key === 'statistics')?.children, [
+    { label: '매출통계', href: '#admin-statistics-sales' },
+    { label: '가입자통계', href: '#admin-statistics-signups' },
+    { label: '방문자통계', href: '#admin-statistics-visitors' },
+  ]);
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-statistics-sales'), 'statistics');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-statistics-signups'), 'statistics');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-statistics-visitors'), 'statistics');
 });
 
 test('admin statistics summary groups sales signups and visitors by day month and year', () => {
@@ -77,7 +85,7 @@ test('admin statistics API requires admin session and returns chart datasets', a
   assert.equal(typeof payload.statistics.monthly.visitors.yAxisTicks[0], 'number');
 });
 
-test('admin statistics panel renders tabs period controls mixed chart and y axis labels', () => {
+test('admin statistics panel renders sidebar-linked sub pages period controls mixed chart and y axis labels', () => {
   const pageSource = fs.readFileSync(new URL('../app/admin/page.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-statistics-panel.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
@@ -85,6 +93,11 @@ test('admin statistics panel renders tabs period controls mixed chart and y axis
   assert.match(pageSource, /AdminStatisticsPanel/);
   assert.match(pageSource, /AdminDashboardShellSection sectionKey="statistics"/);
   assert.match(panelSource, /\/api\/admin\/statistics/);
+  assert.match(panelSource, /admin-statistics-sales/);
+  assert.match(panelSource, /admin-statistics-signups/);
+  assert.match(panelSource, /admin-statistics-visitors/);
+  assert.match(panelSource, /getMetricFromHash/);
+  assert.match(panelSource, /hashchange/);
   assert.match(panelSource, /매출통계/);
   assert.match(panelSource, /가입자통계/);
   assert.match(panelSource, /방문자통계/);
@@ -94,6 +107,8 @@ test('admin statistics panel renders tabs period controls mixed chart and y axis
   assert.match(panelSource, /statistics-y-axis/);
   assert.match(panelSource, /statistics-bar/);
   assert.match(panelSource, /statistics-line/);
+  assert.match(panelSource, /activeMetricMeta\.anchorId/);
+  assert.doesNotMatch(panelSource, /aria-label="통계 종류"[\s\S]*button/);
   assert.match(panelSource, /\(index \+ 0\.5\) \/ length/);
   assert.match(panelSource, /r="2"/);
   assert.match(cssSource, /\.statistics-chart/);
