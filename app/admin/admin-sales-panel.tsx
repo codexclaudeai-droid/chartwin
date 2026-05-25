@@ -544,8 +544,8 @@ export function AdminSalesPanel() {
             </div>
             <div className="mini-card">
               <span>선택 영업자</span>
-              <strong>{visibleSummary.selectedSalesperson?.email ?? '영업자 없음'}</strong>
-              <p>{visibleSummary.selectedSalesperson ? `${visibleSummary.selectedSalesperson.name} / ${visibleSummary.selectedSalesperson.commissionPercent}%` : '회원관리에서 역할을 영업으로 지정하세요.'}</p>
+              <strong>{visibleSummary.selectedSalesperson?.name ?? '영업자 없음'}</strong>
+              <p>{visibleSummary.selectedSalesperson ? `${visibleSummary.selectedSalesperson.email} / ${visibleSummary.selectedSalesperson.commissionPercent}%` : '회원관리에서 역할을 영업으로 지정하세요.'}</p>
             </div>
             <div className="mini-card">
               <span>개별 집계</span>
@@ -591,6 +591,24 @@ export function AdminSalesPanel() {
         )}
 
         {activePage === 'assignments' && (
+        <>
+          <div className="sales-summary-grid">
+            <div className="mini-card">
+              <span>검색/선택 영업자</span>
+              <strong>{visibleSummary.selectedSalesperson?.name ?? '영업자 없음'}</strong>
+              <p>{visibleSummary.selectedSalesperson ? `${visibleSummary.selectedSalesperson.email} / ${visibleSummary.selectedSalesperson.commissionPercent}%` : '상단 영업자 검색 후 조회하면 배정할 영업자가 표시됩니다.'}</p>
+            </div>
+            <div className="mini-card">
+              <span>배정 대상 회원</span>
+              <strong>{visibleSummary.customers.find((customer) => customer.id === selectedCustomerId)?.name ?? '회원 없음'}</strong>
+              <p>{visibleSummary.customers.find((customer) => customer.id === selectedCustomerId)?.email ?? '회원 검색 후 선택하세요.'}</p>
+            </div>
+            <div className="mini-card">
+              <span>검색 결과</span>
+              <strong>{visibleSummary.salespeople.length.toLocaleString('ko-KR')}명</strong>
+              <p>이름 또는 이메일로 검색된 영업자 목록 기준입니다.</p>
+            </div>
+          </div>
           <div className="sales-assignment-panel">
             <div className="toolbar compact">
               <div>
@@ -633,6 +651,7 @@ export function AdminSalesPanel() {
               )}
             </div>
           </div>
+        </>
         )}
 
         {activePage === 'revenue' && (
@@ -640,8 +659,8 @@ export function AdminSalesPanel() {
           <div className="sales-summary-grid">
             <div className="mini-card">
               <span>선택 영업자</span>
-              <strong>{visibleSummary.selectedSalesperson?.email ?? '영업자 없음'}</strong>
-              <p>{visibleSummary.selectedSalesperson ? `${visibleSummary.selectedSalesperson.name} / ${visibleSummary.selectedSalesperson.commissionPercent}%` : '영업자를 선택하면 매출 리스트가 좁혀집니다.'}</p>
+              <strong>{visibleSummary.selectedSalesperson?.name ?? '영업자 없음'}</strong>
+              <p>{visibleSummary.selectedSalesperson ? `${visibleSummary.selectedSalesperson.email} / ${visibleSummary.selectedSalesperson.commissionPercent}%` : '영업자를 선택하면 매출 리스트가 좁혀집니다.'}</p>
             </div>
             <div className="mini-card">
               <span>매출 집계</span>

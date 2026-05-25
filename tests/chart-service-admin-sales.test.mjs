@@ -400,6 +400,10 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(panelSource, /activePage === 'people'/);
   assert.match(panelSource, /activePage === 'assignments'/);
   assert.match(panelSource, /activePage === 'revenue'/);
+  assert.match(panelSource, /검색\/선택 영업자/);
+  assert.match(panelSource, /배정 대상 회원/);
+  assert.match(panelSource, /visibleSummary\.selectedSalesperson\?\.name/);
+  assert.match(panelSource, /visibleSummary\.selectedSalesperson\.email/);
   assert.match(panelSource, /customerQuery/);
   assert.match(panelSource, /selectedCustomerId/);
   assert.match(panelSource, /assignCustomerSalesperson/);
