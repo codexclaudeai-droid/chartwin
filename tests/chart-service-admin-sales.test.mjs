@@ -404,6 +404,14 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(panelSource, /배정 대상 회원/);
   assert.match(panelSource, /visibleSummary\.selectedSalesperson\?\.name/);
   assert.match(panelSource, /visibleSummary\.selectedSalesperson\.email/);
+  assert.match(panelSource, /isSalespersonSearchOpen/);
+  assert.match(panelSource, /getSalespersonSearchResults/);
+  assert.match(panelSource, /salespersonSearchResults/);
+  assert.match(panelSource, /salesperson-search-results/);
+  assert.match(panelSource, /selectSalespersonFromSearch/);
+  assert.match(panelSource, /aria-autocomplete="list"/);
+  assert.match(panelSource, /role="listbox"/);
+  assert.match(panelSource, /role="option"/);
   assert.match(panelSource, /customerQuery/);
   assert.match(panelSource, /selectedCustomerId/);
   assert.match(panelSource, /assignCustomerSalesperson/);
@@ -418,6 +426,8 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(cssSource, /\.sales-team-grid/);
   assert.match(cssSource, /\.sales-team-table/);
   assert.match(cssSource, /\.sales-submenu-tabs/);
+  assert.match(cssSource, /\.salesperson-search-field/);
+  assert.match(cssSource, /\.salesperson-search-results/);
 });
 
 test('admin sales panel keeps management sections visible before summary data loads', () => {

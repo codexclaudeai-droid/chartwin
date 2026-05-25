@@ -142,6 +142,7 @@ export function AdminSalesPanel() {
   const [commissionPercent, setCommissionPercent] = useState('30');
   const [teamCommissionPercent, setTeamCommissionPercent] = useState('30');
   const [teamName, setTeamName] = useState('');
+  const [isSalespersonSearchOpen, setIsSalespersonSearchOpen] = useState(false);
   const [message, setMessage] = useState('영업관리 데이터를 불러오는 중입니다.');
   const [isBusy, setIsBusy] = useState(false);
 
@@ -346,6 +347,12 @@ export function AdminSalesPanel() {
     void refresh(salespersonId, selectedTeamId);
   }
 
+  function selectSalespersonFromSearch(salesperson: SalespersonItem) {
+    setQuery(`${salesperson.name} ${salesperson.email}`);
+    setIsSalespersonSearchOpen(false);
+    selectSalesperson(salesperson.id);
+  }
+
   function selectTeam(teamId: string) {
     setSelectedTeamId(teamId);
     void refresh(selectedSalespersonId, teamId);
@@ -378,6 +385,7 @@ export function AdminSalesPanel() {
 
   const visibleSummary = summary ?? EMPTY_SALES_SUMMARY;
   const activePageMeta = SALES_SUBMENU.find((item) => item.key === activePage) ?? SALES_SUBMENU[0];
+  const salespersonSearchResults = getSalespersonSearchResults(visibleSummary.salespeople, query);
 
   return (
     <section className="card wide" id="admin-sales">
@@ -405,13 +413,40 @@ export function AdminSalesPanel() {
         ))}
       </nav>
       <div className="sales-filter-grid" aria-label="영업관리 필터">
-        <label>
+        <label className="salesperson-search-field">
           <span>영업자 검색</span>
           <input
-            onChange={(event) => setQuery(event.target.value)}
+            aria-autocomplete="list"
+            aria-expanded={isSalespersonSearchOpen && salespersonSearchResults.length > 0}
+            aria-controls="salesperson-search-results"
+            onBlur={() => window.setTimeout(() => setIsSalespersonSearchOpen(false), 120)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setIsSalespersonSearchOpen(true);
+            }}
+            onFocus={() => setIsSalespersonSearchOpen(true)}
             placeholder="이메일 또는 이름"
             value={query}
           />
+          {isSalespersonSearchOpen && salespersonSearchResults.length > 0 && (
+            <div className="salesperson-search-results" id="salesperson-search-results" role="listbox">
+              {salespersonSearchResults.map((salesperson) => (
+                <button
+                  aria-selected={selectedSalespersonId === salesperson.id}
+                  className={selectedSalespersonId === salesperson.id ? 'active' : ''}
+                  key={salesperson.id}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => selectSalespersonFromSearch(salesperson)}
+                  role="option"
+                  type="button"
+                >
+                  <strong>{salesperson.name}</strong>
+                  <span>{salesperson.email}</span>
+                  <small>{salesperson.commissionPercent}% / {formatUsd(salesperson.salesUsd)} / {formatPoint(salesperson.points)}</small>
+                </button>
+              ))}
+            </div>
+          )}
         </label>
         <label>
           <span>기간 범위 시작</span>
@@ -733,4 +768,19 @@ function formatPoint(value: number): string {
 function getSalesPageFromHash(hash: string): SalesPageKey {
   const targetId = hash.startsWith('#') ? hash.slice(1) : hash;
   return SALES_SUBMENU.find((item) => item.anchorId === targetId)?.key ?? 'teams';
+}
+
+function getSalespersonSearchResults(
+  salespeople: SalespersonItem[],
+  query: string,
+): SalespersonItem[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return salespeople.slice(0, 6);
+
+  return salespeople
+    .filter((salesperson) => (
+      salesperson.name.toLowerCase().includes(normalizedQuery)
+      || salesperson.email.toLowerCase().includes(normalizedQuery)
+    ))
+    .slice(0, 8);
 }
