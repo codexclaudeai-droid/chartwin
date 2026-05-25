@@ -17,10 +17,15 @@ const AdminDashboardShellContext = createContext<AdminDashboardSectionKey>('over
 
 export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode }>) {
   const [activeSection, setActiveSection] = useState<AdminDashboardSectionKey>('overview');
+  const [activeTargetId, setActiveTargetId] = useState('admin-overview');
 
   useEffect(() => {
     function syncActiveSection() {
+      const targetId = decodeHashId(window.location.hash.startsWith('#')
+        ? window.location.hash.slice(1)
+        : window.location.hash);
       setActiveSection(getAdminDashboardSectionFromLocation(window.location.hash, window.location.search));
+      setActiveTargetId(targetId || getDefaultTargetIdForSearch(window.location.search));
     }
 
     syncActiveSection();
@@ -52,6 +57,7 @@ export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode
           <nav className="admin-dashboard-menu" aria-label="관리자 카테고리">
             {ADMIN_DASHBOARD_SECTIONS.map((section) => {
               const isActive = section.key === activeSection;
+              const activeChildHref = getActiveChildHref(section, activeTargetId);
               return (
                 <div className="admin-dashboard-menu-group" key={section.key}>
                   <a
@@ -64,9 +70,19 @@ export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode
                   </a>
                   {section.children?.length && (
                   <div className="admin-dashboard-submenu">
-                    {section.children.map((child) => (
-                      <a href={child.href} key={child.href}>{child.label}</a>
-                    ))}
+                    {section.children.map((child) => {
+                      const isChildActive = child.href === activeChildHref;
+                      return (
+                        <a
+                          aria-current={isChildActive ? 'page' : undefined}
+                          className={isChildActive ? 'active' : ''}
+                          href={child.href}
+                          key={child.href}
+                        >
+                          {child.label}
+                        </a>
+                      );
+                    })}
                   </div>
                   )}
                 </div>
@@ -110,4 +126,24 @@ function decodeHashId(targetId: string): string {
   } catch {
     return targetId;
   }
+}
+
+function getDefaultTargetIdForSearch(search: string): string {
+  const searchParams = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  return searchParams.has('supportThread') ? 'admin-support' : 'admin-overview';
+}
+
+function getActiveChildHref(
+  section: (typeof ADMIN_DASHBOARD_SECTIONS)[number],
+  activeTargetId: string,
+): string | null {
+  if (!section.children?.length) return null;
+
+  const exactChild = section.children.find((child) => child.href === `#${activeTargetId}`);
+  if (exactChild) return exactChild.href;
+
+  if (activeTargetId === 'admin-web-info') return '#admin-web-info-terms';
+  if (activeTargetId === 'admin-statistics') return '#admin-statistics-sales';
+
+  return null;
 }

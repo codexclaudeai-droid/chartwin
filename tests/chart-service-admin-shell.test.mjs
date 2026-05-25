@@ -67,6 +67,12 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.doesNotMatch(shellSource, /activeSectionMeta/);
   assert.doesNotMatch(cssSource, /admin-dashboard-workspace-header/);
   assert.match(shellSource, /data-active-admin-section=\{activeSection\}/);
+  assert.match(shellSource, /activeTargetId/);
+  assert.match(shellSource, /getActiveChildHref/);
+  assert.match(shellSource, /aria-current=\{isChildActive \? 'page' : undefined\}/);
+  assert.match(shellSource, /className=\{isChildActive \? 'active' : ''\}/);
+  assert.match(shellSource, /activeTargetId === 'admin-web-info'[\s\S]*'#admin-web-info-terms'/);
+  assert.match(shellSource, /activeTargetId === 'admin-statistics'[\s\S]*'#admin-statistics-sales'/);
   assert.match(shellSource, /scrollIntoView\(\{ block: 'start'/);
   assert.match(cssSource, /\.admin-dashboard-shell/);
   assert.match(cssSource, /\.admin-dashboard-sidebar/);
@@ -84,5 +90,8 @@ test('admin sidebar submenus roll out on hover and keyboard focus', () => {
   assert.match(cssSource, /transition: max-height/);
   assert.match(cssSource, /\.admin-dashboard-menu-group:hover \.admin-dashboard-submenu/);
   assert.match(cssSource, /\.admin-dashboard-menu-group:focus-within \.admin-dashboard-submenu/);
+  assert.match(cssSource, /\.admin-dashboard-menu-group:has\(\.admin-dashboard-menu-item\.active\) \.admin-dashboard-submenu/);
   assert.match(cssSource, /pointer-events: auto/);
+  assert.match(cssSource, /\.admin-dashboard-submenu a\.active/);
+  assert.match(cssSource, /\.admin-dashboard-submenu a\[aria-current="page"\]/);
 });
