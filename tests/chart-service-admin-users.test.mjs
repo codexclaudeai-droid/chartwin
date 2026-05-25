@@ -150,18 +150,17 @@ test('admin user panel renders member contact referral and signup metadata in th
   assert.match(source, /detail\.user\.phoneNumber/);
 });
 
-test('admin user panel exposes referral member list and super admin reward percent controls', () => {
+test('admin user panel exposes referral member list without point setting controls', () => {
   const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
 
-  assert.match(source, /referralRewardPercent/);
-  assert.match(source, /\/api\/admin\/referral-settings/);
-  assert.match(source, /currentAdmin\?\.role === 'super_admin'/);
+  assert.doesNotMatch(source, /referralRewardPercent/);
+  assert.doesNotMatch(source, /\/api\/admin\/referral-settings/);
   assert.match(source, /detail\.referrals\.referredUsers/);
   assert.match(source, /pendingPoints/);
   assert.match(source, /confirmedPoints/);
   assert.match(source, /totalPoints/);
   assert.match(source, /추천회원 목록/);
-  assert.match(source, /추천포인트 적립률/);
+  assert.doesNotMatch(source, /추천포인트 적립률/);
 });
 
 test('admin user panel exposes every supported role in the directory filter', () => {

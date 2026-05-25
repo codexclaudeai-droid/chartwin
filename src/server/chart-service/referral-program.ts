@@ -17,8 +17,18 @@ import type {
 import { toPublicServiceUserRecord } from './user-serialization.ts';
 
 export const DEFAULT_REFERRAL_REWARD_PERCENT = 10;
+export const DEFAULT_SUBSCRIBER_CASHBACK_PERCENT = 3;
+export const DEFAULT_SALESPERSON_REWARD_PERCENT = 30;
 const DEFAULT_REFERRAL_SETTINGS_ID = 'default';
 const REFERRAL_CONFIRM_WINDOW_DAYS = 7;
+
+type ReferralProgramSettingsInput = {
+  admin: Actor;
+  subscriberCashbackPercent?: number;
+  rewardPercent: number;
+  salespersonRewardPercent?: number;
+  updatedAt: string;
+};
 
 export type UserReferralListItem = {
   user: PublicServiceUserRecord;
@@ -65,49 +75,94 @@ export async function getAsyncReferralProgramSettings(
 
 export function updateReferralProgramSettings(
   repository: ChartServiceRepository,
-  input: { admin: Actor; rewardPercent: number; updatedAt: string },
+  input: ReferralProgramSettingsInput,
 ): ReferralProgramSettingsRecord {
   assertSuperAdminActor(input.admin);
-  const rewardPercent = normalizeRewardPercent(input.rewardPercent);
   const before = readReferralProgramSettings(repository) ?? createDefaultReferralProgramSettings();
+  const settings = createReferralProgramSettingsFromInput(before, input);
+
+  saveReferralProgramSettings(repository, settings);
+  appendPointSettingsAuditLog(repository, input.admin, before, settings);
+
+  return settings;
+}
+
+export function updatePointProgramSettings(
+  repository: ChartServiceRepository,
+  input: ReferralProgramSettingsInput,
+): ReferralProgramSettingsRecord {
+  return updateReferralProgramSettings(repository, input);
+}
+
+export async function updateAsyncPointProgramSettings(
+  repository: AsyncChartServiceRepository,
+  input: ReferralProgramSettingsInput,
+): Promise<ReferralProgramSettingsRecord> {
+  return updateAsyncReferralProgramSettings(repository, input);
+}
+
+export function getPointProgramSettings(
+  repository: ChartServiceRepository,
+): ReferralProgramSettingsRecord {
+  return getReferralProgramSettings(repository);
+}
+
+export async function getAsyncPointProgramSettings(
+  repository: AsyncChartServiceRepository,
+): Promise<ReferralProgramSettingsRecord> {
+  return getAsyncReferralProgramSettings(repository);
+}
+
+function createReferralProgramSettingsFromInput(
+  before: ReferralProgramSettingsRecord,
+  input: ReferralProgramSettingsInput,
+): ReferralProgramSettingsRecord {
   const settings: ReferralProgramSettingsRecord = {
     id: DEFAULT_REFERRAL_SETTINGS_ID,
-    rewardPercent,
+    subscriberCashbackPercent: normalizeRewardPercent(
+      input.subscriberCashbackPercent ?? before.subscriberCashbackPercent,
+      'Subscriber cashback percent',
+    ),
+    rewardPercent: normalizeRewardPercent(input.rewardPercent, 'Referral reward percent'),
+    salespersonRewardPercent: normalizeRewardPercent(
+      input.salespersonRewardPercent ?? before.salespersonRewardPercent,
+      'Salesperson reward percent',
+    ),
     updatedByAdminId: input.admin.id,
     updatedAt: input.updatedAt,
   };
 
-  saveReferralProgramSettings(repository, settings);
+  return settings;
+}
+
+function appendPointSettingsAuditLog(
+  repository: Pick<ChartServiceRepository, 'appendAuditLog'>,
+  admin: Actor,
+  before: ReferralProgramSettingsRecord,
+  settings: ReferralProgramSettingsRecord,
+): void {
   repository.appendAuditLog(createAuditLogDraft({
-    actor: input.admin,
-    action: 'admin.referral.reward_percent.update',
+    actor: admin,
+    action: 'admin.points.settings.update',
     targetType: 'referral_program_settings',
     targetId: settings.id,
     beforeJson: { settings: before },
     afterJson: { settings },
   }));
-
-  return settings;
 }
 
 export async function updateAsyncReferralProgramSettings(
   repository: AsyncChartServiceRepository,
-  input: { admin: Actor; rewardPercent: number; updatedAt: string },
+  input: ReferralProgramSettingsInput,
 ): Promise<ReferralProgramSettingsRecord> {
   assertSuperAdminActor(input.admin);
-  const rewardPercent = normalizeRewardPercent(input.rewardPercent);
   const before = await readAsyncReferralProgramSettings(repository) ?? createDefaultReferralProgramSettings();
-  const settings: ReferralProgramSettingsRecord = {
-    id: DEFAULT_REFERRAL_SETTINGS_ID,
-    rewardPercent,
-    updatedByAdminId: input.admin.id,
-    updatedAt: input.updatedAt,
-  };
+  const settings = createReferralProgramSettingsFromInput(before, input);
 
   await saveAsyncReferralProgramSettings(repository, settings);
   await repository.appendAuditLog(createAuditLogDraft({
     actor: input.admin,
-    action: 'admin.referral.reward_percent.update',
+    action: 'admin.points.settings.update',
     targetType: 'referral_program_settings',
     targetId: settings.id,
     beforeJson: { settings: before },
@@ -243,7 +298,9 @@ export async function confirmAsyncMaturedReferralLedgers(
 function createDefaultReferralProgramSettings(): ReferralProgramSettingsRecord {
   return {
     id: DEFAULT_REFERRAL_SETTINGS_ID,
+    subscriberCashbackPercent: DEFAULT_SUBSCRIBER_CASHBACK_PERCENT,
     rewardPercent: DEFAULT_REFERRAL_REWARD_PERCENT,
+    salespersonRewardPercent: DEFAULT_SALESPERSON_REWARD_PERCENT,
     updatedByAdminId: null,
     updatedAt: '1970-01-01T00:00:00.000Z',
   };
@@ -388,9 +445,9 @@ function buildUserReferralSummary(input: {
   };
 }
 
-function normalizeRewardPercent(value: number): number {
-  if (!Number.isFinite(value)) throw new Error('Referral reward percent must be a number');
-  if (value < 0 || value > 100) throw new Error('Referral reward percent must be between 0 and 100');
+function normalizeRewardPercent(value: number, label = 'Referral reward percent'): number {
+  if (!Number.isFinite(value)) throw new Error(`${label} must be a number`);
+  if (value < 0 || value > 100) throw new Error(`${label} must be between 0 and 100`);
   return Math.round(value * 100) / 100;
 }
 

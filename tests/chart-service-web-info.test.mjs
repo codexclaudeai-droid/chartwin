@@ -50,12 +50,15 @@ test('admin web info panel and routes are wired into operations UI', () => {
   const publicRouteSource = fs.readFileSync(new URL('../app/api/web-info/route.ts', import.meta.url), 'utf8');
 
   assert.match(pageSource, /AdminWebInfoPanel/);
+  assert.match(pageSource, /AdminPointSettingsPanel/);
   assert.match(pageSource, /sectionKey="webInfo"/);
   assert.match(pageSource, /admin-web-info-group/);
   assert.match(pageSource, /aria-label="웹정보관리 세부 메뉴"/);
   assert.match(pageSource, /가입약관/);
   assert.match(pageSource, /개인정보보호정책/);
   assert.match(pageSource, /입금정보관리/);
+  assert.match(pageSource, /포인트관리/);
+  assert.match(pageSource, /href="#admin-point-settings"/);
   assert.match(panelSource, /admin-web-info/);
   assert.match(panelSource, /termsContent/);
   assert.match(panelSource, /privacyContent/);

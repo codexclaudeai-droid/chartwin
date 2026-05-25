@@ -8,6 +8,7 @@ import {
 } from '../../domain/chart-service/index.ts';
 import type { AsyncChartServiceRepository } from './async-repository.ts';
 import type { ChartServiceRepository, PublicServiceUserRecord, SalesTeamRecord } from './repository.ts';
+import { getAsyncReferralProgramSettings, getReferralProgramSettings } from './referral-program.ts';
 import { toPublicServiceUserRecord } from './user-serialization.ts';
 
 export const DEFAULT_SALES_COMMISSION_PERCENT = 30;
@@ -124,12 +125,13 @@ export function getAdminSalesManagementSummary(
   input: AdminSalesManagementInput = {},
 ): AdminSalesManagementSummary {
   assertSalesAdminDataReady(repository);
+  const pointSettings = getReferralProgramSettings(repository);
   return buildAdminSalesManagementSummary({
     users: repository.listUsers(),
     payments: repository.listPayments(),
     plans: repository.listPlans(),
-    settings: getSalesCommissionSettings(repository),
-    teamSettings: createSalesTeamSettings(repository.listSalesTeams()),
+    settings: getSalesCommissionSettings(repository, pointSettings.salespersonRewardPercent),
+    teamSettings: createSalesTeamSettings(repository.listSalesTeams(), pointSettings.salespersonRewardPercent),
   }, input);
 }
 
@@ -138,10 +140,11 @@ export async function getAsyncAdminSalesManagementSummary(
   input: AdminSalesManagementInput = {},
 ): Promise<AdminSalesManagementSummary> {
   assertSalesAdminDataReady(repository);
-  const [users, payments, plans] = await Promise.all([
+  const [users, payments, plans, pointSettings] = await Promise.all([
     repository.listUsers(),
     repository.listPayments(),
     repository.listPlans(),
+    getAsyncReferralProgramSettings(repository),
   ]);
   const teams = await repository.listSalesTeams();
 
@@ -149,8 +152,8 @@ export async function getAsyncAdminSalesManagementSummary(
     users,
     payments,
     plans,
-    settings: getSalesCommissionSettings(repository),
-    teamSettings: createSalesTeamSettings(teams),
+    settings: getSalesCommissionSettings(repository, pointSettings.salespersonRewardPercent),
+    teamSettings: createSalesTeamSettings(teams, pointSettings.salespersonRewardPercent),
   }, input);
 }
 
@@ -217,7 +220,10 @@ export function createAdminSalesTeam(
   input: { admin: Actor; name: string; createdAt: string },
 ): AdminSalesTeamRecord {
   assertAdminActor(input.admin);
-  const team = createSalesTeamRecord(repository, input);
+  const team = createSalesTeamRecord(repository, {
+    ...input,
+    commissionPercent: getReferralProgramSettings(repository).salespersonRewardPercent,
+  });
   repository.appendAuditLog(createAuditLogDraft({
     actor: input.admin,
     action: 'admin.sales.team.create',
@@ -234,7 +240,11 @@ export async function createAsyncAdminSalesTeam(
   input: { admin: Actor; name: string; createdAt: string },
 ): Promise<AdminSalesTeamRecord> {
   assertAdminActor(input.admin);
-  const team = await createAsyncSalesTeamRecord(repository, input);
+  const pointSettings = await getAsyncReferralProgramSettings(repository);
+  const team = await createAsyncSalesTeamRecord(repository, {
+    ...input,
+    commissionPercent: pointSettings.salespersonRewardPercent,
+  });
   await repository.appendAuditLog(createAuditLogDraft({
     actor: input.admin,
     action: 'admin.sales.team.create',
@@ -640,12 +650,22 @@ function summarizeRows(rows: AdminSalesManagementRow[]): AdminSalesManagementSum
   };
 }
 
-function getSalesCommissionSettings(repository: object): SalesCommissionSettings {
+function getSalesCommissionSettings(
+  repository: object,
+  defaultPercent = DEFAULT_SALES_COMMISSION_PERCENT,
+): SalesCommissionSettings {
   const existing = salesCommissionSettingsStore.get(repository);
-  if (existing) return cloneSettings(existing);
+  if (existing) {
+    const settings = {
+      ...existing,
+      defaultPercent,
+    };
+    salesCommissionSettingsStore.set(repository, settings);
+    return cloneSettings(settings);
+  }
 
   const settings = {
-    defaultPercent: DEFAULT_SALES_COMMISSION_PERCENT,
+    defaultPercent,
     salespersonPercents: {},
     updatedByAdminId: null,
     updatedAt: '1970-01-01T00:00:00.000Z',
@@ -654,9 +674,12 @@ function getSalesCommissionSettings(repository: object): SalesCommissionSettings
   return cloneSettings(settings);
 }
 
-function createSalesTeamSettings(teams: AdminSalesTeamRecord[]): SalesTeamSettings {
+function createSalesTeamSettings(
+  teams: AdminSalesTeamRecord[],
+  defaultPercent = DEFAULT_SALES_TEAM_COMMISSION_PERCENT,
+): SalesTeamSettings {
   return {
-    defaultPercent: DEFAULT_SALES_TEAM_COMMISSION_PERCENT,
+    defaultPercent,
     teams: teams.map(cloneTeam),
     updatedByAdminId: teams[0]?.updatedByAdminId ?? null,
     updatedAt: teams[0]?.updatedAt ?? '1970-01-01T00:00:00.000Z',
@@ -665,7 +688,7 @@ function createSalesTeamSettings(teams: AdminSalesTeamRecord[]): SalesTeamSettin
 
 function createSalesTeamRecord(
   repository: ChartServiceRepository,
-  input: { admin: Actor; name: string; createdAt: string },
+  input: { admin: Actor; name: string; createdAt: string; commissionPercent: number },
 ): AdminSalesTeamRecord {
   const team = buildNewSalesTeam(repository.nextId('sales_team'), input);
   repository.saveSalesTeam(team);
@@ -674,7 +697,7 @@ function createSalesTeamRecord(
 
 async function createAsyncSalesTeamRecord(
   repository: AsyncChartServiceRepository,
-  input: { admin: Actor; name: string; createdAt: string },
+  input: { admin: Actor; name: string; createdAt: string; commissionPercent: number },
 ): Promise<AdminSalesTeamRecord> {
   const team = buildNewSalesTeam(await repository.nextId('sales_team'), input);
   await repository.saveSalesTeam(team);
@@ -683,14 +706,14 @@ async function createAsyncSalesTeamRecord(
 
 function buildNewSalesTeam(
   id: string,
-  input: { admin: Actor; name: string; createdAt: string },
+  input: { admin: Actor; name: string; createdAt: string; commissionPercent: number },
 ): AdminSalesTeamRecord {
   const name = input.name.trim();
   if (!name) throw new Error('Sales team name required');
   return {
     id,
     name,
-    commissionPercent: DEFAULT_SALES_TEAM_COMMISSION_PERCENT,
+    commissionPercent: normalizePercent(input.commissionPercent),
     salespersonIds: [],
     createdAt: input.createdAt,
     updatedAt: input.createdAt,

@@ -224,12 +224,18 @@ test('postgres plan referral support and notification mappers preserve repositor
 
   const settings = mapReferralProgramSettingsFromPostgresRow({
     id: 'default',
+    subscriber_cashback_percent: '3',
     reward_percent: '10',
+    salesperson_reward_percent: '30',
     updated_by_admin_id: 'super_1',
     updated_at: '2026-05-24T10:00:00.000Z',
   });
+  assert.equal(settings.subscriberCashbackPercent, 3);
   assert.equal(settings.rewardPercent, 10);
+  assert.equal(settings.salespersonRewardPercent, 30);
+  assert.equal(mapReferralProgramSettingsToPostgresRow(settings).subscriber_cashback_percent, 3);
   assert.equal(mapReferralProgramSettingsToPostgresRow(settings).reward_percent, 10);
+  assert.equal(mapReferralProgramSettingsToPostgresRow(settings).salesperson_reward_percent, 30);
 
   const thread = mapSupportThreadFromPostgresRow({
     id: 'support_1',

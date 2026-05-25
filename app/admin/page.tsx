@@ -2,6 +2,7 @@ import { AdminAccessGate } from './admin-access-gate';
 import { AdminDashboardShell, AdminDashboardShellSection } from './admin-dashboard-shell';
 import { AdminDashboardPanel } from './admin-dashboard-panel';
 import { AdminPaymentSettingsPanel } from './admin-payment-settings-panel';
+import { AdminPointSettingsPanel } from './admin-point-settings-panel';
 import { AdminSalesPanel } from './admin-sales-panel';
 import { AdminStatisticsPanel } from './admin-statistics-panel';
 import { AdminWebInfoPanel } from './admin-web-info-panel';
@@ -34,9 +35,11 @@ export default function AdminPage() {
                 <a href="#admin-web-info-terms">가입약관</a>
                 <a href="#admin-web-info-privacy">개인정보보호정책</a>
                 <a href="#admin-payment-settings">입금정보관리</a>
+                <a href="#admin-point-settings">포인트관리</a>
               </nav>
               <AdminWebInfoPanel />
               <AdminPaymentSettingsPanel />
+              <AdminPointSettingsPanel />
             </div>
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="users">

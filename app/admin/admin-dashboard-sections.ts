@@ -46,6 +46,7 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
       { label: '가입약관', href: '#admin-web-info-terms' },
       { label: '개인정보보호정책', href: '#admin-web-info-privacy' },
       { label: '입금정보관리', href: '#admin-payment-settings' },
+      { label: '포인트관리', href: '#admin-point-settings' },
     ],
   },
   support: {
@@ -144,6 +145,7 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
     targetId === 'admin-web-info'
     || targetId.startsWith('admin-web-info-')
     || targetId === 'admin-payment-settings'
+    || targetId === 'admin-point-settings'
   ) {
     return 'webInfo';
   }

@@ -14,6 +14,7 @@ import {
   updateAdminCustomerSalesperson,
   updateAdminSalesCommissionPercent,
   updateAdminSalesTeamCommissionPercent,
+  updatePointProgramSettings,
 } from '../src/server/chart-service/index.ts';
 import { USER_ROLES } from '../src/domain/chart-service/index.ts';
 import {
@@ -73,6 +74,38 @@ test('admin sales management summary lists salesperson revenue rows and totals',
     salesUsd: 300,
     points: 90,
   });
+});
+
+test('admin sales management summary uses point settings as the default salesperson percent', () => {
+  const repository = createMockChartServiceRepository();
+  const salesperson = repository.getUserById('user_subscriber');
+  const customer = repository.getUserById('user_member');
+  if (!salesperson || !customer) throw new Error('fixture users missing');
+  repository.saveUser({ ...salesperson, role: USER_ROLES.salesperson });
+  repository.saveUser({ ...customer, referredByUserId: salesperson.id });
+  repository.savePayment({
+    ...repository.getPaymentById('pay_pending'),
+    id: 'pay_sales_point_settings',
+    userId: customer.id,
+    subscriptionId: 'sub_pending',
+    status: 'confirmed',
+    amountUsd: 300,
+    confirmedAt: '2026-05-24T03:00:00.000Z',
+    updatedAt: '2026-05-24T03:00:00.000Z',
+  });
+
+  updatePointProgramSettings(repository, {
+    admin: { id: 'super_1', role: 'super_admin' },
+    subscriberCashbackPercent: 3,
+    rewardPercent: 10,
+    salespersonRewardPercent: 25,
+    updatedAt: '2026-05-25T09:00:00.000Z',
+  });
+  const summary = getAdminSalesManagementSummary(repository, { salespersonId: salesperson.id });
+
+  assert.equal(summary.defaultPercent, 25);
+  assert.equal(summary.selectedSalesperson?.commissionPercent, 25);
+  assert.equal(summary.rows[0].commissionPercent, 25);
 });
 
 test('super admin can apply individual salesperson commission percent', () => {

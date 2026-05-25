@@ -275,7 +275,9 @@ export function mapReferralLedgerToPostgresRow(record: ReferralLedgerRecord): Po
 export function mapReferralProgramSettingsFromPostgresRow(row: PostgresRow): ReferralProgramSettingsRecord {
   return {
     id: readString(row.id),
+    subscriberCashbackPercent: readNullableNumber(row.subscriber_cashback_percent) ?? 3,
     rewardPercent: readNumber(row.reward_percent),
+    salespersonRewardPercent: readNullableNumber(row.salesperson_reward_percent) ?? 30,
     updatedByAdminId: readNullableString(row.updated_by_admin_id),
     updatedAt: readIsoString(row.updated_at),
   };
@@ -284,7 +286,9 @@ export function mapReferralProgramSettingsFromPostgresRow(row: PostgresRow): Ref
 export function mapReferralProgramSettingsToPostgresRow(record: ReferralProgramSettingsRecord): PostgresRow {
   return {
     id: record.id,
+    subscriber_cashback_percent: record.subscriberCashbackPercent,
     reward_percent: record.rewardPercent,
+    salesperson_reward_percent: record.salespersonRewardPercent,
     updated_by_admin_id: record.updatedByAdminId,
     updated_at: record.updatedAt,
   };

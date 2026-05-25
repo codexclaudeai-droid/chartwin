@@ -14,12 +14,14 @@ import {
   updateReferralProgramSettings,
 } from '../src/server/chart-service/index.ts';
 
-test('referral program defaults to 10 percent rewards', () => {
+test('point program defaults to subscriber cashback referral and salesperson percents', () => {
   const repository = createMockChartServiceRepository();
 
   const settings = getReferralProgramSettings(repository);
 
+  assert.equal(settings.subscriberCashbackPercent, 3);
   assert.equal(settings.rewardPercent, 10);
+  assert.equal(settings.salespersonRewardPercent, 30);
 });
 
 test('manual payment request from a referred user creates pending referral points', () => {
@@ -90,7 +92,24 @@ test('super admin can change referral reward percent for future payment requests
   assert.equal(settings.rewardPercent, 15);
   assert.equal(ledgers[0].percent, 15);
   assert.equal(ledgers[0].points, 29.85);
-  assert.equal(repository.listAuditLogs().at(-1)?.action, 'admin.referral.reward_percent.update');
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'admin.points.settings.update');
+});
+
+test('super admin can change all point program percents together', () => {
+  const repository = createMockChartServiceRepository();
+
+  const settings = updateReferralProgramSettings(repository, {
+    admin: { id: 'super_1', role: 'super_admin' },
+    subscriberCashbackPercent: 4,
+    rewardPercent: 12,
+    salespersonRewardPercent: 28,
+    updatedAt: '2026-05-24T10:00:00.000Z',
+  });
+
+  assert.equal(settings.subscriberCashbackPercent, 4);
+  assert.equal(settings.rewardPercent, 12);
+  assert.equal(settings.salespersonRewardPercent, 28);
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'admin.points.settings.update');
 });
 
 test('normal admin cannot change referral reward percent', () => {
@@ -123,7 +142,7 @@ test('profile and admin summaries expose referred users and point totals', () =>
   assert.deepEqual(profileSummary.referrals, directSummary);
 });
 
-test('referral settings API is readable by admins and writable only by super admins', async () => {
+test('point settings API is readable by admins and writable only by super admins', async () => {
   const repository = getChartServiceRepository();
   const adminSession = createSessionForUser(repository, {
     userId: 'admin_1',
@@ -135,33 +154,45 @@ test('referral settings API is readable by admins and writable only by super adm
     createdAt: new Date().toISOString(),
     ttlSeconds: 60 * 60,
   }).session;
-  const { GET, PATCH } = await import('../app/api/admin/referral-settings/route.ts');
+  const { GET, PATCH } = await import('../app/api/admin/point-settings/route.ts');
 
-  const readable = await GET(new Request('http://localhost/api/admin/referral-settings', {
+  const readable = await GET(new Request('http://localhost/api/admin/point-settings', {
     headers: { cookie: `${SESSION_COOKIE_NAME}=${adminSession.id}` },
   }));
-  const denied = await PATCH(new Request('http://localhost/api/admin/referral-settings', {
+  const denied = await PATCH(new Request('http://localhost/api/admin/point-settings', {
     method: 'PATCH',
     headers: {
       cookie: `${SESSION_COOKIE_NAME}=${adminSession.id}`,
       'content-type': 'application/json',
     },
-    body: JSON.stringify({ rewardPercent: 12 }),
+    body: JSON.stringify({
+      subscriberCashbackPercent: 4,
+      rewardPercent: 12,
+      salespersonRewardPercent: 28,
+    }),
   }));
-  const updated = await PATCH(new Request('http://localhost/api/admin/referral-settings', {
+  const updated = await PATCH(new Request('http://localhost/api/admin/point-settings', {
     method: 'PATCH',
     headers: {
       cookie: `${SESSION_COOKIE_NAME}=${superSession.id}`,
       'content-type': 'application/json',
     },
-    body: JSON.stringify({ rewardPercent: 12 }),
+    body: JSON.stringify({
+      subscriberCashbackPercent: 4,
+      rewardPercent: 12,
+      salespersonRewardPercent: 28,
+    }),
   }));
   const readablePayload = await readable.json();
   const updatedPayload = await updated.json();
 
   assert.equal(readable.status, 200);
+  assert.equal(readablePayload.settings.subscriberCashbackPercent, 3);
   assert.equal(readablePayload.settings.rewardPercent, 10);
+  assert.equal(readablePayload.settings.salespersonRewardPercent, 30);
   assert.equal(denied.status, 403);
   assert.equal(updated.status, 200);
+  assert.equal(updatedPayload.settings.subscriberCashbackPercent, 4);
   assert.equal(updatedPayload.settings.rewardPercent, 12);
+  assert.equal(updatedPayload.settings.salespersonRewardPercent, 28);
 });

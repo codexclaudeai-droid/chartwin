@@ -168,10 +168,14 @@ create index if not exists idx_referral_ledgers_payment_request_id on referral_l
 
 create table if not exists referral_program_settings (
   id text primary key,
+  subscriber_cashback_percent numeric(5,2) not null default 3,
   reward_percent numeric(5,2) not null default 10,
+  salesperson_reward_percent numeric(5,2) not null default 30,
   updated_by_admin_id text,
   updated_at timestamptz not null default now(),
+  constraint chk_referral_program_settings_subscriber_cashback_percent check (subscriber_cashback_percent >= 0 and subscriber_cashback_percent <= 100),
   constraint chk_referral_program_settings_reward_percent check (reward_percent >= 0 and reward_percent <= 100),
+  constraint chk_referral_program_settings_salesperson_reward_percent check (salesperson_reward_percent >= 0 and salesperson_reward_percent <= 100),
   foreign key (updated_by_admin_id) references users(id)
 );
 
@@ -314,15 +318,25 @@ create index if not exists idx_users_referral_code on users (referral_code);
 
 create index if not exists idx_users_referred_by_user_id on users (referred_by_user_id);
 
-create table if not exists referral_program_settings (id text primary key, reward_percent numeric(5,2) not null default 10, updated_by_admin_id text, updated_at timestamptz not null default now());
+create table if not exists referral_program_settings (id text primary key, subscriber_cashback_percent numeric(5,2) not null default 3, reward_percent numeric(5,2) not null default 10, salesperson_reward_percent numeric(5,2) not null default 30, updated_by_admin_id text, updated_at timestamptz not null default now());
+
+alter table if exists referral_program_settings add column if not exists subscriber_cashback_percent numeric(5,2);
 
 alter table if exists referral_program_settings add column if not exists reward_percent numeric(5,2);
+
+alter table if exists referral_program_settings add column if not exists salesperson_reward_percent numeric(5,2);
 
 alter table if exists referral_program_settings add column if not exists updated_by_admin_id text;
 
 alter table if exists referral_program_settings add column if not exists updated_at timestamptz;
 
-insert into referral_program_settings (id, reward_percent, updated_at) values ('default', 10, now()) on conflict (id) do nothing;
+update referral_program_settings set subscriber_cashback_percent = 3 where subscriber_cashback_percent is null;
+
+update referral_program_settings set reward_percent = 10 where reward_percent is null;
+
+update referral_program_settings set salesperson_reward_percent = 30 where salesperson_reward_percent is null;
+
+insert into referral_program_settings (id, subscriber_cashback_percent, reward_percent, salesperson_reward_percent, updated_at) values ('default', 3, 10, 30, now()) on conflict (id) do nothing;
 
 create table if not exists sales_teams (id text primary key, name text not null, commission_percent numeric(5,2) not null default 30, salesperson_ids jsonb not null default '[]'::jsonb, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), updated_by_admin_id text);
 

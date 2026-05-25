@@ -26,6 +26,7 @@ test('admin dashboard sections define the professional sidebar order', () => {
     { label: '가입약관', href: '#admin-web-info-terms' },
     { label: '개인정보보호정책', href: '#admin-web-info-privacy' },
     { label: '입금정보관리', href: '#admin-payment-settings' },
+    { label: '포인트관리', href: '#admin-point-settings' },
   ]);
 });
 
@@ -39,6 +40,7 @@ test('admin dashboard shell maps legacy anchors and deep links to sidebar sectio
   assert.equal(getAdminDashboardSectionFromLocation('#admin-sales'), 'sales');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-users'), 'users');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-payment-settings'), 'webInfo');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-point-settings'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-payments'), 'payments');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-payment-pay_pending'), 'payments');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-subscriptions'), 'subscriptions');
@@ -58,9 +60,9 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.match(pageSource, /AdminDashboardShell/);
   assert.match(pageSource, /sectionKey="overview"[\s\S]*sectionKey="webInfo"[\s\S]*sectionKey="users"[\s\S]*sectionKey="support"[\s\S]*sectionKey="payments"[\s\S]*sectionKey="subscriptions"[\s\S]*sectionKey="sales"[\s\S]*sectionKey="statistics"[\s\S]*sectionKey="audit"/);
   assert.doesNotMatch(pageSource, /AdminDashboardShellSection sectionKey="paymentSettings"/);
-  assert.match(pageSource, /sectionKey="webInfo"[\s\S]*AdminWebInfoPanel[\s\S]*AdminPaymentSettingsPanel/);
+  assert.match(pageSource, /sectionKey="webInfo"[\s\S]*AdminWebInfoPanel[\s\S]*AdminPaymentSettingsPanel[\s\S]*AdminPointSettingsPanel/);
   assert.match(pageSource, /admin-web-info-tabs/);
-  assert.match(pageSource, /href="#admin-web-info-terms"[\s\S]*href="#admin-web-info-privacy"[\s\S]*href="#admin-payment-settings"/);
+  assert.match(pageSource, /href="#admin-web-info-terms"[\s\S]*href="#admin-web-info-privacy"[\s\S]*href="#admin-payment-settings"[\s\S]*href="#admin-point-settings"/);
   assert.match(shellSource, /admin-dashboard-sidebar/);
   assert.doesNotMatch(shellSource, /admin-dashboard-workspace-header/);
   assert.doesNotMatch(shellSource, /activeSectionMeta/);

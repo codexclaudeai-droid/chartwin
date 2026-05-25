@@ -1777,14 +1777,6 @@ a {
   margin-top: 0;
 }
 
-.referral-settings-row label {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 850;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
 .member-directory-cell {
   min-width: 240px;
 }

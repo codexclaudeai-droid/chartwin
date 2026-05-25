@@ -173,16 +173,6 @@ type AdminUserDetailResponse = {
   detail?: AdminUserDetail;
 };
 
-type ReferralSettingsResponse = {
-  ok: boolean;
-  message?: string;
-  settings?: {
-    rewardPercent: number;
-    updatedByAdminId: string | null;
-    updatedAt: string;
-  };
-};
-
 type CurrentAdmin = {
   id: string;
   role: string;
@@ -213,8 +203,6 @@ export function UserAdminPanel() {
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('all');
   const [accountStatus, setAccountStatus] = useState('all');
-  const [referralRewardPercent, setReferralRewardPercent] = useState('10');
-  const [referralSettingsMessage, setReferralSettingsMessage] = useState('추천포인트 적립률은 슈퍼관리자만 변경할 수 있습니다.');
   const [dashboardFilterNotice, setDashboardFilterNotice] = useState<string | null>(null);
   const [message, setMessage] = useState('관리자 로그인 후 회원 목록을 조회할 수 있습니다.');
   const [detailMessage, setDetailMessage] = useState('회원을 선택하면 상세 운영 상태를 볼 수 있습니다.');
@@ -224,7 +212,6 @@ export function UserAdminPanel() {
   useEffect(() => {
     void refresh();
     void refreshCurrentAdmin();
-    void refreshReferralSettings();
     const unsubscribeAdmin = subscribeAdminRefreshEvent((detail) => {
       if (detail.source === 'users') return;
       void refresh();
@@ -243,7 +230,6 @@ export function UserAdminPanel() {
     const unsubscribeAuth = subscribeAuthSessionChangedEvent(() => {
       void refresh();
       void refreshCurrentAdmin();
-      void refreshReferralSettings();
     });
 
     return () => {
@@ -263,19 +249,6 @@ export function UserAdminPanel() {
     const payload = await response.json() as AuthMeResponse;
     const actor = payload.actor ?? payload.user ?? null;
     setCurrentAdmin(payload.authenticated && actor ? actor : null);
-  }
-
-  async function refreshReferralSettings() {
-    const response = await fetch('/api/admin/referral-settings', { cache: 'no-store' });
-    const payload = await response.json() as ReferralSettingsResponse;
-
-    if (!response.ok || !payload.settings) {
-      setReferralSettingsMessage(payload.message || '추천포인트 설정을 불러오지 못했습니다.');
-      return;
-    }
-
-    setReferralRewardPercent(String(payload.settings.rewardPercent));
-    setReferralSettingsMessage(`현재 추천포인트 기본 적립률은 ${payload.settings.rewardPercent}%입니다.`);
   }
 
   async function refresh(filterOverride: UserDirectoryRefreshOptions = {}) {
@@ -408,42 +381,6 @@ export function UserAdminPanel() {
     dispatchAdminRefreshEvent({ source: 'users' });
   }
 
-  async function updateReferralRewardPercent() {
-    if (currentAdmin?.role !== 'super_admin') {
-      setReferralSettingsMessage('추천포인트 적립률은 슈퍼관리자만 변경할 수 있습니다.');
-      return;
-    }
-    const rewardPercent = Number(referralRewardPercent);
-    if (!Number.isFinite(rewardPercent) || rewardPercent < 0 || rewardPercent > 100) {
-      setReferralSettingsMessage('추천포인트 적립률은 0~100 사이 숫자로 입력해주세요.');
-      return;
-    }
-    if (!await confirmAdminAction(
-      'admin.referral.reward_percent.update',
-      `추천포인트 적립률 ${rewardPercent}%`,
-    )) {
-      return;
-    }
-
-    setIsBusy(true);
-    const response = await fetch('/api/admin/referral-settings', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rewardPercent }),
-    });
-    const payload = await response.json() as ReferralSettingsResponse;
-    setIsBusy(false);
-
-    if (!response.ok || !payload.settings) {
-      setReferralSettingsMessage(payload.message || '추천포인트 적립률 변경에 실패했습니다.');
-      return;
-    }
-
-    setReferralRewardPercent(String(payload.settings.rewardPercent));
-    setReferralSettingsMessage(`추천포인트 적립률을 ${payload.settings.rewardPercent}%로 변경했습니다.`);
-    if (detail) void openDetail(detail.user.id);
-  }
-
   function clearDashboardFilterNotice() {
     setDashboardFilterNotice(null);
     setAccountStatus('all');
@@ -492,8 +429,6 @@ export function UserAdminPanel() {
       nextAccountStatus: canSuspendAccount ? 'active' : 'suspended',
     })
     : null;
-  const canEditReferralRewardPercent = currentAdmin?.role === 'super_admin';
-
   return (
     <>
     <section className="card wide" id="admin-users">
@@ -545,29 +480,6 @@ export function UserAdminPanel() {
         label={dashboardFilterNotice}
         onClear={clearDashboardFilterNotice}
       />
-      <div className="admin-filter-row referral-settings-row">
-        <label htmlFor="referralRewardPercent">추천포인트 적립률</label>
-        <input
-          aria-label="추천포인트 적립률"
-          disabled={!canEditReferralRewardPercent}
-          id="referralRewardPercent"
-          max="100"
-          min="0"
-          onChange={(event) => setReferralRewardPercent(event.target.value)}
-          step="0.01"
-          type="number"
-          value={referralRewardPercent}
-        />
-        <button
-          className="button secondary"
-          disabled={isBusy || !canEditReferralRewardPercent}
-          onClick={updateReferralRewardPercent}
-          type="button"
-        >
-          적립률 저장
-        </button>
-      </div>
-      <p className="notice">{referralSettingsMessage}</p>
       <p className="notice">{message}</p>
       <table className="table">
         <thead>

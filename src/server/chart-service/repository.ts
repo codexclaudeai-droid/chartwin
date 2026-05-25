@@ -59,7 +59,9 @@ export type EmailOutboxRecord = {
 
 export type ReferralProgramSettingsRecord = {
   id: string;
+  subscriberCashbackPercent: number;
   rewardPercent: number;
+  salespersonRewardPercent: number;
   updatedByAdminId: string | null;
   updatedAt: string;
 };
