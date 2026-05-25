@@ -10,7 +10,6 @@ import {
 import {
   ADMIN_DASHBOARD_SECTIONS,
   getAdminDashboardSectionFromLocation,
-  getAdminDashboardSectionMeta,
   type AdminDashboardSectionKey,
 } from './admin-dashboard-sections.ts';
 
@@ -18,7 +17,6 @@ const AdminDashboardShellContext = createContext<AdminDashboardSectionKey>('over
 
 export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode }>) {
   const [activeSection, setActiveSection] = useState<AdminDashboardSectionKey>('overview');
-  const activeSectionMeta = getAdminDashboardSectionMeta(activeSection);
 
   useEffect(() => {
     function syncActiveSection() {
@@ -69,13 +67,6 @@ export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode
           </nav>
         </aside>
         <section className="admin-dashboard-workspace" aria-label="관리자 작업 영역">
-          <header className="admin-dashboard-workspace-header">
-            <span>{activeSectionMeta.eyebrow}</span>
-            <div>
-              <h2>{activeSectionMeta.label}</h2>
-              <p>{activeSectionMeta.description}</p>
-            </div>
-          </header>
           {children}
         </section>
       </div>

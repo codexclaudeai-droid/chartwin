@@ -50,6 +50,9 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.match(pageSource, /sectionKey="overview"[\s\S]*sectionKey="users"[\s\S]*sectionKey="support"[\s\S]*sectionKey="payments"[\s\S]*sectionKey="subscriptions"[\s\S]*sectionKey="sales"[\s\S]*sectionKey="statistics"[\s\S]*sectionKey="audit"/);
   assert.match(pageSource, /AdminDashboardShellSection sectionKey="paymentSettings"/);
   assert.match(shellSource, /admin-dashboard-sidebar/);
+  assert.doesNotMatch(shellSource, /admin-dashboard-workspace-header/);
+  assert.doesNotMatch(shellSource, /activeSectionMeta/);
+  assert.doesNotMatch(cssSource, /admin-dashboard-workspace-header/);
   assert.match(shellSource, /data-active-admin-section=\{activeSection\}/);
   assert.match(shellSource, /scrollIntoView\(\{ block: 'start'/);
   assert.match(cssSource, /\.admin-dashboard-shell/);

@@ -325,8 +325,7 @@ a {
 }
 
 .admin-dashboard-sidebar-header span,
-.admin-dashboard-menu-item span,
-.admin-dashboard-workspace-header > span {
+.admin-dashboard-menu-item span {
   font-size: 11px;
   font-weight: 850;
   letter-spacing: 0.12em;
@@ -373,32 +372,6 @@ a {
 
 .admin-dashboard-workspace {
   min-width: 0;
-}
-
-.admin-dashboard-workspace-header {
-  align-items: start;
-  background: rgba(255, 253, 247, 0.72);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  display: grid;
-  gap: 10px;
-  margin-bottom: 18px;
-  padding: 20px 22px;
-}
-
-.admin-dashboard-workspace-header > span {
-  color: var(--accent);
-}
-
-.admin-dashboard-workspace-header h2 {
-  font-size: clamp(24px, 3vw, 34px);
-  margin: 0 0 6px;
-}
-
-.admin-dashboard-workspace-header p {
-  color: var(--muted);
-  line-height: 1.6;
-  margin: 0;
 }
 
 .admin-dashboard-section[hidden] {

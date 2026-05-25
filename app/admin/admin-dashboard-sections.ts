@@ -94,10 +94,6 @@ export const ADMIN_DASHBOARD_SECTIONS: AdminDashboardSection[] = [
   ADMIN_DASHBOARD_SECTION_META.audit,
 ];
 
-export function getAdminDashboardSectionMeta(sectionKey: AdminDashboardSectionKey): AdminDashboardSection {
-  return ADMIN_DASHBOARD_SECTION_META[sectionKey];
-}
-
 export function getAdminDashboardSectionFromLocation(
   hash: string,
   search = '',
