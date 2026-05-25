@@ -243,7 +243,8 @@ test('admin user panel applies dashboard queue preset events', () => {
   assert.match(source, /영업자로 지정할 준비가 되었습니다/);
   assert.match(source, /showSalespersonHandoff/);
   assert.match(source, /영업관리 회원배정으로 이동/);
-  assert.match(source, /href="#admin-sales-assignments"/);
+  assert.match(source, /salespersonId=\$\{encodeURIComponent\(detail\.user\.id\)\}/);
+  assert.match(source, /#admin-sales-assignments/);
   assert.match(cssSource, /\.admin-user-preset-guide/);
   assert.match(cssSource, /\.admin-user-sales-handoff/);
 });

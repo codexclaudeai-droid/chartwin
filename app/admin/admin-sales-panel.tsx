@@ -149,22 +149,40 @@ export function AdminSalesPanel() {
   const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
+    const initialSalespersonId = getSalespersonIdFromSearch(window.location.search);
+    if (initialSalespersonId) {
+      setSelectedSalespersonId(initialSalespersonId);
+      void refresh(initialSalespersonId, selectedTeamId, '회원관리에서 지정한 영업자를 선택했습니다. 회원 배정을 이어가세요.');
+      return;
+    }
+
     void refresh();
   }, []);
 
   useEffect(() => {
     function syncPageFromHash() {
-      setActivePage(getSalesPageFromHash(window.location.hash));
+      const nextPage = getSalesPageFromHash(window.location.hash);
+      const nextSalespersonId = getSalespersonIdFromSearch(window.location.search);
+      setActivePage(nextPage);
+      if (nextPage === 'assignments' && nextSalespersonId) {
+        setSelectedSalespersonId(nextSalespersonId);
+        void refresh(nextSalespersonId, selectedTeamId, '회원관리에서 지정한 영업자를 선택했습니다. 회원 배정을 이어가세요.');
+      }
     }
 
     syncPageFromHash();
     window.addEventListener('hashchange', syncPageFromHash);
-    return () => window.removeEventListener('hashchange', syncPageFromHash);
+    window.addEventListener('popstate', syncPageFromHash);
+    return () => {
+      window.removeEventListener('hashchange', syncPageFromHash);
+      window.removeEventListener('popstate', syncPageFromHash);
+    };
   }, []);
 
   async function refresh(
     nextSalespersonId = selectedSalespersonId,
     nextTeamId = selectedTeamId,
+    nextMessage?: string,
   ) {
     setIsBusy(true);
     const searchParams = new URLSearchParams();
@@ -186,7 +204,10 @@ export function AdminSalesPanel() {
     }
 
     applySummary(payload.summary);
-    setMessage(`영업자 ${payload.summary.salespeople.length}명, 팀 ${payload.summary.teams.length}개를 불러왔습니다.`);
+    if (nextSalespersonId && payload.summary.selectedSalesperson) {
+      setQuery(`${payload.summary.selectedSalesperson.name} ${payload.summary.selectedSalesperson.email}`);
+    }
+    setMessage(nextMessage ?? `영업자 ${payload.summary.salespeople.length}명, 팀 ${payload.summary.teams.length}개를 불러왔습니다.`);
   }
 
   async function createSalesTeam() {
@@ -858,6 +879,11 @@ function formatPoint(value: number): string {
 function getSalesPageFromHash(hash: string): SalesPageKey {
   const targetId = hash.startsWith('#') ? hash.slice(1) : hash;
   return SALES_SUBMENU.find((item) => item.anchorId === targetId)?.key ?? 'teams';
+}
+
+function getSalespersonIdFromSearch(search: string): string {
+  const searchParams = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  return searchParams.get('salespersonId') ?? '';
 }
 
 function getSalespersonSearchResults(

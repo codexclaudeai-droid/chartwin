@@ -602,7 +602,7 @@ export function UserAdminPanel() {
               <div className="notice compact admin-user-sales-handoff" role="status">
                 <strong>영업자 지정 완료</strong>
                 <span>이제 영업관리에서 담당 회원 배정과 매출 집계를 이어갈 수 있습니다.</span>
-                <a className="button secondary" href="#admin-sales-assignments">
+                <a className="button secondary" href={`/admin?salespersonId=${encodeURIComponent(detail.user.id)}#admin-sales-assignments`}>
                   영업관리 회원배정으로 이동
                 </a>
               </div>
