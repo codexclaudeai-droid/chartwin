@@ -7,6 +7,9 @@ export type PaymentQueueFilterPreset = {
 type FilterablePaymentQueueItem = {
   payment: {
     status: string;
+    method?: string;
+    transactionId?: string | null;
+    transactionVerificationStatus?: string | null;
   };
 };
 
@@ -16,6 +19,7 @@ export const PAYMENT_QUEUE_FILTER_PRESETS: PaymentQueueFilterPreset[] = [
   { key: 'confirmed', label: '확인 완료', status: 'confirmed' },
   { key: 'refunded', label: '환불 완료', status: 'refunded' },
   { key: 'rejected', label: '반려', status: 'rejected' },
+  { key: 'txid_unchecked', label: 'TXID 미확인', status: '' },
 ];
 
 export function getPaymentQueueFilterPreset(key: string): PaymentQueueFilterPreset {
@@ -24,6 +28,14 @@ export function getPaymentQueueFilterPreset(key: string): PaymentQueueFilterPres
 
 export function filterPaymentQueueItems<T extends FilterablePaymentQueueItem>(items: T[], key: string): T[] {
   const preset = getPaymentQueueFilterPreset(key);
+  if (preset.key === 'txid_unchecked') {
+    return items.filter((item) => (
+      item.payment.method === 'usdt'
+      && Boolean(item.payment.transactionId)
+      && ['unchecked', 'failed'].includes(item.payment.transactionVerificationStatus ?? 'unchecked')
+    ));
+  }
+
   return preset.status
     ? items.filter((item) => item.payment.status === preset.status)
     : items;

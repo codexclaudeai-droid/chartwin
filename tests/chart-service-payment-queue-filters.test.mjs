@@ -14,6 +14,13 @@ const payments = [
   { payment: { id: 'pay_rejected', status: 'rejected' } },
 ];
 
+const txidPayments = [
+  { payment: { id: 'pay_usdt_unchecked', status: 'pending', method: 'usdt', transactionId: 'tx_1', transactionVerificationStatus: 'unchecked' } },
+  { payment: { id: 'pay_usdt_failed', status: 'pending', method: 'usdt', transactionId: 'tx_2', transactionVerificationStatus: 'failed' } },
+  { payment: { id: 'pay_usdt_verified', status: 'pending', method: 'usdt', transactionId: 'tx_3', transactionVerificationStatus: 'verified' } },
+  { payment: { id: 'pay_bank_pending', status: 'pending', method: 'bank', transactionId: null, transactionVerificationStatus: 'unchecked' } },
+];
+
 test('payment queue filter presets cover common manual operation states', () => {
   assert.deepEqual(PAYMENT_QUEUE_FILTER_PRESETS.map((preset) => preset.label), [
     '전체',
@@ -21,6 +28,7 @@ test('payment queue filter presets cover common manual operation states', () => 
     '확인 완료',
     '환불 완료',
     '반려',
+    'TXID 미확인',
   ]);
 
   assert.deepEqual(getPaymentQueueFilterPreset('pending'), {
@@ -34,6 +42,15 @@ test('payment queue filters narrow items by payment status', () => {
   assert.deepEqual(filterPaymentQueueItems(payments, 'pending').map((item) => item.payment.id), ['pay_pending']);
   assert.deepEqual(filterPaymentQueueItems(payments, 'refunded').map((item) => item.payment.id), ['pay_refunded']);
   assert.deepEqual(filterPaymentQueueItems(payments, 'rejected').map((item) => item.payment.id), ['pay_rejected']);
+});
+
+test('payment queue filters USDT payments that still need TXID review', () => {
+  assert.deepEqual(filterPaymentQueueItems(txidPayments, 'txid_unchecked').map((item) => item.payment.id), [
+    'pay_usdt_unchecked',
+    'pay_usdt_failed',
+  ]);
+  assert.equal(getPaymentQueueFilterCount(txidPayments, 'txid_unchecked'), 2);
+  assert.equal(getPaymentQueueFilterPreset('txid_unchecked').label, 'TXID 미확인');
 });
 
 test('payment queue filter counts summarize each preset', () => {
