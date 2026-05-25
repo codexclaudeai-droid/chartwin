@@ -1414,7 +1414,7 @@ a {
   align-items: end;
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.4fr) minmax(150px, 0.4fr) auto;
+  grid-template-columns: minmax(220px, 1fr) minmax(300px, 0.9fr) auto;
   margin: 16px 0;
 }
 
@@ -1529,6 +1529,59 @@ a {
 .salesperson-search-empty a:hover {
   background: var(--ink);
   color: #fffdf7;
+}
+
+.sales-date-range-field {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  margin: 0;
+  min-height: 42px;
+  padding: 0 10px;
+}
+
+.sales-date-range-field legend {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 4px;
+}
+
+.sales-date-range-field label {
+  align-items: center;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.sales-date-range-field .calendar-icon {
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.sales-date-range-field input {
+  border: 0;
+  min-height: 38px;
+  padding: 0;
+}
+
+.sales-date-range-field input:focus {
+  outline: 0;
+}
+
+.sales-date-range-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(12, 102, 90, 0.12);
+}
+
+.sales-date-range-separator {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 900;
 }
 
 .sales-summary-grid {

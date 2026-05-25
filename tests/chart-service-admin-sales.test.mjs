@@ -384,6 +384,11 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(panelSource, /영업관리/);
   assert.match(panelSource, /영업자 검색/);
   assert.match(panelSource, /기간 범위/);
+  assert.match(panelSource, /sales-date-range-field/);
+  assert.match(panelSource, /calendar-icon/);
+  assert.match(panelSource, /sales-date-range-separator/);
+  assert.match(panelSource, /aria-label="기간 범위 시작"/);
+  assert.match(panelSource, /aria-label="기간 범위 종료"/);
   assert.match(panelSource, /개별 정산율/);
   assert.match(panelSource, /엑셀출력/);
   assert.match(panelSource, /매출일/);
@@ -433,6 +438,8 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(panelSource, /assignSalespersonTeam/);
   assert.match(panelSource, /saveTeamCommissionPercent/);
   assert.match(cssSource, /\.sales-filter-grid/);
+  assert.match(cssSource, /\.sales-date-range-field/);
+  assert.match(cssSource, /\.sales-date-range-separator/);
   assert.match(cssSource, /\.salesperson-list/);
   assert.match(cssSource, /\.sales-customer-list/);
   assert.match(cssSource, /\.sales-team-grid/);

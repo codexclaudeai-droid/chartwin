@@ -513,14 +513,18 @@ export function AdminSalesPanel() {
             </div>
           )}
         </label>
-        <label>
-          <span>기간 범위 시작</span>
-          <input type="date" onChange={(event) => setFrom(event.target.value)} value={from} />
-        </label>
-        <label>
-          <span>기간 범위 종료</span>
-          <input type="date" onChange={(event) => setTo(event.target.value)} value={to} />
-        </label>
+        <fieldset className="sales-date-range-field">
+          <legend>기간 범위</legend>
+          <label>
+            <span className="calendar-icon" aria-hidden="true">▦</span>
+            <input aria-label="기간 범위 시작" type="date" onChange={(event) => setFrom(event.target.value)} value={from} />
+          </label>
+          <span className="sales-date-range-separator" aria-hidden="true">~</span>
+          <label>
+            <span className="calendar-icon" aria-hidden="true">▦</span>
+            <input aria-label="기간 범위 종료" type="date" onChange={(event) => setTo(event.target.value)} value={to} />
+          </label>
+        </fieldset>
         <button className="button" type="button" onClick={() => void refresh()} disabled={isBusy}>
           조회
         </button>
