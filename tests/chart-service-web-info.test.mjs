@@ -51,6 +51,11 @@ test('admin web info panel and routes are wired into operations UI', () => {
 
   assert.match(pageSource, /AdminWebInfoPanel/);
   assert.match(pageSource, /sectionKey="webInfo"/);
+  assert.match(pageSource, /admin-web-info-group/);
+  assert.match(pageSource, /aria-label="웹정보관리 세부 메뉴"/);
+  assert.match(pageSource, /가입약관/);
+  assert.match(pageSource, /개인정보보호정책/);
+  assert.match(pageSource, /입금정보관리/);
   assert.match(panelSource, /admin-web-info/);
   assert.match(panelSource, /termsContent/);
   assert.match(panelSource, /privacyContent/);

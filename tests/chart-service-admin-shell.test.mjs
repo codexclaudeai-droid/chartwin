@@ -59,6 +59,8 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.match(pageSource, /sectionKey="overview"[\s\S]*sectionKey="webInfo"[\s\S]*sectionKey="users"[\s\S]*sectionKey="support"[\s\S]*sectionKey="payments"[\s\S]*sectionKey="subscriptions"[\s\S]*sectionKey="sales"[\s\S]*sectionKey="statistics"[\s\S]*sectionKey="audit"/);
   assert.doesNotMatch(pageSource, /AdminDashboardShellSection sectionKey="paymentSettings"/);
   assert.match(pageSource, /sectionKey="webInfo"[\s\S]*AdminWebInfoPanel[\s\S]*AdminPaymentSettingsPanel/);
+  assert.match(pageSource, /admin-web-info-tabs/);
+  assert.match(pageSource, /href="#admin-web-info-terms"[\s\S]*href="#admin-web-info-privacy"[\s\S]*href="#admin-payment-settings"/);
   assert.match(shellSource, /admin-dashboard-sidebar/);
   assert.doesNotMatch(shellSource, /admin-dashboard-workspace-header/);
   assert.doesNotMatch(shellSource, /activeSectionMeta/);

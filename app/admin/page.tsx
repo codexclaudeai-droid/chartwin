@@ -29,8 +29,15 @@ export default function AdminPage() {
             </div>
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="webInfo">
-            <AdminWebInfoPanel />
-            <AdminPaymentSettingsPanel />
+            <div className="admin-web-info-group">
+              <nav className="admin-web-info-tabs" aria-label="웹정보관리 세부 메뉴">
+                <a href="#admin-web-info-terms">가입약관</a>
+                <a href="#admin-web-info-privacy">개인정보보호정책</a>
+                <a href="#admin-payment-settings">입금정보관리</a>
+              </nav>
+              <AdminWebInfoPanel />
+              <AdminPaymentSettingsPanel />
+            </div>
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="users">
             <UserAdminPanel />
