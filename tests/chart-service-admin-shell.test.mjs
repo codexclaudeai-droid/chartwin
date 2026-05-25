@@ -71,3 +71,17 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.match(cssSource, /\.admin-dashboard-sidebar/);
   assert.match(cssSource, /\.admin-dashboard-section\[hidden\]/);
 });
+
+test('admin sidebar submenus roll out on hover and keyboard focus', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /\.admin-dashboard-menu-group:has\(\.admin-dashboard-submenu\)/);
+  assert.match(cssSource, /\.admin-dashboard-submenu/);
+  assert.match(cssSource, /max-height: 0/);
+  assert.match(cssSource, /overflow: hidden/);
+  assert.match(cssSource, /pointer-events: none/);
+  assert.match(cssSource, /transition: max-height/);
+  assert.match(cssSource, /\.admin-dashboard-menu-group:hover \.admin-dashboard-submenu/);
+  assert.match(cssSource, /\.admin-dashboard-menu-group:focus-within \.admin-dashboard-submenu/);
+  assert.match(cssSource, /pointer-events: auto/);
+});

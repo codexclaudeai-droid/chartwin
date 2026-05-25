@@ -371,6 +371,15 @@ a {
   gap: 6px;
 }
 
+.admin-dashboard-menu-group:has(.admin-dashboard-submenu) .admin-dashboard-menu-item::after {
+  color: rgba(255, 255, 255, 0.48);
+  content: "Sub menu";
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .admin-dashboard-menu-item strong {
   font-size: 15px;
 }
@@ -378,7 +387,22 @@ a {
 .admin-dashboard-submenu {
   display: grid;
   gap: 4px;
-  margin: -4px 0 6px 18px;
+  margin: -4px 0 0 18px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition: max-height 220ms ease, opacity 160ms ease, transform 180ms ease, margin-bottom 180ms ease;
+}
+
+.admin-dashboard-menu-group:hover .admin-dashboard-submenu,
+.admin-dashboard-menu-group:focus-within .admin-dashboard-submenu {
+  margin-bottom: 6px;
+  max-height: 180px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .admin-dashboard-submenu a {
