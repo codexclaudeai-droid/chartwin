@@ -522,6 +522,8 @@ test('support page exposes public notice qna and faq boards before private inqui
   assert.match(styleSource, /#support-inquiry-form/);
   assert.match(styleSource, /\.support-public-board/);
   assert.match(styleSource, /\.support-public-board-card/);
+  assert.match(styleSource, /body:not\(:has\(\.landing-page\)\) \.support-public-board\s*\{[\s\S]*?rgba\(8, 17, 31, 0\.78\)/);
+  assert.match(styleSource, /body:not\(:has\(\.landing-page\)\) \.support-public-board \.section-heading\.compact h2\s*\{[\s\S]*?font-size: clamp\(22px, 2\.4vw, 30px\)/);
 });
 
 test('public board posts are repository backed and hide unpublished items', () => {
