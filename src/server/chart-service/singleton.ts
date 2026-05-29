@@ -69,7 +69,9 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
     typeof persistence.repository.listSignupAgreementsByUserId === 'function' &&
     typeof persistence.repository.saveSignupAgreement === 'function' &&
     typeof persistence.repository.getSupportMessageById === 'function' &&
-    typeof persistence.repository.listSupportMessagesByThreadId === 'function';
+    typeof persistence.repository.listSupportMessagesByThreadId === 'function' &&
+    typeof persistence.repository.deleteSupportMessage === 'function' &&
+    typeof persistence.repository.deleteSupportMessagesByThreadId === 'function';
 }
 
 function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository): void {
@@ -172,6 +174,24 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
         if (message) return structuredClone(message);
       }
       return null;
+    };
+  }
+
+  if (
+    typeof mutableRepository.deleteSupportMessage !== 'function' &&
+    typeof mutableRepository.getSupportMessageById === 'function' &&
+    typeof mutableRepository.listSupportMessagesByThreadId === 'function' &&
+    typeof mutableRepository.deleteSupportMessagesByThreadId === 'function' &&
+    typeof mutableRepository.saveSupportMessage === 'function'
+  ) {
+    mutableRepository.deleteSupportMessage = (id) => {
+      const message = mutableRepository.getSupportMessageById(id);
+      if (!message) return;
+      const threadMessages = mutableRepository.listSupportMessagesByThreadId(message.threadId);
+      mutableRepository.deleteSupportMessagesByThreadId(message.threadId);
+      threadMessages
+        .filter((item) => item.id !== id)
+        .forEach((item) => mutableRepository.saveSupportMessage(item));
     };
   }
 }

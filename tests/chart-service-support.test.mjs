@@ -257,6 +257,7 @@ test('async admin support reply mutations can locate a reply from the supplied t
   });
 
   assert.equal(updated.message.body, 'Updated admin reply without direct getter');
+  delete asyncRepository.deleteSupportMessage;
 
   const deleted = await deleteAsyncSupportMessageAsAdmin(asyncRepository, {
     admin: { id: 'admin_1', role: 'admin' },

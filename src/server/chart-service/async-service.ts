@@ -1458,7 +1458,7 @@ export async function deleteAsyncSupportMessageAsAdmin(
     updatedAt: input.deletedAt,
   };
 
-  await repository.deleteSupportMessage(message.id);
+  await deleteAsyncSupportMessage(repository, message);
   await repository.saveSupportThread(updatedThread);
   await repository.appendAuditLog(createAuditLogDraft({
     actor: input.admin,
@@ -1578,6 +1578,24 @@ async function requireAsyncSupportMessage(
     if (threadMessage) return threadMessage;
   }
   throw new Error(`Support message not found: ${messageId}`);
+}
+
+async function deleteAsyncSupportMessage(
+  repository: AsyncChartServiceRepository,
+  message: SupportMessageRecord,
+): Promise<void> {
+  if (typeof repository.deleteSupportMessage === 'function') {
+    await repository.deleteSupportMessage(message.id);
+    return;
+  }
+
+  const threadMessages = await repository.listSupportMessagesByThreadId(message.threadId);
+  await repository.deleteSupportMessagesByThreadId(message.threadId);
+  await Promise.all(
+    threadMessages
+      .filter((item) => item.id !== message.id)
+      .map((item) => repository.saveSupportMessage(item)),
+  );
 }
 
 async function requireAsyncEditableSupportThreadMessage(
