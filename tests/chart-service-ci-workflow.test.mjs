@@ -27,6 +27,9 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(deployWorkflow, /npm run service:postgres:admin-check/);
   assert.match(deployWorkflow, /CHART_SERVICE_DATABASE_URL/);
   assert.match(deployWorkflow, /CHART_SERVICE_SESSION_SECRET/);
+  assert.match(deployWorkflow, /CHART_SERVICE_REPOSITORY:\s+postgres/);
+  assert.match(deployWorkflow, /CHART_SERVICE_DATABASE_SSL_MODE:\s+require/);
+  assert.match(deployWorkflow, /CHART_SERVICE_EMAIL_PROVIDER:\s+log/);
   assert.match(openNextConfig, /buildCommand:\s*'npx next build'/);
   assert.match(nextConfig, /pg-cloudflare/);
   assert.doesNotMatch(workflow, /Owner1234!/);
