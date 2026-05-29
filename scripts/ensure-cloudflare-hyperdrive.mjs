@@ -6,10 +6,12 @@ const apiToken = requireEnv('CLOUDFLARE_API_TOKEN');
 const databaseUrl = requireEnv('CHART_SERVICE_DATABASE_URL');
 const hyperdriveName = process.env.CLOUDFLARE_HYPERDRIVE_NAME || 'tradingcore-production-supabase';
 const bindingName = process.env.CLOUDFLARE_HYPERDRIVE_BINDING || 'HYPERDRIVE';
+const configuredHyperdriveId = process.env.CLOUDFLARE_HYPERDRIVE_ID?.trim();
 
 const originUrl = normalizeSupabaseDirectUrl(databaseUrl);
-const existingConfig = await findHyperdriveByName(hyperdriveName);
-const hyperdrive = existingConfig ?? await createHyperdrive(hyperdriveName, originUrl);
+const hyperdrive = configuredHyperdriveId
+  ? { id: configuredHyperdriveId }
+  : await ensureHyperdriveConfig(hyperdriveName, originUrl);
 
 patchWranglerConfig(hyperdrive.id, bindingName);
 console.log(`[HYPERDRIVE READY] ${hyperdriveName} (${hyperdrive.id}) bound as ${bindingName}.`);
@@ -42,6 +44,11 @@ async function cloudflareRequest(method, apiPath, body) {
 async function findHyperdriveByName(name) {
   const result = await cloudflareRequest('GET', `/accounts/${accountId}/hyperdrive/configs`);
   return result?.find((config) => config.name === name) ?? null;
+}
+
+async function ensureHyperdriveConfig(name, url) {
+  const existingConfig = await findHyperdriveByName(name);
+  return existingConfig ?? await createHyperdrive(name, url);
 }
 
 async function createHyperdrive(name, url) {
