@@ -43,7 +43,7 @@ function compileSimpleBuySellPineToJs(pine: string): string {
   const buy = program.statements.find((s) => s.kind === 'BUY');
   const sell = program.statements.find((s) => s.kind === 'SELL');
   if (!buy || !sell) {
-    throw new Error('Pine ?꾨왂? BUY/SELL 議곌굔??紐⑤몢 ?꾩슂?⑸땲??');
+    throw new Error('Pine 전략은 BUY/SELL 조건이 모두 필요합니다.');
   }
 
   const buyLeft = buy.condition.left.period;
@@ -81,7 +81,7 @@ function compileBollingerDirectedPineToJs(pine: string): string {
   const hasShortCross = /\bta\.crossunder\(\s*source\s*,\s*upper\s*\)/i.test(code);
   const hasStdev = /\bta\.stdev\(\s*source\s*,\s*length\s*\)/i.test(code);
   if (!hasLongCross || !hasShortCross || !hasStdev) {
-    throw new Error('吏?먮릺吏 ?딅뒗 Pine ?꾨왂 ?⑦꽩?낅땲?? ?꾩옱??BUY/SELL 援먯감???먮뒗 Bollinger directed ?⑦꽩留?吏?먰빀?덈떎.');
+    throw new Error('지원되지 않는 Pine 전략 패턴입니다. 현재는 BUY/SELL 교차 또는 Bollinger directed 패턴만 지원합니다.');
   }
 
   const sourceSeries = (sourceMatch?.[1]?.toLowerCase() ?? 'close') as 'close' | 'open' | 'high' | 'low';
@@ -475,7 +475,7 @@ function compileSupertrendDirectedPineToJs(pine: string): string {
   const hasDirectionChangeLong = /\bta\.change\(\s*direction\s*\)\s*<\s*0/i.test(code);
   const hasDirectionChangeShort = /\bta\.change\(\s*direction\s*\)\s*>\s*0/i.test(code);
   if (!hasSupertrend || !hasDirectionChangeLong || !hasDirectionChangeShort) {
-    throw new Error('吏?먮릺吏 ?딅뒗 Pine ?꾨왂 ?⑦꽩?낅땲?? ?꾩옱??BUY/SELL 援먯감?? Bollinger directed, Supertrend directed ?⑦꽩留?吏?먰빀?덈떎.');
+    throw new Error('지원되지 않는 Pine 전략 패턴입니다. 현재는 BUY/SELL 교차, Bollinger directed, Supertrend directed 패턴만 지원합니다.');
   }
 
   const atrPeriodMatch =
@@ -585,7 +585,7 @@ export function buildStrategyDefinition(input: {
   try {
     new Function(`return (${compiledJs});`)();
   } catch (error) {
-    throw new Error(`?꾨왂 JS 寃利??ㅽ뙣: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`전략 JS 검증 실패: ${error instanceof Error ? error.message : String(error)}`);
   }
   return {
     id: input.id ?? `strategy_${Math.random().toString(36).slice(2, 10)}`,

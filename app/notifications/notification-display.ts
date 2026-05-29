@@ -96,12 +96,18 @@ const CATEGORY_LABELS: Record<string, string> = {
   notice: '공지',
 };
 
-const LEGACY_MOJIBAKE_TITLES: Record<string, string> = {
-  '怨좉컼?쇳꽣 ?듬????깅줉?섏뿀?듬땲??': '고객센터 답변이 등록되었습니다',
-};
+const LEGACY_SUPPORT_REPLY_TITLE = String.fromCodePoint(
+  0x6028, 0xc889, 0xcefc, 0x3f, 0xc1f3, 0xaf63, 0x20, 0x3f,
+  0xb4ec, 0x3f, 0x3f, 0x3f, 0x3f, 0xae45, 0xc909, 0x3f,
+  0xc10f, 0xbfc0, 0x3f, 0xb4ec, 0xb572, 0x3f, 0x3f,
+);
+
+const LEGACY_MOJIBAKE_TITLES = new Map<string, string>([
+  [LEGACY_SUPPORT_REPLY_TITLE, '고객센터 답변이 등록되었습니다'],
+]);
 
 export function normalizeNotificationTitle(title: string): string {
-  return LEGACY_MOJIBAKE_TITLES[title] ?? title;
+  return LEGACY_MOJIBAKE_TITLES.get(title) ?? title;
 }
 
 export function getNotificationCategoryLabel(category: string): string {

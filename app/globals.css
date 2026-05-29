@@ -819,6 +819,13 @@ a {
   border-color: var(--danger);
 }
 
+.button.subtle {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--muted);
+}
+
 .landing-page {
   background:
     radial-gradient(circle at 14% 8%, rgba(183, 255, 42, 0.22), transparent 28vw),
@@ -8210,6 +8217,13 @@ body:not(:has(.landing-page)) .button.secondary {
   border-color: rgba(125, 183, 255, 0.24);
   box-shadow: none;
   color: #ffffff;
+}
+
+body:not(:has(.landing-page)) .button.subtle {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: rgba(216, 236, 255, 0.68);
 }
 
 body:not(:has(.landing-page)) .button.danger {

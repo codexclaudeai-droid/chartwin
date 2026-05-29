@@ -336,7 +336,7 @@ export function createSymbolIconElement(symbolId: string, iconUrl?: string): HTM
 }
 
 export function getSymbolIconUrl(symbolId: string): string | undefined {
-  // ?섎뱶肄붾뵫 留??곗꽑 (?ㅼ젙 遺덊븘??
+  // 하드코딩된 기본 아이콘을 우선 사용합니다.
   const BUILTIN_ICON_MAP: Record<string, string> = {
     'KOSPI':        'https://s3-symbol-logo.tradingview.com/indices/korea-composite-index.svg',
     'KOSPI200':     'https://s3-symbol-logo.tradingview.com/indices/kospi-200.svg',

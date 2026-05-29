@@ -1127,7 +1127,7 @@ export async function rejectAsyncManualPaymentRequest(
   await createAsyncUserNotification(repository, {
     userId: payment.userId,
     category: 'payment',
-    title: '寃곗젣 ?붿껌??諛섎젮?섏뿀?듬땲??',
+    title: '결제 요청이 반려되었습니다',
     body: adminNote,
     linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.rejectedAt,
@@ -1170,7 +1170,7 @@ export async function refundAsyncManualPaymentAndSubscription(
   await createAsyncUserNotification(repository, {
     userId: payment.userId,
     category: 'payment',
-    title: '?섎텋 泥섎━媛 ?꾨즺?섏뿀?듬땲??',
+    title: '환불 처리가 완료되었습니다',
     body: adminNote,
     linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.refundedAt,
@@ -1207,7 +1207,7 @@ export async function approveAsyncSubscriptionCancelRequest(
   await createAsyncUserNotification(repository, {
     userId: subscription.userId,
     category: 'subscription',
-    title: '援щ룆 痍⑥냼媛 ?뱀씤?섏뿀?듬땲??',
+    title: '구독 취소가 승인되었습니다',
     body: adminNote,
     linkUrl: '/pricing',
     createdAt: input.cancelledAt,
@@ -1251,7 +1251,7 @@ export async function approveAsyncSubscriptionRefundRequest(
   await createAsyncUserNotification(repository, {
     userId: subscription.userId,
     category: 'subscription',
-    title: '?섎텋 ?붿껌???뱀씤?섏뿀?듬땲??',
+    title: '환불 요청이 승인되었습니다',
     body: adminNote,
     linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.refundedAt,
@@ -1295,7 +1295,7 @@ export async function rejectAsyncSubscriptionRequest(
   await createAsyncUserNotification(repository, {
     userId: subscription.userId,
     category: 'subscription',
-    title: '援щ룆 ?붿껌??諛섎젮?섏뿀?듬땲??',
+    title: '구독 요청이 반려되었습니다',
     body: adminNote,
     linkUrl: '/pricing',
     createdAt: input.rejectedAt,

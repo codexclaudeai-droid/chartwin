@@ -869,18 +869,19 @@ test('pricing copy makes deposit confirmation explicitly manual', () => {
   assert.match(panelSource, /PRO/);
   assert.match(panelSource, /ELITE/);
   assert.match(pageSource, /입금확인 요청/);
-  assert.match(pageSource, /구독승인/);
+  assert.match(pageSource, /구독을 승인/);
   assert.match(pageSource, /관리자가 실제 입금 내역을 수동 확인/);
   assert.match(panelSource, /관리자 수동 입금 확인/);
   assert.match(panelSource, /dispatchNotificationsRefreshEvent/);
   assert.doesNotMatch(panelSource, /pricing-checkout-trust-strip/);
   assert.doesNotMatch(panelSource, /상태 알림 발송/);
   assert.doesNotMatch(panelSource, /1:1 요청 연결/);
-  assert.match(panelSource, /pricing-auth-cta/);
-  assert.match(panelSource, /로그인 후 신청하기/);
-  assert.match(panelSource, /회원가입 후 구독하기/);
-  assert.match(panelSource, /href="\/login\?redirect=\/pricing"/);
-  assert.match(panelSource, /href="\/signup"/);
+  assert.doesNotMatch(panelSource, /pricing-auth-cta/);
+  assert.match(panelSource, /로그인 후 플랜 신청이 가능합니다/);
+  assert.match(panelSource, /AuthPromptModal/);
+  assert.match(panelSource, /loginHref="\/login\?redirect=\/pricing"/);
+  assert.match(panelSource, /signupHref="\/signup\?redirect=\/pricing"/);
+  assert.match(cssSource, /\.button\.subtle/);
   assert.doesNotMatch(pageSource, /<table className="table">/);
   assert.doesNotMatch(pageSource, /자동 입금 확인/);
   assert.doesNotMatch(panelSource, /자동 입금 확인/);
@@ -1006,6 +1007,36 @@ test('pricing payment request advances through step-based checkout states', () =
   assert.match(cssSource, /\.checkout-stepper/);
   assert.match(cssSource, /\.checkout-step-panel/);
   assert.match(cssSource, /\.checkout-confirm-grid/);
+});
+
+test('service copy does not keep mojibake fragments in app-facing files', () => {
+  const roots = [
+    new URL('../app/', import.meta.url),
+    new URL('../src/', import.meta.url),
+  ];
+  const extensions = new Set(['.css', '.js', '.jsx', '.mjs', '.ts', '.tsx']);
+  const offenders = [];
+
+  function walk(directoryUrl) {
+    for (const entry of fs.readdirSync(directoryUrl, { withFileTypes: true })) {
+      const entryUrl = new URL(`${entry.name}${entry.isDirectory() ? '/' : ''}`, directoryUrl);
+      if (entry.isDirectory()) {
+        walk(entryUrl);
+        continue;
+      }
+      if (!extensions.has(entry.name.slice(entry.name.lastIndexOf('.')))) continue;
+
+      const source = fs.readFileSync(entryUrl, 'utf8');
+      source.split(/\r?\n/).forEach((line, index) => {
+        if (/[\u4e00-\u9fff\uf900-\ufaff\ufffd]/u.test(line)) {
+          offenders.push(`${entryUrl.pathname}:${index + 1}`);
+        }
+      });
+    }
+  }
+
+  roots.forEach(walk);
+  assert.deepEqual(offenders, []);
 });
 
 test('admin payment settings panel and route are wired into operations UI', () => {

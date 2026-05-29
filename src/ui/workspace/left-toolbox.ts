@@ -48,7 +48,7 @@ const tools: ToolboxTool[] = [
             { id: 'cursor-cross', label: '크로스', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round"><line x1="12" y1="4" x2="12" y2="10"></line><line x1="12" y1="14" x2="12" y2="20"></line><line x1="4" y1="12" x2="10" y2="12"></line><line x1="14" y1="12" x2="20" y2="12"></line></svg>` },
             { id: 'cursor-dot', label: '점', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0"><circle cx="12" cy="12" r="2.2"></circle></svg>` },
             { id: 'cursor-arrow', label: '화살표', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0"><path d="M6 3l12 9-5 1 2 7-2 1-3-7-4 4z"></path></svg>` },
-            { id: 'cursor-demo', label: '데모', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#76a9ff" stroke-width="1.0" stroke-linecap="round"><circle cx="12" cy="12" r="8" fill="rgba(47,108,255,0.35)" stroke="none"></circle></svg>` },
+            { id: 'cursor-demo', label: '강조', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#76a9ff" stroke-width="1.0" stroke-linecap="round"><circle cx="12" cy="12" r="8" fill="rgba(47,108,255,0.35)" stroke="none"></circle></svg>` },
           ],
         },
         {

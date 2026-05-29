@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { dispatchNotificationsRefreshEvent } from '../notification-events';
+import { AuthPromptModal } from '../shared/auth-prompt-modal';
 
 type CheckoutStep = 'plan' | 'payment' | 'confirm' | 'submitted';
 
@@ -461,37 +462,13 @@ export function PricingPanel({
       </form>
       <p className="notice">{message}</p>
       {showAuthPromptModal ? (
-        <div
-          className="pricing-auth-modal-backdrop"
-          role="presentation"
-          onClick={() => setShowAuthPromptModal(false)}
-        >
-          <div
-            aria-labelledby="pricing-auth-modal-title"
-            aria-modal="true"
-            className="pricing-auth-modal"
-            role="dialog"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3 id="pricing-auth-modal-title">로그인 후 플랜 신청이 가능합니다.</h3>
-            <p>회원가입 또는 로그인 후 구독 신청을 진행해 주세요.</p>
-            <div className="pricing-auth-modal-actions">
-              <a className="button secondary" href="/login?redirect=/pricing">
-                로그인
-              </a>
-              <a className="button" href="/signup?redirect=/pricing">
-                회원가입
-              </a>
-            </div>
-            <button
-              className="button subtle pricing-auth-modal-close"
-              type="button"
-              onClick={() => setShowAuthPromptModal(false)}
-            >
-              닫기
-            </button>
-          </div>
-        </div>
+        <AuthPromptModal
+          title="로그인 후 플랜 신청이 가능합니다."
+          description="회원가입 또는 로그인 후 구독 신청을 진행해 주세요."
+          loginHref="/login?redirect=/pricing"
+          signupHref="/signup?redirect=/pricing"
+          onClose={() => setShowAuthPromptModal(false)}
+        />
       ) : null}
     </section>
   );

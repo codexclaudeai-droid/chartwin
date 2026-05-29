@@ -2,14 +2,14 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #0f172a; /* ?대몢??諛곌꼍 */
+  background-color: #0f172a; /* 어두운 배경 */
   overflow: hidden;
 }
 
 #app {
   width: 100vw;
   height: 100vh;
-  /* ?뱀떆 紐⑤Ⅴ??諛곌꼍?됱쓣 ?뺤떎??以섏꽌 ?곸뿭 ?뺤씤 */
+  /* 캔버스 영역 확인용 기본 배경 */
   background-color: #0f172a; 
 }
 
