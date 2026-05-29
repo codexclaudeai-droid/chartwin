@@ -360,11 +360,10 @@ test('admin support reply edit and delete controls move into top-right icon butt
   assert.match(adminSource, /admin-support-reply-icon-actions/);
   assert.match(adminSource, /admin-support-reply-icon-button/);
   assert.match(adminSource, /role="group"/);
-  assert.match(adminSource, /threadMessage\.authorUserId === item\.thread\.authorUserId/);
-  assert.match(adminSource, /관리자글/);
   assert.match(adminSource, /관리자 답변/);
-  assert.match(adminSource, /isThreadAuthorMessage \? startThreadEdit\(item\) : startReplyEdit\(threadMessage\)/);
-  assert.match(adminSource, /isThreadAuthorMessage \? void deleteThread\(item\.thread\.id\) : void deleteReply\(threadMessage\.id\)/);
+  assert.match(adminSource, /onClick=\{\(\) => startReplyEdit\(threadMessage\)\}/);
+  assert.match(adminSource, /onClick=\{\(\) => void deleteReply\(threadMessage\.id\)\}/);
+  assert.doesNotMatch(adminSource, /isThreadAuthorMessage/);
   assert.doesNotMatch(adminSource, /admin-support-message-actions-list/);
   assert.doesNotMatch(adminSource, /admin-support-message-action-card/);
   assert.match(styleSource, /#admin-support \.admin-support-message-heading\s*\{[\s\S]*?justify-content: space-between/);
