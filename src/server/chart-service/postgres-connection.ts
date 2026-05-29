@@ -16,6 +16,7 @@ export type PostgresConnectionSettings = {
   port: string | null;
   databaseName: string;
   sslMode: PostgresSslMode;
+  runtimeTarget: string | null;
   hasCredentials: boolean;
   safeLabel: string;
 };
@@ -66,6 +67,7 @@ export function resolvePostgresConnectionSettings(
     port: url.port || null,
     databaseName,
     sslMode,
+    runtimeTarget: input.runtimeTarget ?? null,
     hasCredentials: Boolean(url.username || url.password),
     safeLabel,
   } as PostgresConnectionSettings;

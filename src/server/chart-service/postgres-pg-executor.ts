@@ -18,7 +18,7 @@ export type PgPoolLike = {
 
 export type PgPoolOptions = {
   connectionString: string;
-  ssl?: false | { rejectUnauthorized: boolean };
+  ssl?: boolean | { rejectUnauthorized: boolean };
 };
 
 export function createPgPostgresQueryExecutor(pool: PgPoolLike): PostgresQueryExecutor | TransactionalPostgresQueryExecutor {
@@ -57,15 +57,16 @@ export function createPgPoolOptions(settings: PostgresConnectionSettings): PgPoo
   const options: PgPoolOptions = {
     connectionString: removeSslModeFromConnectionString(settings.connectionString),
   };
-  const ssl = createPgSslOption(settings.sslMode);
+  const ssl = createPgSslOption(settings.sslMode, settings.runtimeTarget ?? '');
   if (ssl !== undefined) {
     options.ssl = ssl;
   }
   return options;
 }
 
-function createPgSslOption(sslMode: PostgresSslMode): PgPoolOptions['ssl'] | undefined {
+function createPgSslOption(sslMode: PostgresSslMode, runtimeTarget = ''): PgPoolOptions['ssl'] | undefined {
   if (sslMode === 'disable') return false;
+  if (runtimeTarget === 'cloudflare-workers' && sslMode === 'require') return true;
   if (sslMode === 'require') return { rejectUnauthorized: false };
   if (sslMode === 'verify-ca' || sslMode === 'verify-full') return { rejectUnauthorized: true };
   return undefined;
