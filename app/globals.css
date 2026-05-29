@@ -9006,12 +9006,27 @@ body:not(:has(.landing-page)) #admin-sales .sales-date-range-field input {
 }
 
 body:not(:has(.landing-page)) #admin-sales .sales-date-range-field {
+  border: 0;
+  box-shadow: none;
   padding: 0 12px;
 }
 
+body:not(:has(.landing-page)) #admin-sales .sales-date-range-field input[type="date"] {
+  border: 0;
+  box-shadow: none;
+  outline: 0;
+}
+
 body:not(:has(.landing-page)) #admin-sales .sales-date-range-field:focus-within {
-  border-color: rgba(98, 166, 255, 0.72);
-  box-shadow: 0 0 0 4px rgba(76, 141, 255, 0.14);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+body:not(:has(.landing-page)) #admin-sales .sales-date-range-field input[type="date"]:focus,
+body:not(:has(.landing-page)) #admin-sales .sales-date-range-field input[type="date"]:focus-visible {
+  border-color: transparent;
+  box-shadow: none;
+  outline: 0;
 }
 
 body:not(:has(.landing-page)) #admin-sales .salesperson-search-results {

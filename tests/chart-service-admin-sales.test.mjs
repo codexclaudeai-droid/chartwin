@@ -475,6 +475,28 @@ test('admin sales salesperson search dropdown keeps text readable in dark theme'
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-sales \.salesperson-search-empty a\s*\{[\s\S]*?color: #ffffff/);
 });
 
+test('admin sales date range inputs remove the dark focus outline', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const dateInputRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-sales \.sales-date-range-field input\[type="date"\]\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const focusWithinRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-sales \.sales-date-range-field:focus-within\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const dateInputFocusRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-sales \.sales-date-range-field input\[type="date"\]:focus,\s*body:not\(:has\(\.landing-page\)\) #admin-sales \.sales-date-range-field input\[type="date"\]:focus-visible\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(dateInputRule, /border:\s*0/);
+  assert.match(dateInputRule, /box-shadow:\s*none/);
+  assert.match(dateInputRule, /outline:\s*0/);
+  assert.match(focusWithinRule, /border-color:\s*transparent/);
+  assert.match(focusWithinRule, /box-shadow:\s*none/);
+  assert.match(dateInputFocusRule, /border-color:\s*transparent/);
+  assert.match(dateInputFocusRule, /box-shadow:\s*none/);
+  assert.match(dateInputFocusRule, /outline:\s*0/);
+});
+
 test('admin sales panel keeps management sections visible before summary data loads', () => {
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-sales-panel.tsx', import.meta.url), 'utf8');
 
