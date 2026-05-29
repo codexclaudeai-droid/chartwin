@@ -228,6 +228,16 @@ test('admin payment completed flow status renders as a readable badge', () => {
   assert.match(doneBadgeRule, /color:\s*#ffffff/);
 });
 
+test('admin operation tables render Korean plan period labels', () => {
+  const paymentSource = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+  const subscriptionSource = fs.readFileSync(new URL('../app/admin/subscription-admin-panel.tsx', import.meta.url), 'utf8');
+  const salesSource = fs.readFileSync(new URL('../app/admin/admin-sales-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(paymentSource, /formatAdminPlanPeriodLabel\(item\.plan\)/);
+  assert.match(subscriptionSource, /formatAdminPlanPeriodLabel\(item\.plan\)/);
+  assert.match(salesSource, /formatAdminPlanPeriodLabel\(row\.subscriptionPlan\)/);
+});
+
 test('admin payment panel confirms irreversible payment operations before posting', () => {
   const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
 

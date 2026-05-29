@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { formatAdminPlanPeriodLabel } from './admin-plan-labels';
 import { dispatchAdminQueuePresetEvent } from './admin-queue-preset-events';
 
 type SalespersonItem = {
@@ -444,7 +445,7 @@ export function AdminSalesPanel() {
       row.salesDate,
       row.email,
       row.customerName,
-      row.subscriptionPlan,
+      formatAdminPlanPeriodLabel(row.subscriptionPlan),
       row.amountUsd,
       `${row.commissionPercent}%`,
       row.points,
@@ -861,7 +862,7 @@ export function AdminSalesPanel() {
                 <tr key={row.paymentId}>
                   <td>{row.salesDate}</td>
                   <td>{row.email}<br /><small>{row.customerName}</small></td>
-                  <td>{row.subscriptionPlan}</td>
+                  <td>{formatAdminPlanPeriodLabel(row.subscriptionPlan)}</td>
                   <td>{formatUsd(row.amountUsd)}</td>
                   <td>{row.commissionPercent}%</td>
                   <td>{formatPoint(row.points)}</td>

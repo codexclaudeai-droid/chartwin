@@ -5,6 +5,7 @@ import { formatPaymentAmountUsd } from '../../src/domain/chart-service/index.ts'
 import { useAdminActionConfirmation } from './admin-action-confirmation-dialog';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
 import { canSubmitAdminOperationNote, normalizeAdminOperationNote } from './admin-operation-note';
+import { formatAdminPlanPeriodLabel } from './admin-plan-labels';
 import { subscribeAdminQueuePresetEvent } from './admin-queue-preset-events';
 import { dispatchAdminRefreshEvent, subscribeAdminRefreshEvent } from './admin-refresh-events';
 import {
@@ -33,7 +34,9 @@ type AdminSubscriptionQueueItem = {
     name: string;
   };
   plan: {
+    id?: string | null;
     name: string;
+    durationDays?: number | null;
   } | null;
   payment: {
     id: string;
@@ -271,7 +274,7 @@ export function SubscriptionAdminPanel() {
                     <span>{item.user.name}</span>
                   </td>
                   <td className="admin-subscription-plan-cell">
-                    <strong>{item.plan?.name ?? '미지정'}</strong>
+                    <strong>{formatAdminPlanPeriodLabel(item.plan)}</strong>
                     {item.subscription.startsAt && (
                       <span>시작 {formatSubscriptionDateTime(item.subscription.startsAt)}</span>
                     )}

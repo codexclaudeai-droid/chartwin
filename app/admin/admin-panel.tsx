@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAdminActionConfirmation } from './admin-action-confirmation-dialog';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
 import { canSubmitAdminOperationNote, normalizeAdminOperationNote } from './admin-operation-note';
+import { formatAdminPlanPeriodLabel } from './admin-plan-labels';
 import { subscribeAdminQueuePresetEvent } from './admin-queue-preset-events';
 import { dispatchAdminRefreshEvent, subscribeAdminRefreshEvent } from './admin-refresh-events';
 import {
@@ -38,7 +39,9 @@ type AdminPaymentQueueItem = {
     name: string;
   };
   plan: {
+    id?: string | null;
     name: string;
+    durationDays?: number | null;
   } | null;
   subscription: {
     status: string;
@@ -337,7 +340,7 @@ export function AdminPanel() {
                   </div>
                 )}
               </td>
-              <td className="admin-payment-plan-cell"><strong>{item.plan?.name ?? 'Unknown'}</strong></td>
+              <td className="admin-payment-plan-cell"><strong>{formatAdminPlanPeriodLabel(item.plan)}</strong></td>
               <td className="admin-payment-amount-cell">${item.payment.amountUsd}</td>
               <td className="admin-payment-status-cell">{renderPaymentFlowStatus(item)}</td>
               <td className="admin-payment-action-cell">
