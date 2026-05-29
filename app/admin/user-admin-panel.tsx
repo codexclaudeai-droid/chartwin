@@ -669,16 +669,22 @@ export function UserAdminPanel() {
       <div className="thread-list admin-detail-panel">
         <p className="notice">{detailMessage}</p>
         {detail && (
-          <article className="thread-card">
-            <div className="thread-meta">
-              <span className="badge">{formatUserRoleLabel(detail.user.role)}</span>
-              <span>{formatUserAccountStatusLabel(detail.user.accountStatus)}</span>
-              <span>{detail.user.email}</span>
-              <span>{detail.user.phoneNumber || '연락번호 미등록'}</span>
-              <span>{detail.user.id}</span>
+          <article className="thread-card admin-user-detail-card">
+            <div className="admin-user-detail-header">
+              <div>
+                <div className="thread-meta admin-user-detail-meta">
+                  <span className="badge">{formatUserRoleLabel(detail.user.role)}</span>
+                  <span>{detail.user.email}</span>
+                  <span>{detail.user.phoneNumber || '연락번호 미등록'}</span>
+                  <span>{detail.user.id}</span>
+                </div>
+                <h3 className="admin-user-detail-title">{detail.user.name}</h3>
+              </div>
+              <span className={getAccountStatusClassName(detail.user.accountStatus)}>
+                {formatUserAccountStatusLabel(detail.user.accountStatus)}
+              </span>
             </div>
-            <h3>{detail.user.name}</h3>
-            <div className="admin-filter-row">
+            <div className="admin-filter-row admin-user-detail-control-grid">
               <input
                 aria-label="로그인 이메일 변경"
                 value={newEmail}
@@ -700,8 +706,8 @@ export function UserAdminPanel() {
                 로그인 이메일 변경
               </button>
             </div>
-            <p className="notice compact">슈퍼관리자 전용: 이메일은 로그인 ID로 사용되며 변경 시 감사로그에 기록됩니다.</p>
-            <div className="admin-filter-row">
+            <p className="notice compact admin-user-detail-control-note">슈퍼관리자 전용: 이메일은 로그인 ID로 사용되며 변경 시 감사로그에 기록됩니다.</p>
+            <div className="admin-filter-row admin-user-detail-control-grid">
               <select value={selectedRole} onChange={(event) => setSelectedRole(event.target.value as UserRole)}>
                 {ROLE_OPTIONS.map((roleOption) => (
                   <option
@@ -725,7 +731,7 @@ export function UserAdminPanel() {
                 </a>
               </div>
             )}
-            <div className="admin-filter-row">
+            <div className="admin-filter-row admin-user-detail-control-grid account-status">
               <input
                 aria-label="계정 상태 변경 사유"
                 value={accountReason}
@@ -740,7 +746,7 @@ export function UserAdminPanel() {
               </button>
             </div>
             {accountPermissionNotice && <p className="notice">{accountPermissionNotice}</p>}
-            <div className="summary-grid">
+            <div className="summary-grid admin-user-detail-summary-grid">
               <article className="mini-card">
                 <span>회원 정보</span>
                 <strong>{detail.user.phoneNumber || '연락번호 미등록'}</strong>
@@ -782,10 +788,10 @@ export function UserAdminPanel() {
               </article>
             </div>
             <div className="admin-history-grid">
-              <section className="admin-history-card">
+              <section className="admin-history-card admin-user-history-card">
                 <h4>추천회원 목록</h4>
                 {detail.referrals.referredUsers.length > 0 ? (
-                  <ul className="admin-history-list referral-member-list">
+                  <ul className="admin-history-list admin-user-history-list referral-member-list">
                     {detail.referrals.referredUsers.map((referral) => (
                       <li key={referral.user.id}>
                         <div className="admin-history-row">
@@ -807,13 +813,13 @@ export function UserAdminPanel() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="admin-history-empty">추천회원 목록이 없습니다.</p>
+                  <p className="admin-history-empty admin-user-history-empty">추천회원 목록이 없습니다.</p>
                 )}
               </section>
-              <section className="admin-history-card">
+              <section className="admin-history-card admin-user-history-card">
                 <h4>최근 결제 내역</h4>
                 {detail.payments.length > 0 ? (
-                  <ul className="admin-history-list">
+                  <ul className="admin-history-list admin-user-history-list">
                     {detail.payments.map((payment) => (
                       <li key={payment.id}>
                         <div className="admin-history-row">
@@ -829,13 +835,13 @@ export function UserAdminPanel() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="admin-history-empty">결제 내역이 없습니다.</p>
+                  <p className="admin-history-empty admin-user-history-empty">결제 내역이 없습니다.</p>
                 )}
               </section>
-              <section className="admin-history-card">
+              <section className="admin-history-card admin-user-history-card">
                 <h4>최근 문의 내역</h4>
                 {detail.supportThreads.length > 0 ? (
-                  <ul className="admin-history-list">
+                  <ul className="admin-history-list admin-user-history-list">
                     {detail.supportThreads.map((thread) => (
                       <li key={thread.id}>
                         <div className="admin-history-row">
@@ -851,13 +857,13 @@ export function UserAdminPanel() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="admin-history-empty">문의 내역이 없습니다.</p>
+                  <p className="admin-history-empty admin-user-history-empty">문의 내역이 없습니다.</p>
                 )}
               </section>
-              <section className="admin-history-card">
+              <section className="admin-history-card admin-user-history-card">
                 <h4>최근 알림 내역</h4>
                 {detail.notifications.length > 0 ? (
-                  <ul className="admin-history-list">
+                  <ul className="admin-history-list admin-user-history-list">
                     {detail.notifications.map((notification) => (
                       <li key={notification.id}>
                         <div className="admin-history-row">
@@ -876,13 +882,13 @@ export function UserAdminPanel() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="admin-history-empty">알림 내역이 없습니다.</p>
+                  <p className="admin-history-empty admin-user-history-empty">알림 내역이 없습니다.</p>
                 )}
               </section>
-              <section className="admin-history-card admin-history-card-wide">
+              <section className="admin-history-card admin-history-card-wide admin-user-history-card">
                 <h4>최근 관리자 조치</h4>
                 {detail.auditEntries.length > 0 ? (
-                  <ul className="admin-history-list admin-audit-history-list">
+                  <ul className="admin-history-list admin-user-history-list admin-user-audit-history-list admin-audit-history-list">
                     {detail.auditEntries.map((entry) => {
                       const auditTargetLink = getAdminAuditTargetLink(entry.log.targetType, entry.log.targetId);
 
@@ -914,7 +920,7 @@ export function UserAdminPanel() {
                     })}
                   </ul>
                 ) : (
-                  <p className="admin-history-empty">관련 관리자 조치가 없습니다.</p>
+                  <p className="admin-history-empty admin-user-history-empty">관련 관리자 조치가 없습니다.</p>
                 )}
               </section>
             </div>

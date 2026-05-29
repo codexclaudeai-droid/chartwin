@@ -398,6 +398,34 @@ test('admin user panel groups directory state into readable table cells', () => 
   assert.match(cssSource, /\.admin-user-ops-grid/);
 });
 
+test('admin user detail panel separates identity controls and history surfaces', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /admin-user-detail-card/);
+  assert.match(source, /admin-user-detail-header/);
+  assert.match(source, /admin-user-detail-title/);
+  assert.match(source, /admin-user-detail-meta/);
+  assert.match(source, /admin-user-detail-control-grid/);
+  assert.match(source, /admin-user-detail-control-note/);
+  assert.match(source, /admin-user-detail-summary-grid/);
+  assert.match(source, /admin-user-history-card/);
+  assert.match(source, /admin-user-history-list/);
+  assert.match(source, /admin-user-history-empty/);
+  assert.match(source, /admin-user-audit-history-list/);
+});
+
+test('admin user detail panel has dense dark operational styling', () => {
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /#admin-users \.admin-user-detail-card\s*\{[\s\S]*?display: grid/);
+  assert.match(cssSource, /#admin-users \.admin-user-detail-header\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto/);
+  assert.match(cssSource, /#admin-users \.admin-user-detail-meta\s*\{[\s\S]*?display: flex/);
+  assert.match(cssSource, /#admin-users \.admin-user-detail-control-grid\s*\{[\s\S]*?grid-template-columns: minmax\(220px, 1fr\) auto/);
+  assert.match(cssSource, /#admin-users \.admin-user-detail-summary-grid\s*\{[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(180px, 1fr\)\)/);
+  assert.match(cssSource, /#admin-users \.admin-user-history-card\s*\{[\s\S]*?background: rgba\(2, 7, 19, 0\.34\)/);
+  assert.match(cssSource, /#admin-users \.admin-user-history-list li\s*\{[\s\S]*?border: 1px solid rgba\(125, 183, 255, 0\.12\)/);
+});
+
 test('admin user panel refreshes its filtered directory after local user operations without self-trigger loops', () => {
   const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
 
