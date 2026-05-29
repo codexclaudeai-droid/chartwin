@@ -16,6 +16,7 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
     'utf8',
   );
   const nextConfig = fs.readFileSync(new URL('../next.config.mjs', import.meta.url), 'utf8');
+  const wranglerConfig = fs.readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
 
   assert.match(workflow, /npm\.cmd run build|npm run build/);
   assert.match(workflow, /workflow_dispatch:/);
@@ -30,6 +31,8 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(deployWorkflow, /CHART_SERVICE_SESSION_SECRET/);
   assert.match(deployWorkflow, /CHART_SERVICE_REPOSITORY:\s+postgres/);
   assert.match(deployWorkflow, /CHART_SERVICE_DATABASE_SSL_MODE:\s+require/);
+  assert.match(wranglerConfig, /CHART_SERVICE_RUNTIME_TARGET/);
+  assert.match(wranglerConfig, /cloudflare-workers/);
   assert.match(deployWorkflow, /CHART_SERVICE_EMAIL_PROVIDER:\s+log/);
   assert.match(openNextConfig, /buildCommand:\s*'npx next build'/);
   assert.match(nextConfig, /pg-cloudflare/);

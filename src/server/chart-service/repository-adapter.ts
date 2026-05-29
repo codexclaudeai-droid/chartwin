@@ -38,12 +38,14 @@ export type ChartServiceRepositoryRuntimeEnv = {
   CHART_SERVICE_REPOSITORY?: string;
   CHART_SERVICE_DATABASE_URL?: string;
   CHART_SERVICE_DATABASE_SSL_MODE?: string;
+  CHART_SERVICE_RUNTIME_TARGET?: string;
 };
 
 export type ChartServiceRepositoryAdapterConfig = {
   adapter?: string | null;
   databaseUrl?: string | null;
   databaseSslMode?: string | null;
+  runtimeTarget?: string | null;
   runtimeMode?: string | null;
   postgresQueryExecutor?: PostgresQueryExecutor | null;
   postgresPoolFactory?: ((options: PgPoolOptions) => PgPoolLike) | null;
@@ -63,6 +65,7 @@ export function getChartServiceRepositoryConfigFromEnv(
     adapter: env.CHART_SERVICE_REPOSITORY,
     databaseUrl: env.CHART_SERVICE_DATABASE_URL,
     databaseSslMode: env.CHART_SERVICE_DATABASE_SSL_MODE,
+    runtimeTarget: env.CHART_SERVICE_RUNTIME_TARGET,
     runtimeMode: env.NODE_ENV,
   };
 }
@@ -83,6 +86,7 @@ export function resolveChartServiceRepositoryAdapter(
   const connection = resolvePostgresConnectionSettings({
     databaseUrl: config.databaseUrl,
     databaseSslMode: config.databaseSslMode,
+    runtimeTarget: config.runtimeTarget,
     runtimeMode: config.runtimeMode,
   });
 

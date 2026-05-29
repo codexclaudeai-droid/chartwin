@@ -6,6 +6,7 @@ export type PostgresConnectionSettingsInput = {
   databaseUrl?: string | null;
   databaseSslMode?: string | null;
   runtimeMode?: string | null;
+  runtimeTarget?: string | null;
 };
 
 export type PostgresConnectionSettings = {
@@ -37,11 +38,12 @@ const PRODUCTION_SAFE_SSL_MODES: readonly PostgresSslMode[] = [
 export function resolvePostgresConnectionSettings(
   input: PostgresConnectionSettingsInput,
 ): PostgresConnectionSettings {
-  const connectionString = input.databaseUrl?.trim();
-  if (!connectionString) {
+  const rawConnectionString = input.databaseUrl?.trim();
+  if (!rawConnectionString) {
     throw new Error('CHART_SERVICE_DATABASE_URL is required.');
   }
 
+  const connectionString = normalizeRuntimeConnectionString(rawConnectionString, input.runtimeTarget);
   const url = parsePostgresUrl(connectionString);
   const protocol = normalizePostgresProtocol(url.protocol);
   const databaseName = decodeURIComponent(url.pathname.replace(/^\/+/, '').trim());
@@ -113,6 +115,17 @@ function normalizePostgresSslMode(value: string | null | undefined, fallback: Po
 function normalizeRuntimeMode(value: string | null | undefined): PostgresRuntimeMode {
   if (value === 'production' || value === 'test') return value;
   return 'development';
+}
+
+function normalizeRuntimeConnectionString(connectionString: string, runtimeTarget: string | null | undefined): string {
+  if (runtimeTarget !== 'cloudflare-workers') return connectionString;
+
+  const url = parsePostgresUrl(connectionString);
+  if (!url.hostname.endsWith('.pooler.supabase.com')) return connectionString;
+  if (url.port !== '5432') return connectionString;
+
+  url.port = '6543';
+  return url.toString();
 }
 
 function hashSensitiveValue(value: string): string {

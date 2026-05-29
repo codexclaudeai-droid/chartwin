@@ -91,6 +91,20 @@ test('postgres connection settings redact credentials and normalize SSL mode', (
   assert.equal(JSON.stringify(settings).includes('super-secret'), false);
 });
 
+test('cloudflare workers runtime uses Supabase transaction pooler port', () => {
+  const settings = resolvePostgresConnectionSettings({
+    databaseUrl: 'postgresql://postgres.project-ref:super-secret@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require',
+    runtimeTarget: 'cloudflare-workers',
+  });
+
+  assert.equal(settings.host, 'aws-1-ap-northeast-2.pooler.supabase.com');
+  assert.equal(settings.port, '6543');
+  assert.equal(settings.safeLabel, 'postgresql://aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres?sslmode=require');
+  assert.match(settings.connectionString, /pooler\.supabase\.com:6543\/postgres/);
+  assert.equal(settings.connectionString.includes('super-secret'), true);
+  assert.equal(JSON.stringify(settings).includes('super-secret'), false);
+});
+
 test('postgres adapter rejects invalid connection protocol and SSL mode early', () => {
   assert.throws(
     () => resolveChartServiceRepositoryAdapter({

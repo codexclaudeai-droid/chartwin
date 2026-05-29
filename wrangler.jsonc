@@ -10,6 +10,7 @@
   },
   "vars": {
     "NODE_ENV": "production",
+    "CHART_SERVICE_RUNTIME_TARGET": "cloudflare-workers",
     "CHART_SERVICE_REPOSITORY": "postgres",
     "CHART_SERVICE_DATABASE_SSL_MODE": "require",
     "CHART_SERVICE_EMAIL_PROVIDER": "log",
