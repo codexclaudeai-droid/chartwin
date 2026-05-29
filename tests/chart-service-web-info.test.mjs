@@ -157,3 +157,14 @@ test('admin web info submenu uses dark admin tab styling', () => {
   assert.match(activeRule, /color:\s*#ffffff/);
   assert.match(activeRule, /box-shadow:\s*none/);
 });
+
+test('admin web info save button centers its label', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const saveButtonRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-web-info-form > \.button\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(saveButtonRule, /justify-content:\s*center/);
+  assert.match(saveButtonRule, /text-align:\s*center/);
+  assert.match(saveButtonRule, /width:\s*100%/);
+});

@@ -8997,6 +8997,12 @@ body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a[aria
   transform: none;
 }
 
+body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-form > .button {
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
 body:not(:has(.landing-page)) #admin-sales .sales-filter-grid,
 body:not(:has(.landing-page)) #admin-sales .sales-filter-grid.compact,
 body:not(:has(.landing-page)) #admin-sales .sales-assignment-panel,
