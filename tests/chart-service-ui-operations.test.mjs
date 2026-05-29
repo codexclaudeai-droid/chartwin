@@ -239,6 +239,22 @@ test('admin payment panel exposes quick memo buttons for required admin notes', 
   assert.match(cssSource, /\.quick-memo-row/);
 });
 
+test('admin payment panel groups payment queue details for readability', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /formatAdminPaymentMethodLabel/);
+  assert.match(source, /formatAdminPaymentDateTime/);
+  assert.match(source, /formatCompactTransactionId/);
+  assert.match(source, /admin-payment-id-cell/);
+  assert.match(source, /admin-payment-member-cell/);
+  assert.match(source, /admin-payment-txid-box/);
+  assert.match(source, /admin-payment-action-cell/);
+  assert.match(cssSource, /#admin-payments \.table\s*\{[\s\S]*?table-layout: fixed/s);
+  assert.match(cssSource, /\.admin-payment-txid-box/);
+  assert.match(cssSource, /\.admin-payment-action-cell \.actions\.compact\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/s);
+});
+
 test('admin payment panel labels confirmation as deposit confirmation only', () => {
   const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
 

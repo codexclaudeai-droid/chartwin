@@ -87,6 +87,27 @@ const PAYMENT_QUICK_MEMOS: PaymentQuickMemo[] = [
   },
 ];
 
+function formatAdminPaymentMethodLabel(method: string): string {
+  if (method === 'usdt') return 'USDT';
+  if (method === 'bank_transfer') return '은행이체';
+  return method;
+}
+
+function formatAdminPaymentDateTime(value: string): string {
+  return new Date(value).toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatCompactTransactionId(transactionId: string): string {
+  return transactionId.length > 22
+    ? `${transactionId.slice(0, 10)}...${transactionId.slice(-8)}`
+    : transactionId;
+}
+
 export function AdminPanel() {
   const [payments, setPayments] = useState<AdminPaymentQueueItem[]>([]);
   const [activeFilterKey, setActiveFilterKey] = useState('all');
@@ -279,40 +300,32 @@ export function AdminPanel() {
         <tbody>
           {filteredPayments.map((item) => (
             <tr className="admin-payment-row" id={getAdminPaymentDomId(item.payment.id)} key={item.payment.id}>
-              <td>
-                {item.payment.id}
+              <td className="admin-payment-id-cell">
+                <strong>{item.payment.id}</strong>
+                <span>
+                  {formatAdminPaymentMethodLabel(item.payment.method)} · {formatAdminPaymentDateTime(item.payment.createdAt)}
+                </span>
                 {item.supportThread && (
-                  <>
-                    <br />
-                    <a className="text-link compact" href={createAdminSupportThreadUrl(item.supportThread.id)}>
-                      입금확인 요청글
-                    </a>
-                  </>
+                  <a className="text-link compact" href={createAdminSupportThreadUrl(item.supportThread.id)}>
+                    입금확인 요청글
+                  </a>
                 )}
               </td>
-              <td>
-                {item.user.email}
-                <br />
-                <small>{item.payment.depositorName || item.user.name}</small>
+              <td className="admin-payment-member-cell">
+                <strong>{item.user.email}</strong>
+                <span>{item.payment.depositorName || item.user.name}</span>
                 {item.payment.transactionId && (
-                  <>
-                    <br />
-                    <small>TXID: {item.payment.transactionId}</small>
-                    <br />
+                  <div className="admin-payment-txid-box">
+                    <small title={item.payment.transactionId}>
+                      TXID {formatCompactTransactionId(item.payment.transactionId)}
+                    </small>
                     {renderTransactionVerificationBadge(item)}
                     {item.payment.transactionVerificationMessage && (
-                      <>
-                        <br />
-                        <small>{item.payment.transactionVerificationMessage}</small>
-                      </>
+                      <small>{item.payment.transactionVerificationMessage}</small>
                     )}
                     {item.payment.transactionVerifiedAt && (
-                      <>
-                        <br />
-                        <small>확인시각: {new Date(item.payment.transactionVerifiedAt).toLocaleString()}</small>
-                      </>
+                      <small>확인 {formatAdminPaymentDateTime(item.payment.transactionVerifiedAt)}</small>
                     )}
-                    <br />
                     <a
                       className="text-link compact"
                       href={createTronScanTransactionUrl(item.payment.transactionId)}
@@ -321,13 +334,13 @@ export function AdminPanel() {
                     >
                       TronScan
                     </a>
-                  </>
+                  </div>
                 )}
               </td>
-              <td>{item.plan?.name ?? 'Unknown'}</td>
-              <td>${item.payment.amountUsd}</td>
-              <td>{renderPaymentFlowStatus(item)}</td>
-              <td>
+              <td className="admin-payment-plan-cell"><strong>{item.plan?.name ?? 'Unknown'}</strong></td>
+              <td className="admin-payment-amount-cell">${item.payment.amountUsd}</td>
+              <td className="admin-payment-status-cell">{renderPaymentFlowStatus(item)}</td>
+              <td className="admin-payment-action-cell">
                 <input
                   aria-label={`${item.payment.id} 관리자 처리 메모`}
                   className="admin-note-input"

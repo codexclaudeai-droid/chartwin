@@ -9461,6 +9461,154 @@ body:not(:has(.landing-page)) #admin-payments > .notice.compact {
   box-shadow: none;
 }
 
+body:not(:has(.landing-page)) #admin-payments {
+  overflow: hidden;
+}
+
+body:not(:has(.landing-page)) #admin-payments .table {
+  table-layout: fixed;
+}
+
+body:not(:has(.landing-page)) #admin-payments .table th:nth-child(1),
+body:not(:has(.landing-page)) #admin-payments .table td:nth-child(1) {
+  width: 17%;
+}
+
+body:not(:has(.landing-page)) #admin-payments .table th:nth-child(2),
+body:not(:has(.landing-page)) #admin-payments .table td:nth-child(2) {
+  width: 25%;
+}
+
+body:not(:has(.landing-page)) #admin-payments .table th:nth-child(3),
+body:not(:has(.landing-page)) #admin-payments .table td:nth-child(3) {
+  width: 11%;
+}
+
+body:not(:has(.landing-page)) #admin-payments .table th:nth-child(4),
+body:not(:has(.landing-page)) #admin-payments .table td:nth-child(4) {
+  width: 9%;
+}
+
+body:not(:has(.landing-page)) #admin-payments .table th:nth-child(5),
+body:not(:has(.landing-page)) #admin-payments .table td:nth-child(5) {
+  width: 19%;
+}
+
+body:not(:has(.landing-page)) #admin-payments .table th:nth-child(6),
+body:not(:has(.landing-page)) #admin-payments .table td:nth-child(6) {
+  width: 19%;
+}
+
+body:not(:has(.landing-page)) #admin-payments .table td {
+  vertical-align: top;
+}
+
+body:not(:has(.landing-page)) .admin-payment-id-cell,
+body:not(:has(.landing-page)) .admin-payment-member-cell,
+body:not(:has(.landing-page)) .admin-payment-plan-cell,
+body:not(:has(.landing-page)) .admin-payment-status-cell,
+body:not(:has(.landing-page)) .admin-payment-action-cell {
+  overflow-wrap: anywhere;
+}
+
+body:not(:has(.landing-page)) .admin-payment-id-cell strong,
+body:not(:has(.landing-page)) .admin-payment-member-cell strong,
+body:not(:has(.landing-page)) .admin-payment-plan-cell strong {
+  color: #ffffff;
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+body:not(:has(.landing-page)) .admin-payment-id-cell span,
+body:not(:has(.landing-page)) .admin-payment-member-cell span {
+  color: rgba(216, 236, 255, 0.66);
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.45;
+  margin-top: 6px;
+}
+
+body:not(:has(.landing-page)) .admin-payment-id-cell .text-link {
+  margin-top: 10px;
+}
+
+body:not(:has(.landing-page)) .admin-payment-amount-cell {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+body:not(:has(.landing-page)) .admin-payment-txid-box {
+  border: 1px solid rgba(125, 183, 255, 0.13);
+  border-radius: 14px;
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(2, 7, 19, 0.34);
+}
+
+body:not(:has(.landing-page)) .admin-payment-txid-box small {
+  color: rgba(216, 236, 255, 0.68);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+body:not(:has(.landing-page)) .admin-payment-txid-box .text-link {
+  margin-top: 0;
+}
+
+body:not(:has(.landing-page)) .admin-payment-action-cell .admin-note-input {
+  min-width: 0;
+}
+
+body:not(:has(.landing-page)) .admin-payment-action-cell .quick-memo-row {
+  align-items: flex-start;
+  gap: 7px;
+  margin: 10px 0;
+}
+
+body:not(:has(.landing-page)) .admin-payment-action-cell .quick-memo-row > span {
+  flex: 0 0 100%;
+}
+
+body:not(:has(.landing-page)) .admin-payment-action-cell .actions.compact {
+  align-items: stretch;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 10px;
+}
+
+body:not(:has(.landing-page)) .admin-payment-action-cell .button {
+  justify-content: center;
+  min-height: 36px;
+  padding-inline: 10px;
+}
+
+@media (max-width: 1180px) {
+  body:not(:has(.landing-page)) #admin-payments .table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .table th,
+  body:not(:has(.landing-page)) #admin-payments .table td {
+    min-width: 150px;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .table td:nth-child(2),
+  body:not(:has(.landing-page)) #admin-payments .table td:nth-child(5),
+  body:not(:has(.landing-page)) #admin-payments .table td:nth-child(6) {
+    min-width: 260px;
+    white-space: normal;
+  }
+}
+
 body:not(:has(.landing-page)) #admin-support > .notice {
   border-color: transparent;
   background: rgba(255, 255, 255, 0.035);
