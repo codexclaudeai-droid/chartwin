@@ -207,6 +207,8 @@ test('admin subscription panel renders request quick filters before the table', 
 
   assert.match(source, /SUBSCRIPTION_QUEUE_FILTER_PRESETS/);
   assert.match(source, /aria-label="구독 요청 빠른 필터"/);
+  assert.match(source, /getSubscriptionQueueFilterCount/);
+  assert.match(source, /quick-filter-count/);
   assert.match(source, /filteredItems\.map/);
 });
 
@@ -255,12 +257,53 @@ test('admin subscription panel confirms cancellation refund and rejection operat
   assert.doesNotMatch(source, /shouldRunAdminAction/);
 });
 
+test('admin subscription panel exposes admin note controls for request decisions', () => {
+  const source = fs.readFileSync(new URL('../app/admin/subscription-admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /SUBSCRIPTION_QUICK_MEMOS/);
+  assert.match(source, /subscriptionOperationNotes/);
+  assert.match(source, /normalizeAdminOperationNote/);
+  assert.match(source, /canSubmitAdminOperationNote/);
+  assert.match(source, /quick-memo-row/);
+  assert.match(source, /취소 사유 확인 후 처리/);
+  assert.match(source, /환불 사유 확인 후 처리/);
+  assert.match(source, /요청 사유 확인 불가/);
+  assert.match(cssSource, /#admin-subscriptions \.admin-subscription-action-cell \.admin-note-input/);
+});
+
 test('admin subscription panel exposes a separate activation approval action', () => {
   const source = fs.readFileSync(new URL('../app/admin/subscription-admin-panel.tsx', import.meta.url), 'utf8');
 
   assert.match(source, /runOperation\(item\.subscription\.id, 'approve'\)/);
   assert.match(source, /\/api\/admin\/subscriptions\/approve/);
   assert.match(source, /item\.subscription\.status === 'payment_requested'/);
+});
+
+test('admin subscription panel groups queue details for readability', () => {
+  const source = fs.readFileSync(new URL('../app/admin/subscription-admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /formatSubscriptionDateTime/);
+  assert.match(source, /formatPaymentAmountUsd/);
+  assert.match(source, /admin-subscription-id-cell/);
+  assert.match(source, /admin-subscription-member-cell/);
+  assert.match(source, /admin-subscription-plan-cell/);
+  assert.match(source, /admin-subscription-payment-cell/);
+  assert.match(source, /admin-subscription-action-cell/);
+  assert.match(cssSource, /#admin-subscriptions \.table\s*\{[\s\S]*?table-layout: fixed/s);
+  assert.match(cssSource, /\.admin-subscription-action-cell \.actions\.compact\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/s);
+});
+
+test('admin subscription panel uses a dark operational queue finish', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /#admin-subscriptions > \.toolbar/);
+  assert.match(cssSource, /#admin-subscriptions \.quick-filter-row\s*\{[\s\S]*?background:/s);
+  assert.match(cssSource, /#admin-subscriptions \.quick-filter-row \.button\s*\{[\s\S]*?border-color:/s);
+  assert.match(cssSource, /#admin-subscriptions \.table th\s*\{[\s\S]*?background:/s);
+  assert.match(cssSource, /#admin-subscriptions \.table td\s*\{[\s\S]*?background:/s);
+  assert.match(cssSource, /#admin-subscriptions \.admin-subscription-payment-cell\s*\{[\s\S]*?border:/s);
 });
 
 test('admin subscription panel refreshes its filtered queue after local operations without overwriting success context', () => {

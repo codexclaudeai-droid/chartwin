@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   filterSubscriptionQueueItems,
+  getSubscriptionQueueFilterCount,
   getSubscriptionQueueFilterPreset,
   SUBSCRIPTION_QUEUE_FILTER_PRESETS,
 } from '../app/admin/subscription-queue-filters.ts';
@@ -34,6 +35,13 @@ test('subscription queue filters narrow items by subscription status', () => {
   assert.deepEqual(filterSubscriptionQueueItems(subscriptions, 'payment_requested').map((item) => item.subscription.id), ['sub_payment_requested']);
   assert.deepEqual(filterSubscriptionQueueItems(subscriptions, 'cancel_requested').map((item) => item.subscription.id), ['sub_cancel_requested']);
   assert.deepEqual(filterSubscriptionQueueItems(subscriptions, 'refund_requested').map((item) => item.subscription.id), ['sub_refund_requested']);
+});
+
+test('subscription queue filter count mirrors filtered results', () => {
+  assert.equal(getSubscriptionQueueFilterCount(subscriptions, 'all'), 4);
+  assert.equal(getSubscriptionQueueFilterCount(subscriptions, 'payment_requested'), 1);
+  assert.equal(getSubscriptionQueueFilterCount(subscriptions, 'cancel_requested'), 1);
+  assert.equal(getSubscriptionQueueFilterCount(subscriptions, 'missing'), 4);
 });
 
 test('unknown subscription queue filter falls back to all subscriptions', () => {

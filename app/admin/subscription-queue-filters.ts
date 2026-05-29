@@ -28,3 +28,7 @@ export function filterSubscriptionQueueItems<T extends FilterableSubscriptionQue
     ? items.filter((item) => item.subscription.status === preset.status)
     : items;
 }
+
+export function getSubscriptionQueueFilterCount<T extends FilterableSubscriptionQueueItem>(items: T[], key: string): number {
+  return filterSubscriptionQueueItems(items, key).length;
+}

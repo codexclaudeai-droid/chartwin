@@ -9827,6 +9827,264 @@ body:not(:has(.landing-page)) .admin-payment-action-cell .button {
   }
 }
 
+body:not(:has(.landing-page)) #admin-subscriptions > .notice {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: none;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions > .notice.compact {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow: none;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions {
+  overflow: hidden;
+  border: 1px solid rgba(89, 151, 255, 0.22);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(55, 125, 255, 0.14), transparent 34%),
+    linear-gradient(145deg, rgba(16, 28, 48, 0.96), rgba(8, 18, 34, 0.98));
+  box-shadow: 0 26px 74px rgba(0, 0, 0, 0.3);
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions > .toolbar {
+  align-items: center;
+  border-bottom: 1px solid rgba(148, 183, 255, 0.16);
+  padding-bottom: 18px;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions > .toolbar h2 {
+  color: #ffffff;
+  letter-spacing: -0.03em;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(154px, 1fr));
+  gap: 10px;
+  margin: 16px 0 14px;
+  padding: 14px;
+  border: 1px solid rgba(125, 183, 255, 0.15);
+  border-radius: 20px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(76, 141, 255, 0.024)),
+    rgba(7, 16, 31, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row .button {
+  justify-content: space-between;
+  min-height: 44px;
+  border-color: rgba(125, 183, 255, 0.18);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(216, 236, 255, 0.76);
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row .button.active {
+  border-color: rgba(98, 166, 255, 0.54);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(98, 166, 255, 0.22), transparent 42%),
+    rgba(76, 141, 255, 0.16);
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-count {
+  border-color: rgba(125, 183, 255, 0.24);
+  background: rgba(2, 7, 19, 0.38);
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .table {
+  border: 1px solid rgba(125, 183, 255, 0.16);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  background: rgba(2, 7, 19, 0.44);
+  table-layout: fixed;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .table th {
+  padding: 14px 16px;
+  background: rgba(76, 141, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .table td {
+  border-top: 1px solid rgba(125, 183, 255, 0.1);
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(232, 242, 255, 0.78);
+  vertical-align: top;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .table tbody tr:hover td {
+  background: rgba(76, 141, 255, 0.095);
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(1),
+body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(1) {
+  width: 16%;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(2),
+body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(2) {
+  width: 20%;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(3),
+body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(3) {
+  width: 14%;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(4),
+body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(4) {
+  width: 17%;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(5),
+body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(5) {
+  width: 16%;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(6),
+body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(6) {
+  width: 17%;
+}
+
+body:not(:has(.landing-page)) .admin-subscription-id-cell,
+body:not(:has(.landing-page)) .admin-subscription-member-cell,
+body:not(:has(.landing-page)) .admin-subscription-plan-cell,
+body:not(:has(.landing-page)) .admin-subscription-status-cell,
+body:not(:has(.landing-page)) .admin-subscription-payment-cell,
+body:not(:has(.landing-page)) .admin-subscription-action-cell {
+  overflow-wrap: anywhere;
+}
+
+body:not(:has(.landing-page)) .admin-subscription-id-cell strong,
+body:not(:has(.landing-page)) .admin-subscription-member-cell strong,
+body:not(:has(.landing-page)) .admin-subscription-plan-cell strong,
+body:not(:has(.landing-page)) .admin-subscription-payment-cell strong {
+  color: #ffffff;
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+body:not(:has(.landing-page)) .admin-subscription-id-cell span,
+body:not(:has(.landing-page)) .admin-subscription-member-cell span,
+body:not(:has(.landing-page)) .admin-subscription-plan-cell span,
+body:not(:has(.landing-page)) .admin-subscription-payment-cell span {
+  color: rgba(216, 236, 255, 0.66);
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.45;
+  margin-top: 6px;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-badge {
+  border-color: rgba(125, 183, 255, 0.2);
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-description,
+body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-raw-status {
+  color: rgba(216, 236, 255, 0.62);
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-payment-cell {
+  border: 1px solid rgba(125, 183, 255, 0.13);
+  border-radius: 14px;
+  background: rgba(2, 7, 19, 0.34);
+}
+
+body:not(:has(.landing-page)) .admin-subscription-empty-text {
+  color: rgba(216, 236, 255, 0.5);
+  font-weight: 800;
+}
+
+body:not(:has(.landing-page)) .admin-subscription-action-cell .admin-note-input {
+  min-width: 0;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .admin-note-input {
+  border-color: rgba(125, 183, 255, 0.18);
+  background: rgba(2, 7, 19, 0.56);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .admin-note-input::placeholder {
+  color: rgba(216, 236, 255, 0.42);
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .admin-note-input:focus {
+  border-color: rgba(98, 166, 255, 0.72);
+  box-shadow: 0 0 0 4px rgba(76, 141, 255, 0.14);
+}
+
+body:not(:has(.landing-page)) .admin-subscription-action-cell .quick-memo-row {
+  align-items: flex-start;
+  gap: 7px;
+  margin: 10px 0;
+}
+
+body:not(:has(.landing-page)) .admin-subscription-action-cell .quick-memo-row > span {
+  flex: 0 0 100%;
+  color: rgba(216, 236, 255, 0.58);
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .quick-memo-button {
+  border-color: rgba(125, 183, 255, 0.18);
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(216, 236, 255, 0.8);
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .quick-memo-button:hover,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .quick-memo-button:focus-visible {
+  border-color: rgba(98, 166, 255, 0.58);
+  background: rgba(76, 141, 255, 0.18);
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) .admin-subscription-action-cell .actions.compact {
+  align-items: stretch;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 10px;
+}
+
+body:not(:has(.landing-page)) .admin-subscription-action-cell .button {
+  justify-content: center;
+  min-height: 36px;
+  padding-inline: 10px;
+}
+
+@media (max-width: 1180px) {
+  body:not(:has(.landing-page)) #admin-subscriptions .table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .table th,
+  body:not(:has(.landing-page)) #admin-subscriptions .table td {
+    min-width: 150px;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(2),
+  body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(5),
+  body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(6) {
+    min-width: 260px;
+    white-space: normal;
+  }
+}
+
 body:not(:has(.landing-page)) #admin-support > .notice {
   border-color: transparent;
   background: rgba(255, 255, 255, 0.035);
