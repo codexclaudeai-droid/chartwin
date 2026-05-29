@@ -29,6 +29,9 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.tmp/next-service-dev',
+  outputFileTracingIncludes: {
+    '/*': ['./node_modules/pg-cloudflare/**/*'],
+  },
   poweredByHeader: false,
   reactStrictMode: true,
   async headers() {

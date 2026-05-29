@@ -11,12 +11,14 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
     new URL('../open-next.config.ts', import.meta.url),
     'utf8',
   );
+  const nextConfig = fs.readFileSync(new URL('../next.config.mjs', import.meta.url), 'utf8');
 
   assert.match(workflow, /npm\.cmd run build|npm run build/);
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /runs-on:\s+ubuntu-latest/);
   assert.match(workflow, /npm run service:cloudflare:build/);
   assert.match(openNextConfig, /buildCommand:\s*'npx next build'/);
+  assert.match(nextConfig, /pg-cloudflare/);
   assert.doesNotMatch(workflow, /Owner1234!/);
   assert.doesNotMatch(workflow, /0123456789abcdef/);
   assert.doesNotMatch(workflow, /postgres:\/\/chart_app:secret/);
