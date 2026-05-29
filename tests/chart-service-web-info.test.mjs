@@ -179,3 +179,14 @@ test('admin payment settings save button centers its label', () => {
   assert.match(saveButtonRule, /text-align:\s*center/);
   assert.match(saveButtonRule, /width:\s*100%/);
 });
+
+test('admin point settings save button centers its label', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const saveButtonRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-point-settings-form > \.button\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(saveButtonRule, /justify-content:\s*center/);
+  assert.match(saveButtonRule, /text-align:\s*center/);
+  assert.match(saveButtonRule, /width:\s*100%/);
+});
