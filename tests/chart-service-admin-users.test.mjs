@@ -334,9 +334,11 @@ test('admin user panel applies dashboard queue preset events', () => {
   assert.match(source, /setRole\(nextRole\)/);
   assert.match(source, /refresh\(\{ role: nextRole, accountStatus: nextAccountStatus, nextMessage \}\)/);
   assert.match(source, /showAllMembersForSalespersonAssignment/);
-  assert.match(source, /전체 회원에서 영업자 지정/);
-  assert.match(source, /openDetail\(item\.user\.id, 'salesperson'\)/);
-  assert.match(source, /영업자로 지정할 준비가 되었습니다/);
+  assert.match(source, /전체 회원 보기/);
+  assert.match(source, /상세를 열어 역할을 영업자로 변경하세요/);
+  assert.doesNotMatch(source, /openDetail\(item\.user\.id, 'salesperson'\)/);
+  assert.doesNotMatch(source, /item\.user\.role !== 'salesperson' &&/);
+  assert.doesNotMatch(source, /영업자로 지정할 준비가 되었습니다/);
   assert.match(source, /showSalespersonHandoff/);
   assert.match(source, /영업관리 회원배정으로 이동/);
   assert.match(source, /salespersonId=\$\{encodeURIComponent\(detail\.user\.id\)\}/);
