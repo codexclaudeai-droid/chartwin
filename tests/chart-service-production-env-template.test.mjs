@@ -10,6 +10,9 @@ test('production env template documents required runtime settings without commit
     'CHART_SERVICE_REPOSITORY',
     'CHART_SERVICE_DATABASE_URL',
     'CHART_SERVICE_DATABASE_SSL_MODE',
+    'CLOUDFLARE_HYPERDRIVE_NAME',
+    'CLOUDFLARE_HYPERDRIVE_ID',
+    'CLOUDFLARE_HYPERDRIVE_BINDING',
     'CHART_SERVICE_SESSION_SECRET',
     'CHART_SERVICE_EMAIL_PROVIDER',
     'CHART_SERVICE_EMAIL_DELIVERY_LIMIT',
@@ -22,6 +25,7 @@ test('production env template documents required runtime settings without commit
 
   for (const key of [
     'CHART_SERVICE_DATABASE_URL',
+    'CLOUDFLARE_HYPERDRIVE_ID',
     'CHART_SERVICE_SESSION_SECRET',
     'CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL',
     'CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD',
@@ -35,6 +39,8 @@ test('production env template documents required runtime settings without commit
   assert.match(envExample, /npm\.cmd run service:postgres:gate/);
   assert.match(envExample, /^CHART_SERVICE_EMAIL_PROVIDER=log$/m);
   assert.match(envExample, /^CHART_SERVICE_EMAIL_DELIVERY_LIMIT=50$/m);
+  assert.match(envExample, /^CLOUDFLARE_HYPERDRIVE_NAME=tradingcore-hyperdrive$/m);
+  assert.match(envExample, /^CLOUDFLARE_HYPERDRIVE_BINDING=HYPERDRIVE$/m);
   assert.doesNotMatch(envExample, /Owner1234!/);
   assert.doesNotMatch(envExample, /0123456789abcdef/);
   assert.doesNotMatch(envExample, /postgres:\/\/chart_app:secret/);

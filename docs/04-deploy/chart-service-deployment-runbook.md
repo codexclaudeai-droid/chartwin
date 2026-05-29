@@ -26,6 +26,9 @@ $env:NODE_ENV='production'
 $env:CHART_SERVICE_REPOSITORY='postgres'
 $env:CHART_SERVICE_DATABASE_URL='<production-postgres-url>'
 $env:CHART_SERVICE_DATABASE_SSL_MODE='require'
+$env:CLOUDFLARE_HYPERDRIVE_NAME='tradingcore-hyperdrive'
+$env:CLOUDFLARE_HYPERDRIVE_ID='<optional-precreated-hyperdrive-id>'
+$env:CLOUDFLARE_HYPERDRIVE_BINDING='HYPERDRIVE'
 $env:CHART_SERVICE_SESSION_SECRET='<32-plus-random-characters>'
 $env:CHART_SERVICE_EMAIL_PROVIDER='log'
 $env:CHART_SERVICE_EMAIL_DELIVERY_LIMIT='50'
@@ -39,6 +42,8 @@ Required values:
 - `CHART_SERVICE_REPOSITORY=postgres`
 - `CHART_SERVICE_DATABASE_URL`
 - `CHART_SERVICE_DATABASE_SSL_MODE`
+- `CLOUDFLARE_HYPERDRIVE_NAME=tradingcore-hyperdrive`
+- `CLOUDFLARE_HYPERDRIVE_BINDING=HYPERDRIVE`
 - `CHART_SERVICE_SESSION_SECRET`
 - `CHART_SERVICE_EMAIL_PROVIDER`
 - `CHART_SERVICE_EMAIL_DELIVERY_LIMIT`
@@ -47,6 +52,11 @@ Required values:
 - `CHART_SERVICE_BOOTSTRAP_ADMIN_NAME`
 
 Use `require`, `verify-ca`, or `verify-full` for production SSL mode. Do not paste real database URLs, session secrets, or bootstrap admin passwords into committed docs.
+
+Cloudflare Hyperdrive can be resolved in two ways:
+
+- Preferred automated path: keep `CLOUDFLARE_HYPERDRIVE_ID` blank and use a `CLOUDFLARE_API_TOKEN` with `Account > Hyperdrive > Edit`, so the deployment workflow can find or create `tradingcore-hyperdrive`.
+- Manual fallback path: create Hyperdrive in the Cloudflare dashboard, then save its config ID as GitHub secret `CLOUDFLARE_HYPERDRIVE_ID`. In this mode the setup script binds that ID without calling the Hyperdrive create/list API.
 
 ## 3. Pre-Deployment
 

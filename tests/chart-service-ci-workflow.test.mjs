@@ -30,6 +30,7 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(deployWorkflow, /node scripts\/ensure-cloudflare-hyperdrive\.mjs/);
   assert.match(deployWorkflow, /CHART_SERVICE_DATABASE_URL/);
   assert.match(deployWorkflow, /CHART_SERVICE_SESSION_SECRET/);
+  assert.match(deployWorkflow, /CLOUDFLARE_HYPERDRIVE_NAME:\s+tradingcore-hyperdrive/);
   assert.match(deployWorkflow, /CLOUDFLARE_HYPERDRIVE_ID/);
   assert.match(deployWorkflow, /CHART_SERVICE_REPOSITORY:\s+postgres/);
   assert.match(deployWorkflow, /CHART_SERVICE_DATABASE_SSL_MODE:\s+require/);
