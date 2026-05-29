@@ -1358,7 +1358,7 @@ export async function updateAsyncSupportThread(
   if (!input.title.trim()) throw new Error('Support title required');
   if (!input.body.trim()) throw new Error('Support message required');
 
-  const message = await requireAsyncCustomerSupportMessage(repository, thread);
+  const message = await requireAsyncEditableSupportThreadMessage(repository, thread);
   const updatedThread: SupportThreadRecord = {
     ...thread,
     title: input.title.trim(),
@@ -1572,13 +1572,14 @@ async function requireAsyncSupportMessage(
   return message;
 }
 
-async function requireAsyncCustomerSupportMessage(
+async function requireAsyncEditableSupportThreadMessage(
   repository: AsyncChartServiceRepository,
   thread: SupportThreadRecord,
 ): Promise<SupportMessageRecord> {
-  const message = (await repository.listSupportMessagesByThreadId(thread.id))
-    .find((item) => !item.isAdminReply && item.authorUserId === thread.authorUserId);
-  if (!message) throw new Error(`Support customer message not found: ${thread.id}`);
+  const messages = await repository.listSupportMessagesByThreadId(thread.id);
+  const message = messages.find((item) => item.authorUserId === thread.authorUserId)
+    ?? messages.find((item) => !item.isAdminReply);
+  if (!message) throw new Error(`Support editable message not found: ${thread.id}`);
   return message;
 }
 

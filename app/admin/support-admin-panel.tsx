@@ -38,6 +38,7 @@ type SupportThreadListItem = {
   } | null;
   messages: Array<{
     id: string;
+    authorUserId: string;
     body: string;
     isAdminReply: boolean;
   }>;
@@ -144,18 +145,20 @@ export function SupportAdminPanel() {
     dispatchAdminRefreshEvent({ source: 'support' });
   }
 
-  function getCustomerMessage(item: SupportThreadListItem) {
-    return item.messages.find((threadMessage) => !threadMessage.isAdminReply) ?? null;
+  function getThreadEditMessage(item: SupportThreadListItem) {
+    return item.messages.find((threadMessage) => threadMessage.authorUserId === item.thread.authorUserId)
+      ?? item.messages.find((threadMessage) => !threadMessage.isAdminReply)
+      ?? null;
   }
 
   function startThreadEdit(item: SupportThreadListItem) {
-    const customerMessage = getCustomerMessage(item);
+    const threadMessage = getThreadEditMessage(item);
     setEditingThreadId(item.thread.id);
     setThreadEditById((current) => ({
       ...current,
       [item.thread.id]: {
         title: item.thread.title,
-        body: customerMessage?.body ?? '',
+        body: threadMessage?.body ?? '',
       },
     }));
   }
@@ -361,7 +364,7 @@ export function SupportAdminPanel() {
           const isEditingThread = editingThreadId === item.thread.id;
           const threadEditDraft = threadEditById[item.thread.id] ?? {
             title: item.thread.title,
-            body: getCustomerMessage(item)?.body ?? '',
+            body: getThreadEditMessage(item)?.body ?? '',
           };
 
           return (
@@ -441,6 +444,8 @@ export function SupportAdminPanel() {
             <div className="admin-support-message-list">
               {item.messages.map((threadMessage) => {
                 const isEditingReply = editingReplyId === threadMessage.id;
+                const isThreadAuthorMessage = threadMessage.authorUserId === item.thread.authorUserId;
+                const replyActionLabel = isThreadAuthorMessage ? '관리자글' : '관리자 답변';
                 const replyEditDraft = replyEditById[threadMessage.id] ?? threadMessage.body;
 
                 return (
@@ -451,23 +456,23 @@ export function SupportAdminPanel() {
                     <div className="admin-support-message-heading">
                       <strong>{threadMessage.isAdminReply ? '관리자' : '문의'}</strong>
                       {threadMessage.isAdminReply ? (
-                        <div className="admin-support-reply-icon-actions" role="group" aria-label="관리자 답변 관리">
+                        <div className="admin-support-reply-icon-actions" role="group" aria-label={`${replyActionLabel} 관리`}>
                           <button
-                            aria-label="관리자 답변 수정"
+                            aria-label={`${replyActionLabel} 수정`}
                             className="admin-support-reply-icon-button"
                             disabled={isBusy}
-                            onClick={() => startReplyEdit(threadMessage)}
-                            title="관리자 답변 수정"
+                            onClick={() => (isThreadAuthorMessage ? startThreadEdit(item) : startReplyEdit(threadMessage))}
+                            title={`${replyActionLabel} 수정`}
                             type="button"
                           >
                             <span aria-hidden="true">✎</span>
                           </button>
                           <button
-                            aria-label="관리자 답변 삭제"
+                            aria-label={`${replyActionLabel} 삭제`}
                             className="admin-support-reply-icon-button danger"
                             disabled={isBusy}
-                            onClick={() => void deleteReply(threadMessage.id)}
-                            title="관리자 답변 삭제"
+                            onClick={() => (isThreadAuthorMessage ? void deleteThread(item.thread.id) : void deleteReply(threadMessage.id))}
+                            title={`${replyActionLabel} 삭제`}
                             type="button"
                           >
                             <span aria-hidden="true">×</span>

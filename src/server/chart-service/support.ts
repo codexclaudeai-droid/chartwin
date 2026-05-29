@@ -137,7 +137,7 @@ export function updateSupportThread(
   if (!input.title.trim()) throw new Error('Support title required');
   if (!input.body.trim()) throw new Error('Support message required');
 
-  const message = requireCustomerSupportMessage(repository, thread);
+  const message = requireEditableSupportThreadMessage(repository, thread);
   const updatedThread: SupportThreadRecord = {
     ...thread,
     title: input.title.trim(),
@@ -271,14 +271,14 @@ function requireSupportMessage(repository: ChartServiceRepository, messageId: st
   return message;
 }
 
-function requireCustomerSupportMessage(
+function requireEditableSupportThreadMessage(
   repository: ChartServiceRepository,
   thread: SupportThreadRecord,
 ): SupportMessageRecord {
-  const message = repository
-    .listSupportMessagesByThreadId(thread.id)
-    .find((item) => !item.isAdminReply && item.authorUserId === thread.authorUserId);
-  if (!message) throw new Error(`Support customer message not found: ${thread.id}`);
+  const messages = repository.listSupportMessagesByThreadId(thread.id);
+  const message = messages.find((item) => item.authorUserId === thread.authorUserId)
+    ?? messages.find((item) => !item.isAdminReply);
+  if (!message) throw new Error(`Support editable message not found: ${thread.id}`);
   return message;
 }
 

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import {
+  createAsyncChartServiceRepository,
   createMockChartServiceRepository,
   createSupportThread,
   deleteSupportMessageAsAdmin,
@@ -9,6 +10,7 @@ import {
   listPublishedPublicBoardPosts,
   listVisibleSupportThreads,
   replyToSupportThreadAsAdmin,
+  updateAsyncSupportThread,
   updateSupportMessageAsAdmin,
   updateSupportThread,
   updatePublicBoardPosts,
@@ -144,6 +146,46 @@ test('support thread owners and admins can update and delete customer posts', ()
     false,
   );
   assert.equal(repository.listAuditLogs().at(-1)?.action, 'support.thread.deleted');
+});
+
+test('admins can update and delete admin-authored support posts through the thread edit flow', async () => {
+  const repository = createMockChartServiceRepository();
+
+  const updated = updateSupportThread(repository, {
+    actor: { id: 'admin_1', role: 'admin' },
+    threadId: 'support_public_notice',
+    title: 'Updated admin notice',
+    body: 'Updated admin notice body',
+    updatedAt: '2026-05-23T11:10:00.000Z',
+  });
+
+  assert.equal(updated.thread.title, 'Updated admin notice');
+  assert.equal(updated.message.id, 'support_msg_public_notice');
+  assert.equal(updated.message.body, 'Updated admin notice body');
+  assert.equal(updated.message.isAdminReply, true);
+
+  const deleted = deleteSupportThread(repository, {
+    actor: { id: 'admin_1', role: 'admin' },
+    threadId: 'support_public_notice',
+    deletedAt: '2026-05-23T11:15:00.000Z',
+  });
+
+  assert.equal(deleted.messages.some((message) => message.id === 'support_msg_public_notice'), true);
+  assert.equal(repository.getSupportThreadById('support_public_notice'), null);
+
+  const asyncRepository = createAsyncChartServiceRepository(createMockChartServiceRepository());
+  const asyncUpdated = await updateAsyncSupportThread(asyncRepository, {
+    actor: { id: 'admin_1', role: 'admin' },
+    threadId: 'support_public_notice',
+    title: 'Updated async admin notice',
+    body: 'Updated async admin notice body',
+    updatedAt: '2026-05-23T11:20:00.000Z',
+  });
+
+  assert.equal(asyncUpdated.thread.title, 'Updated async admin notice');
+  assert.equal(asyncUpdated.message.id, 'support_msg_public_notice');
+  assert.equal(asyncUpdated.message.body, 'Updated async admin notice body');
+  assert.equal(asyncUpdated.message.isAdminReply, true);
 });
 
 test('admin can update and delete support replies with audit evidence', () => {
@@ -318,8 +360,11 @@ test('admin support reply edit and delete controls move into top-right icon butt
   assert.match(adminSource, /admin-support-reply-icon-actions/);
   assert.match(adminSource, /admin-support-reply-icon-button/);
   assert.match(adminSource, /role="group"/);
-  assert.match(adminSource, /aria-label="관리자 답변 수정"/);
-  assert.match(adminSource, /aria-label="관리자 답변 삭제"/);
+  assert.match(adminSource, /threadMessage\.authorUserId === item\.thread\.authorUserId/);
+  assert.match(adminSource, /관리자글/);
+  assert.match(adminSource, /관리자 답변/);
+  assert.match(adminSource, /isThreadAuthorMessage \? startThreadEdit\(item\) : startReplyEdit\(threadMessage\)/);
+  assert.match(adminSource, /isThreadAuthorMessage \? void deleteThread\(item\.thread\.id\) : void deleteReply\(threadMessage\.id\)/);
   assert.doesNotMatch(adminSource, /admin-support-message-actions-list/);
   assert.doesNotMatch(adminSource, /admin-support-message-action-card/);
   assert.match(styleSource, /#admin-support \.admin-support-message-heading\s*\{[\s\S]*?justify-content: space-between/);
