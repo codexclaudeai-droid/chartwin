@@ -130,7 +130,10 @@ export function AuditLogPanel() {
               onClick={() => applyPreset(preset)}
               disabled={isBusy}
             >
-              {preset.label}
+              <span>{preset.label}</span>
+              <small className="audit-log-preset-query">
+                {formatPresetQuery(preset)}
+              </small>
             </button>
           );
         })}
@@ -162,19 +165,34 @@ export function AuditLogPanel() {
           const auditTargetLink = getAdminAuditTargetLink(entry.log.targetType, entry.log.targetId);
 
           return (
-            <article className="thread-card" key={entry.sequence}>
-              <div className="thread-meta">
-                <span className="badge">#{entry.sequence}</span>
-                <span>{entry.log.action}</span>
-                <span>{entry.actor?.email ?? entry.log.actorAdminId}</span>
+            <article className="thread-card audit-log-card" key={entry.sequence}>
+              <header className="audit-log-header">
+                <div>
+                  <span className="badge audit-log-sequence-badge">#{entry.sequence}</span>
+                  <h3>{entry.log.action}</h3>
+                </div>
+                {auditTargetLink && (
+                  <a className="text-link compact" href={auditTargetLink.href}>
+                    {auditTargetLink.label}
+                  </a>
+                )}
+              </header>
+              <div className="audit-log-meta-grid">
+                <div className="audit-log-target-cell">
+                  <span>대상</span>
+                  <strong>{entry.log.targetType}</strong>
+                  <code>{entry.log.targetId}</code>
+                </div>
+                <div className="audit-log-actor-cell">
+                  <span>처리자</span>
+                  <strong>{entry.actor?.email ?? entry.log.actorAdminId}</strong>
+                  {entry.actor && <small>{entry.actor.name} / {entry.actor.role}</small>}
+                </div>
               </div>
-              <h3>{entry.log.targetType} / {entry.log.targetId}</h3>
               {auditTargetLink && (
-                <a className="text-link compact" href={auditTargetLink.href}>
-                  {auditTargetLink.label}
-                </a>
+                <span className="audit-log-target-link-copy">연결된 운영 화면에서 원본 요청을 함께 확인할 수 있습니다.</span>
               )}
-              <ul className="audit-summary">
+              <ul className="audit-summary audit-log-summary-list">
                 {formatAuditLogSummary({
                   action: entry.log.action,
                   targetType: entry.log.targetType,
@@ -185,7 +203,7 @@ export function AuditLogPanel() {
                   <li key={line}>{line}</li>
                 ))}
               </ul>
-              <details>
+              <details className="audit-log-json-details">
                 <summary>변경 전후 데이터 보기</summary>
                 <pre className="audit-json">{JSON.stringify({
                   before: entry.log.beforeJson,
@@ -203,4 +221,9 @@ export function AuditLogPanel() {
 
 function formatAuditLogRefreshMessage(source: AdminRefreshSource): string {
   return `${AUDIT_LOG_REFRESH_SOURCE_LABELS[source]} 후 감사로그를 갱신했습니다.`;
+}
+
+function formatPresetQuery(preset: AuditLogFilterPreset): string {
+  if (!preset.action && !preset.targetType) return '모든 기록';
+  return [preset.action, preset.targetType].filter(Boolean).join(' / ');
 }

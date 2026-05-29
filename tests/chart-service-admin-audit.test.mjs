@@ -168,7 +168,7 @@ test('admin audit log panel renders human-readable summaries above raw JSON', ()
   const source = fs.readFileSync(new URL('../app/admin/audit-log-panel.tsx', import.meta.url), 'utf8');
 
   assert.match(source, /formatAuditLogSummary/);
-  assert.match(source, /className="audit-summary"/);
+  assert.match(source, /audit-log-summary-list/);
   assert.match(source, /변경 전후 데이터 보기/);
 });
 
@@ -222,4 +222,28 @@ test('admin audit log panel applies dashboard preset events with an operator mes
   assert.match(source, /const nextTargetId = detail\.targetId \?\? ''/);
   assert.match(source, /setTargetId\(nextTargetId\)/);
   assert.match(source, /void refresh\(\{ action: preset\.action, targetType: preset\.targetType, targetId: nextTargetId, nextMessage: `\$\{preset\.label\} 감사 로그 필터를 적용했습니다\.` \}\)/);
+});
+
+test('admin audit log panel groups entry details for investigation readability', () => {
+  const source = fs.readFileSync(new URL('../app/admin/audit-log-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /audit-log-card/);
+  assert.match(source, /audit-log-header/);
+  assert.match(source, /audit-log-sequence-badge/);
+  assert.match(source, /audit-log-target-cell/);
+  assert.match(source, /audit-log-actor-cell/);
+  assert.match(source, /audit-log-summary-list/);
+  assert.match(source, /audit-log-json-details/);
+  assert.match(source, /audit-log-preset-query/);
+});
+
+test('admin audit log panel uses a dark operational investigation finish', () => {
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(styleSource, /#admin-audit-logs\s*\{[\s\S]*?linear-gradient/);
+  assert.match(styleSource, /#admin-audit-logs \.quick-filter-row\s*\{[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(154px, 1fr\)\)/);
+  assert.match(styleSource, /#admin-audit-logs \.admin-filter-row\s*\{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(styleSource, /#admin-audit-logs \.audit-log-card\s*\{[\s\S]*?border:/);
+  assert.match(styleSource, /#admin-audit-logs \.audit-log-summary-list\s*\{[\s\S]*?display: grid/);
+  assert.match(styleSource, /#admin-audit-logs \.audit-log-json-details\s*\{[\s\S]*?border:/);
 });
