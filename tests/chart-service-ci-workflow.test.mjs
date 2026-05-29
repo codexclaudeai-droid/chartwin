@@ -21,6 +21,7 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /runs-on:\s+ubuntu-latest/);
   assert.match(workflow, /npm run service:cloudflare:build/);
+  assert.match(deployWorkflow, /npm ci --include=dev/);
   assert.match(deployWorkflow, /npx wrangler deploy/);
   assert.match(deployWorkflow, /npm run service:migrate/);
   assert.match(deployWorkflow, /npm run service:bootstrap/);
