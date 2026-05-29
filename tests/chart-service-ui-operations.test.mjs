@@ -215,6 +215,19 @@ test('admin operation panels render strengthened manual flow badges', () => {
   assert.match(labelSource, /입금확인 완료 · 구독승인 대기/);
 });
 
+test('admin payment completed flow status renders as a readable badge', () => {
+  const paymentSource = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const doneBadgeRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-payments \.badge\.manual-flow-badge\.done\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(paymentSource, /<span className=\{`badge manual-flow-badge \$\{flowBadge\.tone\}`\}>/);
+  assert.match(doneBadgeRule, /background:\s*rgba\(26, 185, 129, 0\.18\)/);
+  assert.match(doneBadgeRule, /border-color:\s*rgba\(77, 255, 181, 0\.42\)/);
+  assert.match(doneBadgeRule, /color:\s*#ffffff/);
+});
+
 test('admin payment panel confirms irreversible payment operations before posting', () => {
   const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
 

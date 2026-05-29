@@ -10257,6 +10257,12 @@ body:not(:has(.landing-page)) #admin-payments .manual-flow-badge {
   border-color: rgba(125, 183, 255, 0.2);
 }
 
+body:not(:has(.landing-page)) #admin-payments .badge.manual-flow-badge.done {
+  background: rgba(26, 185, 129, 0.18);
+  border-color: rgba(77, 255, 181, 0.42);
+  color: #ffffff;
+}
+
 body:not(:has(.landing-page)) #admin-payments .manual-flow-description,
 body:not(:has(.landing-page)) #admin-payments .manual-flow-raw-status {
   color: rgba(216, 236, 255, 0.62);
