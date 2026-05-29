@@ -81,3 +81,14 @@ test('admin manual flow badges expose the two-step deposit and subscription appr
     tone: 'ready',
   });
 });
+
+test('admin payment flow badge labels rejected deposits as subscription rejected', () => {
+  assert.deepEqual(getAdminPaymentFlowBadge({
+    paymentStatus: 'rejected',
+    subscriptionStatus: 'payment_pending',
+  }), {
+    label: '입금미확인/구독반려',
+    description: '입금 내역 미확인으로 구독 요청이 반려되었습니다.',
+    tone: 'blocked',
+  });
+});

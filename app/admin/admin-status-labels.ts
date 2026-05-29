@@ -113,8 +113,8 @@ export function getAdminPaymentFlowBadge(input: {
 
   if (input.paymentStatus === 'rejected') {
     return {
-      label: '반려 완료',
-      description: '입금 미확인으로 요청이 반려되었습니다.',
+      label: '입금미확인/구독반려',
+      description: '입금 내역 미확인으로 구독 요청이 반려되었습니다.',
       tone: 'blocked',
     };
   }
