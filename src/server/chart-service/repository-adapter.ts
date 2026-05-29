@@ -1,4 +1,5 @@
 import { createMockChartServiceRepository } from './mock-repository.ts';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import {
   createAsyncChartServicePersistence,
   type AsyncChartServicePersistence,
@@ -197,7 +198,26 @@ function normalizeAdapter(adapter: string | null | undefined): ChartServiceRepos
 }
 
 function getRuntimeEnv(): ChartServiceRepositoryRuntimeEnv {
-  return ((globalThis as typeof globalThis & {
+  const processEnv = ((globalThis as typeof globalThis & {
     process?: { env?: ChartServiceRepositoryRuntimeEnv };
   }).process?.env) ?? {};
+  const hyperdriveConnectionString = getHyperdriveConnectionString();
+  if (!hyperdriveConnectionString) return processEnv;
+
+  return {
+    ...processEnv,
+    CHART_SERVICE_DATABASE_URL: hyperdriveConnectionString,
+  };
+}
+
+function getHyperdriveConnectionString(): string | null {
+  try {
+    const context = getCloudflareContext();
+    const hyperdrive = (context.env as {
+      HYPERDRIVE?: { connectionString?: string };
+    }).HYPERDRIVE;
+    return hyperdrive?.connectionString ?? null;
+  } catch {
+    return null;
+  }
 }

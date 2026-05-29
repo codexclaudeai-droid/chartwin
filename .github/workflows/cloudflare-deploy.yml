@@ -61,6 +61,9 @@ jobs:
           npm run service:bootstrap
           npm run service:postgres:admin-check
 
+      - name: Prepare Cloudflare Hyperdrive binding
+        run: node scripts/ensure-cloudflare-hyperdrive.mjs
+
       - name: Build integrated Next.js Cloudflare worker
         run: npm run service:cloudflare:build
 

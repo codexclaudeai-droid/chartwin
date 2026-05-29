@@ -27,6 +27,7 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(deployWorkflow, /npm run service:migrate/);
   assert.match(deployWorkflow, /npm run service:bootstrap/);
   assert.match(deployWorkflow, /npm run service:postgres:admin-check/);
+  assert.match(deployWorkflow, /node scripts\/ensure-cloudflare-hyperdrive\.mjs/);
   assert.match(deployWorkflow, /CHART_SERVICE_DATABASE_URL/);
   assert.match(deployWorkflow, /CHART_SERVICE_SESSION_SECRET/);
   assert.match(deployWorkflow, /CHART_SERVICE_REPOSITORY:\s+postgres/);
