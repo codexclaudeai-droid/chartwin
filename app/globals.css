@@ -9777,10 +9777,15 @@ body:not(:has(.landing-page)) #admin-users .admin-user-detail-title {
 
 body:not(:has(.landing-page)) #admin-users .admin-user-detail-control-grid {
   align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   display: grid;
   gap: 10px;
   grid-template-columns: minmax(220px, 1fr) auto;
   margin: 0;
+  padding: 0;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-detail-control-grid.account-status {
@@ -9803,9 +9808,27 @@ body:not(:has(.landing-page)) #admin-users .admin-user-detail-control-grid selec
   outline: 0;
 }
 
+body:not(:has(.landing-page)) #admin-users .admin-user-detail-control-grid input:disabled,
+body:not(:has(.landing-page)) #admin-users .admin-user-detail-control-grid select:disabled {
+  -webkit-text-fill-color: rgba(216, 236, 255, 0.72);
+  background: rgba(7, 21, 47, 0.62);
+  border-color: rgba(125, 183, 255, 0.14);
+  color: rgba(216, 236, 255, 0.72);
+  opacity: 1;
+}
+
 body:not(:has(.landing-page)) #admin-users .admin-user-detail-control-grid .button {
   min-height: 42px;
   white-space: nowrap;
+}
+
+body:not(:has(.landing-page)) #admin-users .admin-user-detail-control-grid .button:disabled {
+  background: rgba(125, 183, 255, 0.12);
+  border-color: rgba(125, 183, 255, 0.18);
+  box-shadow: none;
+  color: rgba(238, 247, 255, 0.58);
+  opacity: 1;
+  transform: none;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-detail-control-note {

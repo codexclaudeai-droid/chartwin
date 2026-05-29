@@ -426,6 +426,17 @@ test('admin user detail panel has dense dark operational styling', () => {
   assert.match(cssSource, /#admin-users \.admin-user-history-list li\s*\{[\s\S]*?border: 1px solid rgba\(125, 183, 255, 0\.12\)/);
 });
 
+test('admin user detail controls do not inherit the light directory filter shell', () => {
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /#admin-users \.admin-user-detail-control-grid\s*\{[\s\S]*?background: transparent/);
+  assert.match(cssSource, /#admin-users \.admin-user-detail-control-grid\s*\{[\s\S]*?border: 0/);
+  assert.match(cssSource, /#admin-users \.admin-user-detail-control-grid\s*\{[\s\S]*?box-shadow: none/);
+  assert.match(cssSource, /#admin-users \.admin-user-detail-control-grid\s*\{[\s\S]*?padding: 0/);
+  assert.match(cssSource, /#admin-users \.admin-user-detail-control-grid input:disabled/);
+  assert.match(cssSource, /#admin-users \.admin-user-detail-control-grid \.button:disabled\s*\{[\s\S]*?background: rgba\(125, 183, 255, 0\.12\)/);
+});
+
 test('admin user audit summaries keep readable text on dark detail cards', () => {
   const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
