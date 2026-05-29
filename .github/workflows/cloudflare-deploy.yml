@@ -49,6 +49,13 @@ jobs:
             fi
           done
 
+      - name: Prepare Supabase Postgres database
+        run: |
+          npm run service:prod-env:check
+          npm run service:migrate
+          npm run service:bootstrap
+          npm run service:postgres:admin-check
+
       - name: Build integrated Next.js Cloudflare worker
         run: npm run service:cloudflare:build
 

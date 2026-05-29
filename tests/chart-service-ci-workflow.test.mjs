@@ -22,6 +22,9 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(workflow, /runs-on:\s+ubuntu-latest/);
   assert.match(workflow, /npm run service:cloudflare:build/);
   assert.match(deployWorkflow, /npx wrangler deploy/);
+  assert.match(deployWorkflow, /npm run service:migrate/);
+  assert.match(deployWorkflow, /npm run service:bootstrap/);
+  assert.match(deployWorkflow, /npm run service:postgres:admin-check/);
   assert.match(deployWorkflow, /CHART_SERVICE_DATABASE_URL/);
   assert.match(deployWorkflow, /CHART_SERVICE_SESSION_SECRET/);
   assert.match(openNextConfig, /buildCommand:\s*'npx next build'/);
