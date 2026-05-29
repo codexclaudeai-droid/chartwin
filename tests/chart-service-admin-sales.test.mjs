@@ -465,6 +465,16 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(cssSource, /\.salesperson-search-empty/);
 });
 
+test('admin sales salesperson search dropdown keeps text readable in dark theme', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-sales \.salesperson-search-results button span/);
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-sales \.salesperson-search-results button small/);
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-sales \.salesperson-search-empty strong\s*\{[\s\S]*?color: #ffffff/);
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-sales \.salesperson-search-empty p\s*\{[\s\S]*?color: rgba\(216, 236, 255, 0\.72\)/);
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-sales \.salesperson-search-empty a\s*\{[\s\S]*?color: #ffffff/);
+});
+
 test('admin sales panel keeps management sections visible before summary data loads', () => {
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-sales-panel.tsx', import.meta.url), 'utf8');
 

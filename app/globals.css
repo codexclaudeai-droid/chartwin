@@ -9024,12 +9024,35 @@ body:not(:has(.landing-page)) #admin-sales .salesperson-search-results button {
   color: #ffffff;
 }
 
+body:not(:has(.landing-page)) #admin-sales .salesperson-search-results button span,
+body:not(:has(.landing-page)) #admin-sales .salesperson-search-results button small {
+  color: rgba(216, 236, 255, 0.72);
+}
+
 body:not(:has(.landing-page)) #admin-sales .salesperson-search-results button:hover,
 body:not(:has(.landing-page)) #admin-sales .salesperson-search-results button.highlighted,
 body:not(:has(.landing-page)) #admin-sales .salesperson-search-results button.active,
 body:not(:has(.landing-page)) #admin-sales .salesperson-search-results button[aria-selected="true"] {
   background: rgba(76, 141, 255, 0.16);
   border-color: rgba(125, 183, 255, 0.28);
+}
+
+body:not(:has(.landing-page)) #admin-sales .salesperson-search-empty strong {
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-sales .salesperson-search-empty p {
+  color: rgba(216, 236, 255, 0.72);
+}
+
+body:not(:has(.landing-page)) #admin-sales .salesperson-search-empty a {
+  border-color: rgba(125, 183, 255, 0.28);
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-sales .salesperson-search-empty a:hover {
+  background: rgba(76, 141, 255, 0.18);
+  border-color: rgba(125, 183, 255, 0.48);
 }
 
 body:not(:has(.landing-page)) #admin-sales .sales-summary-grid .mini-card,
