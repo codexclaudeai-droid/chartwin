@@ -574,7 +574,7 @@ export function AdminSalesPanel() {
       </div>
       <div className="sales-management-body">
         {activePage === 'teams' && (
-        <>
+        <div className="sales-team-dashboard">
           <div className="sales-summary-grid">
             <div className="mini-card">
               <span>기본 팀 정산율</span>
@@ -603,7 +603,7 @@ export function AdminSalesPanel() {
                 영업팀 등록
               </button>
             </div>
-            <div className="sales-filter-grid compact">
+            <div className="sales-filter-grid compact sales-team-control-bar">
               <label>
                 <span>영업팀명</span>
                 <input
@@ -625,9 +625,14 @@ export function AdminSalesPanel() {
                   onClick={() => selectTeam(team.id)}
                   type="button"
                 >
-                  <strong>{team.name}</strong>
-                  <span>{team.commissionPercent}% / {team.salespersonCount}명</span>
-                  <small>{formatUsd(team.salesUsd)} / {formatPoint(team.points)} 포인트</small>
+                  <span className="sales-team-card-kicker">영업팀</span>
+                  <strong className="sales-team-card-title">{team.name}</strong>
+                  <div className="sales-team-card-metrics">
+                    <span><b>{team.commissionPercent}%</b> 정산율</span>
+                    <span><b>{team.salespersonCount.toLocaleString('ko-KR')}명</b> 배치</span>
+                    <span><b>{formatUsd(team.salesUsd)}</b> 매출</span>
+                    <span><b>{formatPoint(team.points)}</b> 포인트</span>
+                  </div>
                 </button>
               ))}
               {visibleSummary.teams.length === 0 && (
@@ -650,7 +655,7 @@ export function AdminSalesPanel() {
                 팀 정산율 저장
               </button>
             </div>
-            <table className="table sales-team-table">
+            <table className="table sales-team-table sales-team-member-table">
               <thead>
                 <tr>
                   <th>순번</th>
@@ -663,22 +668,25 @@ export function AdminSalesPanel() {
               <tbody>
                 {visibleSummary.selectedTeamSalespeople.map((salesperson) => (
                   <tr key={salesperson.id}>
-                    <td>{salesperson.sequence}</td>
-                    <td>{salesperson.name}<br /><small>{salesperson.email}</small></td>
-                    <td>{salesperson.phoneNumber ?? '미등록'}</td>
-                    <td>{formatUsd(salesperson.salesUsd)}</td>
-                    <td>{formatPoint(salesperson.points)}</td>
+                    <td className="sales-team-sequence-cell">{salesperson.sequence}</td>
+                    <td className="sales-team-member-cell">
+                      <strong>{salesperson.name}</strong>
+                      <span>{salesperson.email}</span>
+                    </td>
+                    <td className="sales-team-contact-cell">{salesperson.phoneNumber ?? '미등록'}</td>
+                    <td className="sales-team-money-cell">{formatUsd(salesperson.salesUsd)}</td>
+                    <td className="sales-team-point-cell">{formatPoint(salesperson.points)}</td>
                   </tr>
                 ))}
                 {visibleSummary.selectedTeamSalespeople.length === 0 && (
-                  <tr>
+                  <tr className="sales-team-empty-row">
                     <td colSpan={5}>선택한 영업팀에 배치된 영업자가 없습니다.</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-        </>
+        </div>
         )}
 
         {activePage === 'people' && (

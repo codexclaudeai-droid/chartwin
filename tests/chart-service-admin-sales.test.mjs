@@ -486,3 +486,28 @@ test('admin sales panel has polished operator dashboard styling', () => {
   assert.match(cssSource, /#admin-sales \.table/);
   assert.match(cssSource, /#admin-sales \.table tfoot/);
 });
+
+test('admin sales team page groups team cards and member table for readability', () => {
+  const panelSource = fs.readFileSync(new URL('../app/admin/admin-sales-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /sales-team-dashboard/);
+  assert.match(panelSource, /sales-team-control-bar/);
+  assert.match(panelSource, /sales-team-card-kicker/);
+  assert.match(panelSource, /sales-team-card-title/);
+  assert.match(panelSource, /sales-team-card-metrics/);
+  assert.match(panelSource, /sales-team-member-table/);
+  assert.match(panelSource, /sales-team-member-cell/);
+  assert.match(panelSource, /sales-team-money-cell/);
+  assert.match(panelSource, /sales-team-empty-row/);
+});
+
+test('admin sales team page uses dense dark operational styling', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /#admin-sales \.sales-team-dashboard\s*\{[\s\S]*?display: grid/);
+  assert.match(cssSource, /#admin-sales \.sales-team-control-bar\s*\{[\s\S]*?grid-template-columns: minmax\(240px, 1fr\) auto/);
+  assert.match(cssSource, /#admin-sales \.sales-team-grid\s*\{[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(220px, 1fr\)\)/);
+  assert.match(cssSource, /#admin-sales \.sales-team-card-metrics\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(cssSource, /#admin-sales \.sales-team-member-table\s*\{[\s\S]*?table-layout: fixed/);
+  assert.match(cssSource, /#admin-sales \.sales-team-member-cell strong\s*\{[\s\S]*?color: #ffffff/);
+});
