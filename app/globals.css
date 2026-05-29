@@ -5399,17 +5399,6 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   box-shadow: 0 16px 42px rgba(12, 102, 90, 0.12);
 }
 
-.support-reply-preview {
-  background: color-mix(in srgb, var(--accent) 9%, #fff 91%);
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line) 76%);
-  border-radius: 12px;
-  padding: 12px 14px;
-}
-
-.support-reply-preview b {
-  color: var(--accent);
-}
-
 .support-answer-badge {
   background: rgba(12, 102, 90, 0.12);
   border-color: rgba(12, 102, 90, 0.24);
@@ -8811,8 +8800,7 @@ body:not(:has(.landing-page)) .support-message-list p {
   padding: 10px 12px;
 }
 
-body:not(:has(.landing-page)) .support-message-list .admin-reply,
-body:not(:has(.landing-page)) .support-reply-preview {
+body:not(:has(.landing-page)) .support-message-list .admin-reply {
   background: rgba(76, 141, 255, 0.12);
   border-color: rgba(125, 183, 255, 0.24);
 }

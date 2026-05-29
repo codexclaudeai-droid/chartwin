@@ -460,11 +460,6 @@ export function SupportPanel() {
                     </div>
                   </div>
                 ) : null}
-                {replyPreview ? (
-                  <p className="support-reply-preview">
-                    <b>최근 답변</b>: {replyPreview.body}
-                  </p>
-                ) : null}
                 <div aria-label="문의 대화" className="support-message-list">
                   {item.messages.map((threadMessage) => (
                     <p className={threadMessage.isAdminReply ? 'admin-reply' : undefined} key={threadMessage.id}>

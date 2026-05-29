@@ -437,12 +437,12 @@ test('member support panel supports notification deep links to a thread', () => 
   assert.match(panelSource, /답변 확인 대상 문의/);
   assert.match(panelSource, /최근 관리자 답변/);
   assert.match(panelSource, /support-thread-answered/);
-  assert.match(panelSource, /support-reply-preview/);
   assert.match(panelSource, /support-answer-badge/);
   assert.match(panelSource, /답변 확인 가능/);
   assert.match(panelSource, /support-target-badge/);
   assert.match(panelSource, /알림에서 이동/);
-  assert.match(panelSource, /최근 답변/);
+  assert.doesNotMatch(panelSource, /support-reply-preview/);
+  assert.doesNotMatch(panelSource, /최근 답변/);
   assert.match(panelSource, /문의 카드로 이동/);
   assert.match(panelSource, /id=\{`support-\$\{item\.thread\.id\}`\}/);
   assert.match(panelSource, /support-thread-target/);
@@ -453,7 +453,7 @@ test('member support panel supports notification deep links to a thread', () => 
   assert.match(styleSource, /@keyframes supportTargetPulse/);
   assert.match(styleSource, /\.support-answer-badge/);
   assert.match(styleSource, /\.support-target-badge/);
-  assert.match(styleSource, /\.support-reply-preview/);
+  assert.doesNotMatch(styleSource, /\.support-reply-preview/);
   assert.match(styleSource, /\.support-deep-link-notice/);
 });
 
