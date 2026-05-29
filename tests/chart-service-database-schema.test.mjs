@@ -115,6 +115,7 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /is_published boolean not null default true/i);
   assert.match(sql, /create index if not exists idx_public_board_posts_category/i);
   assert.match(sql, /insert into public_board_posts/i);
+  assert.doesNotMatch(sql, /updated_by_admin_id\).*'admin_1'/i);
   assert.match(sql, /create table if not exists web_info_settings/i);
   assert.match(sql, /terms_content text not null/i);
   assert.match(sql, /privacy_content text not null/i);
