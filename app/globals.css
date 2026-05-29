@@ -9561,10 +9561,88 @@ body:not(:has(.landing-page)) #admin-payments > .notice.compact {
 
 body:not(:has(.landing-page)) #admin-payments {
   overflow: hidden;
+  border: 1px solid rgba(89, 151, 255, 0.22);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(55, 125, 255, 0.15), transparent 34%),
+    linear-gradient(145deg, rgba(16, 28, 48, 0.96), rgba(8, 18, 34, 0.98));
+  box-shadow: 0 26px 74px rgba(0, 0, 0, 0.3);
+}
+
+body:not(:has(.landing-page)) #admin-payments > .toolbar {
+  align-items: center;
+  border-bottom: 1px solid rgba(148, 183, 255, 0.16);
+  padding-bottom: 18px;
+}
+
+body:not(:has(.landing-page)) #admin-payments > .toolbar h2 {
+  color: #ffffff;
+  letter-spacing: -0.03em;
+}
+
+body:not(:has(.landing-page)) #admin-payments .quick-filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(154px, 1fr));
+  gap: 10px;
+  margin: 16px 0 14px;
+  padding: 14px;
+  border: 1px solid rgba(125, 183, 255, 0.15);
+  border-radius: 20px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(76, 141, 255, 0.024)),
+    rgba(7, 16, 31, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+body:not(:has(.landing-page)) #admin-payments .quick-filter-row .button {
+  justify-content: space-between;
+  min-height: 44px;
+  border-color: rgba(125, 183, 255, 0.18);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(216, 236, 255, 0.76);
+}
+
+body:not(:has(.landing-page)) #admin-payments .quick-filter-row .button.active {
+  border-color: rgba(98, 166, 255, 0.54);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(98, 166, 255, 0.22), transparent 42%),
+    rgba(76, 141, 255, 0.16);
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-payments .quick-filter-count {
+  border-color: rgba(125, 183, 255, 0.24);
+  background: rgba(2, 7, 19, 0.38);
+  color: #ffffff;
 }
 
 body:not(:has(.landing-page)) #admin-payments .table {
+  border: 1px solid rgba(125, 183, 255, 0.16);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  background: rgba(2, 7, 19, 0.44);
   table-layout: fixed;
+}
+
+body:not(:has(.landing-page)) #admin-payments .table th {
+  padding: 14px 16px;
+  background: rgba(76, 141, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+body:not(:has(.landing-page)) #admin-payments .table td {
+  border-top: 1px solid rgba(125, 183, 255, 0.1);
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(232, 242, 255, 0.78);
+}
+
+body:not(:has(.landing-page)) #admin-payments .table tbody tr:hover td {
+  background: rgba(76, 141, 255, 0.095);
 }
 
 body:not(:has(.landing-page)) #admin-payments .table th:nth-child(1),
@@ -9649,6 +9727,15 @@ body:not(:has(.landing-page)) .admin-payment-txid-box {
   background: rgba(2, 7, 19, 0.34);
 }
 
+body:not(:has(.landing-page)) #admin-payments .manual-flow-badge {
+  border-color: rgba(125, 183, 255, 0.2);
+}
+
+body:not(:has(.landing-page)) #admin-payments .manual-flow-description,
+body:not(:has(.landing-page)) #admin-payments .manual-flow-raw-status {
+  color: rgba(216, 236, 255, 0.62);
+}
+
 body:not(:has(.landing-page)) .admin-payment-txid-box small {
   color: rgba(216, 236, 255, 0.68);
   font-size: 0.78rem;
@@ -9663,6 +9750,22 @@ body:not(:has(.landing-page)) .admin-payment-action-cell .admin-note-input {
   min-width: 0;
 }
 
+body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .admin-note-input {
+  border-color: rgba(125, 183, 255, 0.18);
+  background: rgba(2, 7, 19, 0.56);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .admin-note-input::placeholder {
+  color: rgba(216, 236, 255, 0.42);
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .admin-note-input:focus {
+  border-color: rgba(98, 166, 255, 0.72);
+  box-shadow: 0 0 0 4px rgba(76, 141, 255, 0.14);
+}
+
 body:not(:has(.landing-page)) .admin-payment-action-cell .quick-memo-row {
   align-items: flex-start;
   gap: 7px;
@@ -9671,6 +9774,23 @@ body:not(:has(.landing-page)) .admin-payment-action-cell .quick-memo-row {
 
 body:not(:has(.landing-page)) .admin-payment-action-cell .quick-memo-row > span {
   flex: 0 0 100%;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .quick-memo-row > span {
+  color: rgba(216, 236, 255, 0.58);
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .quick-memo-button {
+  border-color: rgba(125, 183, 255, 0.18);
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(216, 236, 255, 0.8);
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .quick-memo-button:hover,
+body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .quick-memo-button:focus-visible {
+  border-color: rgba(98, 166, 255, 0.58);
+  background: rgba(76, 141, 255, 0.18);
+  color: #ffffff;
 }
 
 body:not(:has(.landing-page)) .admin-payment-action-cell .actions.compact {

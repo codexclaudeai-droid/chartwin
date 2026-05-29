@@ -255,6 +255,18 @@ test('admin payment panel groups payment queue details for readability', () => {
   assert.match(cssSource, /\.admin-payment-action-cell \.actions\.compact\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/s);
 });
 
+test('admin payment panel uses a dark operational queue finish', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /#admin-payments > \.toolbar/);
+  assert.match(cssSource, /#admin-payments \.quick-filter-row\s*\{[\s\S]*?background:/s);
+  assert.match(cssSource, /#admin-payments \.quick-filter-row \.button\s*\{[\s\S]*?border-color:/s);
+  assert.match(cssSource, /#admin-payments \.table th\s*\{[\s\S]*?background:/s);
+  assert.match(cssSource, /#admin-payments \.table td\s*\{[\s\S]*?background:/s);
+  assert.match(cssSource, /#admin-payments \.admin-payment-action-cell \.admin-note-input\s*\{[\s\S]*?background:/s);
+  assert.match(cssSource, /#admin-payments \.admin-payment-action-cell \.quick-memo-button\s*\{[\s\S]*?border-color:/s);
+});
+
 test('admin payment panel labels confirmation as deposit confirmation only', () => {
   const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
 
