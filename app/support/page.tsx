@@ -43,15 +43,15 @@ export default async function SupportPage() {
       <section className="support-page-hero">
         <span className="eyebrow">Support Center</span>
         <h1>고객센터</h1>
-        <p className="lede">1:1 문의, 제휴문의, 무료체험 신청을 목적별로 나누어 빠르게 접수할 수 있습니다.</p>
+        <p className="lede">입금 확인, 환불 요청, 시그널 이용 문의를 한 곳에서 관리합니다. 제휴문의와 무료체험 신청도 목적에 맞게 접수할 수 있습니다.</p>
       </section>
 
       <section className="support-contact-routes" aria-label="문의 유형 선택">
         {SUPPORT_CONTACT_ROUTES.map((item) => (
           <article className="support-contact-route-card" key={item.title}>
-            <span>{item.title}</span>
-            <p>{item.description}</p>
-            <a className="button secondary" href={item.href}>{item.action}</a>
+            <span className="support-route-card-title">{item.title}</span>
+            <p className="support-route-card-body">{item.description}</p>
+            <a className="button secondary support-route-action" href={item.href}>{item.action}</a>
           </article>
         ))}
       </section>
@@ -59,7 +59,7 @@ export default async function SupportPage() {
       <section className="support-public-board" aria-label="공개 게시판">
         <div className="section-heading compact">
           <span>공개 게시판</span>
-          <h2>공지사항, 질문답변, FAQ</h2>
+          <h2 className="support-board-section-title">공지사항, 질문답변, FAQ</h2>
         </div>
         <div className="support-public-board-grid">
           {PUBLIC_BOARD_CATEGORIES.map((category) => {
@@ -73,7 +73,7 @@ export default async function SupportPage() {
                     <p>{post.body}</p>
                   </div>
                 )) : (
-                  <p>등록된 공개 게시글이 없습니다.</p>
+                  <p className="support-board-empty">등록된 공개 게시글이 없습니다.</p>
                 )}
               </article>
             );

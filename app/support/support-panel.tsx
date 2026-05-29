@@ -171,9 +171,11 @@ export function SupportPanel() {
 
   return (
     <section className="grid-panel support-workspace" id="support-inquiry-form">
-      <div className="card support-compose-card">
-        <h2>1:1 문의 작성</h2>
-        <p className="notice compact">문의 유형을 선택하고 필요한 내용을 남겨주세요. 관리자가 확인 후 답변합니다.</p>
+      <section className="support-panel-frame support-compose-card">
+        <div className="support-compose-header">
+          <h2>1:1 문의 작성</h2>
+          <p className="support-compose-intro">로그인하면 1:1 문의를 남길 수 있습니다. 문의 유형과 공개 범위를 선택한 뒤 필요한 내용을 남겨주세요.</p>
+        </div>
         {isTrialPreset && !canSubmitTrialRequest && (
           <div className="trial-auth-gate" role="status">
             <strong>무료체험 신청은 일반회원 로그인이 필요합니다.</strong>
@@ -188,27 +190,35 @@ export function SupportPanel() {
             </div>
           </div>
         )}
-        <form className="form" onSubmit={submitThread}>
-          <label htmlFor="supportCategory">분류</label>
-          <select id="supportCategory" value={category} onChange={(event) => setCategory(event.target.value)}>
-            <option value="deposit">{formatSupportCategoryLabel('deposit')}</option>
-            <option value="cancel">{formatSupportCategoryLabel('cancel')}</option>
-            <option value="usage">{formatSupportCategoryLabel('usage')}</option>
-            <option value="signal">{formatSupportCategoryLabel('signal')}</option>
-            <option value="trial">{formatSupportCategoryLabel('trial')}</option>
-            <option value="partnership">{formatSupportCategoryLabel('partnership')}</option>
-            <option value="general">{formatSupportCategoryLabel('general')}</option>
-          </select>
-          <label htmlFor="supportVisibility">공개 범위</label>
-          <select id="supportVisibility" value={visibility} onChange={(event) => setVisibility(event.target.value)}>
-            <option value="private">{formatSupportVisibilityLabel('private')}</option>
-            <option value="public">{formatSupportVisibilityLabel('public')}</option>
-          </select>
-          <label htmlFor="supportTitle">제목</label>
-          <input id="supportTitle" value={title} onChange={(event) => setTitle(event.target.value)} required />
-          <label htmlFor="supportBody">내용</label>
-          <textarea id="supportBody" value={body} onChange={(event) => setBody(event.target.value)} required />
-          <div className="actions compact">
+        <form className="form support-form-grid" onSubmit={submitThread}>
+          <label className="support-field" htmlFor="supportCategory">
+            <span>분류</span>
+            <select id="supportCategory" value={category} onChange={(event) => setCategory(event.target.value)}>
+              <option value="deposit">{formatSupportCategoryLabel('deposit')}</option>
+              <option value="cancel">{formatSupportCategoryLabel('cancel')}</option>
+              <option value="usage">{formatSupportCategoryLabel('usage')}</option>
+              <option value="signal">{formatSupportCategoryLabel('signal')}</option>
+              <option value="trial">{formatSupportCategoryLabel('trial')}</option>
+              <option value="partnership">{formatSupportCategoryLabel('partnership')}</option>
+              <option value="general">{formatSupportCategoryLabel('general')}</option>
+            </select>
+          </label>
+          <label className="support-field" htmlFor="supportVisibility">
+            <span>공개 범위</span>
+            <select id="supportVisibility" value={visibility} onChange={(event) => setVisibility(event.target.value)}>
+              <option value="private">{formatSupportVisibilityLabel('private')}</option>
+              <option value="public">{formatSupportVisibilityLabel('public')}</option>
+            </select>
+          </label>
+          <label className="support-field support-field-full" htmlFor="supportTitle">
+            <span>제목</span>
+            <input id="supportTitle" value={title} onChange={(event) => setTitle(event.target.value)} required />
+          </label>
+          <label className="support-field support-field-full" htmlFor="supportBody">
+            <span>내용</span>
+            <textarea id="supportBody" value={body} onChange={(event) => setBody(event.target.value)} required />
+          </label>
+          <div className="actions compact support-submit-row">
             <button className="button" type="submit" disabled={isBusy}>
               {isBusy ? '처리 중' : '문의 등록'}
             </button>
@@ -224,10 +234,10 @@ export function SupportPanel() {
             onClose={() => setShowAuthPromptModal(false)}
           />
         ) : null}
-      </div>
+      </section>
 
-      <div className="card wide support-thread-card">
-        <div className="toolbar">
+      <section className="support-panel-frame support-thread-card">
+        <div className="toolbar support-thread-toolbar">
           <h2>문의 목록</h2>
           <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
         </div>
@@ -283,17 +293,17 @@ export function SupportPanel() {
             );
           })}
         </div>
-        <p className="notice compact">
+        <p className="support-filter-summary">
           현재 필터: {activeFilter.label} / 표시 {filteredThreads.length}건
         </p>
         <div className="thread-list">
           {threads.length === 0 ? (
-            <article className="thread-card">
+            <article className="thread-card support-empty-card">
               <h3>아직 확인 가능한 문의가 없습니다.</h3>
               <p>비공개 문의는 작성자와 관리자만 볼 수 있습니다.</p>
             </article>
           ) : filteredThreads.length === 0 ? (
-            <article className="thread-card">
+            <article className="thread-card support-empty-card">
               <h3>현재 필터에 해당하는 문의가 없습니다.</h3>
               <p>전체 필터로 전환하면 등록된 문의를 모두 확인할 수 있습니다.</p>
             </article>
@@ -320,7 +330,7 @@ export function SupportPanel() {
                   <span>작성 {formatDateTime(item.thread.createdAt)}</span>
                   <span>{item.author?.email ?? 'system'}</span>
                 </div>
-                <h3>{item.thread.title}</h3>
+                <h3 className="support-thread-title">{item.thread.title}</h3>
                 {replyPreview ? (
                   <p className="support-reply-preview">
                     <b>최근 답변</b>: {replyPreview.body}
@@ -338,7 +348,7 @@ export function SupportPanel() {
             );
           })}
         </div>
-      </div>
+      </section>
     </section>
   );
 }
