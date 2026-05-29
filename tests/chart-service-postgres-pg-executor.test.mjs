@@ -61,3 +61,65 @@ test('pg pool options strip sslmode from the connection string and normalize SSL
     ssl: false,
   });
 });
+
+test('pg client executor opens a fresh client for each plain query', async () => {
+  const { createPgClientPostgresQueryExecutor } = await import('../src/server/chart-service/index.ts');
+  const lifecycle = [];
+  let clientIndex = 0;
+  const executor = createPgClientPostgresQueryExecutor(() => {
+    const id = ++clientIndex;
+    return {
+      async connect() {
+        lifecycle.push(`connect:${id}`);
+      },
+      async query(sql, values) {
+        lifecycle.push({ id, sql, values });
+        return { rows: [{ id }] };
+      },
+      async end() {
+        lifecycle.push(`end:${id}`);
+      },
+    };
+  });
+
+  assert.deepEqual((await executor.query({ sql: 'select $1', values: ['a'] })).rows, [{ id: 1 }]);
+  assert.deepEqual((await executor.query({ sql: 'select $1', values: ['b'] })).rows, [{ id: 2 }]);
+  assert.deepEqual(lifecycle, [
+    'connect:1',
+    { id: 1, sql: 'select $1', values: ['a'] },
+    'end:1',
+    'connect:2',
+    { id: 2, sql: 'select $1', values: ['b'] },
+    'end:2',
+  ]);
+});
+
+test('pg client executor keeps transaction statements on one client', async () => {
+  const { createPgClientPostgresQueryExecutor } = await import('../src/server/chart-service/index.ts');
+  const calls = [];
+  const executor = createPgClientPostgresQueryExecutor(() => ({
+    async connect() {
+      calls.push('connect');
+    },
+    async query(sql, values) {
+      calls.push({ sql, values });
+      return { rows: [{ ok: true }] };
+    },
+    async end() {
+      calls.push('end');
+    },
+  }));
+
+  const result = await executor.transaction(async (transactionExecutor) => (
+    await transactionExecutor.query({ sql: 'insert into users(id) values($1)', values: ['user_1'] })
+  ));
+
+  assert.deepEqual(result.rows, [{ ok: true }]);
+  assert.deepEqual(calls, [
+    'connect',
+    { sql: 'begin', values: undefined },
+    { sql: 'insert into users(id) values($1)', values: ['user_1'] },
+    { sql: 'commit', values: undefined },
+    'end',
+  ]);
+});

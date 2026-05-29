@@ -1,6 +1,10 @@
-import { Pool, type PoolConfig } from 'pg';
-import type { PostgresConnectionSettings } from './postgres-connection.ts';
+import { Client, Pool, type ClientConfig, type PoolConfig } from 'pg';
 import {
+  isCloudflareHyperdriveConnection,
+  type PostgresConnectionSettings,
+} from './postgres-connection.ts';
+import {
+  createPgClientPostgresQueryExecutor,
   createPgPoolOptions,
   createPgPostgresQueryExecutor,
 } from './postgres-pg-executor.ts';
@@ -16,10 +20,29 @@ export type ClosablePostgresQueryExecutor = TransactionalPostgresQueryExecutor &
 export function createNodePgPostgresQueryExecutor(
   settings: PostgresConnectionSettings,
 ): ClosablePostgresQueryExecutor {
+  if (shouldUseHyperdriveRequestClient(settings)) {
+    const clientOptions = createPgPoolOptions(settings) as ClientConfig;
+    const executor = createPgClientPostgresQueryExecutor(
+      () => new Client(clientOptions),
+      { closeClient: false },
+    );
+    return createLoggedClosablePostgresQueryExecutor(settings, executor, async () => undefined);
+  }
+
   const pool = new Pool(createPgPoolOptions(settings) as PoolConfig);
   const executor = createPgPostgresQueryExecutor(pool);
+  return createLoggedClosablePostgresQueryExecutor(settings, executor, async () => {
+    await pool.end();
+  });
+}
+
+function createLoggedClosablePostgresQueryExecutor(
+  settings: PostgresConnectionSettings,
+  executor: ReturnType<typeof createPgPostgresQueryExecutor> | ReturnType<typeof createPgClientPostgresQueryExecutor>,
+  close: () => Promise<void>,
+): ClosablePostgresQueryExecutor {
   if (!isTransactionalPostgresQueryExecutor(executor)) {
-    throw new Error('Node pg Pool must support transaction-capable client connections.');
+    throw new Error('Node pg executor must support transaction-capable client connections.');
   }
 
   return {
@@ -41,9 +64,13 @@ export function createNodePgPostgresQueryExecutor(
       }
     },
     async close(): Promise<void> {
-      await pool.end();
+      await close();
     },
   };
+}
+
+function shouldUseHyperdriveRequestClient(settings: PostgresConnectionSettings): boolean {
+  return settings.runtimeTarget === 'cloudflare-workers' && isCloudflareHyperdriveConnection(settings);
 }
 
 function renderErrorMessage(error: unknown): string {

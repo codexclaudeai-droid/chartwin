@@ -11,6 +11,11 @@ export type PgClientLike = {
   release?(): void;
 };
 
+export type PgConnectableClientLike = PgClientLike & {
+  connect?(): Promise<unknown>;
+  end?(): Promise<void>;
+};
+
 export type PgPoolLike = {
   query(sql: string, values?: unknown[]): Promise<{ rows: PostgresRow[] }>;
   connect?(): Promise<PgClientLike>;
@@ -53,6 +58,41 @@ export function createPgPostgresQueryExecutor(pool: PgPoolLike): PostgresQueryEx
   };
 }
 
+export function createPgClientPostgresQueryExecutor(
+  createClient: () => PgConnectableClientLike,
+  options: { closeClient?: boolean } = {},
+): TransactionalPostgresQueryExecutor {
+  const closeClient = options.closeClient ?? true;
+
+  return {
+    async query(statement: PostgresStatement): Promise<PostgresQueryResult> {
+      return await runWithClient(createClient, closeClient, async (client) => {
+        const result = await client.query(statement.sql, statement.values);
+        return { rows: result.rows };
+      });
+    },
+    async transaction<T>(operation: (executor: PostgresQueryExecutor) => Promise<T>): Promise<T> {
+      return await runWithClient(createClient, closeClient, async (client) => {
+        const transactionExecutor: PostgresQueryExecutor = {
+          async query(statement: PostgresStatement): Promise<PostgresQueryResult> {
+            const result = await client.query(statement.sql, statement.values);
+            return { rows: result.rows };
+          },
+        };
+        await client.query('begin');
+        try {
+          const result = await operation(transactionExecutor);
+          await client.query('commit');
+          return result;
+        } catch (error) {
+          await client.query('rollback');
+          throw error;
+        }
+      });
+    },
+  };
+}
+
 export function createPgPoolOptions(settings: PostgresConnectionSettings): PgPoolOptions {
   const options: PgPoolOptions = {
     connectionString: removeSslModeFromConnectionString(settings.connectionString),
@@ -62,6 +102,22 @@ export function createPgPoolOptions(settings: PostgresConnectionSettings): PgPoo
     options.ssl = ssl;
   }
   return options;
+}
+
+async function runWithClient<T>(
+  createClient: () => PgConnectableClientLike,
+  closeClient: boolean,
+  operation: (client: PgConnectableClientLike) => Promise<T>,
+): Promise<T> {
+  const client = createClient();
+  await client.connect?.();
+  try {
+    return await operation(client);
+  } finally {
+    if (closeClient) {
+      await client.end?.();
+    }
+  }
 }
 
 function createPgSslOption(sslMode: PostgresSslMode, runtimeTarget = ''): PgPoolOptions['ssl'] | undefined {
