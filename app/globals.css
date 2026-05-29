@@ -10566,7 +10566,25 @@ body:not(:has(.landing-page)) #admin-support .admin-deep-link-notice {
   background:
     radial-gradient(circle at 0% 0%, rgba(98, 166, 255, 0.18), transparent 42%),
     rgba(7, 16, 31, 0.76);
+  display: grid;
+  gap: 12px;
   box-shadow: none;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-title {
+  color: #ffffff;
+  display: block;
+  font-size: 1rem;
+  line-height: 1.45;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
 }
 
 body:not(:has(.landing-page)) #admin-support .admin-deep-link-notice strong {
@@ -10579,6 +10597,65 @@ body:not(:has(.landing-page)) #admin-support .admin-deep-link-notice p {
 
 body:not(:has(.landing-page)) #admin-support .admin-deep-link-kicker {
   color: rgba(141, 197, 255, 0.92);
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-meta {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-meta span {
+  background: rgba(2, 7, 19, 0.3);
+  border: 1px solid rgba(125, 183, 255, 0.12);
+  border-radius: 12px;
+  color: rgba(216, 236, 255, 0.74);
+  font-size: 0.82rem;
+  font-weight: 750;
+  min-height: 34px;
+  padding: 8px 10px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-target-id {
+  border: 1px solid rgba(125, 183, 255, 0.16);
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-context {
+  margin: 0;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-action-primary,
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-action-secondary {
+  align-items: center;
+  border: 1px solid rgba(125, 183, 255, 0.18);
+  border-radius: 999px;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 12px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-action-primary {
+  background: rgba(76, 141, 255, 0.18);
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-action-secondary {
+  color: rgba(216, 236, 255, 0.74);
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-missing {
+  background: rgba(2, 7, 19, 0.28);
+  border: 1px solid rgba(125, 183, 255, 0.12);
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
 }
 
 body:not(:has(.landing-page)) #admin-support .admin-support-filter-summary {

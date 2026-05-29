@@ -43,3 +43,27 @@ test('admin support panel supports deep links that focus the reply field', () =>
   assert.match(source, /바로 답변/);
   assert.match(source, /thread-card highlighted/);
 });
+
+test('admin support deep link notice exposes target context and actions', () => {
+  const source = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /admin-deep-link-card/);
+  assert.match(source, /admin-deep-link-title/);
+  assert.match(source, /admin-deep-link-context/);
+  assert.match(source, /admin-deep-link-meta/);
+  assert.match(source, /admin-deep-link-target-id/);
+  assert.match(source, /admin-deep-link-actions/);
+  assert.match(source, /admin-deep-link-action-primary/);
+  assert.match(source, /admin-deep-link-action-secondary/);
+  assert.match(source, /admin-deep-link-missing/);
+});
+
+test('admin support deep link notice has focused operational styling', () => {
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(styleSource, /#admin-support \.admin-deep-link-notice\s*\{[\s\S]*?display: grid/);
+  assert.match(styleSource, /#admin-support \.admin-deep-link-meta\s*\{[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(160px, 1fr\)\)/);
+  assert.match(styleSource, /#admin-support \.admin-deep-link-target-id\s*\{[\s\S]*?border: 1px solid rgba\(125, 183, 255, 0\.16\)/);
+  assert.match(styleSource, /#admin-support \.admin-deep-link-actions\s*\{[\s\S]*?display: flex/);
+  assert.match(styleSource, /#admin-support \.admin-deep-link-missing\s*\{[\s\S]*?text-align: center/);
+});

@@ -163,42 +163,55 @@ export function SupportAdminPanel() {
       </div>
       <p className="notice admin-support-status-notice">{message}</p>
       {deepLinkedThreadId && (
-        <div className="admin-deep-link-notice" role="status">
+        <div className="admin-deep-link-notice admin-deep-link-card" role="status">
           <div className="admin-deep-link-heading">
-            <span className="admin-deep-link-kicker">답변 대상 문의</span>
+            <div>
+              <span className="admin-deep-link-kicker">답변 대상 문의</span>
+              <strong className="admin-deep-link-title">
+                {deepLinkedThread ? deepLinkedThread.thread.title : `${deepLinkedThreadId} 문의`}
+              </strong>
+            </div>
             {deepLinkedThread && (
               <span className="badge">{formatSupportStatusLabel(deepLinkedThread.thread.status)}</span>
             )}
           </div>
           {deepLinkedThread ? (
             <>
-              <strong>{deepLinkedThread.thread.title}</strong>
-              <p>
+              <div className="admin-deep-link-meta" aria-label="답변 대상 문의 정보">
+                <span className="admin-deep-link-target-id">{deepLinkedThread.thread.id}</span>
+                <span>{deepLinkedThread.author?.email ?? 'system'}</span>
+                <span>{formatSupportVisibilityLabel(deepLinkedThread.thread.visibility)}</span>
+              </div>
+              <p className="admin-deep-link-context">
                 {deepLinkedThread.author?.email ?? 'system'} 문의입니다.{' '}
                 {deepLinkedThread.thread.status === 'answered'
                   ? '이미 답변 완료된 문의입니다. 필요한 경우 추가 답변을 남길 수 있습니다.'
                   : '이 문의에 바로 답변할 수 있습니다.'}
               </p>
-              <a
-                className="text-link compact"
-                href={`#${getAdminSupportReplyInputId(deepLinkedThread.thread.id)}`}
-                onClick={(event) => {
-                  event.preventDefault();
-                  replyInputRefs.current[deepLinkedThread.thread.id]?.focus();
-                }}
-              >
-                답변 입력창으로 이동
-              </a>
-              <a
-                className="text-link compact"
-                href="#admin-audit-logs"
-                onClick={() => dispatchAdminAuditLogPresetEvent({ presetKey: 'support', targetId: deepLinkedThread.thread.id })}
-              >
-                이 문의 감사로그 보기
-              </a>
+              <div className="admin-deep-link-actions">
+                <a
+                  className="text-link compact admin-deep-link-action-primary"
+                  href={`#${getAdminSupportReplyInputId(deepLinkedThread.thread.id)}`}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    replyInputRefs.current[deepLinkedThread.thread.id]?.focus();
+                  }}
+                >
+                  답변 입력창으로 이동
+                </a>
+                <a
+                  className="text-link compact admin-deep-link-action-secondary"
+                  href="#admin-audit-logs"
+                  onClick={() => dispatchAdminAuditLogPresetEvent({ presetKey: 'support', targetId: deepLinkedThread.thread.id })}
+                >
+                  이 문의 감사로그 보기
+                </a>
+              </div>
             </>
           ) : (
-            <p>{deepLinkedThreadId} 문의를 찾을 수 없거나 조회 권한이 없습니다.</p>
+            <div className="admin-deep-link-missing">
+              <p>{deepLinkedThreadId} 문의를 찾을 수 없거나 조회 권한이 없습니다.</p>
+            </div>
           )}
         </div>
       )}
