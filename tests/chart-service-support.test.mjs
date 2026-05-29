@@ -108,6 +108,8 @@ test('admin support panel renders quick filters before the thread list', () => {
 
   assert.match(source, /SUPPORT_THREAD_FILTER_PRESETS/);
   assert.match(source, /aria-label="고객센터 빠른 필터"/);
+  assert.match(source, /getSupportThreadFilterCount/);
+  assert.match(source, /quick-filter-count/);
   assert.match(source, /filteredThreads\.map/);
 });
 
@@ -135,6 +137,31 @@ test('admin support panel refreshes its filtered queue after local replies witho
   assert.match(source, /detail\.source === 'support'/);
   assert.match(source, /void refresh\(\{ nextMessage: `\$\{threadId\} 문의에 답변했습니다\. 목록을 갱신했습니다\.` \}\)/);
   assert.match(source, /dispatchAdminRefreshEvent\(\{ source: 'support' \}\)/);
+});
+
+test('admin support panel groups thread details for readable operations', () => {
+  const source = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /formatDateTime/);
+  assert.match(source, /admin-support-thread-card/);
+  assert.match(source, /admin-support-thread-header/);
+  assert.match(source, /admin-support-meta-bar/);
+  assert.match(source, /admin-support-author-cell/);
+  assert.match(source, /admin-support-message-list/);
+  assert.match(source, /admin-support-message admin-support-admin-reply/);
+  assert.match(source, /admin-support-reply-actions/);
+  assert.match(source, /aria-label=\{`\$\{item\.thread\.id\} 문의 답변 입력`\}/);
+});
+
+test('admin support panel uses a dark operational queue finish', () => {
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(styleSource, /#admin-support\s*\{[\s\S]*?linear-gradient/);
+  assert.match(styleSource, /#admin-support \.quick-filter-row\s*\{[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(154px, 1fr\)\)/);
+  assert.match(styleSource, /#admin-support \.admin-support-thread-card\s*\{[\s\S]*?border:/);
+  assert.match(styleSource, /#admin-support \.admin-support-message-list\s*\{[\s\S]*?display: grid/);
+  assert.match(styleSource, /#admin-support \.reply-row\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto/);
+  assert.match(styleSource, /#admin-support \.admin-support-reply-actions\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 });
 
 test('member support panel supports notification deep links to a thread', () => {

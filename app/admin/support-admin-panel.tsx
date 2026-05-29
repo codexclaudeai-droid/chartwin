@@ -13,6 +13,7 @@ import { getDefaultSupportReplyBody } from './support-reply-defaults';
 import { canSubmitSupportReply, normalizeSupportReply } from './support-reply-policy';
 import {
   filterSupportThreads,
+  getSupportThreadFilterCount,
   getSupportThreadFilterPreset,
   SUPPORT_THREAD_FILTER_PRESETS,
 } from './support-thread-filters';
@@ -212,7 +213,10 @@ export function SupportAdminPanel() {
               aria-pressed={isActive}
               onClick={() => applyQuickFilter(preset.key)}
             >
-              {preset.label}
+              <span>{preset.label}</span>
+              <strong className="quick-filter-count">
+                {getSupportThreadFilterCount(threads, preset.key)}
+              </strong>
             </button>
           );
         })}
@@ -225,29 +229,46 @@ export function SupportAdminPanel() {
       <div className="thread-list">
         {filteredThreads.map((item) => (
           <article
-            className={highlightedThreadId === item.thread.id ? 'thread-card highlighted' : 'thread-card'}
+            className={
+              highlightedThreadId === item.thread.id
+                ? 'thread-card admin-support-thread-card highlighted'
+                : 'thread-card admin-support-thread-card'
+            }
             id={getAdminSupportThreadDomId(item.thread.id)}
             key={item.thread.id}
           >
-            <div className="thread-meta">
-              <span className="badge">{formatSupportStatusLabel(item.thread.status)}</span>
-              <span>{formatSupportVisibilityLabel(item.thread.visibility)}</span>
-              <span>작성 {formatDateTime(item.thread.createdAt)}</span>
-              <span>{item.author?.email ?? 'system'}</span>
+            <header className="admin-support-thread-header">
+              <div>
+                <span className="admin-support-thread-id">{item.thread.id}</span>
+                <h3>{item.thread.title}</h3>
+              </div>
               <a className="text-link compact" href={createAdminSupportThreadUrl(item.thread.id)}>
                 상세 답변 링크
               </a>
+            </header>
+            <div className="admin-support-meta-bar">
+              <span className="badge">{formatSupportStatusLabel(item.thread.status)}</span>
+              <span>{formatSupportVisibilityLabel(item.thread.visibility)}</span>
+              <span>작성 {formatDateTime(item.thread.createdAt)}</span>
             </div>
-            <h3>{item.thread.title}</h3>
-            {item.messages.map((threadMessage) => (
-              <p className={threadMessage.isAdminReply ? 'admin-reply' : undefined} key={threadMessage.id}>
-                {threadMessage.isAdminReply ? '관리자: ' : '문의: '}
-                {threadMessage.body}
-              </p>
-            ))}
+            <div className="admin-support-author-cell">
+              <span>작성자</span>
+              <strong>{item.author?.email ?? 'system'}</strong>
+            </div>
+            <div className="admin-support-message-list">
+              {item.messages.map((threadMessage) => (
+                <p
+                  className={threadMessage.isAdminReply ? 'admin-support-message admin-support-admin-reply' : 'admin-support-message'}
+                  key={threadMessage.id}
+                >
+                  <strong>{threadMessage.isAdminReply ? '관리자' : '문의'}</strong>
+                  {threadMessage.body}
+                </p>
+              ))}
+            </div>
             <div className="reply-row">
               <textarea
-                aria-label={`${item.thread.id} 문의 바로 답변`}
+                aria-label={`${item.thread.id} 문의 답변 입력`}
                 id={getAdminSupportReplyInputId(item.thread.id)}
                 ref={(element) => {
                   replyInputRefs.current[item.thread.id] = element;
@@ -259,17 +280,19 @@ export function SupportAdminPanel() {
                 }))}
                 placeholder="관리자 답변"
               />
-              <button className="button" type="button" onClick={() => reply(item.thread.id)} disabled={isBusy || !canSubmitSupportReply(replyByThreadId[item.thread.id] || '')}>
-                답변
-              </button>
-              <button
-                className="button secondary"
-                type="button"
-                onClick={() => reply(item.thread.id, getDefaultSupportReplyBody())}
-                disabled={isBusy}
-              >
-                빠른 답변
-              </button>
+              <div className="admin-support-reply-actions">
+                <button className="button" type="button" onClick={() => reply(item.thread.id)} disabled={isBusy || !canSubmitSupportReply(replyByThreadId[item.thread.id] || '')}>
+                  답변
+                </button>
+                <button
+                  className="button secondary"
+                  type="button"
+                  onClick={() => reply(item.thread.id, getDefaultSupportReplyBody())}
+                  disabled={isBusy}
+                >
+                  빠른 답변
+                </button>
+              </div>
             </div>
           </article>
         ))}

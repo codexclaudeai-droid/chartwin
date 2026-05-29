@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   filterSupportThreads,
+  getSupportThreadFilterCount,
   getSupportThreadFilterPreset,
   SUPPORT_THREAD_FILTER_PRESETS,
 } from '../app/admin/support-thread-filters.ts';
@@ -48,4 +49,12 @@ test('unknown support thread filter falls back to all threads', () => {
     'support_answered_private',
     'support_waiting_public',
   ]);
+});
+
+test('support thread filter count mirrors filtered results', () => {
+  assert.equal(getSupportThreadFilterCount(threads, 'all'), 3);
+  assert.equal(getSupportThreadFilterCount(threads, 'waiting'), 2);
+  assert.equal(getSupportThreadFilterCount(threads, 'answered'), 1);
+  assert.equal(getSupportThreadFilterCount(threads, 'private'), 2);
+  assert.equal(getSupportThreadFilterCount(threads, 'missing'), 3);
 });

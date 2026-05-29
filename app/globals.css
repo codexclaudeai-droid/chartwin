@@ -10098,6 +10098,231 @@ body:not(:has(.landing-page)) #admin-support > .notice.compact {
   box-shadow: none !important;
 }
 
+body:not(:has(.landing-page)) #admin-support {
+  overflow: hidden;
+  border: 1px solid rgba(89, 151, 255, 0.22);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(55, 125, 255, 0.14), transparent 34%),
+    linear-gradient(145deg, rgba(16, 28, 48, 0.96), rgba(8, 18, 34, 0.98));
+  box-shadow: 0 26px 74px rgba(0, 0, 0, 0.3);
+}
+
+body:not(:has(.landing-page)) #admin-support > .toolbar {
+  align-items: center;
+  border-bottom: 1px solid rgba(148, 183, 255, 0.16);
+  padding-bottom: 18px;
+}
+
+body:not(:has(.landing-page)) #admin-support > .toolbar h2 {
+  color: #ffffff;
+  letter-spacing: -0.03em;
+}
+
+body:not(:has(.landing-page)) #admin-support .quick-filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(154px, 1fr));
+  gap: 10px;
+  margin: 16px 0 14px;
+  padding: 14px;
+  border: 1px solid rgba(125, 183, 255, 0.15);
+  border-radius: 20px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(76, 141, 255, 0.024)),
+    rgba(7, 16, 31, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+body:not(:has(.landing-page)) #admin-support .quick-filter-row .button {
+  justify-content: space-between;
+  min-height: 44px;
+  border-color: rgba(125, 183, 255, 0.18);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(216, 236, 255, 0.76);
+}
+
+body:not(:has(.landing-page)) #admin-support .quick-filter-row .button.active {
+  border-color: rgba(98, 166, 255, 0.54);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(98, 166, 255, 0.22), transparent 42%),
+    rgba(76, 141, 255, 0.16);
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-support .quick-filter-count {
+  border-color: rgba(125, 183, 255, 0.24);
+  background: rgba(2, 7, 19, 0.38);
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-support .thread-list {
+  gap: 14px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-card {
+  border: 1px solid rgba(125, 183, 255, 0.16);
+  border-radius: 18px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(76, 141, 255, 0.026)),
+    rgba(2, 7, 19, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-card.highlighted,
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-card:target {
+  border-color: rgba(98, 166, 255, 0.58);
+  box-shadow:
+    0 0 0 4px rgba(76, 141, 255, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-header h3 {
+  color: #ffffff;
+  font-size: 1rem;
+  line-height: 1.45;
+  margin: 5px 0 0;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-id {
+  color: rgba(141, 197, 255, 0.82);
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-meta-bar {
+  align-items: center;
+  color: rgba(216, 236, 255, 0.66);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  font-weight: 750;
+  gap: 8px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-author-cell {
+  border: 1px solid rgba(125, 183, 255, 0.13);
+  border-radius: 14px;
+  display: grid;
+  gap: 5px;
+  padding: 10px 12px;
+  background: rgba(2, 7, 19, 0.34);
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-author-cell span {
+  color: rgba(216, 236, 255, 0.52);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-author-cell strong {
+  color: #ffffff;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-message-list {
+  display: grid;
+  gap: 10px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-message {
+  border: 1px solid rgba(125, 183, 255, 0.12);
+  border-radius: 14px;
+  color: rgba(232, 242, 255, 0.78);
+  line-height: 1.65;
+  margin: 0;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  overflow-wrap: anywhere;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-message strong {
+  color: rgba(141, 197, 255, 0.9);
+  display: block;
+  font-size: 0.78rem;
+  margin-bottom: 5px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-admin-reply {
+  border-color: rgba(98, 166, 255, 0.28);
+  background: rgba(76, 141, 255, 0.13);
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-support .reply-row {
+  align-items: stretch;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 0;
+}
+
+body:not(:has(.landing-page)) #admin-support .reply-row textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-actions {
+  align-content: start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 190px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-actions .button {
+  justify-content: center;
+  min-height: 42px;
+  padding-inline: 12px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-notice {
+  border-color: rgba(125, 183, 255, 0.18);
+  border-left-color: rgba(98, 166, 255, 0.74);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(98, 166, 255, 0.18), transparent 42%),
+    rgba(7, 16, 31, 0.76);
+  box-shadow: none;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-notice strong {
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-notice p {
+  color: rgba(216, 236, 255, 0.72);
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-deep-link-kicker {
+  color: rgba(141, 197, 255, 0.92);
+}
+
+@media (max-width: 920px) {
+  body:not(:has(.landing-page)) #admin-support .admin-support-thread-header,
+  body:not(:has(.landing-page)) #admin-support .reply-row {
+    grid-template-columns: 1fr;
+  }
+
+  body:not(:has(.landing-page)) #admin-support .admin-support-thread-header {
+    display: grid;
+  }
+
+  body:not(:has(.landing-page)) #admin-support .admin-support-reply-actions {
+    min-width: 0;
+  }
+}
+
 body:not(:has(.landing-page)) #admin-overview > .admin-overview-card > .notice {
   border-color: transparent !important;
   outline: 0 !important;

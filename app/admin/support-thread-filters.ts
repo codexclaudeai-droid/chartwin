@@ -31,3 +31,7 @@ export function filterSupportThreads<T extends FilterableSupportThread>(threads:
     return statusMatched && visibilityMatched;
   });
 }
+
+export function getSupportThreadFilterCount<T extends FilterableSupportThread>(threads: T[], key: string): number {
+  return filterSupportThreads(threads, key).length;
+}

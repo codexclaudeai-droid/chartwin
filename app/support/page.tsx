@@ -1,5 +1,10 @@
 import { Suspense } from 'react';
-import { getAsyncChartServicePersistence } from '../../src/server/chart-service/index.ts';
+import {
+  getAsyncChartServicePersistence,
+  listAsyncPublishedPublicBoardPosts,
+  PUBLIC_BOARD_CATEGORY_LABELS,
+  type PublicBoardCategory,
+} from '../../src/server/chart-service/index.ts';
 import { SupportPanel } from './support-panel';
 
 export const dynamic = 'force-dynamic';
@@ -25,9 +30,13 @@ const SUPPORT_CONTACT_ROUTES = [
   },
 ];
 
+const PUBLIC_BOARD_CATEGORIES = ['notice', 'qna', 'faq'] as const satisfies PublicBoardCategory[];
+
 export default async function SupportPage() {
   const persistence = getAsyncChartServicePersistence();
-  await persistence.runRead(async () => null);
+  const publicBoardPosts = await persistence.runRead(async (repository) => (
+    await listAsyncPublishedPublicBoardPosts(repository)
+  ));
 
   return (
     <main className="page support-page">
@@ -45,6 +54,31 @@ export default async function SupportPage() {
             <a className="button secondary" href={item.href}>{item.action}</a>
           </article>
         ))}
+      </section>
+
+      <section className="support-public-board" aria-label="공개 게시판">
+        <div className="section-heading compact">
+          <span>공개 게시판</span>
+          <h2>공지사항, 질문답변, FAQ</h2>
+        </div>
+        <div className="support-public-board-grid">
+          {PUBLIC_BOARD_CATEGORIES.map((category) => {
+            const posts = publicBoardPosts.filter((post) => post.category === category);
+            return (
+              <article className="support-public-board-card" key={category}>
+                <span>{PUBLIC_BOARD_CATEGORY_LABELS[category]}</span>
+                {posts.length > 0 ? posts.map((post) => (
+                  <div className="support-public-board-post" key={post.id}>
+                    <strong>{post.title}</strong>
+                    <p>{post.body}</p>
+                  </div>
+                )) : (
+                  <p>등록된 공개 게시글이 없습니다.</p>
+                )}
+              </article>
+            );
+          })}
+        </div>
       </section>
 
       <Suspense fallback={<section className="card wide">문의 목록을 불러오는 중입니다.</section>}>
