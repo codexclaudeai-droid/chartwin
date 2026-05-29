@@ -10919,6 +10919,8 @@ body:not(:has(.landing-page)) #admin-support .admin-support-message {
   border: 1px solid rgba(125, 183, 255, 0.12);
   border-radius: 14px;
   color: rgba(232, 242, 255, 0.78);
+  display: grid;
+  gap: 8px;
   line-height: 1.65;
   margin: 0;
   padding: 12px;
@@ -10930,7 +10932,7 @@ body:not(:has(.landing-page)) #admin-support .admin-support-message strong {
   color: rgba(141, 197, 255, 0.9);
   display: block;
   font-size: 0.78rem;
-  margin-bottom: 5px;
+  margin: 0;
 }
 
 body:not(:has(.landing-page)) #admin-support .admin-support-admin-reply {
@@ -10939,8 +10941,61 @@ body:not(:has(.landing-page)) #admin-support .admin-support-admin-reply {
   color: #ffffff;
 }
 
+body:not(:has(.landing-page)) #admin-support .admin-support-message-heading {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-message-body {
+  display: block;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-icon-actions {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-icon-button {
+  align-items: center;
+  background: rgba(2, 7, 19, 0.5);
+  border: 1px solid rgba(125, 183, 255, 0.22);
+  border-radius: 999px;
+  color: #d8ecff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 15px;
+  font-weight: 900;
+  height: 30px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  width: 30px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-icon-button:hover:not(:disabled),
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-icon-button:focus-visible:not(:disabled) {
+  background: rgba(76, 141, 255, 0.18);
+  border-color: rgba(125, 183, 255, 0.48);
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-icon-button.danger {
+  border-color: rgba(255, 123, 146, 0.32);
+  color: #ffc1cc;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-icon-button.danger:hover:not(:disabled),
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-icon-button.danger:focus-visible:not(:disabled) {
+  background: rgba(255, 77, 109, 0.18);
+  border-color: rgba(255, 123, 146, 0.58);
+  color: #ffffff;
+}
+
 body:not(:has(.landing-page)) #admin-support .admin-support-thread-actions,
-body:not(:has(.landing-page)) #admin-support .admin-support-message-actions,
 body:not(:has(.landing-page)) #admin-support .admin-support-thread-edit-actions,
 body:not(:has(.landing-page)) #admin-support .admin-support-reply-edit-actions {
   align-items: center;
@@ -10955,8 +11010,7 @@ body:not(:has(.landing-page)) #admin-support .admin-support-thread-actions {
 }
 
 body:not(:has(.landing-page)) #admin-support .admin-support-thread-edit-panel,
-body:not(:has(.landing-page)) #admin-support .admin-support-reply-edit-panel,
-body:not(:has(.landing-page)) #admin-support .admin-support-message-action-card {
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-edit-panel {
   background: rgba(2, 7, 19, 0.32);
   border: 1px solid rgba(125, 183, 255, 0.13);
   border-radius: 16px;
@@ -10966,7 +11020,7 @@ body:not(:has(.landing-page)) #admin-support .admin-support-message-action-card 
 }
 
 body:not(:has(.landing-page)) #admin-support .admin-support-thread-edit-panel,
-body:not(:has(.landing-page)) #admin-support .admin-support-message-actions-list {
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-edit-panel {
   display: grid;
   gap: 10px;
 }

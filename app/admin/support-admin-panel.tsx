@@ -439,32 +439,44 @@ export function SupportAdminPanel() {
               <strong>{item.author?.email ?? 'system'}</strong>
             </div>
             <div className="admin-support-message-list">
-              {item.messages.map((threadMessage) => (
-                <p
-                  className={threadMessage.isAdminReply ? 'admin-support-message admin-support-admin-reply' : 'admin-support-message'}
-                  key={threadMessage.id}
-                >
-                  <strong>{threadMessage.isAdminReply ? '관리자' : '문의'}</strong>
-                  {threadMessage.body}
-                </p>
-              ))}
-            </div>
-            <div className="admin-support-message-actions-list">
-              {item.messages.filter((threadMessage) => threadMessage.isAdminReply).map((threadMessage) => {
+              {item.messages.map((threadMessage) => {
                 const isEditingReply = editingReplyId === threadMessage.id;
                 const replyEditDraft = replyEditById[threadMessage.id] ?? threadMessage.body;
 
                 return (
-                  <div className="admin-support-message-action-card" key={threadMessage.id}>
-                    <div className="admin-support-message-actions">
-                      <button className="button secondary compact" type="button" onClick={() => startReplyEdit(threadMessage)} disabled={isBusy}>
-                        답변 수정
-                      </button>
-                      <button className="button danger compact" type="button" onClick={() => void deleteReply(threadMessage.id)} disabled={isBusy}>
-                        답변 삭제
-                      </button>
+                  <article
+                    className={threadMessage.isAdminReply ? 'admin-support-message admin-support-admin-reply' : 'admin-support-message'}
+                    key={threadMessage.id}
+                  >
+                    <div className="admin-support-message-heading">
+                      <strong>{threadMessage.isAdminReply ? '관리자' : '문의'}</strong>
+                      {threadMessage.isAdminReply ? (
+                        <div className="admin-support-reply-icon-actions" role="group" aria-label="관리자 답변 관리">
+                          <button
+                            aria-label="관리자 답변 수정"
+                            className="admin-support-reply-icon-button"
+                            disabled={isBusy}
+                            onClick={() => startReplyEdit(threadMessage)}
+                            title="관리자 답변 수정"
+                            type="button"
+                          >
+                            <span aria-hidden="true">✎</span>
+                          </button>
+                          <button
+                            aria-label="관리자 답변 삭제"
+                            className="admin-support-reply-icon-button danger"
+                            disabled={isBusy}
+                            onClick={() => void deleteReply(threadMessage.id)}
+                            title="관리자 답변 삭제"
+                            type="button"
+                          >
+                            <span aria-hidden="true">×</span>
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
-                    {isEditingReply ? (
+                    <span className="admin-support-message-body">{threadMessage.body}</span>
+                    {threadMessage.isAdminReply && isEditingReply ? (
                       <div className="admin-support-reply-edit-panel">
                         <textarea
                           value={replyEditDraft}
@@ -483,7 +495,7 @@ export function SupportAdminPanel() {
                         </div>
                       </div>
                     ) : null}
-                  </div>
+                  </article>
                 );
               })}
             </div>

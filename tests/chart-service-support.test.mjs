@@ -297,7 +297,7 @@ test('support panels expose edit and delete controls for threads and admin repli
   assert.match(adminSource, /editingReplyId/);
   assert.match(adminSource, /saveReplyEdit/);
   assert.match(adminSource, /deleteReply/);
-  assert.match(adminSource, /admin-support-message-actions/);
+  assert.match(adminSource, /admin-support-reply-icon-actions/);
   assert.match(threadRouteSource, /export async function PATCH/);
   assert.match(threadRouteSource, /updateAsyncSupportThread/);
   assert.match(threadRouteSource, /export async function DELETE/);
@@ -307,7 +307,23 @@ test('support panels expose edit and delete controls for threads and admin repli
   assert.match(replyRouteSource, /export async function DELETE/);
   assert.match(replyRouteSource, /deleteAsyncSupportMessageAsAdmin/);
   assert.match(styleSource, /support-thread-actions/);
-  assert.match(styleSource, /admin-support-message-actions/);
+  assert.match(styleSource, /admin-support-reply-icon-actions/);
+});
+
+test('admin support reply edit and delete controls move into top-right icon buttons', () => {
+  const adminSource = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(adminSource, /admin-support-message-heading/);
+  assert.match(adminSource, /admin-support-reply-icon-actions/);
+  assert.match(adminSource, /admin-support-reply-icon-button/);
+  assert.match(adminSource, /role="group"/);
+  assert.match(adminSource, /aria-label="관리자 답변 수정"/);
+  assert.match(adminSource, /aria-label="관리자 답변 삭제"/);
+  assert.doesNotMatch(adminSource, /admin-support-message-actions-list/);
+  assert.doesNotMatch(adminSource, /admin-support-message-action-card/);
+  assert.match(styleSource, /#admin-support \.admin-support-message-heading\s*\{[\s\S]*?justify-content: space-between/);
+  assert.match(styleSource, /#admin-support \.admin-support-reply-icon-button\s*\{[\s\S]*?width: 30px/);
 });
 
 test('member support panel supports notification deep links to a thread', () => {
