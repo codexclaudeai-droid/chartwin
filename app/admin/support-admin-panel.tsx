@@ -156,12 +156,12 @@ export function SupportAdminPanel() {
     : null;
 
   return (
-    <section className="card wide" id="admin-support">
-      <div className="toolbar">
+    <section className="card wide admin-support-panel" id="admin-support">
+      <div className="toolbar admin-support-toolbar">
         <h2>고객센터 관리</h2>
         <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>새로고침</button>
       </div>
-      <p className="notice">{message}</p>
+      <p className="notice admin-support-status-notice">{message}</p>
       {deepLinkedThreadId && (
         <div className="admin-deep-link-notice" role="status">
           <div className="admin-deep-link-heading">
@@ -202,7 +202,7 @@ export function SupportAdminPanel() {
           )}
         </div>
       )}
-      <div className="quick-filter-row" aria-label="고객센터 빠른 필터">
+      <div className="quick-filter-row admin-support-filter-row" aria-label="고객센터 빠른 필터">
         {SUPPORT_THREAD_FILTER_PRESETS.map((preset) => {
           const isActive = activeFilter.key === preset.key;
           return (
@@ -225,8 +225,8 @@ export function SupportAdminPanel() {
         label={dashboardFilterNotice}
         onClear={clearDashboardFilterNotice}
       />
-      <p className="notice compact">현재 필터: {activeFilter.label} / 표시 {filteredThreads.length}건</p>
-      <div className="thread-list">
+      <p className="notice compact admin-support-filter-summary">현재 필터: {activeFilter.label} / 표시 {filteredThreads.length}건</p>
+      <div className="thread-list admin-support-thread-list">
         {filteredThreads.map((item) => (
           <article
             className={
@@ -240,16 +240,16 @@ export function SupportAdminPanel() {
             <header className="admin-support-thread-header">
               <div>
                 <span className="admin-support-thread-id">{item.thread.id}</span>
-                <h3>{item.thread.title}</h3>
+                <h3 className="admin-support-thread-title">{item.thread.title}</h3>
               </div>
-              <a className="text-link compact" href={createAdminSupportThreadUrl(item.thread.id)}>
+              <a className="text-link compact admin-support-detail-link" href={createAdminSupportThreadUrl(item.thread.id)}>
                 상세 답변 링크
               </a>
             </header>
             <div className="admin-support-meta-bar">
-              <span className="badge">{formatSupportStatusLabel(item.thread.status)}</span>
-              <span>{formatSupportVisibilityLabel(item.thread.visibility)}</span>
-              <span>작성 {formatDateTime(item.thread.createdAt)}</span>
+              <span className="badge admin-support-meta-chip">{formatSupportStatusLabel(item.thread.status)}</span>
+              <span className="admin-support-meta-chip">{formatSupportVisibilityLabel(item.thread.visibility)}</span>
+              <span className="admin-support-meta-chip">작성 {formatDateTime(item.thread.createdAt)}</span>
             </div>
             <div className="admin-support-author-cell">
               <span>작성자</span>
@@ -266,7 +266,7 @@ export function SupportAdminPanel() {
                 </p>
               ))}
             </div>
-            <div className="reply-row">
+            <div className="reply-row admin-support-reply-row">
               <textarea
                 aria-label={`${item.thread.id} 문의 답변 입력`}
                 id={getAdminSupportReplyInputId(item.thread.id)}
@@ -296,7 +296,12 @@ export function SupportAdminPanel() {
             </div>
           </article>
         ))}
-        {filteredThreads.length === 0 && <p className="notice">해당 조건의 고객 문의가 없습니다.</p>}
+        {filteredThreads.length === 0 && (
+          <article className="admin-support-empty-state">
+            <strong>해당 조건의 고객 문의가 없습니다.</strong>
+            <p>다른 필터를 선택하거나 새로고침 후 다시 확인해 주세요.</p>
+          </article>
+        )}
       </div>
     </section>
   );

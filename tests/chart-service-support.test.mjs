@@ -164,6 +164,33 @@ test('admin support panel uses a dark operational queue finish', () => {
   assert.match(styleSource, /#admin-support \.admin-support-reply-actions\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 });
 
+test('admin support panel separates queue controls and reply surfaces for final operations', () => {
+  const source = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /card wide admin-support-panel/);
+  assert.match(source, /toolbar admin-support-toolbar/);
+  assert.match(source, /notice admin-support-status-notice/);
+  assert.match(source, /quick-filter-row admin-support-filter-row/);
+  assert.match(source, /admin-support-filter-summary/);
+  assert.match(source, /thread-list admin-support-thread-list/);
+  assert.match(source, /admin-support-empty-state/);
+  assert.match(source, /admin-support-thread-title/);
+  assert.match(source, /admin-support-meta-chip/);
+  assert.match(source, /admin-support-detail-link/);
+  assert.match(source, /reply-row admin-support-reply-row/);
+});
+
+test('admin support panel final pass styles status filter and reply controls', () => {
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(styleSource, /#admin-support\.admin-support-panel\s*\{[\s\S]*?display: grid/);
+  assert.match(styleSource, /#admin-support \.admin-support-status-notice\s*\{[\s\S]*?border-color: transparent/);
+  assert.match(styleSource, /#admin-support \.admin-support-filter-summary\s*\{[\s\S]*?background: transparent/);
+  assert.match(styleSource, /#admin-support \.admin-support-meta-chip\s*\{[\s\S]*?border: 1px solid rgba\(125, 183, 255, 0\.14\)/);
+  assert.match(styleSource, /#admin-support \.admin-support-reply-row\s*\{[\s\S]*?background: rgba\(2, 7, 19, 0\.28\)/);
+  assert.match(styleSource, /#admin-support \.admin-support-empty-state\s*\{[\s\S]*?text-align: center/);
+});
+
 test('member support panel supports notification deep links to a thread', () => {
   const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
   const pageSource = fs.readFileSync(new URL('../app/support/page.tsx', import.meta.url), 'utf8');

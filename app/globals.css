@@ -10333,6 +10333,17 @@ body:not(:has(.landing-page)) #admin-support {
   box-shadow: 0 26px 74px rgba(0, 0, 0, 0.3);
 }
 
+body:not(:has(.landing-page)) #admin-support.admin-support-panel {
+  display: grid;
+  gap: 16px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-status-notice {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.035);
+  margin: 0;
+}
+
 body:not(:has(.landing-page)) #admin-support > .toolbar {
   align-items: center;
   border-bottom: 1px solid rgba(148, 183, 255, 0.16);
@@ -10385,6 +10396,11 @@ body:not(:has(.landing-page)) #admin-support .thread-list {
   gap: 14px;
 }
 
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-list {
+  display: grid;
+  gap: 16px;
+}
+
 body:not(:has(.landing-page)) #admin-support .admin-support-thread-card {
   border: 1px solid rgba(125, 183, 255, 0.16);
   border-radius: 18px;
@@ -10419,6 +10435,21 @@ body:not(:has(.landing-page)) #admin-support .admin-support-thread-header h3 {
   margin: 5px 0 0;
 }
 
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-title {
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-detail-link {
+  border: 1px solid rgba(125, 183, 255, 0.16);
+  border-radius: 999px;
+  color: rgba(216, 236, 255, 0.78);
+  min-height: 30px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
 body:not(:has(.landing-page)) #admin-support .admin-support-thread-id {
   color: rgba(141, 197, 255, 0.82);
   display: block;
@@ -10434,6 +10465,15 @@ body:not(:has(.landing-page)) #admin-support .admin-support-meta-bar {
   font-size: 0.8rem;
   font-weight: 750;
   gap: 8px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-meta-chip {
+  border: 1px solid rgba(125, 183, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(2, 7, 19, 0.3);
+  color: rgba(216, 236, 255, 0.72);
+  min-height: 28px;
+  padding: 5px 9px;
 }
 
 body:not(:has(.landing-page)) #admin-support .admin-support-author-cell {
@@ -10494,6 +10534,13 @@ body:not(:has(.landing-page)) #admin-support .reply-row {
   margin-top: 0;
 }
 
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-row {
+  background: rgba(2, 7, 19, 0.28);
+  border: 1px solid rgba(125, 183, 255, 0.12);
+  border-radius: 16px;
+  padding: 10px;
+}
+
 body:not(:has(.landing-page)) #admin-support .reply-row textarea {
   min-height: 92px;
   resize: vertical;
@@ -10532,6 +10579,36 @@ body:not(:has(.landing-page)) #admin-support .admin-deep-link-notice p {
 
 body:not(:has(.landing-page)) #admin-support .admin-deep-link-kicker {
   color: rgba(141, 197, 255, 0.92);
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-filter-summary {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: rgba(216, 236, 255, 0.66);
+  margin: 0;
+  padding: 0;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-empty-state {
+  border: 1px solid rgba(125, 183, 255, 0.14);
+  border-radius: 18px;
+  background: rgba(2, 7, 19, 0.34);
+  color: rgba(216, 236, 255, 0.66);
+  display: grid;
+  gap: 8px;
+  min-height: 150px;
+  place-content: center;
+  padding: 22px;
+  text-align: center;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-empty-state strong {
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-empty-state p {
+  margin: 0;
 }
 
 @media (max-width: 920px) {
