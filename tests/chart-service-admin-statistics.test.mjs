@@ -119,3 +119,27 @@ test('admin statistics panel renders sidebar-linked sub pages period controls mi
   assert.match(cssSource, /stroke-width: 2\.1/);
   assert.match(cssSource, /stroke-width: 1\.5/);
 });
+
+test('admin statistics submenu uses dark admin tab styling', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const submenuRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-statistics \.statistics-submenu-tabs\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const linkRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-statistics \.statistics-submenu-tabs a\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const activeRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-statistics \.statistics-submenu-tabs a:hover,[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-statistics \.statistics-submenu-tabs a\[aria-current="page"\]\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(submenuRule, /background:\s*rgba\(2, 7, 19, 0\.62\)/);
+  assert.match(submenuRule, /border:\s*0/);
+  assert.match(submenuRule, /box-shadow:\s*none/);
+  assert.match(linkRule, /display:\s*inline-flex/);
+  assert.match(linkRule, /align-items:\s*center/);
+  assert.match(linkRule, /justify-content:\s*center/);
+  assert.match(linkRule, /color:\s*rgba\(216, 236, 255, 0\.78\)/);
+  assert.match(activeRule, /background:\s*linear-gradient\(135deg, rgba\(55, 125, 255, 0\.96\), rgba\(98, 166, 255, 0\.86\)\)/);
+  assert.match(activeRule, /color:\s*#ffffff/);
+  assert.match(activeRule, /box-shadow:\s*none/);
+});

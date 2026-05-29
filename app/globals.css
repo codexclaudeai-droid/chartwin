@@ -9003,6 +9003,36 @@ body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-form > .but
   width: 100%;
 }
 
+body:not(:has(.landing-page)) #admin-statistics .statistics-submenu-tabs {
+  background: rgba(2, 7, 19, 0.62);
+  border: 0;
+  border-radius: 999px;
+  box-shadow: none;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 8px;
+}
+
+body:not(:has(.landing-page)) #admin-statistics .statistics-submenu-tabs a {
+  align-items: center;
+  color: rgba(216, 236, 255, 0.78);
+  display: inline-flex;
+  justify-content: center;
+  line-height: 1;
+  min-height: 36px;
+  padding: 0 16px;
+}
+
+body:not(:has(.landing-page)) #admin-statistics .statistics-submenu-tabs a:hover,
+body:not(:has(.landing-page)) #admin-statistics .statistics-submenu-tabs a:focus-visible,
+body:not(:has(.landing-page)) #admin-statistics .statistics-submenu-tabs a.active,
+body:not(:has(.landing-page)) #admin-statistics .statistics-submenu-tabs a[aria-current="page"] {
+  background: linear-gradient(135deg, rgba(55, 125, 255, 0.96), rgba(98, 166, 255, 0.86));
+  color: #ffffff;
+  box-shadow: none;
+  transform: none;
+}
+
 body:not(:has(.landing-page)) #admin-sales .sales-filter-grid,
 body:not(:has(.landing-page)) #admin-sales .sales-filter-grid.compact,
 body:not(:has(.landing-page)) #admin-sales .sales-assignment-panel,
