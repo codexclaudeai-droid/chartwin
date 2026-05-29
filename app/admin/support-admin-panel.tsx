@@ -27,6 +27,7 @@ import {
 type SupportThreadListItem = {
   thread: {
     id: string;
+    authorUserId: string;
     title: string;
     status: string;
     visibility: string;
@@ -55,6 +56,10 @@ export function SupportAdminPanel() {
   const [deepLinkedThreadId, setDeepLinkedThreadId] = useState<string | null>(null);
   const [highlightedThreadId, setHighlightedThreadId] = useState<string | null>(null);
   const [replyByThreadId, setReplyByThreadId] = useState<Record<string, string>>({});
+  const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
+  const [threadEditById, setThreadEditById] = useState<Record<string, { title: string; body: string }>>({});
+  const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
+  const [replyEditById, setReplyEditById] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('관리자 세션으로 고객 문의를 조회하고 답변할 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
 
@@ -136,6 +141,118 @@ export function SupportAdminPanel() {
     }
     setReplyByThreadId((current) => ({ ...current, [threadId]: '' }));
     void refresh({ nextMessage: `${threadId} 문의에 답변했습니다. 목록을 갱신했습니다.` });
+    dispatchAdminRefreshEvent({ source: 'support' });
+  }
+
+  function getCustomerMessage(item: SupportThreadListItem) {
+    return item.messages.find((threadMessage) => !threadMessage.isAdminReply) ?? null;
+  }
+
+  function startThreadEdit(item: SupportThreadListItem) {
+    const customerMessage = getCustomerMessage(item);
+    setEditingThreadId(item.thread.id);
+    setThreadEditById((current) => ({
+      ...current,
+      [item.thread.id]: {
+        title: item.thread.title,
+        body: customerMessage?.body ?? '',
+      },
+    }));
+  }
+
+  async function saveThreadEdit(threadId: string) {
+    const draft = threadEditById[threadId];
+    if (!draft || !draft.title.trim() || !draft.body.trim()) {
+      setMessage('문의 제목과 내용을 입력해 주세요.');
+      return;
+    }
+
+    setIsBusy(true);
+    const response = await fetch('/api/support/threads', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId, title: draft.title, body: draft.body }),
+    });
+    const payload = await response.json();
+    setIsBusy(false);
+    if (!response.ok) {
+      setMessage(payload.message || '문의 수정에 실패했습니다.');
+      return;
+    }
+    setEditingThreadId(null);
+    void refresh({ nextMessage: `${threadId} 문의글을 수정했습니다.` });
+    dispatchAdminRefreshEvent({ source: 'support' });
+  }
+
+  async function deleteThread(threadId: string) {
+    if (!window.confirm('문의글을 삭제할까요? 관련 대화가 목록에서 사라집니다.')) return;
+
+    setIsBusy(true);
+    const response = await fetch('/api/support/threads', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId }),
+    });
+    const payload = await response.json();
+    setIsBusy(false);
+    if (!response.ok) {
+      setMessage(payload.message || '문의 삭제에 실패했습니다.');
+      return;
+    }
+    setEditingThreadId(null);
+    void refresh({ nextMessage: `${threadId} 문의글을 삭제했습니다.` });
+    dispatchAdminRefreshEvent({ source: 'support' });
+  }
+
+  function startReplyEdit(threadMessage: SupportThreadListItem['messages'][number]) {
+    setEditingReplyId(threadMessage.id);
+    setReplyEditById((current) => ({
+      ...current,
+      [threadMessage.id]: threadMessage.body,
+    }));
+  }
+
+  async function saveReplyEdit(messageId: string) {
+    const body = normalizeSupportReply(replyEditById[messageId] || '');
+    if (!canSubmitSupportReply(body)) {
+      setMessage('수정할 답변 내용을 입력해 주세요.');
+      return;
+    }
+
+    setIsBusy(true);
+    const response = await fetch('/api/admin/support/reply', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId, body }),
+    });
+    const payload = await response.json();
+    setIsBusy(false);
+    if (!response.ok) {
+      setMessage(payload.message || '답변 수정에 실패했습니다.');
+      return;
+    }
+    setEditingReplyId(null);
+    void refresh({ nextMessage: '관리자 답변을 수정했습니다.' });
+    dispatchAdminRefreshEvent({ source: 'support' });
+  }
+
+  async function deleteReply(messageId: string) {
+    if (!window.confirm('관리자 답변을 삭제할까요?')) return;
+
+    setIsBusy(true);
+    const response = await fetch('/api/admin/support/reply', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId }),
+    });
+    const payload = await response.json();
+    setIsBusy(false);
+    if (!response.ok) {
+      setMessage(payload.message || '답변 삭제에 실패했습니다.');
+      return;
+    }
+    setEditingReplyId(null);
+    void refresh({ nextMessage: '관리자 답변을 삭제했습니다.' });
     dispatchAdminRefreshEvent({ source: 'support' });
   }
 
@@ -240,7 +357,14 @@ export function SupportAdminPanel() {
       />
       <p className="notice compact admin-support-filter-summary">현재 필터: {activeFilter.label} / 표시 {filteredThreads.length}건</p>
       <div className="thread-list admin-support-thread-list">
-        {filteredThreads.map((item) => (
+        {filteredThreads.map((item) => {
+          const isEditingThread = editingThreadId === item.thread.id;
+          const threadEditDraft = threadEditById[item.thread.id] ?? {
+            title: item.thread.title,
+            body: getCustomerMessage(item)?.body ?? '',
+          };
+
+          return (
           <article
             className={
               highlightedThreadId === item.thread.id
@@ -255,10 +379,56 @@ export function SupportAdminPanel() {
                 <span className="admin-support-thread-id">{item.thread.id}</span>
                 <h3 className="admin-support-thread-title">{item.thread.title}</h3>
               </div>
+              <div className="admin-support-thread-actions">
+                <button className="button secondary compact" type="button" onClick={() => startThreadEdit(item)} disabled={isBusy}>
+                  게시글 수정
+                </button>
+                <button className="button danger compact" type="button" onClick={() => void deleteThread(item.thread.id)} disabled={isBusy}>
+                  게시글 삭제
+                </button>
+              </div>
               <a className="text-link compact admin-support-detail-link" href={createAdminSupportThreadUrl(item.thread.id)}>
                 상세 답변 링크
               </a>
             </header>
+            {isEditingThread ? (
+              <div className="admin-support-thread-edit-panel">
+                <label>
+                  <span>제목</span>
+                  <input
+                    value={threadEditDraft.title}
+                    onChange={(event) => setThreadEditById((current) => ({
+                      ...current,
+                      [item.thread.id]: {
+                        ...threadEditDraft,
+                        title: event.target.value,
+                      },
+                    }))}
+                  />
+                </label>
+                <label>
+                  <span>내용</span>
+                  <textarea
+                    value={threadEditDraft.body}
+                    onChange={(event) => setThreadEditById((current) => ({
+                      ...current,
+                      [item.thread.id]: {
+                        ...threadEditDraft,
+                        body: event.target.value,
+                      },
+                    }))}
+                  />
+                </label>
+                <div className="admin-support-thread-edit-actions">
+                  <button className="button" type="button" onClick={() => void saveThreadEdit(item.thread.id)} disabled={isBusy}>
+                    저장
+                  </button>
+                  <button className="button secondary" type="button" onClick={() => setEditingThreadId(null)} disabled={isBusy}>
+                    취소
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <div className="admin-support-meta-bar">
               <span className="badge admin-support-meta-chip">{formatSupportStatusLabel(item.thread.status)}</span>
               <span className="admin-support-meta-chip">{formatSupportVisibilityLabel(item.thread.visibility)}</span>
@@ -278,6 +448,44 @@ export function SupportAdminPanel() {
                   {threadMessage.body}
                 </p>
               ))}
+            </div>
+            <div className="admin-support-message-actions-list">
+              {item.messages.filter((threadMessage) => threadMessage.isAdminReply).map((threadMessage) => {
+                const isEditingReply = editingReplyId === threadMessage.id;
+                const replyEditDraft = replyEditById[threadMessage.id] ?? threadMessage.body;
+
+                return (
+                  <div className="admin-support-message-action-card" key={threadMessage.id}>
+                    <div className="admin-support-message-actions">
+                      <button className="button secondary compact" type="button" onClick={() => startReplyEdit(threadMessage)} disabled={isBusy}>
+                        답변 수정
+                      </button>
+                      <button className="button danger compact" type="button" onClick={() => void deleteReply(threadMessage.id)} disabled={isBusy}>
+                        답변 삭제
+                      </button>
+                    </div>
+                    {isEditingReply ? (
+                      <div className="admin-support-reply-edit-panel">
+                        <textarea
+                          value={replyEditDraft}
+                          onChange={(event) => setReplyEditById((current) => ({
+                            ...current,
+                            [threadMessage.id]: event.target.value,
+                          }))}
+                        />
+                        <div className="admin-support-reply-edit-actions">
+                          <button className="button" type="button" onClick={() => void saveReplyEdit(threadMessage.id)} disabled={isBusy}>
+                            저장
+                          </button>
+                          <button className="button secondary" type="button" onClick={() => setEditingReplyId(null)} disabled={isBusy}>
+                            취소
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
             <div className="reply-row admin-support-reply-row">
               <textarea
@@ -308,7 +516,8 @@ export function SupportAdminPanel() {
               </div>
             </div>
           </article>
-        ))}
+          );
+        })}
         {filteredThreads.length === 0 && (
           <article className="admin-support-empty-state">
             <strong>해당 조건의 고객 문의가 없습니다.</strong>

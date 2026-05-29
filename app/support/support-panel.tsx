@@ -21,6 +21,7 @@ import {
 type AuthSessionState = {
   authenticated: boolean;
   user: {
+    id: string;
     role: string;
   } | null;
 };
@@ -28,6 +29,7 @@ type AuthSessionState = {
 type SupportThreadListItem = {
   thread: {
     id: string;
+    authorUserId: string;
     category: string;
     title: string;
     visibility: string;
@@ -59,6 +61,8 @@ export function SupportPanel() {
   const [activeFilterKey, setActiveFilterKey] = useState('all');
   const [authSession, setAuthSession] = useState<AuthSessionState | null>(null);
   const [showAuthPromptModal, setShowAuthPromptModal] = useState(false);
+  const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
+  const [threadEditById, setThreadEditById] = useState<Record<string, { title: string; body: string }>>({});
   const presetCategory = searchParams.get('category');
   const targetThreadId = searchParams.get('thread');
   const isTrialPreset = presetCategory === 'trial';
@@ -166,6 +170,77 @@ export function SupportPanel() {
     setTitle('');
     setBody('');
     setMessage(`문의 ${payload.thread.id}가 등록되었습니다. 답변이 오면 알림으로 알려드릴게요.`);
+    await refresh();
+  }
+
+  function getCustomerMessage(item: SupportThreadListItem) {
+    return item.messages.find((threadMessage) => !threadMessage.isAdminReply) ?? null;
+  }
+
+  function canManageThread(item: SupportThreadListItem): boolean {
+    if (!authSession?.authenticated || !authSession.user) return false;
+    return authSession.user.id === item.thread.authorUserId ||
+      authSession.user.role === 'admin' ||
+      authSession.user.role === 'super_admin';
+  }
+
+  function startThreadEdit(item: SupportThreadListItem) {
+    const customerMessage = getCustomerMessage(item);
+    setEditingThreadId(item.thread.id);
+    setThreadEditById((current) => ({
+      ...current,
+      [item.thread.id]: {
+        title: item.thread.title,
+        body: customerMessage?.body ?? '',
+      },
+    }));
+  }
+
+  function cancelThreadEdit() {
+    setEditingThreadId(null);
+  }
+
+  async function saveThreadEdit(threadId: string) {
+    const draft = threadEditById[threadId];
+    if (!draft || !draft.title.trim() || !draft.body.trim()) {
+      setMessage('문의 제목과 내용을 입력해 주세요.');
+      return;
+    }
+
+    setIsBusy(true);
+    const response = await fetch('/api/support/threads', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId, title: draft.title, body: draft.body }),
+    });
+    const payload = await response.json();
+    setIsBusy(false);
+    if (!response.ok) {
+      setMessage(payload.message || '문의 수정에 실패했습니다.');
+      return;
+    }
+    setEditingThreadId(null);
+    setMessage('문의글이 수정되었습니다.');
+    await refresh();
+  }
+
+  async function deleteThread(threadId: string) {
+    if (!window.confirm('문의글을 삭제할까요? 삭제 후 목록에서 사라집니다.')) return;
+
+    setIsBusy(true);
+    const response = await fetch('/api/support/threads', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId }),
+    });
+    const payload = await response.json();
+    setIsBusy(false);
+    if (!response.ok) {
+      setMessage(payload.message || '문의 삭제에 실패했습니다.');
+      return;
+    }
+    setEditingThreadId(null);
+    setMessage('문의글이 삭제되었습니다.');
     await refresh();
   }
 
@@ -309,6 +384,12 @@ export function SupportPanel() {
             </article>
           ) : filteredThreads.map((item) => {
             const replyPreview = item.messages.filter((threadMessage) => threadMessage.isAdminReply).at(-1) ?? null;
+            const canEditThread = canManageThread(item);
+            const isEditingThread = editingThreadId === item.thread.id;
+            const threadEditDraft = threadEditById[item.thread.id] ?? {
+              title: item.thread.title,
+              body: getCustomerMessage(item)?.body ?? '',
+            };
             const cardClassName = [
               'thread-card',
               item.thread.status === 'answered' ? 'support-thread-answered' : '',
@@ -331,6 +412,54 @@ export function SupportPanel() {
                   <span>{item.author?.email ?? 'system'}</span>
                 </div>
                 <h3 className="support-thread-title">{item.thread.title}</h3>
+                {canEditThread ? (
+                  <div className="support-thread-actions">
+                    <button className="button secondary compact" type="button" onClick={() => startThreadEdit(item)} disabled={isBusy}>
+                      수정
+                    </button>
+                    <button className="button danger compact" type="button" onClick={() => void deleteThread(item.thread.id)} disabled={isBusy}>
+                      삭제
+                    </button>
+                  </div>
+                ) : null}
+                {isEditingThread ? (
+                  <div className="support-thread-edit-panel">
+                    <label>
+                      <span>제목</span>
+                      <input
+                        value={threadEditDraft.title}
+                        onChange={(event) => setThreadEditById((current) => ({
+                          ...current,
+                          [item.thread.id]: {
+                            ...threadEditDraft,
+                            title: event.target.value,
+                          },
+                        }))}
+                      />
+                    </label>
+                    <label>
+                      <span>내용</span>
+                      <textarea
+                        value={threadEditDraft.body}
+                        onChange={(event) => setThreadEditById((current) => ({
+                          ...current,
+                          [item.thread.id]: {
+                            ...threadEditDraft,
+                            body: event.target.value,
+                          },
+                        }))}
+                      />
+                    </label>
+                    <div className="support-thread-edit-actions">
+                      <button className="button" type="button" onClick={() => void saveThreadEdit(item.thread.id)} disabled={isBusy}>
+                        저장
+                      </button>
+                      <button className="button secondary" type="button" onClick={cancelThreadEdit} disabled={isBusy}>
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
                 {replyPreview ? (
                   <p className="support-reply-preview">
                     <b>최근 답변</b>: {replyPreview.body}

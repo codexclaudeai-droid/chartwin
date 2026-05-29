@@ -1349,6 +1349,129 @@ export async function replyAsyncToSupportThreadAsAdmin(
   return { thread: answeredThread, message };
 }
 
+export async function updateAsyncSupportThread(
+  repository: AsyncChartServiceRepository,
+  input: { actor: Actor; threadId: string; title: string; body: string; updatedAt: string },
+): Promise<{ thread: SupportThreadRecord; message: SupportMessageRecord }> {
+  const thread = await requireAsyncSupportThread(repository, input.threadId);
+  assertCanManageAsyncSupportThread(input.actor, thread, 'update');
+  if (!input.title.trim()) throw new Error('Support title required');
+  if (!input.body.trim()) throw new Error('Support message required');
+
+  const message = await requireAsyncCustomerSupportMessage(repository, thread);
+  const updatedThread: SupportThreadRecord = {
+    ...thread,
+    title: input.title.trim(),
+    updatedAt: input.updatedAt,
+  };
+  const updatedMessage: SupportMessageRecord = {
+    ...message,
+    body: input.body.trim(),
+  };
+
+  await repository.saveSupportThread(updatedThread);
+  await repository.saveSupportMessage(updatedMessage);
+  if (isAdminRole(input.actor.role)) {
+    await repository.appendAuditLog(createAuditLogDraft({
+      actor: input.actor,
+      action: 'support.thread.updated',
+      targetType: 'support_thread',
+      targetId: thread.id,
+      beforeJson: { thread, message },
+      afterJson: { thread: updatedThread, message: updatedMessage },
+    }));
+  }
+
+  return { thread: updatedThread, message: updatedMessage };
+}
+
+export async function deleteAsyncSupportThread(
+  repository: AsyncChartServiceRepository,
+  input: { actor: Actor; threadId: string; deletedAt: string },
+): Promise<{ thread: SupportThreadRecord; messages: SupportMessageRecord[]; detachedPaymentIds: string[] }> {
+  const thread = await requireAsyncSupportThread(repository, input.threadId);
+  assertCanManageAsyncSupportThread(input.actor, thread, 'delete');
+  const messages = await repository.listSupportMessagesByThreadId(thread.id);
+  const detachedPaymentIds = await detachAsyncPaymentsFromSupportThread(repository, thread.id, input.deletedAt);
+
+  if (isAdminRole(input.actor.role)) {
+    await repository.appendAuditLog(createAuditLogDraft({
+      actor: input.actor,
+      action: 'support.thread.deleted',
+      targetType: 'support_thread',
+      targetId: thread.id,
+      beforeJson: { thread, messages, detachedPaymentIds },
+      afterJson: null,
+    }));
+  }
+
+  await repository.deleteSupportMessagesByThreadId(thread.id);
+  await repository.deleteSupportThread(thread.id);
+  return { thread, messages, detachedPaymentIds };
+}
+
+export async function updateAsyncSupportMessageAsAdmin(
+  repository: AsyncChartServiceRepository,
+  input: { admin: Actor; messageId: string; body: string; updatedAt: string },
+): Promise<{ thread: SupportThreadRecord; message: SupportMessageRecord }> {
+  assertAdminActor(input.admin);
+  const message = await requireAsyncSupportMessage(repository, input.messageId);
+  if (!message.isAdminReply) throw new Error('Only admin replies can be updated');
+  if (!input.body.trim()) throw new Error('Support reply required');
+  const thread = await requireAsyncSupportThread(repository, message.threadId);
+  const updatedThread: SupportThreadRecord = {
+    ...thread,
+    updatedAt: input.updatedAt,
+  };
+  const updatedMessage: SupportMessageRecord = {
+    ...message,
+    body: input.body.trim(),
+  };
+
+  await repository.saveSupportThread(updatedThread);
+  await repository.saveSupportMessage(updatedMessage);
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'support.reply.updated',
+    targetType: 'support_thread',
+    targetId: thread.id,
+    beforeJson: { thread, message },
+    afterJson: { thread: updatedThread, message: updatedMessage },
+  }));
+
+  return { thread: updatedThread, message: updatedMessage };
+}
+
+export async function deleteAsyncSupportMessageAsAdmin(
+  repository: AsyncChartServiceRepository,
+  input: { admin: Actor; messageId: string; deletedAt: string },
+): Promise<{ thread: SupportThreadRecord; message: SupportMessageRecord }> {
+  assertAdminActor(input.admin);
+  const message = await requireAsyncSupportMessage(repository, input.messageId);
+  if (!message.isAdminReply) throw new Error('Only admin replies can be deleted');
+  const thread = await requireAsyncSupportThread(repository, message.threadId);
+  const remainingMessages = (await repository.listSupportMessagesByThreadId(thread.id))
+    .filter((item) => item.id !== message.id);
+  const updatedThread: SupportThreadRecord = {
+    ...thread,
+    status: remainingMessages.some((item) => item.isAdminReply) ? 'answered' : 'waiting',
+    updatedAt: input.deletedAt,
+  };
+
+  await repository.deleteSupportMessage(message.id);
+  await repository.saveSupportThread(updatedThread);
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'support.reply.deleted',
+    targetType: 'support_thread',
+    targetId: thread.id,
+    beforeJson: { thread, message },
+    afterJson: { thread: updatedThread },
+  }));
+
+  return { thread: updatedThread, message };
+}
+
 function toPublicActor(user: ServiceUserRecord | null) {
   return user ? toPublicServiceUserRecord(user) : null;
 }
@@ -1429,6 +1552,61 @@ async function requireAsyncUser(repository: AsyncChartServiceRepository, userId:
   const user = await repository.getUserById(userId);
   if (!user) throw new Error(`User not found: ${userId}`);
   return user;
+}
+
+async function requireAsyncSupportThread(
+  repository: AsyncChartServiceRepository,
+  threadId: string,
+): Promise<SupportThreadRecord> {
+  const thread = await repository.getSupportThreadById(threadId);
+  if (!thread) throw new Error(`Support thread not found: ${threadId}`);
+  return thread;
+}
+
+async function requireAsyncSupportMessage(
+  repository: AsyncChartServiceRepository,
+  messageId: string,
+): Promise<SupportMessageRecord> {
+  const message = await repository.getSupportMessageById(messageId);
+  if (!message) throw new Error(`Support message not found: ${messageId}`);
+  return message;
+}
+
+async function requireAsyncCustomerSupportMessage(
+  repository: AsyncChartServiceRepository,
+  thread: SupportThreadRecord,
+): Promise<SupportMessageRecord> {
+  const message = (await repository.listSupportMessagesByThreadId(thread.id))
+    .find((item) => !item.isAdminReply && item.authorUserId === thread.authorUserId);
+  if (!message) throw new Error(`Support customer message not found: ${thread.id}`);
+  return message;
+}
+
+function assertCanManageAsyncSupportThread(
+  actor: Actor,
+  thread: SupportThreadRecord,
+  operation: 'update' | 'delete',
+): void {
+  if (actor.id === thread.authorUserId || isAdminRole(actor.role)) return;
+  throw new Error(`Support thread ${operation} not allowed`);
+}
+
+function isAdminRole(role: UserRole): boolean {
+  return role === USER_ROLES.admin || role === USER_ROLES.superAdmin;
+}
+
+async function detachAsyncPaymentsFromSupportThread(
+  repository: AsyncChartServiceRepository,
+  threadId: string,
+  updatedAt: string,
+): Promise<string[]> {
+  const linkedPayments = (await repository.listPayments()).filter((payment) => payment.supportThreadId === threadId);
+  await Promise.all(linkedPayments.map((payment) => repository.savePayment({
+    ...payment,
+    supportThreadId: null,
+    updatedAt,
+  })));
+  return linkedPayments.map((payment) => payment.id);
 }
 
 async function requireAsyncPayment(

@@ -8758,6 +8758,49 @@ body:not(:has(.landing-page)) .support-reply-preview {
   border-color: rgba(125, 183, 255, 0.24);
 }
 
+body:not(:has(.landing-page)) .support-thread-actions,
+body:not(:has(.landing-page)) .support-thread-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin: 8px 0 10px;
+}
+
+body:not(:has(.landing-page)) .support-thread-edit-panel {
+  background: rgba(2, 7, 19, 0.34);
+  border: 1px solid rgba(125, 183, 255, 0.14);
+  border-radius: 16px;
+  display: grid;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 12px;
+}
+
+body:not(:has(.landing-page)) .support-thread-edit-panel label {
+  color: rgba(216, 236, 255, 0.72);
+  display: grid;
+  font-size: 0.78rem;
+  font-weight: 800;
+  gap: 6px;
+}
+
+body:not(:has(.landing-page)) .support-thread-edit-panel input,
+body:not(:has(.landing-page)) .support-thread-edit-panel textarea {
+  background: rgba(3, 11, 24, 0.86);
+  border: 1px solid rgba(125, 183, 255, 0.18);
+  border-radius: 12px;
+  color: #ffffff;
+  font: inherit;
+  min-height: 42px;
+  padding: 10px 12px;
+}
+
+body:not(:has(.landing-page)) .support-thread-edit-panel textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
 body:not(:has(.landing-page)) .payment-method-tabs {
   background: rgba(255, 255, 255, 0.055);
   border: 1px solid rgba(125, 183, 255, 0.16);
@@ -10757,6 +10800,64 @@ body:not(:has(.landing-page)) #admin-support .admin-support-admin-reply {
   border-color: rgba(98, 166, 255, 0.28);
   background: rgba(76, 141, 255, 0.13);
   color: #ffffff;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-actions,
+body:not(:has(.landing-page)) #admin-support .admin-support-message-actions,
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-edit-actions,
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-edit-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-actions {
+  min-width: min(100%, 380px);
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-edit-panel,
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-edit-panel,
+body:not(:has(.landing-page)) #admin-support .admin-support-message-action-card {
+  background: rgba(2, 7, 19, 0.32);
+  border: 1px solid rgba(125, 183, 255, 0.13);
+  border-radius: 16px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-edit-panel,
+body:not(:has(.landing-page)) #admin-support .admin-support-message-actions-list {
+  display: grid;
+  gap: 10px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-edit-panel label {
+  color: rgba(216, 236, 255, 0.72);
+  display: grid;
+  font-size: 0.78rem;
+  font-weight: 800;
+  gap: 6px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-edit-panel input,
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-edit-panel textarea,
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-edit-panel textarea {
+  background: rgba(3, 11, 24, 0.9);
+  border: 1px solid rgba(125, 183, 255, 0.18);
+  border-radius: 12px;
+  color: #ffffff;
+  font: inherit;
+  min-height: 42px;
+  padding: 10px 12px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-edit-panel textarea,
+body:not(:has(.landing-page)) #admin-support .admin-support-reply-edit-panel textarea {
+  min-height: 110px;
+  resize: vertical;
 }
 
 body:not(:has(.landing-page)) #admin-support .reply-row {

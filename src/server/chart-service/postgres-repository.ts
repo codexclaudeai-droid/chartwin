@@ -300,6 +300,12 @@ export function createPostgresAsyncChartServiceRepository(
         ['id'],
       ));
     },
+    async deleteSupportThread(id: string): Promise<void> {
+      await execute(createPostgresDeleteStatement('support_threads', { id }));
+    },
+    async getSupportMessageById(id: string): Promise<SupportMessageRecord | null> {
+      return selectOne('support_messages', mapSupportMessageFromPostgresRow, { id });
+    },
     async listSupportMessagesByThreadId(threadId: string): Promise<SupportMessageRecord[]> {
       return selectMany('support_messages', mapSupportMessageFromPostgresRow, { thread_id: threadId });
     },
@@ -309,6 +315,12 @@ export function createPostgresAsyncChartServiceRepository(
         mapSupportMessageToPostgresRow(message),
         ['id'],
       ));
+    },
+    async deleteSupportMessage(id: string): Promise<void> {
+      await execute(createPostgresDeleteStatement('support_messages', { id }));
+    },
+    async deleteSupportMessagesByThreadId(threadId: string): Promise<void> {
+      await execute(createPostgresDeleteStatement('support_messages', { thread_id: threadId }));
     },
     async listNotificationsByUserId(userId: string): Promise<NotificationRecord[]> {
       return selectMany('notifications', mapNotificationFromPostgresRow, { user_id: userId });

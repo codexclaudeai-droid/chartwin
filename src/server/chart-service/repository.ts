@@ -170,8 +170,12 @@ export type ChartServiceRepository = {
   getSupportThreadById(id: string): SupportThreadRecord | null;
   listSupportThreads(): SupportThreadRecord[];
   saveSupportThread(thread: SupportThreadRecord): void;
+  deleteSupportThread(id: string): void;
+  getSupportMessageById(id: string): SupportMessageRecord | null;
   listSupportMessagesByThreadId(threadId: string): SupportMessageRecord[];
   saveSupportMessage(message: SupportMessageRecord): void;
+  deleteSupportMessage(id: string): void;
+  deleteSupportMessagesByThreadId(threadId: string): void;
   listNotificationsByUserId(userId: string): NotificationRecord[];
   saveNotification(notification: NotificationRecord): void;
   appendAuditLog(auditLog: AuditLogDraft): void;

@@ -306,6 +306,10 @@ export function createMockChartServiceRepository(
     saveSupportThread(thread) {
       upsertById(state.supportThreads, thread);
     },
+    deleteSupportThread(id) {
+      state.supportThreads = state.supportThreads.filter((thread) => thread.id !== id);
+    },
+    getSupportMessageById: (id) => cloneOrNull(state.supportMessages.find((message) => message.id === id)),
     listSupportMessagesByThreadId(threadId) {
       return state.supportMessages
         .filter((message) => message.threadId === threadId)
@@ -313,6 +317,12 @@ export function createMockChartServiceRepository(
     },
     saveSupportMessage(message) {
       upsertById(state.supportMessages, message);
+    },
+    deleteSupportMessage(id) {
+      state.supportMessages = state.supportMessages.filter((message) => message.id !== id);
+    },
+    deleteSupportMessagesByThreadId(threadId) {
+      state.supportMessages = state.supportMessages.filter((message) => message.threadId !== threadId);
     },
     listNotificationsByUserId(userId) {
       return state.notifications

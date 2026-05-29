@@ -4,9 +4,13 @@ import test from 'node:test';
 import {
   createMockChartServiceRepository,
   createSupportThread,
+  deleteSupportMessageAsAdmin,
+  deleteSupportThread,
   listPublishedPublicBoardPosts,
   listVisibleSupportThreads,
   replyToSupportThreadAsAdmin,
+  updateSupportMessageAsAdmin,
+  updateSupportThread,
   updatePublicBoardPosts,
 } from '../src/server/chart-service/index.ts';
 
@@ -93,6 +97,92 @@ test('admin reply marks support thread answered and records an audit log', () =>
   assert.equal(result.thread.status, 'answered');
   assert.equal(result.message.isAdminReply, true);
   assert.equal(repository.listAuditLogs().at(-1)?.action, 'support.reply.created');
+});
+
+test('support thread owners and admins can update and delete customer posts', () => {
+  const repository = createMockChartServiceRepository();
+  const { thread } = createSupportThread(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'usage',
+    title: 'Original support title',
+    body: 'Original support body',
+    visibility: 'private',
+    createdAt: '2026-05-23T11:00:00.000Z',
+  });
+
+  assert.throws(() => updateSupportThread(repository, {
+    actor: { id: 'user_subscriber', role: 'member' },
+    threadId: thread.id,
+    title: 'Blocked title',
+    body: 'Blocked body',
+    updatedAt: '2026-05-23T11:05:00.000Z',
+  }), /not allowed/);
+
+  const updated = updateSupportThread(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    threadId: thread.id,
+    title: 'Updated support title',
+    body: 'Updated support body',
+    updatedAt: '2026-05-23T11:10:00.000Z',
+  });
+
+  assert.equal(updated.thread.title, 'Updated support title');
+  assert.equal(updated.thread.updatedAt, '2026-05-23T11:10:00.000Z');
+  assert.equal(updated.message.body, 'Updated support body');
+
+  deleteSupportThread(repository, {
+    actor: { id: 'admin_1', role: 'admin' },
+    threadId: thread.id,
+    deletedAt: '2026-05-23T11:20:00.000Z',
+  });
+
+  assert.equal(repository.getSupportThreadById(thread.id), null);
+  assert.equal(repository.listSupportMessagesByThreadId(thread.id).length, 0);
+  assert.equal(
+    listVisibleSupportThreads(repository, { actor: { id: 'user_member', role: 'member' } })
+      .some((item) => item.thread.id === thread.id),
+    false,
+  );
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'support.thread.deleted');
+});
+
+test('admin can update and delete support replies with audit evidence', () => {
+  const repository = createMockChartServiceRepository();
+  const { thread } = createSupportThread(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'signal',
+    title: 'Signal support title',
+    body: 'Signal support body',
+    visibility: 'private',
+    createdAt: '2026-05-23T11:00:00.000Z',
+  });
+  const { message } = replyToSupportThreadAsAdmin(repository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    threadId: thread.id,
+    body: 'Original admin reply',
+    createdAt: '2026-05-23T11:10:00.000Z',
+  });
+
+  const updated = updateSupportMessageAsAdmin(repository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    messageId: message.id,
+    body: 'Updated admin reply',
+    updatedAt: '2026-05-23T11:20:00.000Z',
+  });
+
+  assert.equal(updated.message.body, 'Updated admin reply');
+  assert.equal(updated.thread.updatedAt, '2026-05-23T11:20:00.000Z');
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'support.reply.updated');
+
+  const deleted = deleteSupportMessageAsAdmin(repository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    messageId: message.id,
+    deletedAt: '2026-05-23T11:30:00.000Z',
+  });
+
+  assert.equal(deleted.thread.status, 'waiting');
+  assert.equal(repository.listSupportMessagesByThreadId(thread.id).some((item) => item.id === message.id), false);
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'support.reply.deleted');
 });
 
 test('admin support panel disables blank manual replies before posting', () => {
@@ -189,6 +279,35 @@ test('admin support panel final pass styles status filter and reply controls', (
   assert.match(styleSource, /#admin-support \.admin-support-meta-chip\s*\{[\s\S]*?border: 1px solid rgba\(125, 183, 255, 0\.14\)/);
   assert.match(styleSource, /#admin-support \.admin-support-reply-row\s*\{[\s\S]*?background: rgba\(2, 7, 19, 0\.28\)/);
   assert.match(styleSource, /#admin-support \.admin-support-empty-state\s*\{[\s\S]*?text-align: center/);
+});
+
+test('support panels expose edit and delete controls for threads and admin replies', () => {
+  const supportSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const adminSource = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
+  const threadRouteSource = fs.readFileSync(new URL('../app/api/support/threads/route.ts', import.meta.url), 'utf8');
+  const replyRouteSource = fs.readFileSync(new URL('../app/api/admin/support/reply/route.ts', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(supportSource, /editingThreadId/);
+  assert.match(supportSource, /saveThreadEdit/);
+  assert.match(supportSource, /deleteThread/);
+  assert.match(supportSource, /method: 'PATCH'/);
+  assert.match(supportSource, /method: 'DELETE'/);
+  assert.match(adminSource, /editingThreadId/);
+  assert.match(adminSource, /editingReplyId/);
+  assert.match(adminSource, /saveReplyEdit/);
+  assert.match(adminSource, /deleteReply/);
+  assert.match(adminSource, /admin-support-message-actions/);
+  assert.match(threadRouteSource, /export async function PATCH/);
+  assert.match(threadRouteSource, /updateAsyncSupportThread/);
+  assert.match(threadRouteSource, /export async function DELETE/);
+  assert.match(threadRouteSource, /deleteAsyncSupportThread/);
+  assert.match(replyRouteSource, /export async function PATCH/);
+  assert.match(replyRouteSource, /updateAsyncSupportMessageAsAdmin/);
+  assert.match(replyRouteSource, /export async function DELETE/);
+  assert.match(replyRouteSource, /deleteAsyncSupportMessageAsAdmin/);
+  assert.match(styleSource, /support-thread-actions/);
+  assert.match(styleSource, /admin-support-message-actions/);
 });
 
 test('member support panel supports notification deep links to a thread', () => {
