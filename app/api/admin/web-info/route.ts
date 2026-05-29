@@ -42,6 +42,7 @@ export async function PATCH(request: NextRequest) {
         admin,
         termsContent: String(body.termsContent || ''),
         privacyContent: String(body.privacyContent || ''),
+        planServices: typeof body.planServices === 'object' && body.planServices ? body.planServices : undefined,
         updatedAt: new Date().toISOString(),
       });
     });

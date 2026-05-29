@@ -298,14 +298,96 @@ test('signup API allows missing referral codes without assigning a referrer', as
   assert.match(payload.user.referralCode, /^[A-Z0-9]{6}$/);
 });
 
+test('signup email check API reports duplicate and available addresses', async () => {
+  const { GET } = await import('../app/api/auth/email-check/route.ts');
+
+  const duplicateResponse = await GET(new Request('http://localhost/api/auth/email-check?email=member@example.com'));
+  const duplicatePayload = await duplicateResponse.json();
+  const availableResponse = await GET(new Request(`http://localhost/api/auth/email-check?email=available-${Date.now()}@example.com`));
+  const availablePayload = await availableResponse.json();
+  const invalidResponse = await GET(new Request('http://localhost/api/auth/email-check?email=invalid'));
+  const invalidPayload = await invalidResponse.json();
+
+  assert.equal(duplicateResponse.status, 200);
+  assert.equal(duplicatePayload.available, false);
+  assert.equal(duplicatePayload.message, '이미 가입된 이메일입니다.');
+  assert.equal(availableResponse.status, 200);
+  assert.equal(availablePayload.available, true);
+  assert.equal(availablePayload.message, '사용 가능한 이메일입니다.');
+  assert.equal(invalidResponse.status, 400);
+  assert.equal(invalidPayload.message, '올바른 이메일을 입력해 주세요.');
+});
+
+test('signup referral check API reports a masked referrer preview', async () => {
+  const {
+    getChartServiceRepository,
+  } = await import('../src/server/chart-service/index.ts');
+  const { GET } = await import('../app/api/auth/referral-check/route.ts');
+  const referrer = getChartServiceRepository().getUserById('user_subscriber');
+
+  const successResponse = await GET(new Request(`http://localhost/api/auth/referral-check?code=${referrer?.referralCode}`));
+  const successPayload = await successResponse.json();
+  const missingResponse = await GET(new Request('http://localhost/api/auth/referral-check?code=NOUSER'));
+  const missingPayload = await missingResponse.json();
+
+  assert.equal(successResponse.status, 200);
+  assert.equal(successPayload.found, true);
+  assert.equal(successPayload.referrer.name, referrer?.name);
+  assert.equal(successPayload.referrer.emailMasked.includes('@'), true);
+  assert.notEqual(successPayload.referrer.emailMasked, referrer?.email);
+  assert.equal(successPayload.referrer.email, undefined);
+  assert.equal(missingResponse.status, 404);
+  assert.equal(missingPayload.found, false);
+});
+
 test('signup panel captures referral codes from the signup URL', () => {
   const source = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
 
   assert.match(source, /URLSearchParams\(window\.location\.search\)/);
   assert.match(source, /searchParams\.get\('ref'\)/);
   assert.match(source, /referralCode/);
+  assert.match(source, /lockedReferralCode/);
+  assert.match(source, /setLockedReferralCode\(referralCodeFromUrl\)/);
+  assert.match(source, /checkReferralPreview\(referralCodeFromUrl\)/);
+  assert.match(source, /\/api\/auth\/referral-check\?code=/);
+  assert.match(source, /referrerPreview/);
+  assert.match(source, /emailMasked/);
+  assert.match(source, /signup-referrer-preview/);
+  assert.match(source, /readOnly=\{Boolean\(lockedReferralCode\)\}/);
+  assert.doesNotMatch(source, /추천링크로 적용된 추천코드/);
+  assert.doesNotMatch(source, /가입 완료까지 고정됩니다/);
   assert.match(source, /signupReferralCode/);
   assert.match(source, /추천코드/);
+});
+
+test('signup panel lets manually entered referral codes be previewed', () => {
+  const source = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /handleReferralCodeChange/);
+  assert.match(source, /setReferrerPreview\(null\)/);
+  assert.match(source, /referral-code-row/);
+  assert.match(source, /checkReferralPreview\(referralCode\)/);
+  assert.match(source, /추천인 확인/);
+  assert.match(source, /disabled=\{isCheckingReferral \|\| !referralCode\.trim\(\)\}/);
+  assert.match(source, /추천인을 확인하는 중입니다/);
+  assert.match(source, /추천인:/);
+  assert.match(cssSource, /\.referral-code-row/);
+  assert.match(cssSource, /\.referral-code-row \.button/);
+});
+
+test('signup panel confirms completion then routes new members to redirect or home after signup', () => {
+  const panelSource = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
+  const redirectSource = readFileSync(new URL('../app/auth-redirect.ts', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /getSafeRedirectPath/);
+  assert.match(panelSource, /new URLSearchParams\(window\.location\.search\)/);
+  assert.match(panelSource, /const nextPath = getSafeRedirectPath\(searchParams\) \?\? '\/'/);
+  assert.match(panelSource, /회원가입이 정상 완료되었습니다/);
+  assert.match(panelSource, /window\.setTimeout/);
+  assert.match(panelSource, /window\.location\.assign\(nextPath\)/);
+  assert.match(redirectSource, /getSafeRedirectPath/);
+  assert.match(redirectSource, /window\.location\.assign\(redirect\)/);
 });
 
 test('signup panel labels referral code input as optional', () => {
@@ -319,10 +401,28 @@ test('signup panel labels referral code input as optional', () => {
 
 test('signup panel requires phone password confirmation and policy agreement dropdowns', () => {
   const source = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
+  assert.match(source, /email-check-row/);
+  assert.match(source, /checkEmailAvailability/);
+  assert.match(source, /\/api\/auth\/email-check\?email=/);
+  assert.match(source, /이메일 중복 확인을 먼저 완료해 주세요\./);
+  assert.match(source, /확인 중/);
+  assert.match(source, /확인/);
+  assert.match(source, /setEmailCheck\(null\)/);
+  assert.match(source, /isEmailConfirmed/);
   assert.match(source, /signupPhoneNumber/);
   assert.match(source, /phoneNumber/);
+  assert.match(source, /handlePhoneNumberChange/);
+  assert.match(source, /formatSignupPhoneNumber/);
+  assert.match(source, /inputMode="numeric"/);
+  assert.match(source, /maxLength=\{13\}/);
   assert.match(source, /signupPasswordConfirm/);
+  assert.doesNotMatch(source, /signupPasswordHelp/);
+  assert.doesNotMatch(source, /aria-describedby="signupPasswordHelp"/);
+  assert.doesNotMatch(source, /8자리 이상, 영문 대문자, 숫자, 특수문자를 포함해 주세요\./);
+  assert.match(source, /회원가입 정보를 입력하고 약관에 동의해 주세요\./);
+  assert.doesNotMatch(source, /비밀번호는 8자 이상, 대문자, 소문자, 숫자, 특수문자를 포함해야 합니다\./);
   assert.match(source, /passwordConfirm/);
   assert.match(source, /acceptedTerms/);
   assert.match(source, /acceptedPrivacy/);
@@ -330,6 +430,60 @@ test('signup panel requires phone password confirmation and policy agreement dro
   assert.match(source, /signupPrivacyAgreement/);
   assert.match(source, /<details/);
   assert.match(source, /\/api\/web-info/);
+  assert.match(cssSource, /\.field-help/);
+  assert.match(cssSource, /\.field-help\.success/);
+  assert.match(cssSource, /\.field-help\.error/);
+  assert.match(cssSource, /\.email-check-row/);
+});
+
+test('signup panel uses compact agreement rows and required field marks', () => {
+  const source = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const nameField = source.match(/id="signupName"[\s\S]*?\/>/)?.[0] ?? '';
+
+  assert.match(source, /signup-policy-row/);
+  assert.match(source, /가입약관 내용 확인/);
+  assert.match(source, /개인정보보호정책 내용 확인/);
+  assert.match(source, /동의합니다\./);
+  assert.doesNotMatch(source, /가입약관에 동의합니다\./);
+  assert.doesNotMatch(source, /개인정보보호정책에 동의합니다\./);
+  assert.match(source, /<span className="required-mark" aria-hidden="true">\*<\/span>\s*이메일/);
+  assert.match(source, /<span className="required-mark" aria-hidden="true">\*<\/span>\s*이름/);
+  assert.match(source, /<span className="required-mark" aria-hidden="true">\*<\/span>\s*연락번호/);
+  assert.match(source, /<span className="required-mark" aria-hidden="true">\*<\/span>\s*비밀번호/);
+  assert.match(nameField, /\brequired\b/);
+  assert.match(cssSource, /\.signup-policy-row/);
+  assert.match(cssSource, /justify-content:\s*space-between/);
+  assert.match(cssSource, /\.required-mark/);
+  assert.match(cssSource, /\.signup-policy-box\s*\{[\s\S]*?background:\s*transparent/);
+  assert.match(cssSource, /\.signup-policy-box details\s*\{[\s\S]*?border:\s*0/);
+  assert.match(cssSource, /\.checkbox-row\s*\{[\s\S]*?background:\s*transparent/);
+});
+
+test('signup phone number formatter inserts hyphens while typing digits', async () => {
+  const { formatSignupPhoneNumber } = await import('../app/signup/phone-format.ts');
+
+  assert.equal(formatSignupPhoneNumber('010'), '010');
+  assert.equal(formatSignupPhoneNumber('0101'), '010-1');
+  assert.equal(formatSignupPhoneNumber('0101234'), '010-1234');
+  assert.equal(formatSignupPhoneNumber('01012345678'), '010-1234-5678');
+  assert.equal(formatSignupPhoneNumber('010-1234-abcd-5678'), '010-1234-5678');
+  assert.equal(formatSignupPhoneNumber('01012345678999'), '010-1234-5678');
+});
+
+test('signup panel presents a focused policy experience without post-signup step banners', () => {
+  const panelSource = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /signup-form-card/);
+  assert.match(panelSource, /signup-referral-note/);
+  assert.doesNotMatch(panelSource, /signup-onboarding-strip/);
+  assert.doesNotMatch(panelSource, /가입완료/);
+  assert.doesNotMatch(panelSource, /구독신청/);
+  assert.doesNotMatch(panelSource, /관리자 승인/);
+  assert.match(cssSource, /\.signup-form-card/);
+  assert.match(cssSource, /\.signup-referral-note/);
+  assert.match(cssSource, /\.signup-policy-box details/);
 });
 
 test('mock signup rejects duplicate email addresses case-insensitively', () => {

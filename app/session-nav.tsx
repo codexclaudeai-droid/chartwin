@@ -81,7 +81,21 @@ export function SessionNav() {
   return (
     <div className="session">
       <Link href="/login">로그인</Link>
-      <Link href="/signup">회원가입</Link>
+      <HeaderSignupEclipseButton />
     </div>
+  );
+}
+
+function HeaderSignupEclipseButton() {
+  return (
+    <span className="tc-header-signup-wrap">
+      <span className="tc-header-signup-glow" aria-hidden="true">
+        <span className="tc-header-eclipse tc-header-eclipse-glow" />
+      </span>
+      <Link className="tc-header-signup-pill" href="/signup" aria-label="회원가입">
+        <span className="tc-header-eclipse" aria-hidden="true" />
+        <span className="tc-header-signup-label">회원가입</span>
+      </Link>
+    </span>
   );
 }

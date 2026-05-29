@@ -15,7 +15,7 @@ test('admin TXID verification API checks TronScan and persists the badge status'
     admin: { id: 'super_1', role: 'super_admin' },
     bankName: 'KB',
     bankAccountNumber: '123',
-    bankAccountHolder: 'TC Chart',
+    bankAccountHolder: 'TradingCore',
     bankLogoUrl: '/bank-logos/kb.svg',
     usdtAddress: 'TXYZ123456789',
     usdtNetwork: 'TRC20',

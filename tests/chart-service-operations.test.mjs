@@ -23,6 +23,24 @@ test('mock service creates manual payment requests with a pending subscription',
   assert.equal(result.payment.amountKrw, 270640);
 });
 
+test('bank transfer payment requests require a depositor name', async () => {
+  const {
+    createManualPaymentRequest,
+    createMockChartServiceRepository,
+  } = await import('../src/server/chart-service/index.ts');
+
+  const repository = createMockChartServiceRepository();
+
+  assert.throws(() => createManualPaymentRequest(repository, {
+    userId: 'user_member',
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T10:00:00.000Z',
+    depositorName: '   ',
+    exchangeRate: 1360,
+  }), /Bank transfer depositor name required/);
+});
+
 test('USDT payment requests store the submitted transaction id for admin review', async () => {
   const {
     createManualPaymentRequest,
@@ -58,7 +76,7 @@ test('admin can verify a USDT TXID against TronScan transfer data', async () => 
     admin: { id: 'super_1', role: 'super_admin' },
     bankName: 'KB',
     bankAccountNumber: '123',
-    bankAccountHolder: 'TC Chart',
+    bankAccountHolder: 'TradingCore',
     bankLogoUrl: '/bank-logos/kb.svg',
     usdtAddress: 'TXYZ123456789',
     usdtNetwork: 'TRC20',
@@ -110,7 +128,7 @@ test('admin TXID verification marks mismatched USDT recipient as mismatch', asyn
     admin: { id: 'super_1', role: 'super_admin' },
     bankName: 'KB',
     bankAccountNumber: '123',
-    bankAccountHolder: 'TC Chart',
+    bankAccountHolder: 'TradingCore',
     bankLogoUrl: '/bank-logos/kb.svg',
     usdtAddress: 'TXYZ123456789',
     usdtNetwork: 'TRC20',
@@ -176,6 +194,7 @@ test('admin can confirm payment without activating subscription', async () => {
     planId: 'plan_monthly',
     method: 'bank_transfer',
     requestedAt: '2026-05-23T10:00:00.000Z',
+    depositorName: 'Member',
   });
   const confirmed = confirmManualPaymentRequest(repository, {
     paymentId: requested.payment.id,
@@ -206,6 +225,7 @@ test('admin can approve a confirmed payment subscription separately', async () =
     planId: 'plan_monthly',
     method: 'bank_transfer',
     requestedAt: '2026-05-23T10:00:00.000Z',
+    depositorName: 'Member',
   });
   const confirmed = confirmManualPaymentRequest(repository, {
     paymentId: requested.payment.id,
@@ -240,6 +260,7 @@ test('admin can refund a confirmed payment before subscription activation', asyn
     planId: 'plan_monthly',
     method: 'bank_transfer',
     requestedAt: '2026-05-23T10:00:00.000Z',
+    depositorName: 'Member',
   });
   confirmManualPaymentRequest(repository, {
     paymentId: requested.payment.id,

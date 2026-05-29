@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     try {
       userId = (await getActorFromAsyncRequest(repository, request, new Date().toISOString())).id;
     } catch {
-      // Keep mock preview fallback until every chart entrypoint is auth-first.
+      // Keep the preview query fallback until every chart entrypoint is auth-first.
     }
 
     return getAsyncChartAccessSnapshot(repository, userId);

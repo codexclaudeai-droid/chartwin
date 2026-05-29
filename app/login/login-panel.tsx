@@ -2,19 +2,12 @@
 
 import { useState } from 'react';
 import { dispatchAuthSessionChangedEvent } from '../auth-events';
-
-const demoUsers = [
-  { email: 'member@example.com', label: '일반 회원' },
-  { email: 'trial@example.com', label: '체험 회원' },
-  { email: 'subscriber@example.com', label: '구독 회원' },
-  { email: 'admin@example.com', label: '관리자' },
-  { email: 'super@example.com', label: '최고관리자' },
-];
+import { navigateToSafeRedirect } from '../auth-redirect';
 
 export function LoginPanel() {
-  const [email, setEmail] = useState(demoUsers[0].email);
-  const [password, setPassword] = useState('Demo1234!');
-  const [message, setMessage] = useState('이메일과 비밀번호로 세션 쿠키를 발급합니다. 데모 비밀번호는 Demo1234! 입니다.');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('이메일과 비밀번호를 입력해 로그인하세요.');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function login(event: React.FormEvent<HTMLFormElement>) {
@@ -31,7 +24,14 @@ export function LoginPanel() {
     });
     const payload = await response.json();
     setIsSubmitting(false);
-    if (response.ok) dispatchAuthSessionChangedEvent();
+    if (response.ok) {
+      dispatchAuthSessionChangedEvent();
+      if (isAdminRole(payload.user?.role)) {
+        window.location.assign('/admin');
+        return;
+      }
+      if (navigateToSafeRedirect(new URLSearchParams(window.location.search))) return;
+    }
     setMessage(response.ok ? `${payload.user.email} 계정으로 로그인되었습니다.` : payload.message);
   }
 
@@ -44,7 +44,7 @@ export function LoginPanel() {
   }
 
   return (
-    <section className="card">
+    <section className="card auth-card">
       <form className="form" method="post" onSubmit={login}>
         <label htmlFor="email">이메일</label>
         <input
@@ -53,6 +53,8 @@ export function LoginPanel() {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
+          autoComplete="email"
+          required
         />
         <label htmlFor="password">비밀번호</label>
         <input
@@ -61,13 +63,9 @@ export function LoginPanel() {
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
+          autoComplete="current-password"
+          required
         />
-        <label htmlFor="demoEmail">데모 계정 빠른 선택</label>
-        <select id="demoEmail" value={email} onChange={(event) => setEmail(event.target.value)}>
-          {demoUsers.map((user) => (
-            <option key={user.email} value={user.email}>{user.label} - {user.email}</option>
-          ))}
-        </select>
         <div className="actions compact">
           <button className="button" type="submit" disabled={isSubmitting}>
             {isSubmitting ? '처리 중' : '로그인'}
@@ -80,4 +78,8 @@ export function LoginPanel() {
       <p className="notice">{message}</p>
     </section>
   );
+}
+
+function isAdminRole(role: unknown): boolean {
+  return role === 'admin' || role === 'super_admin';
 }

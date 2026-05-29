@@ -91,10 +91,15 @@ export function AdminDashboardPanel() {
   const queueItems = summary ? getAdminDashboardQueueItems(summary) : [];
 
   return (
-    <section className="card wide">
-      <div className="toolbar">
-        <h2>운영 대시보드</h2>
-        <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
+    <section className="card wide admin-overview-card">
+      <div className="toolbar admin-overview-toolbar">
+        <div>
+          <span className="eyebrow">Operations</span>
+          <h2>운영 대시보드</h2>
+        </div>
+        <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>
+          새로고침
+        </button>
       </div>
       <p className="notice">{message}</p>
       {summary && (
@@ -141,7 +146,7 @@ export function AdminDashboardPanel() {
               <p className="notice">지금은 수동으로 처리할 운영 대기 건이 없습니다.</p>
             )}
           </div>
-          <div className="summary-grid">
+          <div className="summary-grid admin-overview-summary-grid">
             <a
               className="mini-card dashboard-summary-card dashboard-payment-card"
               href="#admin-payments"
@@ -164,7 +169,10 @@ export function AdminDashboardPanel() {
             >
               <span>구독 승인/변경</span>
               <strong>처리 대기 {summary.subscriptions.queueCount}건</strong>
-              <p>입금 대기 {summary.subscriptions.paymentPendingCount}건, 환불 대기 {summary.subscriptions.refundRequestedCount}건</p>
+              <p>
+                입금 대기 {summary.subscriptions.paymentPendingCount}건, 환불 대기{' '}
+                {summary.subscriptions.refundRequestedCount}건
+              </p>
             </a>
             <a
               className="mini-card dashboard-summary-card dashboard-support-card"
@@ -188,7 +196,10 @@ export function AdminDashboardPanel() {
             >
               <span>회원 상태</span>
               <strong>정지 {summary.users.suspendedCount}건</strong>
-              <p>전체 회원 {summary.users.totalCount}명, 정상 {summary.users.activeCount}명, 관리자 {summary.users.adminCount}명</p>
+              <p>
+                전체 회원 {summary.users.totalCount}명, 정상 {summary.users.activeCount}명,
+                관리자 {summary.users.adminCount}명
+              </p>
             </a>
             <a
               className="mini-card dashboard-summary-card dashboard-audit-card"

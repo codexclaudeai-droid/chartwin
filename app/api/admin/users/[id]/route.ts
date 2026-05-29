@@ -9,6 +9,7 @@ import {
   getAdminMutationErrorStatus,
   guardMutationRequest,
   updateAsyncAdminUserAccountStatus,
+  updateAsyncAdminUserEmail,
   updateAsyncAdminUserRole,
 } from '../../../../../src/server/chart-service/index.ts';
 
@@ -65,10 +66,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const body = await request.json().catch(() => ({}));
   const role = normalizeRole(body.role);
   const accountStatus = normalizeAccountStatus(body.accountStatus);
-  if (!role && !accountStatus) {
+  const email = normalizeEmailInput(body.email);
+  if (!role && !accountStatus && !email) {
     return NextResponse.json({
       ok: false,
-      message: 'Invalid role or account status',
+      message: 'Invalid role, account status, or email',
     }, { status: 400 });
   }
 
@@ -78,6 +80,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const detail = await persistence.runMutation(async (repository) => {
       const admin = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
       assertAdminActor(admin);
+      if (email) {
+        return updateAsyncAdminUserEmail(repository, {
+          admin,
+          userId: id,
+          email,
+        });
+      }
       return accountStatus
         ? updateAsyncAdminUserAccountStatus(repository, {
           admin,
@@ -110,4 +119,8 @@ function normalizeRole(value: unknown): UserRole | null {
 
 function normalizeAccountStatus(value: unknown): UserAccountStatus | null {
   return ALLOWED_ACCOUNT_STATUSES.includes(value as UserAccountStatus) ? value as UserAccountStatus : null;
+}
+
+function normalizeEmailInput(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }

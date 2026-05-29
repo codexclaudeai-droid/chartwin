@@ -8,6 +8,13 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "vars": {
+    "NODE_ENV": "production",
+    "CHART_SERVICE_REPOSITORY": "postgres",
+    "CHART_SERVICE_DATABASE_SSL_MODE": "require",
+    "CHART_SERVICE_EMAIL_PROVIDER": "log",
+    "CHART_SERVICE_EMAIL_DELIVERY_LIMIT": "50"
+  },
   "observability": {
     "enabled": true
   }

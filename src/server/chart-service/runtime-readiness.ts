@@ -31,6 +31,9 @@ export type ChartServiceRuntimeReadiness = {
 export type ChartServiceRuntimeEnv = ChartServiceRepositoryRuntimeEnv & {
   NODE_ENV?: string;
   CHART_SERVICE_SESSION_SECRET?: string;
+  CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL?: string;
+  CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD?: string;
+  CHART_SERVICE_BOOTSTRAP_ADMIN_NAME?: string;
 };
 
 type RuntimeRepositorySelection = ResolvedChartServiceRepositoryAdapter | {
@@ -133,6 +136,7 @@ export function getChartServiceRuntimeReadiness(
       status: 'pass',
       message: 'Default plan seed and initial admin bootstrap script are available.',
     });
+    checks.push(getBootstrapAdminCredentialsCheck(env, mode));
     checks.push({
       key: 'postgres_transaction_boundary',
       label: 'Postgres transaction boundary',
@@ -177,6 +181,43 @@ export function getChartServiceRuntimeReadiness(
     mode,
     repository,
     checks,
+  };
+}
+
+function getBootstrapAdminCredentialsCheck(
+  env: ChartServiceRuntimeEnv,
+  mode: ChartServiceRuntimeMode,
+): RuntimeReadinessCheck {
+  const email = env.CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL?.trim() ?? '';
+  const password = env.CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD ?? '';
+  const name = env.CHART_SERVICE_BOOTSTRAP_ADMIN_NAME?.trim() ?? '';
+  const hasAnyCredential = Boolean(email || password || name);
+
+  if (email && password && name) {
+    return {
+      key: 'bootstrap_admin_credentials',
+      label: 'Initial admin bootstrap credentials',
+      status: 'pass',
+      message: 'Initial admin bootstrap email, password, and display name are configured.',
+    };
+  }
+
+  if (hasAnyCredential) {
+    return {
+      key: 'bootstrap_admin_credentials',
+      label: 'Initial admin bootstrap credentials',
+      status: 'warn',
+      message: 'Initial admin bootstrap requires email and password, and a display name is recommended.',
+    };
+  }
+
+  return {
+    key: 'bootstrap_admin_credentials',
+    label: 'Initial admin bootstrap credentials',
+    status: 'warn',
+    message: mode === 'production'
+      ? 'Initial admin bootstrap credentials are not configured. Skip only if the first super admin already exists.'
+      : 'Initial admin bootstrap credentials are optional for local development.',
   };
 }
 

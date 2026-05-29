@@ -61,7 +61,7 @@ export async function requestAsyncPasswordReset(
     id: emailOutboxId,
     recipientEmail: user.email,
     template: 'password_reset',
-    subject: 'Reset your TC Chart password',
+    subject: 'Reset your TradingCore password',
     body: [
       'Use this reset token to set a new password:',
       token,

@@ -115,6 +115,8 @@ test('global memory persistence repairs stale repository singletons after new me
   delete staleRepository.saveSalesTeam;
   delete staleRepository.getPaymentTransferSettings;
   delete staleRepository.savePaymentTransferSettings;
+  delete staleRepository.listSignupAgreementsByUserId;
+  delete staleRepository.saveSignupAgreement;
 
   try {
     globals.__chartServiceRepository = staleRepository;
@@ -125,11 +127,28 @@ test('global memory persistence repairs stale repository singletons after new me
     const persistence = getAsyncChartServicePersistence(env);
     const teams = await persistence.repository.listSalesTeams();
     const settings = await persistence.repository.getPaymentTransferSettings();
+    await persistence.repository.saveSignupAgreement({
+      id: 'signup_agreement_repaired',
+      userId: 'user_member',
+      termsAcceptedAt: '2026-05-27T00:00:00.000Z',
+      privacyAcceptedAt: '2026-05-27T00:00:00.000Z',
+      termsContent: 'Terms snapshot',
+      privacyContent: 'Privacy snapshot',
+      termsSettingsUpdatedAt: '2026-05-27T00:00:00.000Z',
+      privacySettingsUpdatedAt: '2026-05-27T00:00:00.000Z',
+      ipAddress: null,
+      userAgent: null,
+      createdAt: '2026-05-27T00:00:00.000Z',
+    });
+    const agreements = await persistence.repository.listSignupAgreementsByUserId('user_member');
 
     assert.deepEqual(teams, []);
     assert.equal(settings, null);
+    assert.equal(agreements.some((agreement) => agreement.id === 'signup_agreement_repaired'), true);
     assert.equal(typeof globals.__chartServiceRepository.listSalesTeams, 'function');
     assert.equal(typeof globals.__chartServiceRepository.saveSalesTeam, 'function');
+    assert.equal(typeof globals.__chartServiceRepository.listSignupAgreementsByUserId, 'function');
+    assert.equal(typeof globals.__chartServiceRepository.saveSignupAgreement, 'function');
   } finally {
     globals.__chartServiceRepository = previousSync;
     globals.__chartServiceRepositorySignature = previousSyncSignature;

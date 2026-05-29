@@ -25,7 +25,7 @@ test('admin can update payment transfer settings and persist them through reposi
     admin: { id: 'admin_1', role: 'admin' },
     bankName: 'KB국민은행',
     bankAccountNumber: '123-456-7890',
-    bankAccountHolder: 'TC Chart',
+    bankAccountHolder: 'TradingCore',
     bankLogoUrl: '/bank-logos/kb.svg',
     usdtAddress: 'TXYZ123456789',
     usdtNetwork: 'TRC20',
@@ -38,6 +38,27 @@ test('admin can update payment transfer settings and persist them through reposi
   assert.equal(repository.getPaymentTransferSettings()?.usdtNetwork, 'TRC20');
 });
 
+test('admin payment transfer setting updates are recorded in audit logs', () => {
+  const repository = createMockChartServiceRepository();
+
+  updatePaymentTransferSettings(repository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    bankName: 'KB Bank',
+    bankAccountNumber: '123-456-7890',
+    bankAccountHolder: 'TradingCore',
+    bankLogoUrl: '/bank-logos/kb.svg',
+    usdtAddress: 'TXYZ123456789',
+    usdtNetwork: 'TRC20',
+    updatedAt: '2026-05-25T03:00:00.000Z',
+  });
+
+  const [auditLog] = repository.listAuditLogs();
+  assert.equal(auditLog?.actorAdminId, 'admin_1');
+  assert.equal(auditLog?.action, 'payment_transfer_settings.update');
+  assert.equal(auditLog?.targetType, 'payment_transfer_settings');
+  assert.equal(auditLog?.targetId, 'default');
+});
+
 test('payment transfer settings reject blank required instructions', () => {
   const repository = createMockChartServiceRepository();
 
@@ -45,7 +66,7 @@ test('payment transfer settings reject blank required instructions', () => {
     admin: { id: 'admin_1', role: 'admin' },
     bankName: 'KB국민은행',
     bankAccountNumber: '   ',
-    bankAccountHolder: 'TC Chart',
+    bankAccountHolder: 'TradingCore',
     bankLogoUrl: '/bank-logos/kb.svg',
     usdtAddress: 'TXYZ123456789',
     usdtNetwork: 'TRC20',

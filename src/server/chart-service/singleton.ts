@@ -13,8 +13,11 @@ import {
 import type {
   ChartServiceRepository,
   PaymentTransferSettingsRecord,
+  PublicBoardPostRecord,
   SalesTeamRecord,
+  SignupAgreementRecord,
 } from './repository.ts';
+import { getDefaultPublicBoardPosts } from './public-board.ts';
 
 const globalForChartService = globalThis as typeof globalThis & {
   __chartServiceRepository?: ChartServiceRepository;
@@ -60,17 +63,25 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
   return typeof persistence.repository.listSalesTeams === 'function' &&
     typeof persistence.repository.saveSalesTeam === 'function' &&
     typeof persistence.repository.getPaymentTransferSettings === 'function' &&
-    typeof persistence.repository.savePaymentTransferSettings === 'function';
+    typeof persistence.repository.savePaymentTransferSettings === 'function' &&
+    typeof persistence.repository.listPublicBoardPosts === 'function' &&
+    typeof persistence.repository.savePublicBoardPost === 'function' &&
+    typeof persistence.repository.listSignupAgreementsByUserId === 'function' &&
+    typeof persistence.repository.saveSignupAgreement === 'function';
 }
 
 function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository): void {
   const mutableRepository = repository as ChartServiceRepository & {
     __fallbackSalesTeams?: SalesTeamRecord[];
     __fallbackPaymentTransferSettings?: PaymentTransferSettingsRecord | null;
+    __fallbackPublicBoardPosts?: PublicBoardPostRecord[];
+    __fallbackSignupAgreements?: SignupAgreementRecord[];
   };
 
   mutableRepository.__fallbackSalesTeams ??= [];
   mutableRepository.__fallbackPaymentTransferSettings ??= null;
+  mutableRepository.__fallbackPublicBoardPosts ??= getDefaultPublicBoardPosts();
+  mutableRepository.__fallbackSignupAgreements ??= [];
 
   if (typeof mutableRepository.listSalesTeams !== 'function') {
     mutableRepository.listSalesTeams = () => (
@@ -102,6 +113,47 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
   if (typeof mutableRepository.savePaymentTransferSettings !== 'function') {
     mutableRepository.savePaymentTransferSettings = (settings) => {
       mutableRepository.__fallbackPaymentTransferSettings = structuredClone(settings);
+    };
+  }
+
+  if (typeof mutableRepository.listPublicBoardPosts !== 'function') {
+    mutableRepository.listPublicBoardPosts = () => (
+      mutableRepository.__fallbackPublicBoardPosts ?? []
+    ).map((post) => structuredClone(post));
+  }
+
+  if (typeof mutableRepository.savePublicBoardPost !== 'function') {
+    mutableRepository.savePublicBoardPost = (post) => {
+      const posts = mutableRepository.__fallbackPublicBoardPosts ?? [];
+      const index = posts.findIndex((item) => item.id === post.id);
+      if (index >= 0) {
+        posts[index] = structuredClone(post);
+      } else {
+        posts.push(structuredClone(post));
+      }
+      mutableRepository.__fallbackPublicBoardPosts = posts;
+    };
+  }
+
+  if (typeof mutableRepository.listSignupAgreementsByUserId !== 'function') {
+    mutableRepository.listSignupAgreementsByUserId = (userId) => (
+      mutableRepository.__fallbackSignupAgreements ?? []
+    )
+      .filter((agreement) => agreement.userId === userId)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .map((agreement) => structuredClone(agreement));
+  }
+
+  if (typeof mutableRepository.saveSignupAgreement !== 'function') {
+    mutableRepository.saveSignupAgreement = (agreement) => {
+      const agreements = mutableRepository.__fallbackSignupAgreements ?? [];
+      const index = agreements.findIndex((item) => item.id === agreement.id);
+      if (index >= 0) {
+        agreements[index] = structuredClone(agreement);
+      } else {
+        agreements.push(structuredClone(agreement));
+      }
+      mutableRepository.__fallbackSignupAgreements = agreements;
     };
   }
 }

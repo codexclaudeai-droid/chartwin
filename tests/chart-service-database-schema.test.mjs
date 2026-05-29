@@ -16,6 +16,7 @@ test('chart service database schema covers repository-backed core tables', () =>
     'password_reset_tokens',
     'subscription_plans',
     'subscriptions',
+    'public_board_posts',
     'support_threads',
     'support_messages',
     'payment_requests',
@@ -44,6 +45,9 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.transaction_verification_status.type, 'text');
   assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.transaction_verification_message.nullable, true);
   assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.transaction_verified_at.nullable, true);
+  assert.equal(tables.find((table) => table.name === 'public_board_posts')?.columns.category.type, 'text');
+  assert.equal(tables.find((table) => table.name === 'public_board_posts')?.columns.is_published.default, 'true');
+  assert.equal(tables.find((table) => table.name === 'public_board_posts')?.columns.updated_by_admin_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'referral_program_settings')?.columns.reward_percent.type, 'numeric(5,2)');
   assert.equal(tables.find((table) => table.name === 'referral_program_settings')?.columns.subscriber_cashback_percent.default, '3');
   assert.equal(tables.find((table) => table.name === 'referral_program_settings')?.columns.salesperson_reward_percent.default, '30');
@@ -59,6 +63,7 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'payment_transfer_settings')?.columns.updated_by_admin_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'web_info_settings')?.columns.terms_content.type, 'text');
   assert.equal(tables.find((table) => table.name === 'web_info_settings')?.columns.privacy_content.type, 'text');
+  assert.equal(tables.find((table) => table.name === 'web_info_settings')?.columns.plan_services_json.type, 'jsonb');
   assert.equal(tables.find((table) => table.name === 'web_info_settings')?.columns.updated_by_admin_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'signup_agreements')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'signup_agreements')?.columns.terms_content.type, 'text');
@@ -105,10 +110,17 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /usdt_network text not null/i);
   assert.match(sql, /alter table if exists payment_transfer_settings add column if not exists bank_account_number text/i);
   assert.match(sql, /alter table if exists payment_transfer_settings add column if not exists bank_logo_url text/i);
+  assert.match(sql, /create table if not exists public_board_posts/i);
+  assert.match(sql, /category text not null/i);
+  assert.match(sql, /is_published boolean not null default true/i);
+  assert.match(sql, /create index if not exists idx_public_board_posts_category/i);
+  assert.match(sql, /insert into public_board_posts/i);
   assert.match(sql, /create table if not exists web_info_settings/i);
   assert.match(sql, /terms_content text not null/i);
   assert.match(sql, /privacy_content text not null/i);
+  assert.match(sql, /plan_services_json jsonb not null default '\{\}'::jsonb/i);
   assert.match(sql, /alter table if exists web_info_settings add column if not exists terms_content text/i);
+  assert.match(sql, /alter table if exists web_info_settings add column if not exists plan_services_json jsonb/i);
   assert.match(sql, /create table if not exists signup_agreements/i);
   assert.match(sql, /terms_accepted_at timestamptz not null/i);
   assert.match(sql, /privacy_accepted_at timestamptz not null/i);

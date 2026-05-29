@@ -20,3 +20,7 @@ export function formatSessionUserLabel(user: SessionNavUser): string {
 export function formatSessionRoleLabel(role: string): string {
   return ROLE_LABELS[role] || role;
 }
+
+export function shouldShowProfileNavigation(input: { authenticated?: boolean }): boolean {
+  return input.authenticated === true;
+}

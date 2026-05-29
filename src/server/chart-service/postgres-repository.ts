@@ -31,6 +31,8 @@ import {
   mapPaymentTransferSettingsToPostgresRow,
   mapPlanFromPostgresRow,
   mapPlanToPostgresRow,
+  mapPublicBoardPostFromPostgresRow,
+  mapPublicBoardPostToPostgresRow,
   mapReferralProgramSettingsFromPostgresRow,
   mapReferralProgramSettingsToPostgresRow,
   mapReferralLedgerFromPostgresRow,
@@ -58,6 +60,7 @@ import type {
   EmailOutboxRecord,
   PasswordResetTokenRecord,
   PaymentTransferSettingsRecord,
+  PublicBoardPostRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
@@ -268,6 +271,19 @@ export function createPostgresAsyncChartServiceRepository(
       await execute(createPostgresUpsertStatement(
         'referral_ledgers',
         mapReferralLedgerToPostgresRow(ledger),
+        ['id'],
+      ));
+    },
+    async listPublicBoardPosts(): Promise<PublicBoardPostRecord[]> {
+      return selectMany('public_board_posts', mapPublicBoardPostFromPostgresRow, {}, {
+        orderBy: ['sort_order', 'updated_at'],
+        direction: 'asc',
+      });
+    },
+    async savePublicBoardPost(post: PublicBoardPostRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'public_board_posts',
+        mapPublicBoardPostToPostgresRow(post),
         ['id'],
       ));
     },

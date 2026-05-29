@@ -135,7 +135,7 @@ test('postgres async repository persists payment transfer settings with upsert S
             id: 'default',
             bank_name: 'KB국민은행',
             bank_account_number: '123-456-7890',
-            bank_account_holder: 'TC Chart',
+            bank_account_holder: 'TradingCore',
             bank_logo_url: '/bank-logos/kb.svg',
             usdt_address: 'TXYZ123456789',
             usdt_network: 'TRC20',
@@ -154,7 +154,7 @@ test('postgres async repository persists payment transfer settings with upsert S
     id: 'default',
     bankName: 'KB국민은행',
     bankAccountNumber: '123-456-7890',
-    bankAccountHolder: 'TC Chart',
+    bankAccountHolder: 'TradingCore',
     bankLogoUrl: '/bank-logos/kb.svg',
     usdtAddress: 'TXYZ123456789',
     usdtNetwork: 'TRC20',
@@ -171,7 +171,7 @@ test('postgres async repository persists payment transfer settings with upsert S
     'default',
     'KB국민은행',
     '123-456-7890',
-    'TC Chart',
+    'TradingCore',
     '/bank-logos/kb.svg',
     'TXYZ123456789',
   ]);
@@ -189,6 +189,9 @@ test('postgres async repository persists web info settings with upsert SQL', asy
             id: 'default',
             terms_content: 'Terms content',
             privacy_content: 'Privacy content',
+            plan_services_json: {
+              plan_monthly: ['월간 차트 접근'],
+            },
             updated_by_admin_id: 'admin_1',
             updated_at: '2026-05-25T05:00:00.000Z',
           }],
@@ -204,19 +207,24 @@ test('postgres async repository persists web info settings with upsert SQL', asy
     id: 'default',
     termsContent: 'Terms content',
     privacyContent: 'Privacy content',
+    planServices: {
+      plan_monthly: ['월간 차트 접근'],
+    },
     updatedByAdminId: 'admin_1',
     updatedAt: '2026-05-25T05:00:00.000Z',
   });
 
   assert.equal(settings?.termsContent, 'Terms content');
+  assert.deepEqual(settings?.planServices.plan_monthly, ['월간 차트 접근']);
   assert.equal(calls[0].sql, 'select * from web_info_settings where id = $1');
   assert.deepEqual(calls[0].values, ['default']);
   assert.match(calls[1].sql, /^insert into web_info_settings /);
   assert.match(calls[1].sql, /on conflict \(id\) do update/);
-  assert.deepEqual(calls[1].values.slice(0, 4), [
+  assert.deepEqual(calls[1].values.slice(0, 5), [
     'default',
     'Terms content',
     'Privacy content',
+    { plan_monthly: ['월간 차트 접근'] },
     'admin_1',
   ]);
 });

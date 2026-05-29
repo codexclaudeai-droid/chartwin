@@ -1,27 +1,15 @@
-import { validatePasswordPolicy } from '../../src/domain/chart-service/index.ts';
 import { SignupPanel } from './signup-panel';
 
 export default function SignupPage() {
-  const policy = validatePasswordPolicy('Aa1!aaaa');
-
   return (
-    <main className="page">
-      <h1>회원가입</h1>
-      <p className="lede">
-        실제 가입 저장소를 연결하기 전, 보안 정책과 가입 플로우 기준을 먼저 고정합니다.
-      </p>
-      <table className="table">
-        <tbody>
-          <tr>
-            <th>Password policy</th>
-            <td>{policy.ok ? 'Ready' : policy.missing.join(', ')}</td>
-          </tr>
-          <tr>
-            <th>Email verification</th>
-            <td>필수</td>
-          </tr>
-        </tbody>
-      </table>
+    <main className="page auth-page signup-page">
+      <section className="auth-hero">
+        <span className="eyebrow">Create Account</span>
+        <h1>회원가입</h1>
+        <p className="lede">
+          TradingCore 계정을 만들고 TC Chart, 구독 신청, 무료체험, 고객센터 문의를 하나의 계정으로 이용하세요.
+        </p>
+      </section>
       <SignupPanel />
     </main>
   );

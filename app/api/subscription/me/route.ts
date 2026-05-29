@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     try {
       userId = (await getActorFromAsyncRequest(repository, request, new Date().toISOString())).id;
     } catch {
-      // Keep the mock preview fallback until real auth persistence is wired.
+      // Keep the preview query fallback until persistent auth sessions are wired end-to-end.
     }
 
     return {

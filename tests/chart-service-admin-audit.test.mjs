@@ -209,6 +209,7 @@ test('admin audit log panel keeps active filters and explains source-triggered r
   assert.match(source, /subscribeAdminRefreshEvent\(\(detail\) => \{/);
   assert.match(source, /void refresh\(\{ \.\.\.latestFilterRef\.current, nextMessage \}\)/);
   assert.match(source, /formatAuditLogRefreshMessage\(detail\.source\)/);
+  assert.match(source, /webInfo:/);
 });
 
 test('admin audit log panel applies dashboard preset events with an operator message', () => {

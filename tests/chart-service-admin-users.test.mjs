@@ -8,6 +8,7 @@ import {
   getChartServiceRepository,
   SESSION_COOKIE_NAME,
   updateAdminUserAccountStatus,
+  updateAdminUserEmail,
 } from '../src/server/chart-service/index.ts';
 
 test('admin user directory filters users and attaches operational account state', () => {
@@ -68,6 +69,52 @@ test('admin user directory can filter by account status', () => {
   assert.equal(active.every((item) => item.user.accountStatus === 'active'), true);
 });
 
+test('only super admins can change a user login email and the change is audited', () => {
+  const repository = createMockChartServiceRepository();
+
+  assert.throws(() => updateAdminUserEmail(repository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    userId: 'user_member',
+    email: 'new-member@example.com',
+  }), /Super admin role required/);
+
+  const detail = updateAdminUserEmail(repository, {
+    admin: { id: 'super_1', role: 'super_admin' },
+    userId: 'user_member',
+    email: ' New-Member@Example.com ',
+  });
+  const auditLog = repository.listAuditLogs().at(-1);
+
+  assert.equal(detail.user.email, 'new-member@example.com');
+  assert.equal(repository.getUserById('user_member')?.email, 'new-member@example.com');
+  assert.equal(auditLog?.action, 'admin.user.email.update');
+  assert.equal(auditLog?.actorAdminId, 'super_1');
+  assert.equal(auditLog?.targetId, 'user_member');
+  assert.deepEqual(auditLog?.afterJson, {
+    user: {
+      ...repository.getUserById('user_member'),
+    },
+    previousEmail: 'member@example.com',
+    nextEmail: 'new-member@example.com',
+  });
+});
+
+test('admin user email changes reject invalid or duplicate addresses', () => {
+  const repository = createMockChartServiceRepository();
+
+  assert.throws(() => updateAdminUserEmail(repository, {
+    admin: { id: 'super_1', role: 'super_admin' },
+    userId: 'user_member',
+    email: 'not-an-email',
+  }), /Valid email required/);
+
+  assert.throws(() => updateAdminUserEmail(repository, {
+    admin: { id: 'super_1', role: 'super_admin' },
+    userId: 'user_member',
+    email: 'ADMIN@EXAMPLE.COM',
+  }), /Email already in use/);
+});
+
 test('admin users API accepts an account status filter', async () => {
   const repository = getChartServiceRepository();
   const superSession = createSessionForUser(repository, {
@@ -92,6 +139,48 @@ test('admin users API accepts an account status filter', async () => {
   assert.equal(payload.ok, true);
   assert.equal(payload.users.every((item) => item.user.accountStatus === 'suspended'), true);
   assert.equal(payload.users.some((item) => item.user.email === 'trial@example.com'), true);
+});
+
+test('admin user detail API lets only super admins change login email', async () => {
+  const repository = getChartServiceRepository();
+  const adminSession = createSessionForUser(repository, {
+    userId: 'admin_1',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  }).session;
+  const superSession = createSessionForUser(repository, {
+    userId: 'super_1',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  }).session;
+  const { PATCH } = await import('../app/api/admin/users/[id]/route.ts');
+
+  const denied = await PATCH(new Request('http://localhost/api/admin/users/user_trial', {
+    method: 'PATCH',
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${adminSession.id}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ email: 'trial-renamed@example.com' }),
+  }), { params: Promise.resolve({ id: 'user_trial' }) });
+  const allowed = await PATCH(new Request('http://localhost/api/admin/users/user_trial', {
+    method: 'PATCH',
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${superSession.id}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ email: 'trial-renamed@example.com' }),
+  }), { params: Promise.resolve({ id: 'user_trial' }) });
+  const payload = await allowed.json();
+
+  assert.equal(denied.status, 403);
+  assert.equal(allowed.status, 200);
+  assert.equal(payload.detail.user.email, 'trial-renamed@example.com');
+  updateAdminUserEmail(repository, {
+    admin: { id: 'super_1', role: 'super_admin' },
+    userId: 'user_trial',
+    email: 'trial@example.com',
+  });
 });
 
 test('admin users API requires admin session and supports query filtering', async () => {
@@ -266,6 +355,31 @@ test('admin user panel confirms role and account status changes before patching'
   assert.match(source, /admin\.user\.account\.suspend/);
   assert.match(source, /admin\.user\.account\.activate/);
   assert.doesNotMatch(source, /shouldRunAdminAction/);
+});
+
+test('admin user panel exposes super-admin-only login email change controls', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /newEmail/);
+  assert.match(source, /updateEmail/);
+  assert.match(source, /currentAdmin\?\.role === 'super_admin'/);
+  assert.match(source, /로그인 이메일 변경/);
+  assert.match(source, /슈퍼관리자 전용/);
+  assert.match(source, /admin\.user\.email\.update/);
+  assert.match(source, /body: JSON\.stringify\(\{ email: newEmail \}\)/);
+});
+
+test('admin user directory has polished operator dashboard styling', () => {
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /#admin-users \.admin-filter-row/);
+  assert.match(cssSource, /#admin-users \.table/);
+  assert.match(cssSource, /#admin-users \.table tbody tr/);
+  assert.match(cssSource, /\.admin-user-summary-strip/);
+  assert.match(cssSource, /grid-template-columns: repeat\(5, minmax\(120px, 1fr\)\)/);
+  assert.match(cssSource, /\.member-directory-cell span/);
+  assert.match(cssSource, /\.admin-detail-panel \.thread-card/);
+  assert.match(cssSource, /\.admin-history-card/);
 });
 
 test('admin user panel refreshes its filtered directory after local user operations without self-trigger loops', () => {

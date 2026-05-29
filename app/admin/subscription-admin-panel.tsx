@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useAdminActionConfirmation } from './admin-action-confirmation-dialog';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
-import { canSubmitAdminOperationNote, normalizeAdminOperationNote } from './admin-operation-note';
 import { subscribeAdminQueuePresetEvent } from './admin-queue-preset-events';
 import { dispatchAdminRefreshEvent, subscribeAdminRefreshEvent } from './admin-refresh-events';
 import {
@@ -48,8 +47,9 @@ export function SubscriptionAdminPanel() {
   const [items, setItems] = useState<AdminSubscriptionQueueItem[]>([]);
   const [activeFilterKey, setActiveFilterKey] = useState('all');
   const [dashboardFilterNotice, setDashboardFilterNotice] = useState<string | null>(null);
-  const [operationNotes, setOperationNotes] = useState<Record<string, string>>({});
-  const [message, setMessage] = useState('관리자 세션으로 구독 승인, 취소, 환불 요청을 처리합니다.');
+  const [message, setMessage] = useState(
+    '관리자 확인으로 구독 승인, 취소, 환불 요청을 처리합니다.',
+  );
   const [isBusy, setIsBusy] = useState(false);
   const { confirmAdminAction, confirmationDialog } = useAdminActionConfirmation();
 
@@ -88,11 +88,7 @@ export function SubscriptionAdminPanel() {
   }
 
   async function runOperation(subscriptionId: string, action: 'approve' | 'cancel' | 'refund' | 'reject') {
-    const adminNote = normalizeAdminOperationNote(operationNotes[subscriptionId] || '');
-    if (!canSubmitAdminOperationNote(adminNote)) {
-      setMessage('관리자 처리 메모를 입력한 뒤 요청을 처리해주세요.');
-      return;
-    }
+    const adminNote = '';
     if (!await confirmAdminAction(`subscription.${action}`, subscriptionId)) {
       return;
     }
@@ -118,8 +114,7 @@ export function SubscriptionAdminPanel() {
       setMessage(payload.message || '구독 요청 처리에 실패했습니다.');
       return;
     }
-    setOperationNotes((currentNotes) => ({ ...currentNotes, [subscriptionId]: '' }));
-    void refresh({ nextMessage: `${subscriptionId} 요청을 처리했습니다. 목록을 갱신했습니다.` });
+    void refresh({ nextMessage: `${subscriptionId} 요청을 처리했고 목록을 갱신했습니다.` });
     dispatchAdminRefreshEvent({ source: 'subscriptions' });
   }
 
@@ -143,7 +138,9 @@ export function SubscriptionAdminPanel() {
       <div className="manual-flow-cell">
         <span className={`badge manual-flow-badge ${flowBadge.tone}`}>{flowBadge.label}</span>
         <small className="manual-flow-description">{flowBadge.description}</small>
-        <small className="manual-flow-raw-status">구독 상태: {formatSubscriptionStatusLabel(item.subscription.status)}</small>
+        <small className="manual-flow-raw-status">
+          구독 상태: {formatSubscriptionStatusLabel(item.subscription.status)}
+        </small>
       </div>
     );
   }
@@ -153,97 +150,129 @@ export function SubscriptionAdminPanel() {
 
   return (
     <>
-    <section className="card wide" id="admin-subscriptions">
-      <div className="toolbar">
-        <h2>구독 요청 관리</h2>
-        <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>새로고침</button>
-      </div>
-      <p className="notice">{message}</p>
-      <div className="quick-filter-row" aria-label="구독 요청 빠른 필터">
-        {SUBSCRIPTION_QUEUE_FILTER_PRESETS.map((preset) => {
-          const isActive = activeFilter.key === preset.key;
-          return (
-            <button
-              className={`button secondary${isActive ? ' active' : ''}`}
-              type="button"
-              key={preset.key}
-              aria-pressed={isActive}
-              onClick={() => applyQuickFilter(preset.key)}
-            >
-              {preset.label}
-            </button>
-          );
-        })}
-      </div>
-      <AdminDashboardFilterNotice
-        label={dashboardFilterNotice}
-        onClear={clearDashboardFilterNotice}
-      />
-      <p className="notice compact">현재 필터: {activeFilter.label} / 표시 {filteredItems.length}건</p>
-      <table className="table">
-        <thead>
-          <tr>
-            <th>구독 ID</th>
-            <th>회원</th>
-            <th>플랜</th>
-            <th>상태</th>
-            <th>결제</th>
-            <th>관리</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredItems.map((item) => (
-            <tr className="admin-subscription-row" id={getAdminSubscriptionDomId(item.subscription.id)} key={item.subscription.id}>
-              <td>{item.subscription.id}</td>
-              <td>{item.user.email}<br /><small>{item.user.name}</small></td>
-              <td>{item.plan?.name ?? '-'}</td>
-              <td>{renderSubscriptionFlowStatus(item)}</td>
-              <td>{item.payment ? `${item.payment.id} / ${formatPaymentStatusLabel(item.payment.status)}` : '-'}</td>
-              <td>
-                <input
-                  aria-label={`${item.subscription.id} 관리자 처리 메모`}
-                  className="admin-note-input"
-                  onChange={(event) => setOperationNotes((currentNotes) => ({
-                    ...currentNotes,
-                    [item.subscription.id]: event.target.value,
-                  }))}
-                  placeholder="처리 메모 입력"
-                  value={operationNotes[item.subscription.id] || ''}
-                />
-                <div className="actions compact">
-                  {item.subscription.status === 'payment_requested' && (
-                    <button className="button" type="button" onClick={() => runOperation(item.subscription.id, 'approve')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.subscription.id] || '')}>
-                      구독 승인
-                    </button>
-                  )}
-                  {item.subscription.status === 'cancel_requested' && (
-                    <button className="button secondary" type="button" onClick={() => runOperation(item.subscription.id, 'cancel')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.subscription.id] || '')}>
-                      취소 승인
-                    </button>
-                  )}
-                  {item.subscription.status === 'refund_requested' && (
-                    <button className="button danger" type="button" onClick={() => runOperation(item.subscription.id, 'refund')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.subscription.id] || '')}>
-                      환불 승인
-                    </button>
-                  )}
-                  {(item.subscription.status === 'cancel_requested' || item.subscription.status === 'refund_requested') && (
-                    <button className="button secondary" type="button" onClick={() => runOperation(item.subscription.id, 'reject')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.subscription.id] || '')}>
-                      반려
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-          {filteredItems.length === 0 && (
+      <section className="card wide" id="admin-subscriptions">
+        <div className="toolbar">
+          <h2>구독관리</h2>
+          <button
+            className="button secondary"
+            type="button"
+            onClick={() => void refresh()}
+            disabled={isBusy}
+          >
+            새로고침
+          </button>
+        </div>
+        <p className="notice">{message}</p>
+        <div className="quick-filter-row" aria-label="구독 요청 빠른 필터">
+          {SUBSCRIPTION_QUEUE_FILTER_PRESETS.map((preset) => {
+            const isActive = activeFilter.key === preset.key;
+            return (
+              <button
+                className={`button secondary${isActive ? ' active' : ''}`}
+                type="button"
+                key={preset.key}
+                aria-pressed={isActive}
+                onClick={() => applyQuickFilter(preset.key)}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
+        <AdminDashboardFilterNotice
+          label={dashboardFilterNotice}
+          onClear={clearDashboardFilterNotice}
+        />
+        <p className="notice compact">
+          현재 필터: {activeFilter.label} / 표시 {filteredItems.length}건
+        </p>
+        <table className="table">
+          <thead>
             <tr>
-              <td colSpan={6}>대기 중인 구독 요청이 없습니다.</td>
+              <th>구독 ID</th>
+              <th>회원</th>
+              <th>플랜</th>
+              <th>상태</th>
+              <th>결제</th>
+              <th>관리</th>
             </tr>
-          )}
-        </tbody>
-      </table>
-    </section>
-    {confirmationDialog}
+          </thead>
+          <tbody>
+            {filteredItems.map((item) => (
+              <tr
+                className="admin-subscription-row"
+                id={getAdminSubscriptionDomId(item.subscription.id)}
+                key={item.subscription.id}
+              >
+                <td>{item.subscription.id}</td>
+                <td>
+                  {item.user.email}
+                  <br />
+                  <small>{item.user.name}</small>
+                </td>
+                <td>{item.plan?.name ?? '-'}</td>
+                <td>{renderSubscriptionFlowStatus(item)}</td>
+                <td>
+                  {item.payment
+                    ? `${item.payment.id} / ${formatPaymentStatusLabel(item.payment.status)}`
+                    : '-'}
+                </td>
+                <td>
+                  <div className="actions compact">
+                    {item.subscription.status === 'payment_requested' && (
+                      <button
+                        className="button"
+                        type="button"
+                        onClick={() => runOperation(item.subscription.id, 'approve')}
+                        disabled={isBusy}
+                      >
+                        구독 승인
+                      </button>
+                    )}
+                    {item.subscription.status === 'cancel_requested' && (
+                      <button
+                        className="button secondary"
+                        type="button"
+                        onClick={() => runOperation(item.subscription.id, 'cancel')}
+                        disabled={isBusy}
+                      >
+                        취소 승인
+                      </button>
+                    )}
+                    {item.subscription.status === 'refund_requested' && (
+                      <button
+                        className="button danger"
+                        type="button"
+                        onClick={() => runOperation(item.subscription.id, 'refund')}
+                        disabled={isBusy}
+                      >
+                        환불 승인
+                      </button>
+                    )}
+                    {(item.subscription.status === 'cancel_requested' ||
+                      item.subscription.status === 'refund_requested') && (
+                      <button
+                        className="button secondary"
+                        type="button"
+                        onClick={() => runOperation(item.subscription.id, 'reject')}
+                        disabled={isBusy}
+                      >
+                        반려
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {filteredItems.length === 0 && (
+              <tr>
+                <td colSpan={6}>대기 중인 구독 요청이 없습니다.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </section>
+      {confirmationDialog}
     </>
   );
 }

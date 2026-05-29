@@ -17,7 +17,7 @@ export default function AdminPage() {
         <span>Chart Service Operations</span>
         <h1>관리자페이지</h1>
         <p className="lede">
-          관리자 세션이 있을 때만 결제 요청, 입금 확인, 구독 승인, 환불/취소 처리를 실행합니다.
+          관리자 세션이 있을 때 결제 요청, 입금 확인, 구독 승인, 환불과 취소 처리를 실행합니다.
         </p>
       </div>
       <AdminAccessGate>

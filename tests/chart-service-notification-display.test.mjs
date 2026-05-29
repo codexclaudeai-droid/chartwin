@@ -12,6 +12,7 @@ test('notification display helpers translate categories and action labels', asyn
     getNotificationBulkActionHint,
     getNotificationCenterHref,
     getNotificationEmptyStateMessage,
+    getNotificationFilterHelpMessage,
     getNotificationFilterKeyFromSearch,
     getNotificationLinkLabel,
     getNotificationNavigationMessage,
@@ -19,6 +20,7 @@ test('notification display helpers translate categories and action labels', asyn
     getNotificationsWithoutIds,
     getNotificationsWithReadState,
     getUnreadNotificationsByTab,
+    normalizeNotificationTitle,
   } = await import('../app/notifications/notification-display.ts');
 
   assert.equal(getNotificationCategoryLabel('support_request'), '신규 문의');
@@ -36,6 +38,9 @@ test('notification display helpers translate categories and action labels', asyn
   assert.equal(getNotificationEmptyStateMessage('payment', true), '결제 알림이 없습니다. 입금확인 요청이나 관리자 처리 결과가 생기면 표시됩니다.');
   assert.equal(getNotificationEmptyStateMessage('support', true), '문의 알림이 없습니다. 고객센터 답변이나 새 문의 알림이 생기면 표시됩니다.');
   assert.equal(getNotificationEmptyStateMessage('subscription', true), '구독 알림이 없습니다. 승인, 만료 예정, 취소/환불 처리 결과가 생기면 표시됩니다.');
+  assert.equal(getNotificationFilterHelpMessage('unread'), '고객센터 답변 알림은 미확인 탭에 표시됩니다. 알림의 "문의 답변 확인하기"를 누르면 해당 문의 카드로 이동합니다.');
+  assert.equal(getNotificationFilterHelpMessage('support'), '문의 탭에서는 고객센터 답변과 문의 관련 알림만 모아봅니다. "문의 답변 확인하기"를 누르면 답변이 달린 문의로 이동합니다.');
+  assert.equal(getNotificationFilterHelpMessage('all'), null);
   assert.equal(getNotificationBulkActionHint({ totalCount: 3, unreadCount: 0 }, 'all', 0), '미확인 알림이 없어 읽음 처리 버튼이 비활성화되었습니다.');
   assert.equal(getNotificationBulkActionHint({ totalCount: 3, unreadCount: 2 }, 'payment', 0), '현재 필터에 미확인 알림이 없어 필터 읽음 버튼이 비활성화되었습니다.');
   assert.equal(getNotificationBulkActionHint({ totalCount: 3, unreadCount: 2 }, 'unread', 2), null);
@@ -56,6 +61,8 @@ test('notification display helpers translate categories and action labels', asyn
   assert.equal(getNotificationNavigationMessage({ category: 'support_request', linkUrl: '/admin?supportThread=support_1#admin-support' }), '신규 문의 알림을 읽음 처리하고 답변 화면으로 이동합니다.');
   assert.equal(getNotificationNavigationMessage({ category: 'payment', linkUrl: '/profile#payment-pay_1' }), '결제 알림을 읽음 처리하고 진행 상황으로 이동합니다.');
   assert.equal(getNotificationNavigationMessage({ category: 'notice', linkUrl: null }), '알림을 읽음 처리합니다.');
+  assert.equal(normalizeNotificationTitle('怨좉컼?쇳꽣 ?듬????깅줉?섏뿀?듬땲??'), '고객센터 답변이 등록되었습니다');
+  assert.equal(normalizeNotificationTitle('새 알림'), '새 알림');
   const notifications = [
     { id: 'n1', category: 'support_request', readAt: null },
     { id: 'n2', category: 'support_reply', readAt: '2026-05-24T14:00:00.000Z' },
@@ -101,13 +108,15 @@ test('notification display helpers translate categories and action labels', asyn
 test('notifications page and panel use readable Korean copy instead of raw notification values', () => {
   const pageSource = fs.readFileSync(new URL('../app/notifications/page.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/notifications/notifications-panel.tsx', import.meta.url), 'utf8');
+  const displaySource = fs.readFileSync(new URL('../app/notifications/notification-display.ts', import.meta.url), 'utf8');
   const navSource = fs.readFileSync(new URL('../app/notification-nav-link.tsx', import.meta.url), 'utf8');
   const profileSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
 
   assert.match(pageSource, /알림센터/);
-  assert.match(pageSource, /운영 처리 결과와 고객센터 답변을 한곳에서 확인합니다/);
+  assert.match(pageSource, /운영 처리 결과, 구독 상태 변경, 고객센터 답변과 시스템 알림을 한 곳에서 확인합니다/);
   assert.match(panelSource, /getNotificationCategoryLabel/);
   assert.match(panelSource, /getNotificationEmptyStateMessage/);
+  assert.match(panelSource, /getNotificationFilterHelpMessage/);
   assert.match(panelSource, /getNotificationBulkActionHint/);
   assert.match(panelSource, /getNotificationLinkLabel/);
   assert.match(panelSource, /getNotificationNavigationMessage/);
@@ -115,6 +124,7 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /notification-action-link/);
   assert.match(panelSource, /formatNotificationReadState/);
   assert.match(panelSource, /formatNotificationSummaryMessage/);
+  assert.match(panelSource, /normalizeNotificationTitle/);
   assert.match(panelSource, /NOTIFICATION_FILTER_TABS/);
   assert.match(panelSource, /filterNotificationsByTab/);
   assert.match(panelSource, /activeFilterKey/);
@@ -136,6 +146,8 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /\/api\/notifications\/\$\{notificationId\}\/archive/);
   assert.match(panelSource, /dispatchNotificationsRefreshEvent/);
   assert.match(panelSource, /현재 필터 읽음/);
+  assert.match(panelSource, /filterHelpMessage/);
+  assert.match(displaySource, /문의 답변 확인하기/);
   assert.match(panelSource, /bulkActionHint/);
   assert.match(panelSource, /emptyStateMessage/);
   assert.match(panelSource, /Promise\.all/);

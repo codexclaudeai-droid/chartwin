@@ -3,6 +3,7 @@ const SUPPORT_CATEGORY_LABELS: Record<string, string> = {
   cancel: '취소/환불',
   usage: '사용 방법',
   signal: '시그널',
+  trial: '무료체험',
   partnership: '제휴',
   general: '일반',
 };

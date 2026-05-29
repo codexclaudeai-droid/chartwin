@@ -15,6 +15,8 @@ import {
   mapPaymentTransferSettingsToPostgresRow,
   mapPlanFromPostgresRow,
   mapPlanToPostgresRow,
+  mapPublicBoardPostFromPostgresRow,
+  mapPublicBoardPostToPostgresRow,
   mapReferralProgramSettingsFromPostgresRow,
   mapReferralProgramSettingsToPostgresRow,
   mapReferralLedgerFromPostgresRow,
@@ -314,7 +316,7 @@ test('postgres payment transfer settings mapper preserves bank and USDT instruct
     id: 'default',
     bank_name: 'KB국민은행',
     bank_account_number: '123-456-7890',
-    bank_account_holder: 'TC Chart',
+    bank_account_holder: 'TradingCore',
     bank_logo_url: '/bank-logos/kb.svg',
     usdt_address: 'TXYZ123456789',
     usdt_network: 'TRC20',
@@ -326,7 +328,7 @@ test('postgres payment transfer settings mapper preserves bank and USDT instruct
     id: 'default',
     bankName: 'KB국민은행',
     bankAccountNumber: '123-456-7890',
-    bankAccountHolder: 'TC Chart',
+    bankAccountHolder: 'TradingCore',
     bankLogoUrl: '/bank-logos/kb.svg',
     usdtAddress: 'TXYZ123456789',
     usdtNetwork: 'TRC20',
@@ -337,7 +339,7 @@ test('postgres payment transfer settings mapper preserves bank and USDT instruct
     id: 'default',
     bank_name: 'KB국민은행',
     bank_account_number: '123-456-7890',
-    bank_account_holder: 'TC Chart',
+    bank_account_holder: 'TradingCore',
     bank_logo_url: '/bank-logos/kb.svg',
     usdt_address: 'TXYZ123456789',
     usdt_network: 'TRC20',
@@ -351,6 +353,11 @@ test('postgres web info settings mapper preserves signup policy content', () => 
     id: 'default',
     terms_content: 'Terms content',
     privacy_content: 'Privacy content',
+    plan_services_json: {
+      plan_monthly: ['월간 차트 접근'],
+      plan_half_year: ['6개월 혜택'],
+      plan_yearly: ['연간 혜택'],
+    },
     updated_by_admin_id: 'admin_1',
     updated_at: '2026-05-25T05:00:00.000Z',
   });
@@ -359,6 +366,11 @@ test('postgres web info settings mapper preserves signup policy content', () => 
     id: 'default',
     termsContent: 'Terms content',
     privacyContent: 'Privacy content',
+    planServices: {
+      plan_monthly: ['월간 차트 접근'],
+      plan_half_year: ['6개월 혜택'],
+      plan_yearly: ['연간 혜택'],
+    },
     updatedByAdminId: 'admin_1',
     updatedAt: '2026-05-25T05:00:00.000Z',
   });
@@ -366,6 +378,11 @@ test('postgres web info settings mapper preserves signup policy content', () => 
     id: 'default',
     terms_content: 'Terms content',
     privacy_content: 'Privacy content',
+    plan_services_json: {
+      plan_monthly: ['월간 차트 접근'],
+      plan_half_year: ['6개월 혜택'],
+      plan_yearly: ['연간 혜택'],
+    },
     updated_by_admin_id: 'admin_1',
     updated_at: '2026-05-25T05:00:00.000Z',
   });
@@ -411,6 +428,43 @@ test('postgres signup agreement mapper preserves policy evidence snapshots', () 
     ip_address: '203.0.113.10',
     user_agent: 'signup-test-agent',
     created_at: '2026-05-25T08:10:00.000Z',
+  });
+});
+
+test('postgres public board post mapper preserves publishing controls', () => {
+  const post = mapPublicBoardPostFromPostgresRow({
+    id: 'public_board_notice',
+    category: 'notice',
+    title: 'Service notice',
+    body: 'Published notice body',
+    is_published: true,
+    sort_order: '3',
+    created_at: '2026-05-25T09:00:00.000Z',
+    updated_at: '2026-05-25T10:00:00.000Z',
+    updated_by_admin_id: null,
+  });
+
+  assert.deepEqual(post, {
+    id: 'public_board_notice',
+    category: 'notice',
+    title: 'Service notice',
+    body: 'Published notice body',
+    isPublished: true,
+    sortOrder: 3,
+    createdAt: '2026-05-25T09:00:00.000Z',
+    updatedAt: '2026-05-25T10:00:00.000Z',
+    updatedByAdminId: null,
+  });
+  assert.deepEqual(mapPublicBoardPostToPostgresRow(post), {
+    id: 'public_board_notice',
+    category: 'notice',
+    title: 'Service notice',
+    body: 'Published notice body',
+    is_published: true,
+    sort_order: 3,
+    created_at: '2026-05-25T09:00:00.000Z',
+    updated_at: '2026-05-25T10:00:00.000Z',
+    updated_by_admin_id: null,
   });
 });
 

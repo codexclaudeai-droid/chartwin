@@ -1,7 +1,7 @@
 export const ADMIN_REFRESH_EVENT = 'chart-service-admin-refresh';
 
 type RefreshEventTarget = Pick<EventTarget, 'addEventListener' | 'removeEventListener' | 'dispatchEvent'>;
-export type AdminRefreshSource = 'payments' | 'subscriptions' | 'support' | 'users';
+export type AdminRefreshSource = 'payments' | 'subscriptions' | 'support' | 'users' | 'webInfo';
 export type AdminRefreshEventDetail = {
   source?: AdminRefreshSource;
 };

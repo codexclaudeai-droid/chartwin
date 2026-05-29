@@ -29,6 +29,7 @@ type SupportThreadListItem = {
     title: string;
     status: string;
     visibility: string;
+    createdAt: string;
   };
   author: {
     email: string;
@@ -231,6 +232,7 @@ export function SupportAdminPanel() {
             <div className="thread-meta">
               <span className="badge">{formatSupportStatusLabel(item.thread.status)}</span>
               <span>{formatSupportVisibilityLabel(item.thread.visibility)}</span>
+              <span>작성 {formatDateTime(item.thread.createdAt)}</span>
               <span>{item.author?.email ?? 'system'}</span>
               <a className="text-link compact" href={createAdminSupportThreadUrl(item.thread.id)}>
                 상세 답변 링크
@@ -275,4 +277,11 @@ export function SupportAdminPanel() {
       </div>
     </section>
   );
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat('ko-KR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(new Date(value));
 }

@@ -34,8 +34,8 @@ export function formatPaymentStatusLabel(status: PaymentStatus): string {
 }
 
 export function formatChartAccessLabel(access: { fullChart: boolean; paidSignals: boolean }): string {
-  if (access.fullChart && access.paidSignals) return '전체 차트와 유료 시그널 이용 가능';
-  if (access.fullChart) return '차트 이용 가능, 유료 시그널 승인 대기';
+  if (access.fullChart && access.paidSignals) return 'TC Chart와 유료 시그널 이용 가능';
+  if (access.fullChart) return 'TC Chart 이용 가능, 유료 시그널 승인 대기';
   return '구독 승인 후 이용 가능';
 }
 
@@ -47,4 +47,3 @@ export function formatPaymentAmountUsd(amountUsd: number): string {
     style: 'currency',
   }).format(amountUsd);
 }
-

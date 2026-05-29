@@ -207,6 +207,7 @@ export function UserAdminPanel() {
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
   const [currentAdmin, setCurrentAdmin] = useState<CurrentAdmin | null>(null);
   const [accountReason, setAccountReason] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState<UserRole>('member');
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('all');
@@ -304,6 +305,7 @@ export function UserAdminPanel() {
     }
 
     setDetail(payload.detail);
+    setNewEmail(payload.detail.user.email);
     setSelectedRole(nextRole ?? payload.detail.user.role as UserRole);
     setDetailMessage(nextRole === 'salesperson' && payload.detail.user.role !== 'salesperson'
       ? `${payload.detail.user.email} 회원을 영업자로 지정할 준비가 되었습니다. 역할 변경 버튼을 누르세요.`
@@ -346,6 +348,7 @@ export function UserAdminPanel() {
     }
 
     setDetail(payload.detail);
+    setNewEmail(payload.detail.user.email);
     setSelectedRole(payload.detail.user.role as UserRole);
     setDetailMessage(payload.detail.user.role === 'salesperson'
       ? `${payload.detail.user.email} 회원을 영업자로 지정했습니다. 영업관리에서 회원 배정을 이어가세요.`
@@ -394,8 +397,47 @@ export function UserAdminPanel() {
     }
 
     setDetail(payload.detail);
+    setNewEmail(payload.detail.user.email);
     setAccountReason('');
     setDetailMessage(`${payload.detail.user.email} 계정 상태를 ${formatUserAccountStatusLabel(payload.detail.user.accountStatus)}(으)로 변경했습니다.`);
+    void refresh({ nextMessage: '회원 목록을 갱신했습니다.' });
+    dispatchAdminRefreshEvent({ source: 'users' });
+  }
+
+  async function updateEmail() {
+    if (!detail) return;
+    if (currentAdmin?.role !== 'super_admin') {
+      setDetailMessage('로그인 이메일 변경은 슈퍼관리자만 가능합니다.');
+      return;
+    }
+    if (!newEmail.trim()) {
+      setDetailMessage('변경할 로그인 이메일을 입력해 주세요.');
+      return;
+    }
+    if (!await confirmAdminAction(
+      'admin.user.email.update',
+      `${detail.user.email} -> ${newEmail.trim()}`,
+    )) {
+      return;
+    }
+
+    setIsBusy(true);
+    const response = await fetch(`/api/admin/users/${encodeURIComponent(detail.user.id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: newEmail }),
+    });
+    const payload = await response.json() as AdminUserDetailResponse;
+    setIsBusy(false);
+
+    if (!response.ok || !payload.detail) {
+      setDetailMessage(payload.message || '로그인 이메일 변경에 실패했습니다.');
+      return;
+    }
+
+    setDetail(payload.detail);
+    setNewEmail(payload.detail.user.email);
+    setDetailMessage(`로그인 이메일을 ${payload.detail.user.email}(으)로 변경했습니다.`);
     void refresh({ nextMessage: '회원 목록을 갱신했습니다.' });
     dispatchAdminRefreshEvent({ source: 'users' });
   }
@@ -444,6 +486,7 @@ export function UserAdminPanel() {
       nextAccountStatus: 'active',
     })
     : false;
+  const canChangeEmail = currentAdmin?.role === 'super_admin';
   const rolePermissionNotice = detail && !canSubmitRole
     ? getAdminUserPermissionNotice({
       actorRole: currentAdmin?.role,
@@ -549,14 +592,25 @@ export function UserAdminPanel() {
             <th>차트 접근</th>
             <th>최근 결제</th>
             <th>운영 상태</th>
-            <th>상세</th>
           </tr>
         </thead>
         <tbody>
           {users.map((item) => (
             <tr key={item.user.id}>
               <td className="member-directory-cell">
-                <strong>{item.user.name}</strong>
+                <div className="member-directory-title-row">
+                  <strong>{item.user.name}</strong>
+                  <div className="member-directory-actions">
+                    <button className="button secondary" type="button" onClick={() => openDetail(item.user.id)} disabled={isBusy}>
+                      상세
+                    </button>
+                    {item.user.role !== 'salesperson' && (
+                      <button className="button secondary" type="button" onClick={() => openDetail(item.user.id, 'salesperson')} disabled={isBusy}>
+                        영업자 지정
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <small>{item.user.email}</small>
                 <span>연락번호 {item.user.phoneNumber || '미등록'}</span>
                 <span>추천인 {item.referrer?.email ?? '없음'}</span>
@@ -578,21 +632,11 @@ export function UserAdminPanel() {
                 문의 {item.supportThreadCount}건<br />
                 미확인 알림 {item.unreadNotificationCount}건
               </td>
-              <td>
-                <button className="button secondary" type="button" onClick={() => openDetail(item.user.id)} disabled={isBusy}>
-                  상세
-                </button>
-                {item.user.role !== 'salesperson' && (
-                  <button className="button secondary" type="button" onClick={() => openDetail(item.user.id, 'salesperson')} disabled={isBusy}>
-                    영업자 지정
-                  </button>
-                )}
-              </td>
             </tr>
           ))}
           {users.length === 0 && (
             <tr>
-              <td colSpan={7}>표시할 회원이 없습니다.</td>
+              <td colSpan={6}>표시할 회원이 없습니다.</td>
             </tr>
           )}
         </tbody>
@@ -609,6 +653,29 @@ export function UserAdminPanel() {
               <span>{detail.user.id}</span>
             </div>
             <h3>{detail.user.name}</h3>
+            <div className="admin-filter-row">
+              <input
+                aria-label="로그인 이메일 변경"
+                value={newEmail}
+                onChange={(event) => setNewEmail(event.target.value)}
+                placeholder="새 로그인 이메일"
+                disabled={!canChangeEmail}
+              />
+              <button
+                className="button secondary"
+                type="button"
+                onClick={updateEmail}
+                disabled={
+                  isBusy ||
+                  !canChangeEmail ||
+                  !newEmail.trim() ||
+                  newEmail.trim().toLowerCase() === detail.user.email.toLowerCase()
+                }
+              >
+                로그인 이메일 변경
+              </button>
+            </div>
+            <p className="notice compact">슈퍼관리자 전용: 이메일은 로그인 ID로 사용되며 변경 시 감사로그에 기록됩니다.</p>
             <div className="admin-filter-row">
               <select value={selectedRole} onChange={(event) => setSelectedRole(event.target.value as UserRole)}>
                 {ROLE_OPTIONS.map((roleOption) => (

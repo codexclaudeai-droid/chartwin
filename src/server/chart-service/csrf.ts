@@ -4,17 +4,17 @@ type OriginCheckedRequest = {
 };
 
 export function isSameOriginMutationRequest(request: OriginCheckedRequest): boolean {
-  const requestOrigin = getUrlOrigin(request.url);
+  const requestOrigin = normalizeLoopbackOrigin(getUrlOrigin(request.url));
   if (!requestOrigin) return false;
 
   const origin = request.headers.get('origin');
   if (origin) {
-    return getUrlOrigin(origin) === requestOrigin;
+    return normalizeLoopbackOrigin(getUrlOrigin(origin)) === requestOrigin;
   }
 
   const referer = request.headers.get('referer');
   if (referer) {
-    return getUrlOrigin(referer) === requestOrigin;
+    return normalizeLoopbackOrigin(getUrlOrigin(referer)) === requestOrigin;
   }
 
   return true;
@@ -31,5 +31,19 @@ function getUrlOrigin(value: string): string | null {
     return new URL(value).origin;
   } catch {
     return null;
+  }
+}
+
+function normalizeLoopbackOrigin(origin: string | null): string | null {
+  if (!origin) return null;
+  try {
+    const url = new URL(origin);
+    if (url.hostname === '127.0.0.1' || url.hostname === 'localhost' || url.hostname === '::1') {
+      url.hostname = 'localhost';
+      return url.origin;
+    }
+    return url.origin;
+  } catch {
+    return origin;
   }
 }

@@ -79,6 +79,26 @@ create index if not exists idx_subscriptions_user_id on subscriptions (user_id);
 
 create index if not exists idx_subscriptions_status on subscriptions (status);
 
+create table if not exists public_board_posts (
+  id text primary key,
+  category text not null,
+  title text not null,
+  body text not null,
+  is_published boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by_admin_id text,
+  constraint chk_public_board_posts_category check (category in ('notice', 'qna', 'faq')),
+  foreign key (updated_by_admin_id) references users(id)
+);
+
+create index if not exists idx_public_board_posts_category on public_board_posts (category);
+
+create index if not exists idx_public_board_posts_is_published on public_board_posts (is_published);
+
+create index if not exists idx_public_board_posts_updated_by_admin_id on public_board_posts (updated_by_admin_id);
+
 create table if not exists support_threads (
   id text primary key,
   author_user_id text not null,
@@ -212,6 +232,7 @@ create table if not exists web_info_settings (
   id text primary key,
   terms_content text not null,
   privacy_content text not null,
+  plan_services_json jsonb not null default '{}'::jsonb,
   updated_by_admin_id text,
   updated_at timestamptz not null default now(),
   foreign key (updated_by_admin_id) references users(id)
@@ -378,17 +399,59 @@ update payment_transfer_settings set bank_logo_url = '/bank-logos/generic-bank.s
 
 create index if not exists idx_payment_transfer_settings_updated_by_admin_id on payment_transfer_settings (updated_by_admin_id);
 
-create table if not exists web_info_settings (id text primary key, terms_content text not null, privacy_content text not null, updated_by_admin_id text, updated_at timestamptz not null default now());
+create table if not exists public_board_posts (id text primary key, category text not null, title text not null, body text not null, is_published boolean not null default true, sort_order integer not null default 0, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), updated_by_admin_id text);
+
+alter table if exists public_board_posts add column if not exists category text;
+
+alter table if exists public_board_posts add column if not exists title text;
+
+alter table if exists public_board_posts add column if not exists body text;
+
+alter table if exists public_board_posts add column if not exists is_published boolean;
+
+alter table if exists public_board_posts add column if not exists sort_order integer;
+
+alter table if exists public_board_posts add column if not exists created_at timestamptz;
+
+alter table if exists public_board_posts add column if not exists updated_at timestamptz;
+
+alter table if exists public_board_posts add column if not exists updated_by_admin_id text;
+
+update public_board_posts set is_published = true where is_published is null;
+
+update public_board_posts set sort_order = 0 where sort_order is null;
+
+update public_board_posts set created_at = now() where created_at is null;
+
+update public_board_posts set updated_at = now() where updated_at is null;
+
+insert into public_board_posts (id, category, title, body, is_published, sort_order, created_at, updated_at, updated_by_admin_id) values ('public_board_notice', 'notice', '서비스 운영 공지', '구독 운영, 결제 안내, 차트 접근 정책 변경 사항을 공개 게시판으로 안내합니다.', true, 10, now(), now(), 'admin_1') on conflict (id) do nothing;
+
+insert into public_board_posts (id, category, title, body, is_published, sort_order, created_at, updated_at, updated_by_admin_id) values ('public_board_qna', 'qna', '공개 질문답변', '자주 반복되는 질문은 공개 답변으로 정리하고, 개인정보가 필요한 내용은 1:1 문의로 처리합니다.', true, 20, now(), now(), 'admin_1') on conflict (id) do nothing;
+
+insert into public_board_posts (id, category, title, body, is_published, sort_order, created_at, updated_at, updated_by_admin_id) values ('public_board_faq', 'faq', '자주 묻는 질문', '결제, 승인, 무료체험, 시그널 접근 기준을 가장 앞에서 확인할 수 있게 정리합니다.', true, 30, now(), now(), 'admin_1') on conflict (id) do nothing;
+
+create index if not exists idx_public_board_posts_category on public_board_posts (category);
+
+create index if not exists idx_public_board_posts_is_published on public_board_posts (is_published);
+
+create index if not exists idx_public_board_posts_updated_by_admin_id on public_board_posts (updated_by_admin_id);
+
+create table if not exists web_info_settings (id text primary key, terms_content text not null, privacy_content text not null, plan_services_json jsonb not null default '{}'::jsonb, updated_by_admin_id text, updated_at timestamptz not null default now());
 
 alter table if exists web_info_settings add column if not exists terms_content text;
 
 alter table if exists web_info_settings add column if not exists privacy_content text;
 
+alter table if exists web_info_settings add column if not exists plan_services_json jsonb;
+
 alter table if exists web_info_settings add column if not exists updated_by_admin_id text;
 
 alter table if exists web_info_settings add column if not exists updated_at timestamptz;
 
-insert into web_info_settings (id, terms_content, privacy_content, updated_at) values ('default', 'TC Chart 서비스 이용약관', 'TC Chart 개인정보보호정책', now()) on conflict (id) do nothing;
+update web_info_settings set plan_services_json = '{}'::jsonb where plan_services_json is null;
+
+insert into web_info_settings (id, terms_content, privacy_content, updated_at) values ('default', 'TradingCore 서비스 이용약관', 'TradingCore 개인정보보호정책', now()) on conflict (id) do nothing;
 
 create index if not exists idx_web_info_settings_updated_by_admin_id on web_info_settings (updated_by_admin_id);
 

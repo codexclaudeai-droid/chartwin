@@ -1,16 +1,8 @@
 type AdminDashboardPrioritySummary = {
-  payments: {
-    pendingCount: number;
-  };
-  subscriptions: {
-    queueCount: number;
-  };
-  support: {
-    waitingCount: number;
-  };
-  users?: {
-    suspendedCount: number;
-  };
+  payments: { pendingCount: number };
+  subscriptions: { queueCount: number };
+  support: { waitingCount: number };
+  users?: { suspendedCount: number };
 };
 
 export type AdminDashboardPriority = {
@@ -32,7 +24,9 @@ export type AdminDashboardQueueItem = Omit<AdminDashboardPriority, 'key'> & {
   filterLabel: string;
 };
 
-export function getAdminDashboardQueueItems(summary: AdminDashboardPrioritySummary): AdminDashboardQueueItem[] {
+export function getAdminDashboardQueueItems(
+  summary: AdminDashboardPrioritySummary,
+): AdminDashboardQueueItem[] {
   const items: AdminDashboardQueueItem[] = [];
 
   if (summary.payments.pendingCount > 0) {
@@ -99,7 +93,9 @@ export function getAdminDashboardQueueItems(summary: AdminDashboardPrioritySumma
   return items;
 }
 
-export function getAdminDashboardPriority(summary: AdminDashboardPrioritySummary): AdminDashboardPriority {
+export function getAdminDashboardPriority(
+  summary: AdminDashboardPrioritySummary,
+): AdminDashboardPriority {
   if (summary.payments.pendingCount > 0) {
     return {
       key: 'payments',
@@ -136,11 +132,12 @@ export function getAdminDashboardPriority(summary: AdminDashboardPrioritySummary
     };
   }
 
-  if ((summary.users?.suspendedCount ?? 0) > 0) {
+  const suspendedCount = summary.users?.suspendedCount ?? 0;
+  if (suspendedCount > 0) {
     return {
       key: 'users',
       title: '정지 계정 확인',
-      description: `정지 상태인 회원 ${summary.users?.suspendedCount ?? 0}명을 사용자 관리에서 검토하세요.`,
+      description: `정지 상태인 회원 ${suspendedCount}명을 회원 관리에서 검토하세요.`,
       href: '#admin-users',
       panel: 'users',
       presetKey: 'suspended',

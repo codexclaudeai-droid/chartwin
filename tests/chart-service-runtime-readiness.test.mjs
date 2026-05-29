@@ -35,6 +35,7 @@ test('runtime readiness accepts configured postgres persistence with pg runtime 
   assert.equal(readiness.checks.some((check) => check.key === 'postgres_mapping_contract' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'postgres_schema_migration_harness' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'postgres_bootstrap_harness' && check.status === 'pass'), true);
+  assert.equal(readiness.checks.some((check) => check.key === 'bootstrap_admin_credentials' && check.status === 'warn'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'postgres_transaction_boundary' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'transactional_email_outbox' && check.status === 'pass'), true);
   assert.equal(readiness.checks.some((check) => check.key === 'transactional_email_dispatch_harness' && check.status === 'pass'), true);
@@ -96,6 +97,31 @@ test('runtime readiness requires a strong session signing secret in production',
   assert.equal(configured.checks.find((check) => check.key === 'session_secret')?.status, 'pass');
 });
 
+test('runtime readiness reports initial admin bootstrap credential readiness', async () => {
+  const { getChartServiceRuntimeReadiness } = await import('../src/server/chart-service/index.ts');
+
+  const incomplete = getChartServiceRuntimeReadiness({
+    NODE_ENV: 'production',
+    CHART_SERVICE_REPOSITORY: 'postgres',
+    CHART_SERVICE_DATABASE_URL: 'postgres://chart-service.local/app',
+    CHART_SERVICE_SESSION_SECRET: '0123456789abcdef0123456789abcdef',
+    CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL: 'owner@example.com',
+  });
+  const configured = getChartServiceRuntimeReadiness({
+    NODE_ENV: 'production',
+    CHART_SERVICE_REPOSITORY: 'postgres',
+    CHART_SERVICE_DATABASE_URL: 'postgres://chart-service.local/app',
+    CHART_SERVICE_SESSION_SECRET: '0123456789abcdef0123456789abcdef',
+    CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL: 'owner@example.com',
+    CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD: 'Owner1234!',
+    CHART_SERVICE_BOOTSTRAP_ADMIN_NAME: 'Owner',
+  });
+
+  assert.equal(incomplete.checks.find((check) => check.key === 'bootstrap_admin_credentials')?.status, 'warn');
+  assert.match(incomplete.checks.find((check) => check.key === 'bootstrap_admin_credentials')?.message ?? '', /email and password/);
+  assert.equal(configured.checks.find((check) => check.key === 'bootstrap_admin_credentials')?.status, 'pass');
+});
+
 test('health route exposes runtime readiness without leaking database credentials', async () => {
   const { GET } = await import('../app/api/health/route.ts');
 
@@ -121,4 +147,19 @@ test('production readiness harness is wired into package scripts and env templat
   assert.match(envExample, /CHART_SERVICE_SESSION_SECRET=/);
   assert.match(envExample, /CHART_SERVICE_EMAIL_PROVIDER=/);
   assert.match(envExample, /CHART_SERVICE_EMAIL_DELIVERY_LIMIT=/);
+});
+
+test('production-facing server pages use async persistence for postgres compatibility', () => {
+  for (const pagePath of [
+    '../app/page.tsx',
+    '../app/pricing/page.tsx',
+    '../app/support/page.tsx',
+  ]) {
+    const source = fs.readFileSync(new URL(pagePath, import.meta.url), 'utf8');
+
+    assert.match(source, /getAsyncChartServicePersistence/, `${pagePath} should use async persistence`);
+    assert.match(source, /runRead/, `${pagePath} should read through the async boundary`);
+    assert.match(source, /dynamic = 'force-dynamic'/, `${pagePath} should avoid static prerendering runtime DB reads`);
+    assert.doesNotMatch(source, /getChartServiceRepository\(/, `${pagePath} should not use the sync singleton`);
+  }
 });

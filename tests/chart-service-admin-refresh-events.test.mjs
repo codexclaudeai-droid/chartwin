@@ -34,6 +34,19 @@ test('admin refresh event carries the source panel for self-refresh guards', () 
   assert.deepEqual(receivedDetail, { source: 'payments' });
 });
 
+test('admin refresh event supports web info source changes', () => {
+  const target = new EventTarget();
+  let receivedDetail = null;
+  const unsubscribe = subscribeAdminRefreshEvent((detail) => {
+    receivedDetail = detail;
+  }, target);
+
+  dispatchAdminRefreshEvent({ source: 'webInfo' }, target);
+  unsubscribe();
+
+  assert.deepEqual(receivedDetail, { source: 'webInfo' });
+});
+
 test('admin refresh event helpers are safe without a browser target', () => {
   let refreshCount = 0;
   const unsubscribe = subscribeAdminRefreshEvent(() => {

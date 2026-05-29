@@ -25,6 +25,8 @@ test('admin dashboard sections define the professional sidebar order', () => {
   assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.find((section) => section.key === 'webInfo')?.children, [
     { label: '가입약관', href: '#admin-web-info-terms' },
     { label: '개인정보보호정책', href: '#admin-web-info-privacy' },
+    { label: '플랜 제공서비스', href: '#admin-plan-services' },
+    { label: '공개게시판', href: '#admin-public-board' },
     { label: '입금정보관리', href: '#admin-payment-settings' },
     { label: '포인트관리', href: '#admin-point-settings' },
   ]);
@@ -42,6 +44,7 @@ test('admin dashboard shell maps legacy anchors and deep links to sidebar sectio
   assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info-terms'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info-privacy'), 'webInfo');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-plan-services'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-statistics'), 'statistics');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-sales'), 'sales');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-sales-teams'), 'sales');
@@ -78,6 +81,10 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.doesNotMatch(cssSource, /admin-dashboard-workspace-header/);
   assert.match(shellSource, /data-active-admin-section=\{activeSection\}/);
   assert.match(shellSource, /activeTargetId/);
+  assert.match(shellSource, /getInitialAdminDashboardState/);
+  assert.doesNotMatch(shellSource, /useState<AdminDashboardSectionKey>\('overview'\)/);
+  assert.match(shellSource, /useState<AdminDashboardSectionKey>\(\(\) => getInitialAdminDashboardState\(\)\.activeSection\)/);
+  assert.match(shellSource, /\}, \[activeTargetId\]\)/);
   assert.match(shellSource, /getActiveChildHref/);
   assert.match(shellSource, /aria-current=\{isChildActive \? 'page' : undefined\}/);
   assert.match(shellSource, /className=\{isChildActive \? 'active' : ''\}/);
@@ -104,4 +111,20 @@ test('admin sidebar submenus roll out on hover and keyboard focus', () => {
   assert.match(cssSource, /pointer-events: auto/);
   assert.match(cssSource, /\.admin-dashboard-submenu a\.active/);
   assert.match(cssSource, /\.admin-dashboard-submenu a\[aria-current="page"\]/);
+});
+
+test('admin dashboard uses polished console design tokens and surfaces', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /--admin-surface:/);
+  assert.match(cssSource, /--admin-sidebar:/);
+  assert.match(cssSource, /--admin-glow:/);
+  assert.match(cssSource, /\.admin-dashboard-sidebar::before/);
+  assert.match(cssSource, /\.admin-dashboard-workspace/);
+  assert.match(cssSource, /animation: admin-section-rise/);
+  assert.match(cssSource, /@keyframes admin-section-rise/);
+  assert.match(cssSource, /\.admin-page \.card/);
+  assert.match(cssSource, /\.admin-page \.table/);
+  assert.match(cssSource, /\.admin-page \.form input:focus/);
+  assert.match(cssSource, /\.admin-page \.button:hover:not\(:disabled\)/);
 });

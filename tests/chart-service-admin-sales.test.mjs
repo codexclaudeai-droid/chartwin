@@ -472,3 +472,17 @@ test('admin sales panel keeps management sections visible before summary data lo
   assert.match(panelSource, /const visibleSummary = summary \?\? EMPTY_SALES_SUMMARY/);
   assert.doesNotMatch(panelSource, /\{summary && \(/);
 });
+
+test('admin sales panel has polished operator dashboard styling', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /#admin-sales \.sales-filter-grid/);
+  assert.match(cssSource, /#admin-sales \.sales-summary-grid \.mini-card/);
+  assert.match(cssSource, /#admin-sales \.salesperson-card/);
+  assert.match(cssSource, /#admin-sales \.sales-team-card/);
+  assert.match(cssSource, /#admin-sales \.sales-customer-card/);
+  assert.match(cssSource, /#admin-sales \.sales-assignment-panel/);
+  assert.match(cssSource, /#admin-sales \.sales-team-panel/);
+  assert.match(cssSource, /#admin-sales \.table/);
+  assert.match(cssSource, /#admin-sales \.table tfoot/);
+});

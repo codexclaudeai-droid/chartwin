@@ -18,3 +18,11 @@ test('login page links users to password recovery', () => {
   assert.match(page, /\/forgot-password/);
 });
 
+test('forgot password panel uses production Korean copy without demo placeholders', () => {
+  const panel = fs.readFileSync(new URL('../app/forgot-password/forgot-password-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panel, /비밀번호 재설정/);
+  assert.doesNotMatch(panel, /NewDemo1234!/);
+  assert.doesNotMatch(panel, /member@example\.com/);
+  assert.doesNotMatch(panel, /Request reset|Reset password|Reset token/);
+});

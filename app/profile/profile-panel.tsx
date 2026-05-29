@@ -324,7 +324,7 @@ export function ProfilePanel() {
             <strong>{dashboard.user.phoneNumber || '미등록'}</strong>
           </div>
           <div className="status-row">
-            <span>권한</span>
+            <span>회원레벨</span>
             <strong>{dashboard.user.role}</strong>
           </div>
         </div>
@@ -480,8 +480,6 @@ export function ProfilePanel() {
           )}
           <button className="button secondary" type="submit" disabled={isBusy}>이미지 정책 확인</button>
         </form>
-        <p className="notice">{settingsMessage}</p>
-        <p className="notice">{message}</p>
       </div>
 
       <div className="card wide">

@@ -94,3 +94,36 @@ test('audit log summary falls back when no known change can be summarized', () =
 
   assert.deepEqual(summary, ['상세 변경은 원본 JSON에서 확인하세요.']);
 });
+
+test('audit log summary highlights web info and plan service changes', () => {
+  const summary = formatAuditLogSummary({
+    action: 'admin.web_info.settings.update',
+    targetType: 'web_info_settings',
+    targetId: 'default',
+    beforeJson: {
+      settings: {
+        termsContent: 'Old terms',
+        privacyContent: 'Old privacy',
+        planServices: {
+          plan_monthly: ['TC Chart 접근'],
+          plan_half_year: ['TC Chart 접근', '유료 시그널 열람'],
+        },
+      },
+    },
+    afterJson: {
+      settings: {
+        termsContent: 'New terms',
+        privacyContent: 'Old privacy',
+        planServices: {
+          plan_monthly: ['TC Chart 접근', '유료 시그널 열람'],
+          plan_half_year: ['TC Chart 접근', '유료 시그널 열람'],
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(summary, [
+    '가입약관 내용 변경',
+    '플랜 제공서비스 변경: 1개 플랜',
+  ]);
+});

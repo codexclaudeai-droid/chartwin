@@ -32,6 +32,9 @@ export function createSupportThread(
 ): { thread: SupportThreadRecord; message: SupportMessageRecord } {
   const author = repository.getUserById(input.actor.id);
   if (!author) throw new Error(`User not found: ${input.actor.id}`);
+  if (input.category === 'trial' && input.actor.role !== USER_ROLES.member) {
+    throw new Error('Trial request requires a member account');
+  }
   if (!input.title.trim()) throw new Error('Support title required');
   if (!input.body.trim()) throw new Error('Support message required');
 

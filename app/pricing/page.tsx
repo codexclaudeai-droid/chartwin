@@ -1,41 +1,32 @@
 import {
-  getChartServiceRepository,
-  getPaymentTransferSettingsForDisplay,
+  getAsyncChartServicePersistence,
+  getAsyncPaymentTransferSettingsForDisplay,
+  getAsyncWebInfoSettingsForDisplay,
 } from '../../src/server/chart-service/index.ts';
 import { PricingPanel } from './pricing-panel';
 
-export default function PricingPage() {
-  const repository = getChartServiceRepository();
-  const plans = repository.listPlans();
-  const paymentSettings = getPaymentTransferSettingsForDisplay(repository);
+export const dynamic = 'force-dynamic';
+
+export default async function PricingPage() {
+  const persistence = getAsyncChartServicePersistence();
+  const { paymentSettings, plans, webInfoSettings } = await persistence.runRead(async (repository) => ({
+    plans: await repository.listPlans(),
+    paymentSettings: await getAsyncPaymentTransferSettingsForDisplay(repository),
+    webInfoSettings: await getAsyncWebInfoSettingsForDisplay(repository),
+  }));
 
   return (
-    <main className="page">
-      <h1>구독 플랜</h1>
-      <p className="lede">
-        결제는 자동 승인하지 않습니다. 사용자가 입금 확인 요청을 남기면 관리자가 실제 입금 내역을 수동 확인한 뒤 구독 승인, 환불, 취소를 처리합니다.
-      </p>
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Plan</th>
-            <th>Period</th>
-            <th>Price</th>
-            <th>Discount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {plans.map((plan) => (
-            <tr key={plan.id}>
-              <td>{plan.name}</td>
-              <td>{plan.durationDays}일</td>
-              <td>${Math.round(plan.basePriceUsd * (1 - plan.discountPercent / 100) * 100) / 100}</td>
-              <td>{plan.discountPercent}%</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <PricingPanel plans={plans} paymentSettings={paymentSettings} />
+    <main className="page pricing-page">
+      <section className="pricing-page-hero">
+        <span className="eyebrow">Subscription Checkout</span>
+        <h1>구독 플랜을 선택하고 결제 정보를 확인하세요.</h1>
+        <p className="lede">
+          BASIC, PRO, ELITE 플랜을 비교한 뒤 은행이체 또는 USDT 결제 정보를 확인하고 입금확인 요청까지 단계별로 진행합니다.
+          결제는 자동 승인되지 않으며 관리자가 실제 입금 내역을 수동 확인한 뒤 구독을 승인합니다.
+        </p>
+      </section>
+
+      <PricingPanel plans={plans} paymentSettings={paymentSettings} planServices={webInfoSettings.planServices} />
     </main>
   );
 }

@@ -371,6 +371,7 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
   };
   const amountUsd = Math.round(plan.basePriceUsd * (1 - plan.discountPercent / 100) * 100) / 100;
   const transactionId = normalizePaymentTransactionId(input.method, input.transactionId);
+  const depositorName = normalizePaymentDepositorName(input.method, input.depositorName);
   const { thread: supportThread, message: supportMessage } = createDepositSupportThreadDraft({
     threadId: supportThreadId,
     messageId: await repository.nextId('support_msg'),
@@ -379,7 +380,7 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
     plan,
     amountUsd,
     method: input.method,
-    depositorName: input.depositorName ?? null,
+    depositorName,
     transactionId,
     createdAt: input.requestedAt,
   });
@@ -395,7 +396,7 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
     exchangeRate: input.exchangeRate ?? null,
     referralPointsUsed: input.referralPointsUsed ?? 0,
     status: PAYMENT_STATUSES.pending,
-    depositorName: input.depositorName ?? null,
+    depositorName,
     transactionId,
     transactionVerificationStatus: TRANSACTION_VERIFICATION_STATUSES.unchecked,
     transactionVerificationMessage: null,
@@ -561,6 +562,9 @@ export async function createAsyncSupportThread(
   },
 ): Promise<{ thread: SupportThreadRecord; message: SupportMessageRecord }> {
   const author = await requireAsyncUser(repository, input.actor.id);
+  if (input.category === 'trial' && input.actor.role !== USER_ROLES.member) {
+    throw new Error('Trial request requires a member account');
+  }
   if (!input.title.trim()) throw new Error('Support title required');
   if (!input.body.trim()) throw new Error('Support message required');
 
@@ -968,6 +972,41 @@ export async function updateAsyncAdminUserAccountStatus(
   return getAsyncAdminUserDetail(repository, user.id);
 }
 
+export async function updateAsyncAdminUserEmail(
+  repository: AsyncChartServiceRepository,
+  input: { admin: Actor; userId: string; email: string },
+): Promise<AdminUserDetail> {
+  assertSuperAdminActor(input.admin);
+  const user = await requireAsyncUser(repository, input.userId);
+
+  const email = normalizeAdminUserEmail(input.email);
+  const existingUser = await repository.getUserByEmail(email);
+  if (existingUser && existingUser.id !== user.id) {
+    throw new Error('Email already in use');
+  }
+  if (email === user.email) return getAsyncAdminUserDetail(repository, user.id);
+
+  const updatedUser = {
+    ...user,
+    email,
+  };
+  await repository.saveUser(updatedUser);
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.user.email.update',
+    targetType: 'user',
+    targetId: user.id,
+    beforeJson: { user },
+    afterJson: {
+      user: updatedUser,
+      previousEmail: user.email,
+      nextEmail: email,
+    },
+  }));
+
+  return getAsyncAdminUserDetail(repository, user.id);
+}
+
 export async function confirmAsyncManualPaymentRequest(
   repository: AsyncChartServiceRepository,
   input: { paymentId: string; admin: Actor; confirmedAt: string; adminNote?: string },
@@ -1301,7 +1340,7 @@ export async function replyAsyncToSupportThreadAsAdmin(
   await createAsyncUserNotification(repository, {
     userId: thread.authorUserId,
     category: 'support_reply',
-    title: '怨좉컼?쇳꽣 ?듬????깅줉?섏뿀?듬땲??',
+    title: '고객센터 답변이 등록되었습니다',
     body: input.body.trim(),
     linkUrl: createSupportThreadLink(thread.id),
     createdAt: input.createdAt,
@@ -1437,10 +1476,26 @@ function normalizePaymentTransactionId(method: PaymentRequestRecord['method'], v
   return transactionId || null;
 }
 
+function normalizePaymentDepositorName(method: PaymentRequestRecord['method'], value: string | undefined): string | null {
+  const depositorName = String(value ?? '').trim();
+  if (method === 'bank_transfer' && !depositorName) {
+    throw new Error('Bank transfer depositor name required');
+  }
+  return depositorName || null;
+}
+
 const ADMIN_ROLES: UserRole[] = ['admin', 'super_admin'];
 
 function requiresSuperAdmin(role: UserRole): boolean {
   return ADMIN_ROLES.includes(role);
+}
+
+function normalizeAdminUserEmail(value: string): string {
+  const email = value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('Valid email required');
+  }
+  return email;
 }
 
 function isVisibleNotification(notification: NotificationRecord): boolean {

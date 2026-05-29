@@ -14,22 +14,43 @@ test('web info settings default to signup terms and privacy content', () => {
 
   assert.equal(settings.termsContent.length > 0, true);
   assert.equal(settings.privacyContent.length > 0, true);
+  assert.deepEqual(settings.planServices.plan_monthly.slice(0, 3), [
+    'TC Chart 접근',
+    '유료 시그널 열람',
+    '마이프로필 구독 상태 확인',
+  ]);
 });
 
-test('admin can update signup terms and privacy policy content', () => {
+test('admin can update signup terms, privacy policy, and plan service content', () => {
   const repository = createMockChartServiceRepository();
+  const before = getWebInfoSettingsForDisplay(repository);
 
   const updated = updateWebInfoSettings(repository, {
     admin: { id: 'admin_1', role: 'admin' },
     termsContent: 'Updated terms content',
     privacyContent: 'Updated privacy content',
+    planServices: {
+      plan_monthly: ['월간 차트 접근', '월간 시그널 열람'],
+      plan_half_year: ['6개월 전용 혜택'],
+      plan_yearly: ['연간 전용 혜택'],
+    },
     updatedAt: '2026-05-25T05:00:00.000Z',
   });
 
   assert.equal(updated.termsContent, 'Updated terms content');
   assert.equal(updated.privacyContent, 'Updated privacy content');
+  assert.deepEqual(updated.planServices.plan_monthly, ['월간 차트 접근', '월간 시그널 열람']);
+  assert.deepEqual(updated.planServices.plan_half_year, ['6개월 전용 혜택']);
+  assert.deepEqual(updated.planServices.plan_yearly, ['연간 전용 혜택']);
   assert.equal(updated.updatedByAdminId, 'admin_1');
   assert.equal(repository.getWebInfoSettings()?.privacyContent, 'Updated privacy content');
+  assert.deepEqual(repository.getWebInfoSettings()?.planServices.plan_yearly, ['연간 전용 혜택']);
+  const auditLog = repository.listAuditLogs().at(-1);
+  assert.equal(auditLog?.action, 'admin.web_info.settings.update');
+  assert.equal(auditLog?.targetType, 'web_info_settings');
+  assert.equal(auditLog?.targetId, 'default');
+  assert.deepEqual(auditLog?.beforeJson, { settings: before });
+  assert.deepEqual(auditLog?.afterJson, { settings: updated });
 });
 
 test('web info settings reject blank policy content', () => {
@@ -39,8 +60,29 @@ test('web info settings reject blank policy content', () => {
     admin: { id: 'admin_1', role: 'admin' },
     termsContent: '   ',
     privacyContent: 'Updated privacy content',
+    planServices: {
+      plan_monthly: ['월간 차트 접근'],
+      plan_half_year: ['6개월 전용 혜택'],
+      plan_yearly: ['연간 전용 혜택'],
+    },
     updatedAt: '2026-05-25T05:00:00.000Z',
   }), /Terms content is required/);
+});
+
+test('web info settings reject blank plan service items', () => {
+  const repository = createMockChartServiceRepository();
+
+  assert.throws(() => updateWebInfoSettings(repository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    termsContent: 'Updated terms content',
+    privacyContent: 'Updated privacy content',
+    planServices: {
+      plan_monthly: ['월간 차트 접근', '   '],
+      plan_half_year: ['6개월 전용 혜택'],
+      plan_yearly: ['연간 전용 혜택'],
+    },
+    updatedAt: '2026-05-25T05:00:00.000Z',
+  }), /Plan services must not include blank items/);
 });
 
 test('admin web info panel and routes are wired into operations UI', () => {
@@ -62,6 +104,8 @@ test('admin web info panel and routes are wired into operations UI', () => {
   assert.match(sectionSource, /개인정보보호정책/);
   assert.match(sectionSource, /입금정보관리/);
   assert.match(sectionSource, /포인트관리/);
+  assert.match(sectionSource, /플랜 제공서비스/);
+  assert.match(sectionSource, /href: '#admin-plan-services'/);
   assert.match(sectionSource, /href: '#admin-point-settings'/);
   assert.match(sectionSource, /getWebInfoPageFromHash/);
   assert.match(sectionSource, /hashchange/);
@@ -69,12 +113,23 @@ test('admin web info panel and routes are wired into operations UI', () => {
   assert.match(sectionSource, /activePage === 'privacy'/);
   assert.match(sectionSource, /activePage === 'payments'/);
   assert.match(sectionSource, /activePage === 'points'/);
+  assert.match(sectionSource, /activePage === 'planServices'/);
   assert.match(panelSource, /admin-web-info/);
-  assert.match(panelSource, /mode: 'terms' \| 'privacy'/);
+  assert.match(panelSource, /mode: 'terms' \| 'privacy' \| 'planServices'/);
   assert.match(panelSource, /mode === 'terms'/);
   assert.match(panelSource, /termsContent/);
   assert.match(panelSource, /privacyContent/);
+  assert.match(panelSource, /planServices/);
+  assert.match(panelSource, /plan-services-grid/);
+  assert.match(panelSource, /plan-services-help/);
+  assert.match(panelSource, /plan-services-preview/);
+  assert.match(panelSource, /제공서비스 미리보기/);
+  assert.match(panelSource, /서비스 항목/);
+  assert.match(panelSource, /플랜 제공서비스/);
+  assert.match(panelSource, /parsePlanServiceLines/);
   assert.match(panelSource, /\/api\/admin\/web-info/);
+  assert.match(panelSource, /dispatchAdminRefreshEvent/);
+  assert.match(panelSource, /source: 'webInfo'/);
   assert.match(adminRouteSource, /updateAsyncWebInfoSettings/);
   assert.match(publicRouteSource, /getAsyncWebInfoSettingsForDisplay/);
 });

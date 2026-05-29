@@ -13,6 +13,7 @@ import type {
   EmailOutboxRecord,
   PasswordResetTokenRecord,
   PaymentTransferSettingsRecord,
+  PublicBoardPostRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
@@ -351,6 +352,7 @@ export function mapWebInfoSettingsFromPostgresRow(row: PostgresRow): WebInfoSett
     id: readString(row.id),
     termsContent: readString(row.terms_content),
     privacyContent: readString(row.privacy_content),
+    planServices: readPlanServices(row.plan_services_json),
     updatedByAdminId: readNullableString(row.updated_by_admin_id),
     updatedAt: readIsoString(row.updated_at),
   };
@@ -361,6 +363,7 @@ export function mapWebInfoSettingsToPostgresRow(record: WebInfoSettingsRecord): 
     id: record.id,
     terms_content: record.termsContent,
     privacy_content: record.privacyContent,
+    plan_services_json: record.planServices,
     updated_by_admin_id: record.updatedByAdminId,
     updated_at: record.updatedAt,
   };
@@ -395,6 +398,34 @@ export function mapSignupAgreementToPostgresRow(record: SignupAgreementRecord): 
     ip_address: record.ipAddress,
     user_agent: record.userAgent,
     created_at: record.createdAt,
+  };
+}
+
+export function mapPublicBoardPostFromPostgresRow(row: PostgresRow): PublicBoardPostRecord {
+  return {
+    id: readString(row.id),
+    category: readString(row.category) as PublicBoardPostRecord['category'],
+    title: readString(row.title),
+    body: readString(row.body),
+    isPublished: readBoolean(row.is_published),
+    sortOrder: readNumber(row.sort_order),
+    createdAt: readIsoString(row.created_at),
+    updatedAt: readIsoString(row.updated_at),
+    updatedByAdminId: readNullableString(row.updated_by_admin_id),
+  };
+}
+
+export function mapPublicBoardPostToPostgresRow(record: PublicBoardPostRecord): PostgresRow {
+  return {
+    id: record.id,
+    category: record.category,
+    title: record.title,
+    body: record.body,
+    is_published: record.isPublished,
+    sort_order: record.sortOrder,
+    created_at: record.createdAt,
+    updated_at: record.updatedAt,
+    updated_by_admin_id: record.updatedByAdminId,
   };
 }
 
@@ -624,6 +655,23 @@ function readStringArray(value: unknown): string[] {
     throw new Error('Expected postgres json string array value');
   }
   return [...parsedValue];
+}
+
+function readPlanServices(value: unknown): Record<string, string[]> {
+  if (value == null) return {};
+  const parsedValue = typeof value === 'string' ? JSON.parse(value) : value;
+  if (!parsedValue || typeof parsedValue !== 'object' || Array.isArray(parsedValue)) {
+    throw new Error('Expected postgres json object value');
+  }
+
+  return Object.fromEntries(
+    Object.entries(parsedValue).map(([planId, services]) => {
+      if (!Array.isArray(services) || !services.every((service) => typeof service === 'string')) {
+        throw new Error('Expected postgres plan services string array value');
+      }
+      return [planId, [...services]];
+    }),
+  );
 }
 
 function assertSafeIdentifier(identifier: string): void {

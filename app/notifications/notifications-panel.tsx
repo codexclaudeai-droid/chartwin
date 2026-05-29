@@ -12,6 +12,7 @@ import {
   getNotificationBulkActionHint,
   getNotificationCategoryLabel,
   getNotificationEmptyStateMessage,
+  getNotificationFilterHelpMessage,
   getNotificationFilterKeyFromSearch,
   getNotificationLinkLabel,
   getNotificationNavigationMessage,
@@ -19,6 +20,7 @@ import {
   getNotificationsWithoutIds,
   getNotificationsWithReadState,
   getUnreadNotificationsByTab,
+  normalizeNotificationTitle,
 } from './notification-display';
 
 type NotificationRecord = {
@@ -51,6 +53,7 @@ export function NotificationsPanel() {
   const filteredNotifications = filterNotificationsByTab(notifications, activeFilterKey);
   const filteredUnreadNotifications = getUnreadNotificationsByTab(notifications, activeFilterKey);
   const emptyStateMessage = getNotificationEmptyStateMessage(activeFilterKey, notifications.length > 0);
+  const filterHelpMessage = getNotificationFilterHelpMessage(activeFilterKey);
   const bulkActionHint = getNotificationBulkActionHint(summary, activeFilterKey, filteredUnreadNotifications.length);
   const bulkActionHintId = bulkActionHint ? 'notification-bulk-action-hint' : undefined;
 
@@ -257,6 +260,7 @@ export function NotificationsPanel() {
         })}
       </div>
       <p className="notice compact">현재 필터: {NOTIFICATION_FILTER_TABS.find((tab) => tab.key === activeFilterKey)?.label ?? '전체'} / 표시 {filteredNotifications.length}건 / 미확인 {filteredUnreadNotifications.length}건</p>
+      {filterHelpMessage && <p className="notice compact">{filterHelpMessage}</p>}
       <div className="thread-list">
         {filteredNotifications.map((notification) => (
           <article className="thread-card" key={notification.id}>
@@ -265,7 +269,7 @@ export function NotificationsPanel() {
               <span>{formatNotificationReadState(notification.readAt)}</span>
               <span>{new Date(notification.createdAt).toLocaleString()}</span>
             </div>
-            <h3>{notification.title}</h3>
+            <h3>{normalizeNotificationTitle(notification.title)}</h3>
             <p>{notification.body}</p>
             <div className="actions compact">
               {notification.linkUrl && (

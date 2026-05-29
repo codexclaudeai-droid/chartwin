@@ -141,7 +141,7 @@ export type AuditLogDraft = {
   afterJson: unknown;
 };
 
-export type SupportCategory = 'deposit' | 'cancel' | 'partnership' | 'usage' | 'signal' | 'general';
+export type SupportCategory = 'deposit' | 'cancel' | 'partnership' | 'usage' | 'signal' | 'trial' | 'general';
 export type SupportVisibility = 'public' | 'private';
 export type SupportStatus = 'waiting' | 'answered' | 'closed';
 

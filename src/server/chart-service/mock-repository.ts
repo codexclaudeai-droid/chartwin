@@ -20,6 +20,7 @@ import type {
   EmailOutboxFilter,
   PasswordResetTokenRecord,
   PaymentTransferSettingsRecord,
+  PublicBoardPostRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
@@ -28,6 +29,7 @@ import type {
 } from './repository.ts';
 import { getDefaultChartServiceSubscriptionPlans } from './bootstrap.ts';
 import { createPasswordHash } from './passwords.ts';
+import { getDefaultPublicBoardPosts } from './public-board.ts';
 import { createStableFallbackReferralCode } from './referral-codes.ts';
 
 export type MockChartServiceState = {
@@ -44,6 +46,7 @@ export type MockChartServiceState = {
   paymentTransferSettings: PaymentTransferSettingsRecord | null;
   webInfoSettings: WebInfoSettingsRecord | null;
   signupAgreements: SignupAgreementRecord[];
+  publicBoardPosts: PublicBoardPostRecord[];
   referralLedgers: ReferralLedgerRecord[];
   supportThreads: SupportThreadRecord[];
   supportMessages: SupportMessageRecord[];
@@ -119,6 +122,7 @@ export function createMockChartServiceState(): MockChartServiceState {
     paymentTransferSettings: null,
     webInfoSettings: null,
     signupAgreements: [],
+    publicBoardPosts: getDefaultPublicBoardPosts(),
     referralLedgers: [
       {
         id: 'ref_ledger_pending',
@@ -197,6 +201,7 @@ export function createMockChartServiceRepository(
   state.paymentTransferSettings ??= null;
   state.webInfoSettings ??= null;
   state.signupAgreements ??= [];
+  state.publicBoardPosts ??= getDefaultPublicBoardPosts();
 
   return {
     nextId(prefix: string): string {
@@ -291,6 +296,10 @@ export function createMockChartServiceRepository(
     },
     saveReferralLedger(ledger) {
       upsertById(state.referralLedgers, ledger);
+    },
+    listPublicBoardPosts: () => state.publicBoardPosts.map((post) => structuredClone(post)),
+    savePublicBoardPost(post) {
+      upsertById(state.publicBoardPosts, post);
     },
     getSupportThreadById: (id) => cloneOrNull(state.supportThreads.find((thread) => thread.id === id)),
     listSupportThreads: () => state.supportThreads.map((thread) => ({ ...thread })),

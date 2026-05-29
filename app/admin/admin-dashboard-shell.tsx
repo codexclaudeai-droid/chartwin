@@ -16,8 +16,8 @@ import {
 const AdminDashboardShellContext = createContext<AdminDashboardSectionKey>('overview');
 
 export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode }>) {
-  const [activeSection, setActiveSection] = useState<AdminDashboardSectionKey>('overview');
-  const [activeTargetId, setActiveTargetId] = useState('admin-overview');
+  const [activeSection, setActiveSection] = useState<AdminDashboardSectionKey>(() => getInitialAdminDashboardState().activeSection);
+  const [activeTargetId, setActiveTargetId] = useState(() => getInitialAdminDashboardState().activeTargetId);
 
   useEffect(() => {
     function syncActiveSection() {
@@ -38,13 +38,13 @@ export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode
   }, []);
 
   useEffect(() => {
-    const targetId = window.location.hash.slice(1);
+    const targetId = activeTargetId;
     if (!targetId) return;
 
     window.requestAnimationFrame(() => {
       document.getElementById(decodeHashId(targetId))?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
-  }, [activeSection]);
+  }, [activeTargetId]);
 
   return (
     <AdminDashboardShellContext.Provider value={activeSection}>
@@ -126,6 +126,23 @@ function decodeHashId(targetId: string): string {
   } catch {
     return targetId;
   }
+}
+
+function getInitialAdminDashboardState(): {
+  activeSection: AdminDashboardSectionKey;
+  activeTargetId: string;
+} {
+  if (typeof window === 'undefined') {
+    return { activeSection: 'overview', activeTargetId: 'admin-overview' };
+  }
+
+  const targetId = decodeHashId(window.location.hash.startsWith('#')
+    ? window.location.hash.slice(1)
+    : window.location.hash);
+  return {
+    activeSection: getAdminDashboardSectionFromLocation(window.location.hash, window.location.search),
+    activeTargetId: targetId || getDefaultTargetIdForSearch(window.location.search),
+  };
 }
 
 function getDefaultTargetIdForSearch(search: string): string {

@@ -155,7 +155,8 @@ test('dashboard presentation helpers format user-facing account status labels', 
   assert.equal(formatSubscriptionStatusLabel('refund_requested'), '환불 승인 대기');
   assert.equal(formatPaymentStatusLabel('confirmed'), '입금 확인 완료');
   assert.equal(formatPaymentStatusLabel('refunded'), '환불 완료');
-  assert.equal(formatChartAccessLabel({ fullChart: true, paidSignals: true }), '전체 차트와 유료 시그널 이용 가능');
+  assert.equal(formatChartAccessLabel({ fullChart: true, paidSignals: true }), 'TC Chart와 유료 시그널 이용 가능');
+  assert.equal(formatChartAccessLabel({ fullChart: true, paidSignals: false }), 'TC Chart 이용 가능, 유료 시그널 승인 대기');
   assert.equal(formatChartAccessLabel({ fullChart: false, paidSignals: false }), '구독 승인 후 이용 가능');
   assert.equal(formatPaymentAmountUsd(49.9), '$49.90');
 });

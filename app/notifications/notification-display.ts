@@ -40,6 +40,11 @@ const EMPTY_STATE_MESSAGES: Record<NotificationFilterKey, string> = {
   subscription: '구독 알림이 없습니다. 승인, 만료 예정, 취소/환불 처리 결과가 생기면 표시됩니다.',
 };
 
+const FILTER_HELP_MESSAGES: Partial<Record<NotificationFilterKey, string>> = {
+  unread: '고객센터 답변 알림은 미확인 탭에 표시됩니다. 알림의 "문의 답변 확인하기"를 누르면 해당 문의 카드로 이동합니다.',
+  support: '문의 탭에서는 고객센터 답변과 문의 관련 알림만 모아봅니다. "문의 답변 확인하기"를 누르면 답변이 달린 문의로 이동합니다.',
+};
+
 export function getNotificationFilterKeyFromSearch(search: string): NotificationFilterKey {
   const params = new URLSearchParams(search);
   const filterKey = params.get('tab');
@@ -55,6 +60,10 @@ export function getNotificationEmptyStateMessage(
   if (!hasAnyNotifications) return EMPTY_STATE_MESSAGES.all;
 
   return EMPTY_STATE_MESSAGES[filterKey];
+}
+
+export function getNotificationFilterHelpMessage(filterKey: NotificationFilterKey): string | null {
+  return FILTER_HELP_MESSAGES[filterKey] ?? null;
 }
 
 export function getNotificationBulkActionHint(
@@ -86,6 +95,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   expiry: '만료 예정',
   notice: '공지',
 };
+
+const LEGACY_MOJIBAKE_TITLES: Record<string, string> = {
+  '怨좉컼?쇳꽣 ?듬????깅줉?섏뿀?듬땲??': '고객센터 답변이 등록되었습니다',
+};
+
+export function normalizeNotificationTitle(title: string): string {
+  return LEGACY_MOJIBAKE_TITLES[title] ?? title;
+}
 
 export function getNotificationCategoryLabel(category: string): string {
   return CATEGORY_LABELS[category] ?? category;

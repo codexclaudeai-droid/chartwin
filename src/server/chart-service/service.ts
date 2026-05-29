@@ -117,6 +117,7 @@ export function createManualPaymentRequest(
   };
   const amountUsd = calculatePlanAmountUsd(plan.basePriceUsd, plan.discountPercent);
   const transactionId = normalizePaymentTransactionId(input.method, input.transactionId);
+  const depositorName = normalizePaymentDepositorName(input.method, input.depositorName);
   const { thread: supportThread, message: supportMessage } = createDepositSupportThreadDraft({
     threadId: supportThreadId,
     messageId: repository.nextId('support_msg'),
@@ -125,7 +126,7 @@ export function createManualPaymentRequest(
     plan,
     amountUsd,
     method: input.method,
-    depositorName: input.depositorName ?? null,
+    depositorName,
     transactionId,
     createdAt: input.requestedAt,
   });
@@ -141,7 +142,7 @@ export function createManualPaymentRequest(
     exchangeRate: input.exchangeRate ?? null,
     referralPointsUsed: input.referralPointsUsed ?? 0,
     status: PAYMENT_STATUSES.pending,
-    depositorName: input.depositorName ?? null,
+    depositorName,
     transactionId,
     transactionVerificationStatus: TRANSACTION_VERIFICATION_STATUSES.unchecked,
     transactionVerificationMessage: null,
@@ -738,6 +739,14 @@ function normalizePaymentTransactionId(method: PaymentRequestRecord['method'], v
     throw new Error('USDT transaction id too long');
   }
   return transactionId || null;
+}
+
+function normalizePaymentDepositorName(method: PaymentRequestRecord['method'], value: string | undefined): string | null {
+  const depositorName = String(value ?? '').trim();
+  if (method === 'bank_transfer' && !depositorName) {
+    throw new Error('Bank transfer depositor name required');
+  }
+  return depositorName || null;
 }
 
 function requireUser(repository: ChartServiceRepository, userId: string) {

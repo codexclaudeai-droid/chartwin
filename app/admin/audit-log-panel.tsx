@@ -46,6 +46,7 @@ const AUDIT_LOG_REFRESH_SOURCE_LABELS: Record<AdminRefreshSource, string> = {
   subscriptions: '구독 작업',
   support: '고객센터 작업',
   users: '회원 작업',
+  webInfo: '웹정보 설정',
 };
 
 export function AuditLogPanel() {

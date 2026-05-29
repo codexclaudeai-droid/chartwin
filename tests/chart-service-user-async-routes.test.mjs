@@ -31,6 +31,8 @@ test('user read routes use the async persistence boundary', () => {
   for (const routePath of [
     '../app/api/notifications/route.ts',
     '../app/api/support/threads/route.ts',
+    '../app/api/auth/email-check/route.ts',
+    '../app/api/auth/referral-check/route.ts',
   ]) {
     const source = readFileSync(new URL(routePath, import.meta.url), 'utf8');
 
@@ -78,4 +80,40 @@ test('auth responses do not expose password hashes', async () => {
   assert.equal(loginPayload.user.passwordHash, undefined);
   assert.equal(signupResponse.status, 200);
   assert.equal(signupPayload.user.passwordHash, undefined);
+});
+
+test('payment request route rejects bank transfers without a depositor name', async () => {
+  const { resetChartServiceRateLimits } = await import('../src/server/chart-service/index.ts');
+  const loginRoute = await import('../app/api/auth/login/route.ts');
+  const paymentRoute = await import('../app/api/payments/request/route.ts');
+
+  resetChartServiceRateLimits();
+  const loginResponse = await loginRoute.POST(new Request('http://localhost/api/auth/login', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ email: 'member@example.com', password: 'Demo1234!' }),
+  }));
+
+  const paymentResponse = await paymentRoute.POST(new Request('http://localhost/api/payments/request', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+      cookie: loginResponse.headers.get('set-cookie') ?? '',
+    },
+    body: JSON.stringify({
+      planId: 'plan_monthly',
+      method: 'bank_transfer',
+      depositorName: '   ',
+      exchangeRate: 1360,
+    }),
+  }));
+  const paymentPayload = await paymentResponse.json();
+
+  assert.equal(paymentResponse.status, 400);
+  assert.equal(paymentPayload.ok, false);
+  assert.match(paymentPayload.message, /Bank transfer depositor name required/);
 });

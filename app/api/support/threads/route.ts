@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 }
 
 function normalizeCategory(value: unknown): SupportCategory {
-  const allowed: SupportCategory[] = ['deposit', 'cancel', 'partnership', 'usage', 'signal', 'general'];
+  const allowed: SupportCategory[] = ['deposit', 'cancel', 'partnership', 'usage', 'signal', 'trial', 'general'];
   return allowed.includes(value as SupportCategory) ? value as SupportCategory : 'general';
 }
 

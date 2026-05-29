@@ -4,8 +4,10 @@ import test from 'node:test';
 import {
   createMockChartServiceRepository,
   createSupportThread,
+  listPublishedPublicBoardPosts,
   listVisibleSupportThreads,
   replyToSupportThreadAsAdmin,
+  updatePublicBoardPosts,
 } from '../src/server/chart-service/index.ts';
 
 test('member can create a private support thread with an initial message', () => {
@@ -25,6 +27,29 @@ test('member can create a private support thread with an initial message', () =>
   assert.equal(result.thread.visibility, 'private');
   assert.equal(result.message.threadId, result.thread.id);
   assert.equal(result.message.isAdminReply, false);
+});
+
+test('free trial support requests require a normal member account', () => {
+  const repository = createMockChartServiceRepository();
+
+  const result = createSupportThread(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'trial',
+    title: '무료체험 신청',
+    body: '무료체험을 신청합니다.',
+    visibility: 'private',
+    createdAt: '2026-05-23T11:00:00.000Z',
+  });
+
+  assert.equal(result.thread.category, 'trial');
+  assert.throws(() => createSupportThread(repository, {
+    actor: { id: 'admin_1', role: 'admin' },
+    category: 'trial',
+    title: '무료체험 신청',
+    body: '관리자 계정 신청',
+    visibility: 'private',
+    createdAt: '2026-05-23T11:00:00.000Z',
+  }), /Trial request requires a member account/);
 });
 
 test('support visibility exposes public threads to guests and private threads only to owner or admin', () => {
@@ -121,14 +146,183 @@ test('member support panel supports notification deep links to a thread', () => 
   assert.match(panelSource, /targetThreadId/);
   assert.match(panelSource, /targetThread/);
   assert.match(panelSource, /latestAdminReply/);
+  assert.match(panelSource, /orderedThreads/);
+  assert.match(panelSource, /activeFilterKey/);
+  assert.match(panelSource, /filterSupportThreads/);
+  assert.match(panelSource, /aria-label="내 문의 빠른 필터"/);
+  assert.match(panelSource, /quick-filter-count/);
+  assert.match(panelSource, /현재 필터: \{activeFilter\.label\}/);
+  assert.match(panelSource, /filteredThreads\.map/);
+  assert.match(panelSource, /현재 필터에 해당하는 문의가 없습니다/);
   assert.match(panelSource, /support-deep-link-notice/);
   assert.match(panelSource, /답변 확인 대상 문의/);
   assert.match(panelSource, /최근 관리자 답변/);
+  assert.match(panelSource, /support-thread-answered/);
+  assert.match(panelSource, /support-reply-preview/);
+  assert.match(panelSource, /support-answer-badge/);
+  assert.match(panelSource, /답변 확인 가능/);
+  assert.match(panelSource, /support-target-badge/);
+  assert.match(panelSource, /알림에서 이동/);
+  assert.match(panelSource, /최근 답변/);
   assert.match(panelSource, /문의 카드로 이동/);
   assert.match(panelSource, /id=\{`support-\$\{item\.thread\.id\}`\}/);
   assert.match(panelSource, /support-thread-target/);
   assert.match(pageSource, /import \{ Suspense \} from 'react'/);
   assert.match(pageSource, /<Suspense fallback=/);
   assert.match(styleSource, /\.thread-card\.support-thread-target/);
+  assert.match(styleSource, /\.thread-card\.support-thread-answered/);
+  assert.match(styleSource, /@keyframes supportTargetPulse/);
+  assert.match(styleSource, /\.support-answer-badge/);
+  assert.match(styleSource, /\.support-target-badge/);
+  assert.match(styleSource, /\.support-reply-preview/);
   assert.match(styleSource, /\.support-deep-link-notice/);
+});
+
+test('member support panel supports trial request presets from landing links', () => {
+  const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const labelSource = fs.readFileSync(new URL('../app/support/support-display-labels.ts', import.meta.url), 'utf8');
+  const defaultSource = fs.readFileSync(new URL('../app/support/support-request-defaults.ts', import.meta.url), 'utf8');
+  const routeSource = fs.readFileSync(new URL('../app/api/support/threads/route.ts', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /presetCategory/);
+  assert.match(panelSource, /searchParams\.get\('category'\)/);
+  assert.match(panelSource, /presetCategory !== 'trial' && presetCategory !== 'partnership'/);
+  assert.match(panelSource, /authSession/);
+  assert.match(panelSource, /canSubmitTrialRequest/);
+  assert.match(panelSource, /\/api\/auth\/me/);
+  assert.match(panelSource, /trial-auth-gate/);
+  assert.match(panelSource, /무료체험 신청은 일반회원 로그인이 필요합니다/);
+  assert.match(panelSource, /\/signup\?redirect=\/support%3Fcategory%3Dtrial%23support-inquiry-form/);
+  assert.match(panelSource, /\/login\?redirect=\/support%3Fcategory%3Dtrial%23support-inquiry-form/);
+  assert.match(panelSource, /getTrialSupportRequestDraft/);
+  assert.match(panelSource, /getPartnershipSupportRequestDraft/);
+  assert.match(panelSource, /value="trial"/);
+  assert.match(panelSource, /value="partnership"/);
+  assert.match(labelSource, /trial/);
+  assert.match(labelSource, /partnership/);
+  assert.match(defaultSource, /무료체험 신청/);
+  assert.match(defaultSource, /체험 가능 조건/);
+  assert.match(defaultSource, /제휴문의/);
+  assert.match(defaultSource, /TradingCore 서비스 제휴/);
+  assert.match(routeSource, /'trial'/);
+  assert.match(styleSource, /\.trial-auth-gate/);
+  assert.doesNotMatch(defaultSource, /5분 차트 미리보기/);
+});
+
+test('support page exposes public notice qna and faq boards before private inquiries', () => {
+  const pageSource = fs.readFileSync(new URL('../app/support/page.tsx', import.meta.url), 'utf8');
+  const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(pageSource, /getAsyncChartServicePersistence/);
+  assert.match(pageSource, /persistence\.runRead/);
+  assert.match(pageSource, /SUPPORT_CONTACT_ROUTES/);
+  assert.match(pageSource, /support-contact-routes/);
+  assert.match(pageSource, /1:1 문의/);
+  assert.match(pageSource, /제휴문의/);
+  assert.match(pageSource, /무료체험신청/);
+  assert.match(pageSource, /#support-inquiry-form/);
+  assert.match(pageSource, /\/support\?category=partnership#support-inquiry-form/);
+  assert.match(pageSource, /\/signup\?redirect=\/support%3Fcategory%3Dtrial%23support-inquiry-form/);
+  assert.match(pageSource, /회원가입 후 무료체험 신청/);
+  assert.match(panelSource, /id="support-inquiry-form"/);
+  assert.doesNotMatch(pageSource, /SUPPORT_FLOW/);
+  assert.doesNotMatch(pageSource, /입금\/결제/);
+  assert.doesNotMatch(pageSource, /취소\/환불/);
+  assert.match(pageSource, /listAsyncPublishedPublicBoardPosts/);
+  assert.match(pageSource, /PUBLIC_BOARD_CATEGORY_LABELS/);
+  assert.match(pageSource, /support-public-board/);
+  assert.match(pageSource, /공지사항/);
+  assert.match(pageSource, /질문답변/);
+  assert.match(pageSource, /FAQ/);
+  assert.match(pageSource, /공개 게시판/);
+  assert.match(pageSource, /<SupportPanel \/>/);
+  assert.match(styleSource, /\.support-contact-routes/);
+  assert.match(styleSource, /\.support-contact-route-card/);
+  assert.match(styleSource, /#support-inquiry-form/);
+  assert.match(styleSource, /\.support-public-board/);
+  assert.match(styleSource, /\.support-public-board-card/);
+});
+
+test('public board posts are repository backed and hide unpublished items', () => {
+  const repository = createMockChartServiceRepository();
+
+  repository.savePublicBoardPost({
+    id: 'public_board_hidden',
+    category: 'notice',
+    title: 'Hidden notice',
+    body: 'Operators can keep draft posts unpublished.',
+    isPublished: false,
+    sortOrder: -10,
+    createdAt: '2026-05-25T09:00:00.000Z',
+    updatedAt: '2026-05-25T09:00:00.000Z',
+    updatedByAdminId: 'admin_1',
+  });
+  repository.savePublicBoardPost({
+    id: 'public_board_priority',
+    category: 'faq',
+    title: 'Priority FAQ',
+    body: 'Published posts are sorted by configured order.',
+    isPublished: true,
+    sortOrder: -20,
+    createdAt: '2026-05-25T10:00:00.000Z',
+    updatedAt: '2026-05-25T10:00:00.000Z',
+    updatedByAdminId: 'admin_1',
+  });
+
+  const posts = listPublishedPublicBoardPosts(repository);
+
+  assert.equal(posts.some((post) => post.id === 'public_board_hidden'), false);
+  assert.equal(posts[0].id, 'public_board_priority');
+  assert.deepEqual(
+    [...new Set(posts.map((post) => post.category))].sort(),
+    ['faq', 'notice', 'qna'],
+  );
+});
+
+test('admin can update public board posts with audit evidence', () => {
+  const repository = createMockChartServiceRepository();
+
+  const updated = updatePublicBoardPosts(repository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    posts: [
+      {
+        id: 'public_board_notice',
+        category: 'notice',
+        title: 'Updated notice',
+        body: 'Updated public notice body',
+        isPublished: true,
+        sortOrder: 1,
+      },
+      {
+        category: 'faq',
+        title: 'New FAQ',
+        body: 'New FAQ body',
+        isPublished: false,
+        sortOrder: 2,
+      },
+    ],
+    updatedAt: '2026-05-25T11:00:00.000Z',
+  });
+
+  assert.equal(updated[0].title, 'Updated notice');
+  assert.equal(updated[0].createdAt, '2026-05-23T00:00:00.000Z');
+  assert.equal(updated[1].id.startsWith('public_board_'), true);
+  assert.equal(repository.listPublicBoardPosts().some((post) => post.title === 'New FAQ'), true);
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'admin.public_board.update');
+});
+
+test('admin web info section exposes public board management submenu and route', () => {
+  const sectionSource = fs.readFileSync(new URL('../app/admin/admin-web-info-section.tsx', import.meta.url), 'utf8');
+  const panelSource = fs.readFileSync(new URL('../app/admin/admin-public-board-panel.tsx', import.meta.url), 'utf8');
+  const routeSource = fs.readFileSync(new URL('../app/api/admin/public-board/route.ts', import.meta.url), 'utf8');
+
+  assert.match(sectionSource, /AdminPublicBoardPanel/);
+  assert.match(sectionSource, /href: '#admin-public-board'/);
+  assert.match(sectionSource, /activePage === 'publicBoard'/);
+  assert.match(panelSource, /\/api\/admin\/public-board/);
+  assert.match(panelSource, /PUBLIC_BOARD_CATEGORY_LABELS/);
+  assert.match(panelSource, /공개 게시판 저장/);
+  assert.match(routeSource, /updateAsyncPublicBoardPosts/);
 });

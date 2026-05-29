@@ -136,7 +136,7 @@ export function AdminPaymentSettingsPanel() {
             <input
               value={settings.bankAccountHolder}
               onChange={(event) => updateField('bankAccountHolder', event.target.value)}
-              placeholder="예: TC Chart"
+              placeholder="예: TradingCore"
               required
             />
           </label>

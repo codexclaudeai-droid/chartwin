@@ -1,4 +1,4 @@
-import { assertAdminActor, type Actor } from '../../domain/chart-service/index.ts';
+import { assertAdminActor, createAuditLogDraft, type Actor } from '../../domain/chart-service/index.ts';
 import type {
   AsyncChartServiceRepository,
 } from './async-repository.ts';
@@ -46,8 +46,17 @@ export function updatePaymentTransferSettings(
   input: PaymentTransferSettingsInput,
 ): PaymentTransferSettingsRecord {
   assertAdminActor(input.admin);
+  const before = repository.getPaymentTransferSettings?.() ?? null;
   const settings = createPaymentTransferSettingsRecord(input);
   repository.savePaymentTransferSettings(settings);
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'payment_transfer_settings.update',
+    targetType: 'payment_transfer_settings',
+    targetId: settings.id,
+    beforeJson: { settings: before },
+    afterJson: { settings },
+  }));
   return settings;
 }
 
@@ -56,8 +65,17 @@ export async function updateAsyncPaymentTransferSettings(
   input: PaymentTransferSettingsInput,
 ): Promise<PaymentTransferSettingsRecord> {
   assertAdminActor(input.admin);
+  const before = await repository.getPaymentTransferSettings?.() ?? null;
   const settings = createPaymentTransferSettingsRecord(input);
   await repository.savePaymentTransferSettings(settings);
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'payment_transfer_settings.update',
+    targetType: 'payment_transfer_settings',
+    targetId: settings.id,
+    beforeJson: { settings: before },
+    afterJson: { settings },
+  }));
   return settings;
 }
 

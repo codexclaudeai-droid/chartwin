@@ -61,7 +61,7 @@ export function SubscriptionActionsPanel() {
       </div>
       <div className="status-list">
         <div className="status-row">
-          <span>권한</span>
+          <span>회원레벨</span>
           <strong>{access?.role ?? '-'}</strong>
         </div>
         <div className="status-row">

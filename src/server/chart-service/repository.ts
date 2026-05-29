@@ -92,6 +92,7 @@ export type WebInfoSettingsRecord = {
   id: string;
   termsContent: string;
   privacyContent: string;
+  planServices: Record<string, string[]>;
   updatedByAdminId: string | null;
   updatedAt: string;
 };
@@ -108,6 +109,20 @@ export type SignupAgreementRecord = {
   ipAddress: string | null;
   userAgent: string | null;
   createdAt: string;
+};
+
+export type PublicBoardCategory = 'notice' | 'qna' | 'faq';
+
+export type PublicBoardPostRecord = {
+  id: string;
+  category: PublicBoardCategory;
+  title: string;
+  body: string;
+  isPublished: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  updatedByAdminId: string | null;
 };
 
 export type EmailOutboxFilter = {
@@ -150,6 +165,8 @@ export type ChartServiceRepository = {
   saveSignupAgreement(agreement: SignupAgreementRecord): void;
   listReferralLedgersByPaymentId(paymentRequestId: string): ReferralLedgerRecord[];
   saveReferralLedger(ledger: ReferralLedgerRecord): void;
+  listPublicBoardPosts(): PublicBoardPostRecord[];
+  savePublicBoardPost(post: PublicBoardPostRecord): void;
   getSupportThreadById(id: string): SupportThreadRecord | null;
   listSupportThreads(): SupportThreadRecord[];
   saveSupportThread(thread: SupportThreadRecord): void;

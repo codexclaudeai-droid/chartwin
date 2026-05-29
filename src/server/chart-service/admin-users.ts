@@ -226,8 +226,52 @@ export function updateAdminUserAccountStatus(
   return getAdminUserDetail(repository, user.id);
 }
 
+export function updateAdminUserEmail(
+  repository: ChartServiceRepository,
+  input: { admin: Actor; userId: string; email: string },
+): AdminUserDetail {
+  assertSuperAdminActor(input.admin);
+  const user = repository.getUserById(input.userId);
+  if (!user) throw new Error(`User not found: ${input.userId}`);
+
+  const email = normalizeAdminUserEmail(input.email);
+  const existingUser = repository.getUserByEmail(email);
+  if (existingUser && existingUser.id !== user.id) {
+    throw new Error('Email already in use');
+  }
+  if (email === user.email) return getAdminUserDetail(repository, user.id);
+
+  const updatedUser = {
+    ...user,
+    email,
+  };
+  repository.saveUser(updatedUser);
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.user.email.update',
+    targetType: 'user',
+    targetId: user.id,
+    beforeJson: { user },
+    afterJson: {
+      user: updatedUser,
+      previousEmail: user.email,
+      nextEmail: email,
+    },
+  }));
+
+  return getAdminUserDetail(repository, user.id);
+}
+
 function requiresSuperAdmin(role: UserRole): boolean {
   return ADMIN_ROLES.includes(role);
+}
+
+function normalizeAdminUserEmail(value: string): string {
+  const email = value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('Valid email required');
+  }
+  return email;
 }
 
 function isVisibleNotification(notification: NotificationRecord): boolean {
