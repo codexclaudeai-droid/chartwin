@@ -15,6 +15,7 @@ test('deployment runbook documents the production Postgres release flow', () => 
     'CLOUDFLARE_HYPERDRIVE_NAME=tradingcore-hyperdrive',
     'CLOUDFLARE_HYPERDRIVE_BINDING=HYPERDRIVE',
     'CLOUDFLARE_HYPERDRIVE_ID',
+    'CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE',
     'CHART_SERVICE_SESSION_SECRET',
     'CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL',
     'npm.cmd run service:launch-check',
