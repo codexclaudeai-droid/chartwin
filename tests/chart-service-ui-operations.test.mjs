@@ -267,6 +267,18 @@ test('admin payment panel uses a dark operational queue finish', () => {
   assert.match(cssSource, /#admin-payments \.admin-payment-action-cell \.quick-memo-button\s*\{[\s\S]*?border-color:/s);
 });
 
+test('admin payment quick filters remove the outer container outline', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const quickFilterRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-payments \.quick-filter-row\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(quickFilterRule, /border:\s*0/);
+  assert.match(quickFilterRule, /outline:\s*0/);
+  assert.match(quickFilterRule, /box-shadow:\s*none/);
+  assert.doesNotMatch(quickFilterRule, /border:\s*1px/);
+});
+
 test('admin payment panel labels confirmation as deposit confirmation only', () => {
   const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
 
