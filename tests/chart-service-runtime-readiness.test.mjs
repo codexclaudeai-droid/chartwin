@@ -78,6 +78,24 @@ test('runtime readiness fails unsafe postgres SSL settings in production', async
   assert.match(sslCheck?.message ?? '', /SSL/);
 });
 
+test('runtime readiness accepts Hyperdrive local connections without app-level SSL', async () => {
+  const { getChartServiceRuntimeReadiness } = await import('../src/server/chart-service/index.ts');
+
+  const readiness = getChartServiceRuntimeReadiness({
+    NODE_ENV: 'production',
+    CHART_SERVICE_REPOSITORY: 'postgres',
+    CHART_SERVICE_DATABASE_URL: 'postgresql://token.hyperdrive.local:5432/config-id',
+    CHART_SERVICE_DATABASE_SSL_MODE: 'require',
+    CHART_SERVICE_RUNTIME_TARGET: 'cloudflare-workers',
+    CHART_SERVICE_SESSION_SECRET: '0123456789abcdef0123456789abcdef',
+  });
+  const sslCheck = readiness.checks.find((check) => check.key === 'database_ssl');
+
+  assert.equal(readiness.ok, true);
+  assert.equal(sslCheck?.status, 'pass');
+  assert.match(sslCheck?.message ?? '', /Hyperdrive/);
+});
+
 test('runtime readiness requires a strong session signing secret in production', async () => {
   const { getChartServiceRuntimeReadiness } = await import('../src/server/chart-service/index.ts');
 

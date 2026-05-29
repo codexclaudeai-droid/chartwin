@@ -4,8 +4,10 @@ import {
   type ChartServiceRepositoryRuntimeEnv,
 } from './repository-adapter.ts';
 import {
+  isCloudflareHyperdriveConnection,
   isPostgresSslModeProductionSafe,
   type PostgresSslMode,
+  type PostgresConnectionSettings,
 } from './postgres-connection.ts';
 
 export type ChartServiceRuntimeMode = 'development' | 'test' | 'production';
@@ -106,17 +108,13 @@ export function getChartServiceRuntimeReadiness(
         ? `Database URL is configured for ${connection.safeLabel}.`
         : 'CHART_SERVICE_DATABASE_URL is required.',
     });
-    const sslStatus = connection && mode === 'production' && !isPostgresSslModeProductionSafe(connection.sslMode)
-      ? 'fail'
-      : connection && isPostgresSslModeProductionSafe(connection.sslMode)
-        ? 'pass'
-        : 'warn';
+    const sslStatus = connection ? getDatabaseSslStatus(connection, mode) : 'fail';
     checks.push({
       key: 'database_ssl',
       label: 'Database SSL',
       status: sslStatus,
       message: connection
-        ? renderDatabaseSslMessage(connection.sslMode, mode)
+        ? renderDatabaseSslMessage(connection, mode)
         : 'Database SSL mode cannot be checked without a valid database URL.',
     });
     checks.push({
@@ -258,7 +256,24 @@ function normalizeMode(value: string | undefined): ChartServiceRuntimeMode {
   return 'development';
 }
 
-function renderDatabaseSslMessage(sslMode: PostgresSslMode, mode: ChartServiceRuntimeMode): string {
+function getDatabaseSslStatus(
+  connection: PostgresConnectionSettings,
+  mode: ChartServiceRuntimeMode,
+): RuntimeReadinessCheck['status'] {
+  if (isCloudflareHyperdriveConnection(connection)) return 'pass';
+  if (mode === 'production' && !isPostgresSslModeProductionSafe(connection.sslMode)) return 'fail';
+  if (isPostgresSslModeProductionSafe(connection.sslMode)) return 'pass';
+  return 'warn';
+}
+
+function renderDatabaseSslMessage(
+  connection: PostgresConnectionSettings,
+  mode: ChartServiceRuntimeMode,
+): string {
+  const sslMode = connection.sslMode;
+  if (isCloudflareHyperdriveConnection(connection)) {
+    return 'Cloudflare Hyperdrive local binding is configured without app-level SSL; origin SSL is managed by Hyperdrive.';
+  }
   if (mode === 'production' && !isPostgresSslModeProductionSafe(sslMode)) {
     return `Postgres SSL mode "${sslMode}" is unsafe for production. Use require, verify-ca, or verify-full.`;
   }

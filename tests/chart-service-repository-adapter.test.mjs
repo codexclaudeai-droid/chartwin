@@ -105,6 +105,19 @@ test('cloudflare workers runtime uses Supabase direct host when a pooler url inc
   assert.equal(JSON.stringify(settings).includes('super-secret'), false);
 });
 
+test('cloudflare Hyperdrive local connections disable app-level SSL', () => {
+  const settings = resolvePostgresConnectionSettings({
+    databaseUrl: 'postgresql://token.hyperdrive.local:5432/config-id',
+    databaseSslMode: 'require',
+    runtimeTarget: 'cloudflare-workers',
+    runtimeMode: 'production',
+  });
+
+  assert.equal(settings.host, 'token.hyperdrive.local');
+  assert.equal(settings.sslMode, 'disable');
+  assert.equal(settings.safeLabel, 'postgresql://token.hyperdrive.local:5432/config-id?sslmode=disable');
+});
+
 test('postgres adapter rejects invalid connection protocol and SSL mode early', () => {
   assert.throws(
     () => resolveChartServiceRepositoryAdapter({

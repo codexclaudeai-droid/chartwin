@@ -53,10 +53,11 @@ export function resolvePostgresConnectionSettings(
   }
 
   const runtimeMode = normalizeRuntimeMode(input.runtimeMode);
-  const sslMode = normalizePostgresSslMode(
+  const requestedSslMode = normalizePostgresSslMode(
     input.databaseSslMode ?? url.searchParams.get('sslmode'),
     runtimeMode === 'production' ? 'require' : 'prefer',
   );
+  const sslMode = isCloudflareHyperdriveHost(url.hostname) ? 'disable' : requestedSslMode;
 
   const portPart = url.port ? `:${url.port}` : '';
   const safeLabel = `${protocol}://${url.hostname}${portPart}/${databaseName}?sslmode=${sslMode}`;
@@ -82,6 +83,10 @@ export function resolvePostgresConnectionSettings(
 
 export function isPostgresSslModeProductionSafe(sslMode: PostgresSslMode): boolean {
   return PRODUCTION_SAFE_SSL_MODES.includes(sslMode);
+}
+
+export function isCloudflareHyperdriveConnection(settings: PostgresConnectionSettings): boolean {
+  return isCloudflareHyperdriveHost(settings.host);
 }
 
 export function getPostgresConnectionSignature(settings: PostgresConnectionSettings): string {
@@ -130,6 +135,10 @@ function normalizeRuntimeConnectionString(connectionString: string, runtimeTarge
   if (url.port !== '5432') return connectionString;
   url.port = '6543';
   return url.toString();
+}
+
+function isCloudflareHyperdriveHost(hostname: string): boolean {
+  return hostname.endsWith('.hyperdrive.local');
 }
 
 function createSupabaseDirectConnectionUrl(url: URL): string | null {

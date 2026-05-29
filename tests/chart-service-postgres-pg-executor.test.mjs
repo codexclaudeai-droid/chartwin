@@ -37,6 +37,12 @@ test('pg pool options strip sslmode from the connection string and normalize SSL
     databaseUrl: 'postgresql://postgres.project-ref:secret@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require',
     runtimeTarget: 'cloudflare-workers',
   });
+  const hyperdriveSsl = resolvePostgresConnectionSettings({
+    databaseUrl: 'postgresql://token.hyperdrive.local:5432/config-id',
+    databaseSslMode: 'require',
+    runtimeTarget: 'cloudflare-workers',
+    runtimeMode: 'production',
+  });
 
   assert.deepEqual(createPgPoolOptions(requiredSsl), {
     connectionString: 'postgresql://chart_app:secret@db.example.com/chart_service',
@@ -49,5 +55,9 @@ test('pg pool options strip sslmode from the connection string and normalize SSL
   assert.deepEqual(createPgPoolOptions(cloudflareSsl), {
     connectionString: 'postgresql://postgres:secret@db.project-ref.supabase.co:5432/postgres',
     ssl: true,
+  });
+  assert.deepEqual(createPgPoolOptions(hyperdriveSsl), {
+    connectionString: 'postgresql://token.hyperdrive.local:5432/config-id',
+    ssl: false,
   });
 });
