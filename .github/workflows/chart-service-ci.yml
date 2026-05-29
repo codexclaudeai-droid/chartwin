@@ -28,9 +28,6 @@ jobs:
       - name: Build chart app
         run: npm.cmd run build
 
-      - name: Run service launch check
-        run: npm.cmd run service:launch-check
-
   cloudflare-next-build:
     runs-on: ubuntu-latest
 

@@ -13,13 +13,7 @@ const env = {
 rmSync(nextDistDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 rmSync(workerOutputDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 
-run(runner, ['next', 'build'], env);
-run(runner, [
-  'opennextjs-cloudflare',
-  'build',
-  '--skipNextBuild',
-  '--dangerouslyUseUnsupportedNextVersion',
-], env);
+run(runner, ['opennextjs-cloudflare', 'build', '--dangerouslyUseUnsupportedNextVersion'], env);
 
 function run(command, args, runEnv) {
   const result = spawnSync(command, args, {
