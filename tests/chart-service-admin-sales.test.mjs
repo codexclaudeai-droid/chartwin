@@ -487,6 +487,15 @@ test('admin sales panel has polished operator dashboard styling', () => {
   assert.match(cssSource, /#admin-sales \.table tfoot/);
 });
 
+test('admin sales submenu tabs center labels inside rounded pills', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /#admin-sales \.sales-submenu-tabs a\s*\{[^}]*display: inline-flex/);
+  assert.match(cssSource, /#admin-sales \.sales-submenu-tabs a\s*\{[^}]*align-items: center/);
+  assert.match(cssSource, /#admin-sales \.sales-submenu-tabs a\s*\{[^}]*justify-content: center/);
+  assert.match(cssSource, /#admin-sales \.sales-submenu-tabs a\s*\{[^}]*line-height: 1/);
+});
+
 test('admin sales team page groups team cards and member table for readability', () => {
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-sales-panel.tsx', import.meta.url), 'utf8');
 

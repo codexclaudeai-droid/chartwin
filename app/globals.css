@@ -8902,11 +8902,17 @@ body:not(:has(.landing-page)) #admin-sales .sales-submenu-tabs {
 
 body:not(:has(.landing-page)) #admin-sales .admin-web-info-tabs a,
 body:not(:has(.landing-page)) #admin-sales .sales-submenu-tabs a {
+  align-items: center;
   border: 0;
   border-radius: 999px;
   color: rgba(216, 236, 255, 0.72);
+  display: inline-flex;
+  justify-content: center;
+  line-height: 1;
   min-height: 38px;
   padding: 0 18px;
+  text-align: center;
+  white-space: nowrap;
 }
 
 body:not(:has(.landing-page)) #admin-sales .admin-web-info-tabs a:hover,
