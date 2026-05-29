@@ -400,6 +400,28 @@ test('admin user panel groups directory state into readable table cells', () => 
   assert.match(cssSource, /\.admin-user-ops-grid/);
 });
 
+test('admin user directory detail button matches the role badge pill sizing', () => {
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const tableButtonIndex = cssSource.indexOf(
+    'body:not(:has(.landing-page)) #admin-users > .table .button.secondary',
+  );
+  const detailButtonIndex = cssSource.indexOf(
+    'body:not(:has(.landing-page)) #admin-users > .table .member-directory-actions .button.secondary',
+  );
+  const detailButtonRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-users > \.table \.member-directory-actions \.button\.secondary\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body;
+
+  assert.ok(tableButtonIndex >= 0);
+  assert.ok(detailButtonIndex > tableButtonIndex);
+  assert.ok(detailButtonRule);
+  assert.match(detailButtonRule, /min-width:\s*auto;/);
+  assert.match(detailButtonRule, /min-height:\s*auto;/);
+  assert.match(detailButtonRule, /padding:\s*4px 10px;/);
+  assert.match(detailButtonRule, /font-size:\s*12px;/);
+  assert.match(detailButtonRule, /line-height:\s*1\.2;/);
+});
+
 test('admin user detail panel separates identity controls and history surfaces', () => {
   const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
 

@@ -9879,6 +9879,14 @@ body:not(:has(.landing-page)) #admin-users > .table .button.secondary:hover {
   background: rgba(76, 141, 255, 0.18);
 }
 
+body:not(:has(.landing-page)) #admin-users > .table .member-directory-actions .button.secondary {
+  min-width: auto;
+  min-height: auto;
+  padding: 4px 10px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 body:not(:has(.landing-page)) #admin-users .admin-detail-panel {
   margin-top: 28px;
   border-top: 1px solid rgba(148, 183, 255, 0.14);
