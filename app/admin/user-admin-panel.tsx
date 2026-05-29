@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   formatChartAccessLabel,
+  formatPaymentAmountUsd,
   type PaymentStatus,
   type SubscriptionStatus,
   type UserAccountStatus,
@@ -596,7 +597,7 @@ export function UserAdminPanel() {
         </thead>
         <tbody>
           {users.map((item) => (
-            <tr key={item.user.id}>
+            <tr className="admin-user-row" key={item.user.id}>
               <td className="member-directory-cell">
                 <div className="member-directory-title-row">
                   <strong>{item.user.name}</strong>
@@ -612,25 +613,49 @@ export function UserAdminPanel() {
                   </div>
                 </div>
                 <small>{item.user.email}</small>
-                <span>연락번호 {item.user.phoneNumber || '미등록'}</span>
-                <span>추천인 {item.referrer?.email ?? '없음'}</span>
-                <span>가입일 {formatDateTime(item.user.createdAt)}</span>
+                <div className="member-directory-meta-grid">
+                  <span>연락번호 {item.user.phoneNumber || '미등록'}</span>
+                  <span>추천인 {item.referrer?.email ?? '없음'}</span>
+                  <span>가입일 {formatDateTime(item.user.createdAt)}</span>
+                </div>
               </td>
-              <td>
-                <span className="badge">{formatUserRoleLabel(item.user.role)}</span><br />
-                <small>{formatUserAccountStatusLabel(item.user.accountStatus)}</small>
+              <td className="admin-user-role-cell">
+                <span className="badge admin-user-role-badge">{formatUserRoleLabel(item.user.role)}</span>
+                <span className={getAccountStatusClassName(item.user.accountStatus)}>
+                  {formatUserAccountStatusLabel(item.user.accountStatus)}
+                </span>
               </td>
-              <td>{item.subscription ? formatSubscriptionStatusLabel(item.subscription.status) : '구독 없음'}</td>
-              <td>{formatChartAccessLabel(item.access)}</td>
-              <td>
-                {item.latestPayment
-                  ? `${formatPaymentStatusLabel(item.latestPayment.status)} / $${item.latestPayment.amountUsd}`
-                  : '결제 없음'}
+              <td className="admin-user-subscription-cell">
+                {item.subscription ? (
+                  <>
+                    <strong>{formatSubscriptionStatusLabel(item.subscription.status)}</strong>
+                    {item.subscription.endsAt && <small>만료 {formatDateTime(item.subscription.endsAt)}</small>}
+                  </>
+                ) : (
+                  <span className="admin-user-empty-text">구독 없음</span>
+                )}
               </td>
-              <td>
-                결제 {item.paymentCount}건<br />
-                문의 {item.supportThreadCount}건<br />
-                미확인 알림 {item.unreadNotificationCount}건
+              <td className="admin-user-access-cell">
+                <span>{formatChartAccessLabel(item.access)}</span>
+              </td>
+              <td className="admin-user-payment-cell">
+                {item.latestPayment ? (
+                  <>
+                    <strong>{formatPaymentStatusLabel(item.latestPayment.status)}</strong>
+                    <small>
+                      {formatPaymentAmountUsd(item.latestPayment.amountUsd)} / {formatDateTime(item.latestPayment.updatedAt)}
+                    </small>
+                  </>
+                ) : (
+                  <span className="admin-user-empty-text">결제 없음</span>
+                )}
+              </td>
+              <td className="admin-user-ops-cell">
+                <div className="admin-user-ops-grid" aria-label="운영 상태 요약">
+                  <span>결제 <strong>{item.paymentCount}</strong></span>
+                  <span>문의 <strong>{item.supportThreadCount}</strong></span>
+                  <span>알림 <strong>{item.unreadNotificationCount}</strong></span>
+                </div>
               </td>
             </tr>
           ))}
@@ -907,6 +932,10 @@ function formatDateTime(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function getAccountStatusClassName(accountStatus: UserAccountStatus): string {
+  return `admin-user-account-status ${accountStatus}`;
 }
 
 function formatReferralPoints(value: number): string {

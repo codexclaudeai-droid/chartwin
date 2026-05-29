@@ -382,6 +382,22 @@ test('admin user directory has polished operator dashboard styling', () => {
   assert.match(cssSource, /\.admin-history-card/);
 });
 
+test('admin user panel groups directory state into readable table cells', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /className="admin-user-row"/);
+  assert.match(source, /member-directory-meta-grid/);
+  assert.match(source, /admin-user-role-cell/);
+  assert.match(source, /admin-user-account-status/);
+  assert.match(source, /admin-user-subscription-cell/);
+  assert.match(source, /admin-user-payment-cell/);
+  assert.match(source, /admin-user-ops-grid/);
+  assert.match(cssSource, /\.member-directory-meta-grid/);
+  assert.match(cssSource, /\.admin-user-account-status/);
+  assert.match(cssSource, /\.admin-user-ops-grid/);
+});
+
 test('admin user panel refreshes its filtered directory after local user operations without self-trigger loops', () => {
   const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
 
