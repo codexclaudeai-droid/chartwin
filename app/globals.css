@@ -9888,6 +9888,10 @@ body:not(:has(.landing-page)) #admin-users .admin-user-history-list .admin-histo
   justify-content: space-between;
 }
 
+body:not(:has(.landing-page)) #admin-users .admin-user-history-list .admin-history-row span {
+  color: rgba(216, 236, 255, 0.72);
+}
+
 body:not(:has(.landing-page)) #admin-users .admin-user-history-list strong {
   color: #ffffff;
   font-size: 13px;
@@ -9910,6 +9914,7 @@ body:not(:has(.landing-page)) #admin-users .admin-user-history-empty {
 body:not(:has(.landing-page)) #admin-users .admin-user-audit-history-list .audit-summary {
   background: transparent;
   border: 0;
+  color: rgba(216, 236, 255, 0.78);
   margin: 0;
   padding: 0;
 }
@@ -9917,6 +9922,7 @@ body:not(:has(.landing-page)) #admin-users .admin-user-audit-history-list .audit
 body:not(:has(.landing-page)) #admin-users .admin-user-audit-history-list .audit-summary li {
   background: rgba(86, 240, 255, 0.055);
   border-color: rgba(86, 240, 255, 0.12);
+  color: rgba(238, 247, 255, 0.86);
   padding: 8px 10px;
 }
 

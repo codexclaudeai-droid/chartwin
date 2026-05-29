@@ -426,6 +426,14 @@ test('admin user detail panel has dense dark operational styling', () => {
   assert.match(cssSource, /#admin-users \.admin-user-history-list li\s*\{[\s\S]*?border: 1px solid rgba\(125, 183, 255, 0\.12\)/);
 });
 
+test('admin user audit summaries keep readable text on dark detail cards', () => {
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /#admin-users \.admin-user-audit-history-list \.audit-summary\s*\{[\s\S]*?color: rgba\(216, 236, 255, 0\.78\)/);
+  assert.match(cssSource, /#admin-users \.admin-user-audit-history-list \.audit-summary li\s*\{[\s\S]*?color: rgba\(238, 247, 255, 0\.86\)/);
+  assert.match(cssSource, /#admin-users \.admin-user-history-list \.admin-history-row span\s*\{[\s\S]*?color: rgba\(216, 236, 255, 0\.72\)/);
+});
+
 test('admin user panel refreshes its filtered directory after local user operations without self-trigger loops', () => {
   const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
 
