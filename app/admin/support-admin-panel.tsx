@@ -215,7 +215,7 @@ export function SupportAdminPanel() {
     }));
   }
 
-  async function saveReplyEdit(messageId: string) {
+  async function saveReplyEdit(messageId: string, threadId: string) {
     const body = normalizeSupportReply(replyEditById[messageId] || '');
     if (!canSubmitSupportReply(body)) {
       setMessage('수정할 답변 내용을 입력해 주세요.');
@@ -226,7 +226,7 @@ export function SupportAdminPanel() {
     const response = await fetch('/api/admin/support/reply', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messageId, body }),
+      body: JSON.stringify({ messageId, threadId, body }),
     });
     const payload = await response.json();
     setIsBusy(false);
@@ -239,14 +239,14 @@ export function SupportAdminPanel() {
     dispatchAdminRefreshEvent({ source: 'support' });
   }
 
-  async function deleteReply(messageId: string) {
+  async function deleteReply(messageId: string, threadId: string) {
     if (!window.confirm('관리자 답변을 삭제할까요?')) return;
 
     setIsBusy(true);
     const response = await fetch('/api/admin/support/reply', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messageId }),
+      body: JSON.stringify({ messageId, threadId }),
     });
     const payload = await response.json();
     setIsBusy(false);
@@ -469,7 +469,7 @@ export function SupportAdminPanel() {
                             aria-label="관리자 답변 삭제"
                             className="admin-support-reply-icon-button danger"
                             disabled={isBusy}
-                            onClick={() => void deleteReply(threadMessage.id)}
+                            onClick={() => void deleteReply(threadMessage.id, item.thread.id)}
                             title="관리자 답변 삭제"
                             type="button"
                           >
@@ -489,7 +489,7 @@ export function SupportAdminPanel() {
                           }))}
                         />
                         <div className="admin-support-reply-edit-actions">
-                          <button className="button" type="button" onClick={() => void saveReplyEdit(threadMessage.id)} disabled={isBusy}>
+                          <button className="button" type="button" onClick={() => void saveReplyEdit(threadMessage.id, item.thread.id)} disabled={isBusy}>
                             저장
                           </button>
                           <button className="button secondary" type="button" onClick={() => setEditingReplyId(null)} disabled={isBusy}>

@@ -67,6 +67,7 @@ export async function PATCH(request: NextRequest) {
       return updateAsyncSupportMessageAsAdmin(repository, {
         admin,
         messageId: String(body.messageId || ''),
+        threadId: String(body.threadId || ''),
         body: String(body.body || ''),
         updatedAt: new Date().toISOString(),
       });
@@ -102,6 +103,7 @@ export async function DELETE(request: NextRequest) {
       return deleteAsyncSupportMessageAsAdmin(repository, {
         admin,
         messageId: String(body.messageId || ''),
+        threadId: String(body.threadId || ''),
         deletedAt: new Date().toISOString(),
       });
     });

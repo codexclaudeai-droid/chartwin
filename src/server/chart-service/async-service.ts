@@ -1412,10 +1412,10 @@ export async function deleteAsyncSupportThread(
 
 export async function updateAsyncSupportMessageAsAdmin(
   repository: AsyncChartServiceRepository,
-  input: { admin: Actor; messageId: string; body: string; updatedAt: string },
+  input: { admin: Actor; messageId: string; threadId?: string; body: string; updatedAt: string },
 ): Promise<{ thread: SupportThreadRecord; message: SupportMessageRecord }> {
   assertAdminActor(input.admin);
-  const message = await requireAsyncSupportMessage(repository, input.messageId);
+  const message = await requireAsyncSupportMessage(repository, input.messageId, input.threadId);
   if (!message.isAdminReply) throw new Error('Only admin replies can be updated');
   if (!input.body.trim()) throw new Error('Support reply required');
   const thread = await requireAsyncSupportThread(repository, message.threadId);
@@ -1444,10 +1444,10 @@ export async function updateAsyncSupportMessageAsAdmin(
 
 export async function deleteAsyncSupportMessageAsAdmin(
   repository: AsyncChartServiceRepository,
-  input: { admin: Actor; messageId: string; deletedAt: string },
+  input: { admin: Actor; messageId: string; threadId?: string; deletedAt: string },
 ): Promise<{ thread: SupportThreadRecord; message: SupportMessageRecord }> {
   assertAdminActor(input.admin);
-  const message = await requireAsyncSupportMessage(repository, input.messageId);
+  const message = await requireAsyncSupportMessage(repository, input.messageId, input.threadId);
   if (!message.isAdminReply) throw new Error('Only admin replies can be deleted');
   const thread = await requireAsyncSupportThread(repository, message.threadId);
   const remainingMessages = (await repository.listSupportMessagesByThreadId(thread.id))
@@ -1566,10 +1566,18 @@ async function requireAsyncSupportThread(
 async function requireAsyncSupportMessage(
   repository: AsyncChartServiceRepository,
   messageId: string,
+  threadId?: string,
 ): Promise<SupportMessageRecord> {
-  const message = await repository.getSupportMessageById(messageId);
-  if (!message) throw new Error(`Support message not found: ${messageId}`);
-  return message;
+  const message = typeof repository.getSupportMessageById === 'function'
+    ? await repository.getSupportMessageById(messageId)
+    : null;
+  if (message) return message;
+  if (threadId) {
+    const threadMessages = await repository.listSupportMessagesByThreadId(threadId);
+    const threadMessage = threadMessages.find((item) => item.id === messageId) ?? null;
+    if (threadMessage) return threadMessage;
+  }
+  throw new Error(`Support message not found: ${messageId}`);
 }
 
 async function requireAsyncEditableSupportThreadMessage(

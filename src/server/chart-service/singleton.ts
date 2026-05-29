@@ -67,7 +67,9 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
     typeof persistence.repository.listPublicBoardPosts === 'function' &&
     typeof persistence.repository.savePublicBoardPost === 'function' &&
     typeof persistence.repository.listSignupAgreementsByUserId === 'function' &&
-    typeof persistence.repository.saveSignupAgreement === 'function';
+    typeof persistence.repository.saveSignupAgreement === 'function' &&
+    typeof persistence.repository.getSupportMessageById === 'function' &&
+    typeof persistence.repository.listSupportMessagesByThreadId === 'function';
 }
 
 function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository): void {
@@ -154,6 +156,22 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
         agreements.push(structuredClone(agreement));
       }
       mutableRepository.__fallbackSignupAgreements = agreements;
+    };
+  }
+
+  if (
+    typeof mutableRepository.getSupportMessageById !== 'function' &&
+    typeof mutableRepository.listSupportThreads === 'function' &&
+    typeof mutableRepository.listSupportMessagesByThreadId === 'function'
+  ) {
+    mutableRepository.getSupportMessageById = (id) => {
+      for (const thread of mutableRepository.listSupportThreads()) {
+        const message = mutableRepository
+          .listSupportMessagesByThreadId(thread.id)
+          .find((item) => item.id === id);
+        if (message) return structuredClone(message);
+      }
+      return null;
     };
   }
 }

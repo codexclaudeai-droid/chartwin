@@ -5,11 +5,13 @@ import {
   createAsyncChartServiceRepository,
   createMockChartServiceRepository,
   createSupportThread,
+  deleteAsyncSupportMessageAsAdmin,
   deleteSupportMessageAsAdmin,
   deleteSupportThread,
   listPublishedPublicBoardPosts,
   listVisibleSupportThreads,
   replyToSupportThreadAsAdmin,
+  updateAsyncSupportMessageAsAdmin,
   updateAsyncSupportThread,
   updateSupportMessageAsAdmin,
   updateSupportThread,
@@ -227,6 +229,46 @@ test('admin can update and delete support replies with audit evidence', () => {
   assert.equal(repository.listAuditLogs().at(-1)?.action, 'support.reply.deleted');
 });
 
+test('async admin support reply mutations can locate a reply from the supplied thread without a direct message getter', async () => {
+  const backingRepository = createMockChartServiceRepository();
+  const { thread } = createSupportThread(backingRepository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'signal',
+    title: 'Signal support title',
+    body: 'Signal support body',
+    visibility: 'private',
+    createdAt: '2026-05-23T11:00:00.000Z',
+  });
+  const { message } = replyToSupportThreadAsAdmin(backingRepository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    threadId: thread.id,
+    body: 'Original admin reply',
+    createdAt: '2026-05-23T11:10:00.000Z',
+  });
+  const asyncRepository = createAsyncChartServiceRepository(backingRepository);
+  delete asyncRepository.getSupportMessageById;
+
+  const updated = await updateAsyncSupportMessageAsAdmin(asyncRepository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    threadId: thread.id,
+    messageId: message.id,
+    body: 'Updated admin reply without direct getter',
+    updatedAt: '2026-05-23T11:20:00.000Z',
+  });
+
+  assert.equal(updated.message.body, 'Updated admin reply without direct getter');
+
+  const deleted = await deleteAsyncSupportMessageAsAdmin(asyncRepository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    threadId: thread.id,
+    messageId: message.id,
+    deletedAt: '2026-05-23T11:30:00.000Z',
+  });
+
+  assert.equal(deleted.message.id, message.id);
+  assert.equal(deleted.thread.status, 'waiting');
+});
+
 test('admin support panel disables blank manual replies before posting', () => {
   const source = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
 
@@ -362,7 +404,10 @@ test('admin support reply edit and delete controls move into top-right icon butt
   assert.match(adminSource, /role="group"/);
   assert.match(adminSource, /관리자 답변/);
   assert.match(adminSource, /onClick=\{\(\) => startReplyEdit\(threadMessage\)\}/);
-  assert.match(adminSource, /onClick=\{\(\) => void deleteReply\(threadMessage\.id\)\}/);
+  assert.match(adminSource, /onClick=\{\(\) => void deleteReply\(threadMessage\.id, item\.thread\.id\)\}/);
+  assert.match(adminSource, /onClick=\{\(\) => void saveReplyEdit\(threadMessage\.id, item\.thread\.id\)\}/);
+  assert.match(adminSource, /JSON\.stringify\(\{ messageId, threadId, body \}\)/);
+  assert.match(adminSource, /JSON\.stringify\(\{ messageId, threadId \}\)/);
   assert.doesNotMatch(adminSource, /isThreadAuthorMessage/);
   assert.doesNotMatch(adminSource, /admin-support-message-actions-list/);
   assert.doesNotMatch(adminSource, /admin-support-message-action-card/);
