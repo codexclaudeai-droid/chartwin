@@ -24,8 +24,28 @@ export function createNodePgPostgresQueryExecutor(
 
   return {
     ...executor,
+    async query(statement) {
+      try {
+        return await executor.query(statement);
+      } catch (error) {
+        console.error('[chart-service-postgres-query-failed]', settings.safeLabel, renderErrorMessage(error));
+        throw error;
+      }
+    },
+    async transaction(operation) {
+      try {
+        return await executor.transaction(operation);
+      } catch (error) {
+        console.error('[chart-service-postgres-transaction-failed]', settings.safeLabel, renderErrorMessage(error));
+        throw error;
+      }
+    },
     async close(): Promise<void> {
       await pool.end();
     },
   };
+}
+
+function renderErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

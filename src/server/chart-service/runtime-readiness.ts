@@ -59,6 +59,7 @@ export function getChartServiceRuntimeReadiness(
       adapter: env.CHART_SERVICE_REPOSITORY,
       databaseUrl: env.CHART_SERVICE_DATABASE_URL,
       databaseSslMode: env.CHART_SERVICE_DATABASE_SSL_MODE,
+      runtimeTarget: env.CHART_SERVICE_RUNTIME_TARGET,
       runtimeMode: mode,
     });
     checks.push({
