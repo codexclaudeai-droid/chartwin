@@ -124,10 +124,29 @@ function normalizeRuntimeConnectionString(connectionString: string, runtimeTarge
 
   const url = parsePostgresUrl(connectionString);
   if (!url.hostname.endsWith('.pooler.supabase.com')) return connectionString;
-  if (url.port !== '5432') return connectionString;
+  const directUrl = createSupabaseDirectConnectionUrl(url);
+  if (directUrl) return directUrl;
 
+  if (url.port !== '5432') return connectionString;
   url.port = '6543';
   return url.toString();
+}
+
+function createSupabaseDirectConnectionUrl(url: URL): string | null {
+  const projectRef = getSupabaseProjectRefFromPoolerUser(url.username);
+  if (!projectRef) return null;
+
+  const directUrl = new URL(url.toString());
+  directUrl.hostname = `db.${projectRef}.supabase.co`;
+  directUrl.username = 'postgres';
+  directUrl.port = '5432';
+  return directUrl.toString();
+}
+
+function getSupabaseProjectRefFromPoolerUser(username: string): string | null {
+  const decodedUsername = decodeURIComponent(username);
+  const match = /^postgres\.([a-z0-9-]+)$/i.exec(decodedUsername);
+  return match?.[1] ?? null;
 }
 
 function hashSensitiveValue(value: string): string {

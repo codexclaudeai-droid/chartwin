@@ -47,7 +47,7 @@ test('pg pool options strip sslmode from the connection string and normalize SSL
     ssl: false,
   });
   assert.deepEqual(createPgPoolOptions(cloudflareSsl), {
-    connectionString: 'postgresql://postgres.project-ref:secret@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres',
+    connectionString: 'postgresql://postgres:secret@db.project-ref.supabase.co:5432/postgres',
     ssl: true,
   });
 });
