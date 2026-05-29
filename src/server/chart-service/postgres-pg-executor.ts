@@ -55,7 +55,7 @@ export function createPgPostgresQueryExecutor(pool: PgPoolLike): PostgresQueryEx
 
 export function createPgPoolOptions(settings: PostgresConnectionSettings): PgPoolOptions {
   const options: PgPoolOptions = {
-    connectionString: settings.connectionString,
+    connectionString: removeSslModeFromConnectionString(settings.connectionString),
   };
   const ssl = createPgSslOption(settings.sslMode);
   if (ssl !== undefined) {
@@ -69,4 +69,10 @@ function createPgSslOption(sslMode: PostgresSslMode): PgPoolOptions['ssl'] | und
   if (sslMode === 'require') return { rejectUnauthorized: false };
   if (sslMode === 'verify-ca' || sslMode === 'verify-full') return { rejectUnauthorized: true };
   return undefined;
+}
+
+function removeSslModeFromConnectionString(connectionString: string): string {
+  const url = new URL(connectionString);
+  url.searchParams.delete('sslmode');
+  return url.toString();
 }

@@ -297,7 +297,7 @@ test('async persistence factory can create postgres persistence from a pool fact
 
   assert.equal(user.email, 'pool@example.com');
   assert.deepEqual(poolCalls[0], {
-    connectionString: 'postgres://chart_app:secret@db.example.com/chart_service?sslmode=require',
+    connectionString: 'postgres://chart_app:secret@db.example.com/chart_service',
     ssl: { rejectUnauthorized: false },
   });
   assert.deepEqual(queryCalls[0], {

@@ -25,7 +25,7 @@ test('pg executor adapts Pool.query(sql, values) to the postgres statement execu
   }]);
 });
 
-test('pg pool options preserve the connection string and normalize SSL behavior', async () => {
+test('pg pool options strip sslmode from the connection string and normalize SSL behavior', async () => {
   const { createPgPoolOptions } = await import('../src/server/chart-service/index.ts');
   const requiredSsl = resolvePostgresConnectionSettings({
     databaseUrl: 'postgresql://chart_app:secret@db.example.com/chart_service?sslmode=require',
@@ -35,11 +35,11 @@ test('pg pool options preserve the connection string and normalize SSL behavior'
   });
 
   assert.deepEqual(createPgPoolOptions(requiredSsl), {
-    connectionString: 'postgresql://chart_app:secret@db.example.com/chart_service?sslmode=require',
+    connectionString: 'postgresql://chart_app:secret@db.example.com/chart_service',
     ssl: { rejectUnauthorized: false },
   });
   assert.deepEqual(createPgPoolOptions(disabledSsl), {
-    connectionString: 'postgresql://chart_app:secret@db.example.com/chart_service?sslmode=disable',
+    connectionString: 'postgresql://chart_app:secret@db.example.com/chart_service',
     ssl: false,
   });
 });
