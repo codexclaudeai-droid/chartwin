@@ -33,6 +33,7 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(deployWorkflow, /CHART_SERVICE_EMAIL_PROVIDER:\s+log/);
   assert.match(openNextConfig, /buildCommand:\s*'npx next build'/);
   assert.match(nextConfig, /pg-cloudflare/);
+  assert.match(nextConfig, /serverExternalPackages:\s*\['pg', 'pg-cloudflare'\]/);
   assert.doesNotMatch(workflow, /Owner1234!/);
   assert.doesNotMatch(workflow, /0123456789abcdef/);
   assert.doesNotMatch(workflow, /postgres:\/\/chart_app:secret/);

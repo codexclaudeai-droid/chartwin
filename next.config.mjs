@@ -32,6 +32,7 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/*': ['./node_modules/pg-cloudflare/**/*'],
   },
+  serverExternalPackages: ['pg', 'pg-cloudflare'],
   poweredByHeader: false,
   reactStrictMode: true,
   async headers() {
