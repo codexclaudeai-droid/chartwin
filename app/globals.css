@@ -8702,6 +8702,38 @@ body:not(:has(.landing-page)) .support-thread-title {
   margin: 12px 0 10px;
 }
 
+body:not(:has(.landing-page)) .support-deep-link-notice {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.065), rgba(55, 125, 255, 0.03)),
+    rgba(9, 19, 36, 0.82);
+  border: 1px solid rgba(125, 183, 255, 0.18);
+  border-left: 0;
+  border-radius: 16px;
+  box-shadow: 0 18px 56px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 14px 16px;
+}
+
+body:not(:has(.landing-page)) .support-deep-link-notice strong {
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+body:not(:has(.landing-page)) .support-deep-link-notice p {
+  color: rgba(216, 236, 255, 0.72);
+}
+
+body:not(:has(.landing-page)) .support-deep-link-notice .thread-meta {
+  color: rgba(216, 236, 255, 0.64);
+  gap: 8px;
+}
+
+body:not(:has(.landing-page)) .support-deep-link-notice .text-link {
+  color: var(--tc-ui-blue-2);
+  justify-self: start;
+}
+
 body:not(:has(.landing-page)) .support-route-action {
   justify-self: start;
 }

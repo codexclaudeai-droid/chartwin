@@ -63,4 +63,6 @@ test('support page final pass uses dark operational styling without nested gener
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-filter-summary\s*\{[\s\S]*?background: transparent/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-empty-card\s*\{[\s\S]*?text-align: center/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-thread-title\s*\{[\s\S]*?color: #ffffff/);
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-deep-link-notice\s*\{[\s\S]*?rgba\(9, 19, 36, 0\.82\)/);
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-deep-link-notice p\s*\{[\s\S]*?rgba\(216, 236, 255, 0\.72\)/);
 });
