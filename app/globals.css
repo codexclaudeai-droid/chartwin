@@ -9003,6 +9003,12 @@ body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-form > .but
   width: 100%;
 }
 
+body:not(:has(.landing-page)) #admin-section-webInfo .admin-payment-settings-form > .button {
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
 body:not(:has(.landing-page)) #admin-statistics .statistics-submenu-tabs {
   background: rgba(2, 7, 19, 0.62);
   border: 0;
