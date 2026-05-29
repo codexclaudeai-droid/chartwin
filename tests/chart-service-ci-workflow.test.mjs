@@ -2,17 +2,18 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
-test('chart service CI workflow runs tests, builds, and readiness checks', () => {
+test('chart service CI workflow runs release gates and Postgres dry-run checks', () => {
   const workflow = fs.readFileSync(
     new URL('../.github/workflows/chart-service-ci.yml', import.meta.url),
     'utf8',
   );
 
-  assert.match(workflow, /node --test tests\\\*\.test\.mjs/);
+  assert.match(workflow, /npm\.cmd run service:launch-check|npm run service:launch-check/);
   assert.match(workflow, /npm\.cmd run build|npm run build/);
-  assert.match(workflow, /npm\.cmd run service:build|npm run service:build/);
-  assert.match(workflow, /npm\.cmd run service:check|npm run service:check/);
-  assert.match(workflow, /npm\.cmd run service:email:deliver|npm run service:email:deliver/);
-  assert.match(workflow, /CHART_SERVICE_REPOSITORY: postgres/);
-  assert.match(workflow, /CHART_SERVICE_DATABASE_SSL_MODE: require/);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /runs-on:\s+ubuntu-latest/);
+  assert.match(workflow, /npm run service:cloudflare:build/);
+  assert.doesNotMatch(workflow, /Owner1234!/);
+  assert.doesNotMatch(workflow, /0123456789abcdef/);
+  assert.doesNotMatch(workflow, /postgres:\/\/chart_app:secret/);
 });

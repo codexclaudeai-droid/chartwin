@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 .next
+.open-next
 .wrangler
 .dev.vars
 .dev.vars.*
