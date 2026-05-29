@@ -9782,6 +9782,12 @@ body:not(:has(.landing-page)) #admin-users .member-directory-cell span {
   padding: 6px 10px;
 }
 
+body:not(:has(.landing-page)) #admin-users .member-directory-meta-grid span {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 body:not(:has(.landing-page)) #admin-users .badge {
   border-color: rgba(125, 183, 255, 0.22);
   background: rgba(76, 141, 255, 0.14);

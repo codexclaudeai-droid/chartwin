@@ -422,6 +422,18 @@ test('admin user directory detail button matches the role badge pill sizing', ()
   assert.match(detailButtonRule, /line-height:\s*1\.2;/);
 });
 
+test('admin user directory contact metadata removes chip outline and fill', () => {
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const metaRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-users \.member-directory-meta-grid span\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body;
+
+  assert.ok(metaRule);
+  assert.match(metaRule, /border:\s*0;/);
+  assert.match(metaRule, /background:\s*transparent;/);
+  assert.match(metaRule, /box-shadow:\s*none;/);
+});
+
 test('admin user detail panel separates identity controls and history surfaces', () => {
   const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
 
