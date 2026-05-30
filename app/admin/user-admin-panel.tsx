@@ -30,6 +30,7 @@ import {
 } from './admin-user-permissions';
 import { formatAuditLogSummary } from './audit-log-summary';
 import { getAdminAuditTargetLink } from './audit-target-links';
+import { formatAdminPlanTierLabel } from './admin-plan-labels';
 import { createAdminPaymentUrl } from './payment-links';
 import {
   createAdminSubscriptionUrl,
@@ -69,6 +70,7 @@ type AdminUserDirectoryItem = {
   } | null;
   subscription: {
     id: string;
+    planId: string | null;
     status: SubscriptionStatus;
     endsAt: string | null;
   } | null;
@@ -622,6 +624,7 @@ export function UserAdminPanel() {
                 <td className="admin-user-subscription-cell">
                   {item.subscription ? (
                     <>
+                      <span className="badge admin-user-plan-badge">{formatAdminPlanTierLabel(item.subscription)}</span>
                       <strong>{formatSubscriptionStatusLabel(item.subscription.status)}</strong>
                       {item.subscription.endsAt && <small>만료 {formatDateTime(item.subscription.endsAt)}</small>}
                     </>
@@ -749,6 +752,9 @@ export function UserAdminPanel() {
               </article>
               <article className="mini-card">
                 <span>구독 상태</span>
+                {detail.subscription && (
+                  <span className="badge admin-user-plan-badge">{formatAdminPlanTierLabel(detail.subscription)}</span>
+                )}
                 <strong>{detail.subscription ? formatSubscriptionStatusLabel(detail.subscription.status) : '구독 없음'}</strong>
                 <p>{formatChartAccessLabel(detail.access)}</p>
                 {detail.subscription && isAdminSubscriptionQueueStatus(detail.subscription.status) && (

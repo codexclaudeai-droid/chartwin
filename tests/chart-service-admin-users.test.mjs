@@ -258,6 +258,15 @@ test('admin user panel renders operator-friendly user state labels', () => {
   assert.doesNotMatch(source, /\{item\.user\.accountStatus\}/);
 });
 
+test('admin user panel shows the subscription plan tier beside subscription status', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /formatAdminPlanTierLabel/);
+  assert.match(source, /formatAdminPlanTierLabel\(item\.subscription/);
+  assert.match(source, /formatAdminPlanTierLabel\(detail\.subscription/);
+  assert.match(source, /admin-user-plan-badge/);
+});
+
 test('admin user panel renders member contact referral and signup metadata in the member column', () => {
   const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
 

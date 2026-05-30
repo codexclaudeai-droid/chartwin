@@ -10085,6 +10085,14 @@ body:not(:has(.landing-page)) #admin-users .admin-user-role-cell .admin-user-rol
   margin-bottom: 8px;
 }
 
+body:not(:has(.landing-page)) #admin-users .admin-user-plan-badge {
+  display: inline-flex;
+  margin-bottom: 8px;
+  border-color: rgba(104, 203, 255, 0.32);
+  background: linear-gradient(135deg, rgba(76, 141, 255, 0.22), rgba(45, 212, 191, 0.12));
+  color: #ffffff;
+}
+
 body:not(:has(.landing-page)) #admin-users .admin-user-account-status,
 body:not(:has(.landing-page)) #admin-users .admin-user-access-cell span,
 body:not(:has(.landing-page)) #admin-users .admin-user-empty-text {
