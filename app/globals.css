@@ -8585,6 +8585,45 @@ body:not(:has(.landing-page)) .login-page-shell {
   width: min(560px, 100%);
 }
 
+body:not(:has(.landing-page)) .auth-signup-guide {
+  align-items: center;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.065), rgba(64, 141, 255, 0.045)),
+    rgba(9, 22, 45, 0.84);
+  border: 1px solid rgba(125, 183, 255, 0.18);
+  border-radius: 8px;
+  color: rgba(232, 243, 255, 0.9);
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding: 16px 18px;
+}
+
+body:not(:has(.landing-page)) .auth-signup-guide strong {
+  color: #ffffff;
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 5px;
+}
+
+body:not(:has(.landing-page)) .auth-signup-guide p {
+  color: rgba(216, 236, 255, 0.72);
+  font-weight: 650;
+  line-height: 1.5;
+  margin: 0;
+}
+
+body:not(:has(.landing-page)) .auth-signup-guide .button {
+  flex: 0 0 auto;
+  justify-content: center;
+  min-width: 116px;
+}
+
+body:not(:has(.landing-page)) .auth-link-note {
+  text-align: center;
+}
+
 body:not(:has(.landing-page)) .email-check-row,
 body:not(:has(.landing-page)) .referral-code-row,
 body:not(:has(.landing-page)) .actions.compact,
@@ -9046,6 +9085,15 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 @media (max-width: 640px) {
   body:not(:has(.landing-page)) .page {
     padding: 24px 16px 92px;
+  }
+
+  body:not(:has(.landing-page)) .auth-signup-guide {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body:not(:has(.landing-page)) .auth-signup-guide .button {
+    width: 100%;
   }
 
   body:not(:has(.landing-page)) .card,
