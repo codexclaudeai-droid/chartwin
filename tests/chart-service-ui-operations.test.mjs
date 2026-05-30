@@ -821,6 +821,14 @@ test('landing hero keeps internal access gate details out of the public view', (
   assert.doesNotMatch(pageSource, /signalQueue/);
 });
 
+test('mobile landing hero centers slide artwork between copy and slide controls', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /@media \(max-width: 760px\)\s*\{[\s\S]*?\.landing-page \.landing-hero-bg\s*\{[\s\S]*?background-position:\s*center clamp\(218px, 42svh, 270px\)/);
+  assert.match(cssSource, /@media \(max-width: 760px\)\s*\{[\s\S]*?\.landing-page \.landing-hero-bg\s*\{[\s\S]*?background-size:\s*min\(74vw, 350px\) auto/);
+  assert.match(cssSource, /@media \(max-width: 760px\)\s*\{[\s\S]*?\.landing-page \.landing-hero-controls\s*\{[^}]*bottom: 44px/s);
+});
+
 test('landing middle sections present plan details without a workflow section', () => {
   const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');

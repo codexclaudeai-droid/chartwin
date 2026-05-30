@@ -8020,15 +8020,19 @@ body:has(.landing-page)::-webkit-scrollbar {
 @media (max-width: 760px) {
   .landing-page .landing-hero-bg {
     background-position:
-      right -12px bottom 42px,
+      center clamp(218px, 42svh, 270px),
       center center,
       center center,
       center center;
     background-size:
-      min(78vw, 420px) auto,
+      min(74vw, 350px) auto,
       cover,
       cover,
       cover;
+  }
+
+  .landing-page .landing-hero-controls {
+    bottom: 44px;
   }
 
   .landing-hero-chart-board {
