@@ -15,6 +15,7 @@ import {
   filterSupportThreads,
   getSupportThreadFilterCount,
   getSupportThreadFilterPreset,
+  sortSupportThreadsByCreatedAtDesc,
   SUPPORT_THREAD_FILTER_PRESETS,
 } from './support-thread-filters';
 import {
@@ -270,7 +271,8 @@ export function SupportAdminPanel() {
   }
 
   const activeFilter = getSupportThreadFilterPreset(activeFilterKey);
-  const filteredThreads = filterSupportThreads(threads, activeFilterKey);
+  const orderedThreads = sortSupportThreadsByCreatedAtDesc(threads);
+  const filteredThreads = filterSupportThreads(orderedThreads, activeFilterKey);
   const deepLinkedThread = deepLinkedThreadId
     ? threads.find((item) => item.thread.id === deepLinkedThreadId) ?? null
     : null;

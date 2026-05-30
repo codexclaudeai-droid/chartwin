@@ -67,6 +67,7 @@ export function listPublishedPublicBoardPosts(
   return repository.listPublicBoardPosts()
     .filter((post) => post.isPublished)
     .sort((left, right) => (
+      right.createdAt.localeCompare(left.createdAt) ||
       left.sortOrder - right.sortOrder ||
       right.updatedAt.localeCompare(left.updatedAt) ||
       left.title.localeCompare(right.title)
@@ -80,6 +81,7 @@ export async function listAsyncPublishedPublicBoardPosts(
   return (await repository.listPublicBoardPosts())
     .filter((post) => post.isPublished)
     .sort((left, right) => (
+      right.createdAt.localeCompare(left.createdAt) ||
       left.sortOrder - right.sortOrder ||
       right.updatedAt.localeCompare(left.updatedAt) ||
       left.title.localeCompare(right.title)

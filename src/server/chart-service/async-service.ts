@@ -721,7 +721,10 @@ export async function listAsyncVisibleSupportThreads(
     messages: await repository.listSupportMessagesByThreadId(thread.id),
   })));
 
-  return items.sort((a, b) => new Date(b.thread.updatedAt).getTime() - new Date(a.thread.updatedAt).getTime());
+  return items.sort((a, b) => (
+    new Date(b.thread.createdAt).getTime() - new Date(a.thread.createdAt).getTime() ||
+    new Date(b.thread.updatedAt).getTime() - new Date(a.thread.updatedAt).getTime()
+  ));
 }
 
 export async function listAsyncAdminPaymentQueue(
@@ -935,7 +938,10 @@ export async function getAsyncAdminUserDirectory(
       user.name.toLowerCase().includes(query) ||
       user.id.toLowerCase().includes(query)
     ))
-    .sort((a, b) => a.email.localeCompare(b.email));
+    .sort((a, b) => (
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() ||
+      a.email.localeCompare(b.email)
+    ));
 
   return Promise.all(filteredUsers.map(async (user) => {
     const [payments, supportThreads, notifications, subscription, access] = await Promise.all([

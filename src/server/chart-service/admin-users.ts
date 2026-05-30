@@ -69,7 +69,10 @@ export function getAdminUserDirectory(
       user.name.toLowerCase().includes(query) ||
       user.id.toLowerCase().includes(query)
     ))
-    .sort((a, b) => a.email.localeCompare(b.email))
+    .sort((a, b) => (
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() ||
+      a.email.localeCompare(b.email)
+    ))
     .map((user) => {
       const payments = repository
         .listPayments()

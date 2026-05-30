@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
+  createAsyncChartServiceRepository,
   createMockChartServiceRepository,
   createSessionForUser,
+  getAsyncAdminUserDirectory,
   getAdminUserDirectory,
   getChartServiceRepository,
   SESSION_COOKIE_NAME,
@@ -36,6 +38,39 @@ test('admin user directory includes contact referral and signup metadata', () =>
   assert.equal(member?.user.phoneNumber, '010-1000-2000');
   assert.equal(member?.referrer?.email, 'subscriber@example.com');
   assert.equal(member?.user.createdAt, '2026-05-23T00:00:00.000Z');
+});
+
+test('admin user directory orders members by newest signup first', async () => {
+  const repository = createMockChartServiceRepository();
+  const baseUser = repository.getUserById('user_member');
+  assert.ok(baseUser);
+
+  repository.saveUser({
+    ...baseUser,
+    id: 'user_sort_old',
+    email: 'old-sort@example.com',
+    name: 'Old Sort',
+    referralCode: 'OLDSRT',
+    createdAt: '2026-05-24T00:00:00.000Z',
+  });
+  repository.saveUser({
+    ...baseUser,
+    id: 'user_sort_new',
+    email: 'new-sort@example.com',
+    name: 'New Sort',
+    referralCode: 'NEWSRT',
+    createdAt: '2026-05-26T00:00:00.000Z',
+  });
+
+  const syncResult = getAdminUserDirectory(repository);
+  assert.equal(syncResult[0].user.email, 'new-sort@example.com');
+  assert.equal(syncResult.findIndex((item) => item.user.email === 'new-sort@example.com') <
+    syncResult.findIndex((item) => item.user.email === 'old-sort@example.com'), true);
+
+  const asyncResult = await getAsyncAdminUserDirectory(createAsyncChartServiceRepository(repository));
+  assert.equal(asyncResult[0].user.email, 'new-sort@example.com');
+  assert.equal(asyncResult.findIndex((item) => item.user.email === 'new-sort@example.com') <
+    asyncResult.findIndex((item) => item.user.email === 'old-sort@example.com'), true);
 });
 
 test('admin user directory can filter by role without hiding subscription state', () => {

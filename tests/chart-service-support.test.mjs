@@ -12,6 +12,9 @@ import {
   deleteSupportThread,
   listPublishedPublicBoardPosts,
   listVisibleSupportThreads,
+  listAsyncPublishedPublicBoardPosts,
+  listAsyncVisibleSupportThreads,
+  replyAsyncToSupportThreadAsAdmin,
   replyToSupportThreadAsAdmin,
   updateAsyncSupportMessageAsAdmin,
   updateAsyncSupportThread,
@@ -111,6 +114,66 @@ test('support visibility exposes public threads to guests and private threads on
   assert.equal(guestThreads.some((item) => item.thread.title === '개인 문의'), false);
   assert.equal(ownerThreads.some((item) => item.thread.title === '개인 문의'), true);
   assert.equal(adminThreads.some((item) => item.thread.title === '개인 문의'), true);
+});
+
+test('support thread lists order posts by newest registration before later replies', async () => {
+  const repository = createMockChartServiceRepository();
+  const older = createSupportThread(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'usage',
+    title: '먼저 등록된 문의',
+    body: '먼저 등록했습니다.',
+    visibility: 'private',
+    createdAt: '2026-05-23T11:00:00.000Z',
+  });
+  createSupportThread(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'usage',
+    title: '나중 등록된 문의',
+    body: '나중에 등록했습니다.',
+    visibility: 'private',
+    createdAt: '2026-05-23T11:30:00.000Z',
+  });
+  replyToSupportThreadAsAdmin(repository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    threadId: older.thread.id,
+    body: '늦게 답변했습니다.',
+    createdAt: '2026-05-23T12:00:00.000Z',
+  });
+
+  const syncTitles = listVisibleSupportThreads(repository, { actor: { id: 'admin_1', role: 'admin' } })
+    .map((item) => item.thread.title);
+
+  assert.equal(syncTitles.indexOf('나중 등록된 문의') < syncTitles.indexOf('먼저 등록된 문의'), true);
+
+  const asyncRepository = createAsyncChartServiceRepository(createMockChartServiceRepository());
+  const asyncOlder = await createAsyncSupportThread(asyncRepository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'usage',
+    title: '비동기 먼저 등록된 문의',
+    body: '먼저 등록했습니다.',
+    visibility: 'private',
+    createdAt: '2026-05-23T11:00:00.000Z',
+  });
+  await createAsyncSupportThread(asyncRepository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'usage',
+    title: '비동기 나중 등록된 문의',
+    body: '나중에 등록했습니다.',
+    visibility: 'private',
+    createdAt: '2026-05-23T11:30:00.000Z',
+  });
+  await replyAsyncToSupportThreadAsAdmin(asyncRepository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    threadId: asyncOlder.thread.id,
+    body: '늦게 답변했습니다.',
+    createdAt: '2026-05-23T12:00:00.000Z',
+  });
+
+  const asyncTitles = (await listAsyncVisibleSupportThreads(asyncRepository, { actor: { id: 'admin_1', role: 'admin' } }))
+    .map((item) => item.thread.title);
+
+  assert.equal(asyncTitles.indexOf('비동기 나중 등록된 문의') < asyncTitles.indexOf('비동기 먼저 등록된 문의'), true);
 });
 
 test('admin reply marks support thread answered and records an audit log', () => {
@@ -569,6 +632,18 @@ test('member support list keeps inquiry bodies collapsed behind title clicks', (
   assert.match(styleSource, /\.support-thread-title-button/);
 });
 
+test('support panels keep visible thread lists ordered by newest registration', () => {
+  const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const adminPanelSource = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
+  const filterSource = fs.readFileSync(new URL('../app/admin/support-thread-filters.ts', import.meta.url), 'utf8');
+
+  assert.match(filterSource, /sortSupportThreadsByCreatedAtDesc/);
+  assert.match(filterSource, /b\.thread\.createdAt/);
+  assert.match(panelSource, /sortSupportThreadsByCreatedAtDesc\(threads\)/);
+  assert.match(adminPanelSource, /sortSupportThreadsByCreatedAtDesc\(threads\)/);
+  assert.doesNotMatch(panelSource, /b\.thread\.updatedAt/);
+});
+
 test('private support threads show a lock icon before the title', () => {
   const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
   const adminPanelSource = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
@@ -707,15 +782,46 @@ test('public board posts are repository backed and hide unpublished items', () =
     updatedAt: '2026-05-25T10:00:00.000Z',
     updatedByAdminId: 'admin_1',
   });
+  repository.savePublicBoardPost({
+    id: 'public_board_latest',
+    category: 'notice',
+    title: 'Latest notice',
+    body: 'Published posts are sorted by newest registration.',
+    isPublished: true,
+    sortOrder: 999,
+    createdAt: '2026-05-26T10:00:00.000Z',
+    updatedAt: '2026-05-26T10:00:00.000Z',
+    updatedByAdminId: 'admin_1',
+  });
 
   const posts = listPublishedPublicBoardPosts(repository);
 
   assert.equal(posts.some((post) => post.id === 'public_board_hidden'), false);
-  assert.equal(posts[0].id, 'public_board_priority');
+  assert.equal(posts[0].id, 'public_board_latest');
   assert.deepEqual(
     [...new Set(posts.map((post) => post.category))].sort(),
     ['faq', 'notice', 'qna'],
   );
+});
+
+test('async public board posts use newest registration order for the support page', async () => {
+  const repository = createMockChartServiceRepository();
+
+  repository.savePublicBoardPost({
+    id: 'public_board_latest_async',
+    category: 'qna',
+    title: 'Latest async QNA',
+    body: 'Newest registration appears first.',
+    isPublished: true,
+    sortOrder: 999,
+    createdAt: '2026-05-27T10:00:00.000Z',
+    updatedAt: '2026-05-27T10:00:00.000Z',
+    updatedByAdminId: 'admin_1',
+  });
+
+  const posts = await listAsyncPublishedPublicBoardPosts(createAsyncChartServiceRepository(repository));
+
+  assert.equal(posts[0].id, 'public_board_latest_async');
 });
 
 test('admin can update public board posts with audit evidence', () => {

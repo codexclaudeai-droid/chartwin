@@ -87,7 +87,10 @@ export function listVisibleSupportThreads(
       author: repository.getUserById(thread.authorUserId),
       messages: repository.listSupportMessagesByThreadId(thread.id),
     }))
-    .sort((a, b) => new Date(b.thread.updatedAt).getTime() - new Date(a.thread.updatedAt).getTime());
+    .sort((a, b) => (
+      new Date(b.thread.createdAt).getTime() - new Date(a.thread.createdAt).getTime() ||
+      new Date(b.thread.updatedAt).getTime() - new Date(a.thread.updatedAt).getTime()
+    ));
 }
 
 export function replyToSupportThreadAsAdmin(

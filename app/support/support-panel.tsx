@@ -16,6 +16,7 @@ import {
   SUPPORT_THREAD_FILTER_PRESETS,
   filterSupportThreads,
   getSupportThreadFilterPreset,
+  sortSupportThreadsByCreatedAtDesc,
 } from '../admin/support-thread-filters';
 
 type AuthSessionState = {
@@ -74,14 +75,7 @@ export function SupportPanel() {
     ? threads.find((item) => item.thread.id === targetThreadId) ?? null
     : null;
   const latestAdminReply = targetThread?.messages.filter((threadMessage) => threadMessage.isAdminReply).at(-1) ?? null;
-  const orderedThreads = [...threads].sort((a, b) => {
-    if (a.thread.status === b.thread.status) {
-      return new Date(b.thread.updatedAt).getTime() - new Date(a.thread.updatedAt).getTime();
-    }
-    if (a.thread.status === 'answered') return -1;
-    if (b.thread.status === 'answered') return 1;
-    return 0;
-  });
+  const orderedThreads = sortSupportThreadsByCreatedAtDesc(threads);
   const activeFilter = getSupportThreadFilterPreset(activeFilterKey);
   const filteredThreads = filterSupportThreads(orderedThreads, activeFilterKey);
 
