@@ -11,6 +11,7 @@ import {
   type AsyncChartServicePersistence,
 } from './async-repository.ts';
 import type {
+  ChartUserSettingsRecord,
   ChartServiceRepository,
   PaymentTransferSettingsRecord,
   PublicBoardPostRecord,
@@ -77,6 +78,8 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
     typeof persistence.repository.savePublicBoardPost === 'function' &&
     typeof persistence.repository.listSignupAgreementsByUserId === 'function' &&
     typeof persistence.repository.saveSignupAgreement === 'function' &&
+    typeof persistence.repository.getChartUserSettings === 'function' &&
+    typeof persistence.repository.saveChartUserSettings === 'function' &&
     typeof persistence.repository.getSupportMessageById === 'function' &&
     typeof persistence.repository.listSupportMessagesByThreadId === 'function' &&
     typeof persistence.repository.deleteSupportMessage === 'function' &&
@@ -85,6 +88,8 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
 
 function hasMemoryRepositoryCapabilities(repository: ChartServiceRepository): boolean {
   return typeof repository.getSupportMessageById === 'function' &&
+    typeof repository.getChartUserSettings === 'function' &&
+    typeof repository.saveChartUserSettings === 'function' &&
     typeof repository.listSupportMessagesByThreadId === 'function' &&
     typeof repository.deleteSupportMessage === 'function' &&
     typeof repository.deleteSupportMessagesByThreadId === 'function';
@@ -109,6 +114,8 @@ function copyRecoverableMemoryRepositoryRecords(
     copyRecords(() => source.listSessionsByUserId?.(user.id) ?? [], target.saveSession);
     copyRecords(() => source.listNotificationsByUserId?.(user.id) ?? [], target.saveNotification);
     copyRecords(() => source.listSignupAgreementsByUserId?.(user.id) ?? [], target.saveSignupAgreement);
+    const chartSettings = readOptionalRecord(() => source.getChartUserSettings?.(user.id) ?? null);
+    if (chartSettings) target.saveChartUserSettings(chartSettings);
   });
 
   readRecords(source.listPayments).forEach((payment) => {
@@ -156,12 +163,14 @@ function readOptionalRecord<RecordType>(read: (() => RecordType | null) | undefi
 function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository): void {
   const mutableRepository = repository as ChartServiceRepository & {
     __fallbackSalesTeams?: SalesTeamRecord[];
+    __fallbackChartUserSettings?: ChartUserSettingsRecord[];
     __fallbackPaymentTransferSettings?: PaymentTransferSettingsRecord | null;
     __fallbackPublicBoardPosts?: PublicBoardPostRecord[];
     __fallbackSignupAgreements?: SignupAgreementRecord[];
   };
 
   mutableRepository.__fallbackSalesTeams ??= [];
+  mutableRepository.__fallbackChartUserSettings ??= [];
   mutableRepository.__fallbackPaymentTransferSettings ??= null;
   mutableRepository.__fallbackPublicBoardPosts ??= getDefaultPublicBoardPosts();
   mutableRepository.__fallbackSignupAgreements ??= [];
@@ -237,6 +246,27 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
         agreements.push(structuredClone(agreement));
       }
       mutableRepository.__fallbackSignupAgreements = agreements;
+    };
+  }
+
+  if (typeof mutableRepository.getChartUserSettings !== 'function') {
+    mutableRepository.getChartUserSettings = (userId) => {
+      const settings = (mutableRepository.__fallbackChartUserSettings ?? [])
+        .find((item) => item.userId === userId);
+      return settings ? structuredClone(settings) : null;
+    };
+  }
+
+  if (typeof mutableRepository.saveChartUserSettings !== 'function') {
+    mutableRepository.saveChartUserSettings = (settings) => {
+      const rows = mutableRepository.__fallbackChartUserSettings ?? [];
+      const index = rows.findIndex((item) => item.userId === settings.userId);
+      if (index >= 0) {
+        rows[index] = structuredClone(settings);
+      } else {
+        rows.push(structuredClone(settings));
+      }
+      mutableRepository.__fallbackChartUserSettings = rows;
     };
   }
 

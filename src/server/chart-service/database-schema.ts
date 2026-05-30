@@ -286,6 +286,14 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       ],
     },
     {
+      name: 'chart_user_settings',
+      columns: {
+        user_id: { type: 'text', primaryKey: true, references: 'users.id' },
+        settings_json: { type: 'jsonb', default: "'{}'::jsonb" },
+        updated_at: { type: 'timestamptz', default: 'now()' },
+      },
+    },
+    {
       name: 'signup_agreements',
       columns: {
         id: { type: 'text', primaryKey: true },
@@ -462,6 +470,11 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     "update web_info_settings set plan_services_json = '{}'::jsonb where plan_services_json is null;",
     "insert into web_info_settings (id, terms_content, privacy_content, updated_at) values ('default', 'TradingCore 서비스 이용약관', 'TradingCore 개인정보보호정책', now()) on conflict (id) do nothing;",
     'create index if not exists idx_web_info_settings_updated_by_admin_id on web_info_settings (updated_by_admin_id);',
+    "create table if not exists chart_user_settings (user_id text primary key references users(id), settings_json jsonb not null default '{}'::jsonb, updated_at timestamptz not null default now());",
+    "alter table if exists chart_user_settings add column if not exists settings_json jsonb;",
+    'alter table if exists chart_user_settings add column if not exists updated_at timestamptz;',
+    "update chart_user_settings set settings_json = '{}'::jsonb where settings_json is null;",
+    'update chart_user_settings set updated_at = now() where updated_at is null;',
     'create table if not exists signup_agreements (id text primary key, user_id text not null, terms_accepted_at timestamptz not null, privacy_accepted_at timestamptz not null, terms_content text not null, privacy_content text not null, terms_settings_updated_at timestamptz not null, privacy_settings_updated_at timestamptz not null, ip_address text, user_agent text, created_at timestamptz not null default now());',
     'alter table if exists signup_agreements add column if not exists user_id text;',
     'alter table if exists signup_agreements add column if not exists terms_accepted_at timestamptz;',

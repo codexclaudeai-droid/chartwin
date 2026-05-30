@@ -97,6 +97,12 @@ export type WebInfoSettingsRecord = {
   updatedAt: string;
 };
 
+export type ChartUserSettingsRecord = {
+  userId: string;
+  settings: Record<string, unknown>;
+  updatedAt: string;
+};
+
 export type SignupAgreementRecord = {
   id: string;
   userId: string;
@@ -161,6 +167,8 @@ export type ChartServiceRepository = {
   savePaymentTransferSettings(settings: PaymentTransferSettingsRecord): void;
   getWebInfoSettings(): WebInfoSettingsRecord | null;
   saveWebInfoSettings(settings: WebInfoSettingsRecord): void;
+  getChartUserSettings(userId: string): ChartUserSettingsRecord | null;
+  saveChartUserSettings(settings: ChartUserSettingsRecord): void;
   listSignupAgreementsByUserId(userId: string): SignupAgreementRecord[];
   saveSignupAgreement(agreement: SignupAgreementRecord): void;
   listReferralLedgersByPaymentId(paymentRequestId: string): ReferralLedgerRecord[];

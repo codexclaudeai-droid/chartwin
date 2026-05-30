@@ -10,6 +10,7 @@ import type {
 } from '../../domain/chart-service/index.ts';
 import type {
   AuthSessionRecord,
+  ChartUserSettingsRecord,
   EmailOutboxRecord,
   PasswordResetTokenRecord,
   PaymentTransferSettingsRecord,
@@ -369,6 +370,22 @@ export function mapWebInfoSettingsToPostgresRow(record: WebInfoSettingsRecord): 
   };
 }
 
+export function mapChartUserSettingsFromPostgresRow(row: PostgresRow): ChartUserSettingsRecord {
+  return {
+    userId: readString(row.user_id),
+    settings: readJsonRecord(row.settings_json),
+    updatedAt: readIsoString(row.updated_at),
+  };
+}
+
+export function mapChartUserSettingsToPostgresRow(record: ChartUserSettingsRecord): PostgresRow {
+  return {
+    user_id: record.userId,
+    settings_json: record.settings,
+    updated_at: record.updatedAt,
+  };
+}
+
 export function mapSignupAgreementFromPostgresRow(row: PostgresRow): SignupAgreementRecord {
   return {
     id: readString(row.id),
@@ -659,10 +676,7 @@ function readStringArray(value: unknown): string[] {
 
 function readPlanServices(value: unknown): Record<string, string[]> {
   if (value == null) return {};
-  const parsedValue = typeof value === 'string' ? JSON.parse(value) : value;
-  if (!parsedValue || typeof parsedValue !== 'object' || Array.isArray(parsedValue)) {
-    throw new Error('Expected postgres json object value');
-  }
+  const parsedValue = readJsonRecord(value);
 
   return Object.fromEntries(
     Object.entries(parsedValue).map(([planId, services]) => {
@@ -672,6 +686,15 @@ function readPlanServices(value: unknown): Record<string, string[]> {
       return [planId, [...services]];
     }),
   );
+}
+
+function readJsonRecord(value: unknown): Record<string, unknown> {
+  if (value == null) return {};
+  const parsedValue = typeof value === 'string' ? JSON.parse(value) : value;
+  if (!parsedValue || typeof parsedValue !== 'object' || Array.isArray(parsedValue)) {
+    throw new Error('Expected postgres json object value');
+  }
+  return structuredClone(parsedValue as Record<string, unknown>);
 }
 
 function assertSafeIdentifier(identifier: string): void {

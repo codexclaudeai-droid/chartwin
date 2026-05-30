@@ -19,6 +19,8 @@ import {
   mapAuditLogDraftToPostgresRow,
   mapAuthSessionFromPostgresRow,
   mapAuthSessionToPostgresRow,
+  mapChartUserSettingsFromPostgresRow,
+  mapChartUserSettingsToPostgresRow,
   mapEmailOutboxFromPostgresRow,
   mapEmailOutboxToPostgresRow,
   mapNotificationFromPostgresRow,
@@ -56,6 +58,7 @@ import {
 } from './postgres-mappers.ts';
 import type {
   AuthSessionRecord,
+  ChartUserSettingsRecord,
   EmailOutboxFilter,
   EmailOutboxRecord,
   PasswordResetTokenRecord,
@@ -247,6 +250,16 @@ export function createPostgresAsyncChartServiceRepository(
         'web_info_settings',
         mapWebInfoSettingsToPostgresRow(settings),
         ['id'],
+      ));
+    },
+    async getChartUserSettings(userId: string): Promise<ChartUserSettingsRecord | null> {
+      return selectOne('chart_user_settings', mapChartUserSettingsFromPostgresRow, { user_id: userId });
+    },
+    async saveChartUserSettings(settings: ChartUserSettingsRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'chart_user_settings',
+        mapChartUserSettingsToPostgresRow(settings),
+        ['user_id'],
       ));
     },
     async listSignupAgreementsByUserId(userId: string): Promise<SignupAgreementRecord[]> {

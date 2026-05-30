@@ -214,6 +214,18 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   const SYMBOL_STORAGE_KEY = 'my-chart-lib.last-symbol.v1';
   const TIMEFRAME_STORAGE_KEY = 'my-chart-lib.last-timeframe.v1';
   const QUOTE_CURRENCY_STORAGE_KEY = 'my-chart-lib.quote-currency.v1';
+  const CHART_CONFIG_STORAGE_KEY = 'my-chart-lib.chart-config.v1';
+  const CHART_USER_SETTINGS_ENDPOINT = '/api/chart/settings';
+  const CHART_SYNCED_LOCAL_STORAGE_KEYS = [
+    SYMBOL_STORAGE_KEY,
+    TIMEFRAME_STORAGE_KEY,
+    QUOTE_CURRENCY_STORAGE_KEY,
+    'my-chart-lib.toolbox-hidden.v1',
+    'my-chart-lib.chart-gap-mode.v1',
+    'my-chart-lib.pattern-analysis-scope.v1',
+    'my-chart-lib.pattern-alert-enabled.v1',
+    'my-chart-lib.gateway-fast-sync.v1',
+  ] as const;
   type PersistedDrawingEntry = {
     symbol: string;
     timeframe: TimeframeKey;
@@ -489,6 +501,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const normalized = canonicalizeUiSymbol(symbol);
       if (!normalized) return;
       localStorage.setItem(SYMBOL_STORAGE_KEY, normalized);
+      scheduleChartUserSettingsSync();
     } catch {
       // ignore
     }
@@ -548,6 +561,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const store = loadQuoteCurrencyStore();
       store.entries[normalized] = currency;
       saveQuoteCurrencyStore(store);
+      scheduleChartUserSettingsSync();
     } catch {
       // ignore
     }
@@ -564,10 +578,190 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   const saveTimeframe = (timeframe: TimeframeKey): void => {
     try {
       localStorage.setItem(TIMEFRAME_STORAGE_KEY, timeframe);
+      scheduleChartUserSettingsSync();
     } catch {
       // ignore
     }
   };
+  type StoredChartConfig = {
+    version: 1;
+    layout?: Record<string, unknown>;
+    candleStyle?: Record<string, unknown>;
+    timezone?: string;
+    indicators?: Record<string, unknown>;
+    panelState?: Record<string, unknown>;
+  };
+  type ChartUserSettingsSnapshot = {
+    version: 1;
+    localStorage: Record<string, string>;
+    chartConfig: StoredChartConfig;
+    updatedAt: string;
+  };
+  let chartUserSettingsSyncTimer: number | null = null;
+
+  const cloneJsonRecord = (value: unknown): Record<string, unknown> | null => {
+    if (!isRecord(value) || Array.isArray(value)) return null;
+    try {
+      const parsed = JSON.parse(JSON.stringify(value)) as unknown;
+      return isRecord(parsed) && !Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+  const readStoredChartConfig = (): StoredChartConfig => {
+    try {
+      const raw = localStorage.getItem(CHART_CONFIG_STORAGE_KEY);
+      if (!raw) return { version: 1 };
+      const parsed = JSON.parse(raw) as unknown;
+      if (!isRecord(parsed)) return { version: 1 };
+      return {
+        version: 1,
+        layout: cloneJsonRecord(parsed.layout) ?? undefined,
+        candleStyle: cloneJsonRecord(parsed.candleStyle) ?? undefined,
+        timezone: typeof parsed.timezone === 'string' ? parsed.timezone : undefined,
+        indicators: cloneJsonRecord(parsed.indicators) ?? undefined,
+        panelState: cloneJsonRecord(parsed.panelState) ?? undefined,
+      };
+    } catch {
+      return { version: 1 };
+    }
+  };
+  const saveStoredChartConfig = (config: StoredChartConfig): void => {
+    try {
+      localStorage.setItem(CHART_CONFIG_STORAGE_KEY, JSON.stringify({ ...config, version: 1 }));
+    } catch {
+      // ignore
+    }
+  };
+  const captureChartConfig = (chart: SimpleChart): StoredChartConfig => {
+    const layout = chart.config.layout as Record<string, unknown>;
+    const rightGapBars = toFiniteNumber(layout.rightGapBars);
+    return {
+      version: 1,
+      layout: {
+        marketInfoSide: layout.marketInfoSide === 'left' ? 'left' : 'right',
+        rightGapBars: rightGapBars === null ? 0 : Math.max(0, Math.min(48, rightGapBars)),
+        yAxisTransparentBackground: layout.yAxisTransparentBackground !== false,
+        leftPanEnabled: layout.leftPanEnabled === true,
+        verticalPanEnabled: layout.verticalPanEnabled === true,
+        mobileCrosshairTooltipEnabled: layout.mobileCrosshairTooltipEnabled !== false,
+      },
+      candleStyle: cloneJsonRecord(chart.config.candleStyle) ?? undefined,
+      timezone: typeof chart.config.timezone === 'string' ? chart.config.timezone : undefined,
+      indicators: cloneJsonRecord(chart.config.indicators) ?? undefined,
+      panelState: cloneJsonRecord(chart.config.panelState) ?? undefined,
+    };
+  };
+  const applySavedChartConfig = (chart: SimpleChart): void => {
+    const saved = readStoredChartConfig();
+    const layout = saved.layout ?? {};
+    if (layout.marketInfoSide === 'left' || layout.marketInfoSide === 'right') {
+      chart.config.layout.marketInfoSide = layout.marketInfoSide;
+    }
+    const rightGapBars = toFiniteNumber(layout.rightGapBars);
+    if (rightGapBars !== null) {
+      chart.config.layout.rightGapBars = Math.max(0, Math.min(48, rightGapBars));
+    }
+    if (typeof layout.yAxisTransparentBackground === 'boolean') {
+      chart.config.layout.yAxisTransparentBackground = layout.yAxisTransparentBackground;
+    }
+    if (typeof layout.leftPanEnabled === 'boolean') {
+      chart.config.layout.leftPanEnabled = layout.leftPanEnabled;
+    }
+    if (typeof layout.verticalPanEnabled === 'boolean') {
+      chart.config.layout.verticalPanEnabled = layout.verticalPanEnabled;
+    }
+    if (typeof layout.mobileCrosshairTooltipEnabled === 'boolean') {
+      chart.config.layout.mobileCrosshairTooltipEnabled = layout.mobileCrosshairTooltipEnabled;
+    }
+    if (saved.candleStyle) {
+      chart.config.candleStyle = {
+        ...chart.config.candleStyle,
+        ...saved.candleStyle,
+      } as typeof chart.config.candleStyle;
+    }
+    if (saved.timezone) {
+      chart.config.timezone = saved.timezone;
+    }
+    if (saved.indicators) {
+      chart.config.indicators = {
+        ...chart.config.indicators,
+        ...saved.indicators,
+      } as typeof chart.config.indicators;
+    }
+    if (saved.panelState) {
+      chart.config.panelState = {
+        ...chart.config.panelState,
+        ...saved.panelState,
+      } as typeof chart.config.panelState;
+    }
+  };
+  const captureSyncedLocalStorageEntries = (): Record<string, string> => {
+    const entries: Record<string, string> = {};
+    CHART_SYNCED_LOCAL_STORAGE_KEYS.forEach((key) => {
+      const value = localStorage.getItem(key);
+      if (typeof value === 'string') entries[key] = value;
+    });
+    return entries;
+  };
+  const applySyncedLocalStorageEntries = (entries: unknown): void => {
+    if (!isRecord(entries)) return;
+    CHART_SYNCED_LOCAL_STORAGE_KEYS.forEach((key) => {
+      const value = entries[key];
+      if (typeof value === 'string') {
+        localStorage.setItem(key, value);
+      }
+    });
+  };
+  const captureChartUserSettingsSnapshot = (chart?: SimpleChart | null): ChartUserSettingsSnapshot => ({
+    version: 1,
+    localStorage: captureSyncedLocalStorageEntries(),
+    chartConfig: chart ? captureChartConfig(chart) : readStoredChartConfig(),
+    updatedAt: new Date().toISOString(),
+  });
+  const hydrateChartUserSettings = async (): Promise<void> => {
+    try {
+      const response = await fetch(CHART_USER_SETTINGS_ENDPOINT, {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'include',
+      });
+      if (!response.ok) return;
+      const payload = await response.json() as { settings?: unknown };
+      if (!isRecord(payload.settings)) return;
+      applySyncedLocalStorageEntries(payload.settings.localStorage);
+      if (isRecord(payload.settings.chartConfig)) {
+        saveStoredChartConfig({
+          ...readStoredChartConfig(),
+          ...payload.settings.chartConfig,
+          version: 1,
+        } as StoredChartConfig);
+      }
+    } catch {
+      // The chart should still load with device-local settings if account sync is unavailable.
+    }
+  };
+  const scheduleChartUserSettingsSync = (chart?: SimpleChart | null): void => {
+    if (chartUserSettingsSyncTimer !== null) {
+      window.clearTimeout(chartUserSettingsSyncTimer);
+    }
+    chartUserSettingsSyncTimer = window.setTimeout(() => {
+      chartUserSettingsSyncTimer = null;
+      const settings = captureChartUserSettingsSnapshot(chart);
+      void fetch(CHART_USER_SETTINGS_ENDPOINT, {
+        method: 'PATCH',
+        cache: 'no-store',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ settings }),
+      }).catch(() => {});
+    }, 700);
+  };
+  const persistChartUserSettingsForChart = (chart: SimpleChart): void => {
+    saveStoredChartConfig(captureChartConfig(chart));
+    scheduleChartUserSettingsSync(chart);
+  };
+  await hydrateChartUserSettings();
   const persistedSymbol = loadSavedSymbol();
   const persistedTimeframe = loadSavedTimeframe();
   type PaneController = {
@@ -907,6 +1101,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
 
     const chart = new SimpleChart(chartArea);
     applyUserFacingStrategy(chart);
+    applySavedChartConfig(chart);
     let lastCurrencySelectWidth = '';
     chart.onAfterDraw = () => {
       const axisPad = chart.currentAxisPad;
@@ -1115,7 +1310,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     });
     let refreshChartUi = () => {};
     const refreshOverlay = createIndicatorOverlay(chartArea, chart, () => refreshChartUi());
-    dividerManager.setOnAfterResize(() => refreshOverlay());
+    dividerManager.setOnAfterResize(() => {
+      refreshOverlay();
+      persistChartUserSettingsForChart(chart);
+    });
     chart.onAfterResize = () => {
       dividerManager.syncDividers();
       refreshOverlay();
@@ -1126,6 +1324,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       dividerManager.syncDividers();
       refreshHeader();
       refreshStrategyReport();
+    };
+    const handleChartSettingsChanged = () => {
+      refreshChartUi();
+      persistChartUserSettingsForChart(chart);
     };
 
     const applyMockData = () => {
@@ -1596,8 +1798,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           refreshChartUi();
         });
       },
-      onIndicatorClick: () => openIndicatorModal(chart, refreshChartUi),
-      onStrategyClick: () => openStrategyModal(chart, refreshChartUi),
+      onIndicatorClick: () => openIndicatorModal(chart, handleChartSettingsChanged),
+      onStrategyClick: () => openStrategyModal(chart, handleChartSettingsChanged),
       onMinimizeClick: () => {
         togglePaneMinimize(paneId);
         refreshHeader();
@@ -1786,6 +1988,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         openChartSettingsModal(pane.chart, () => {
           pane.refreshChartUi();
           pane.refreshHeader();
+          persistChartUserSettingsForChart(pane.chart);
         }, pane.refreshHeader);
       },
       isPaneMaximized: () => paneState.maximizedPaneId !== null,
@@ -2081,7 +2284,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       }, { passive: true });
       indMobileBtn.addEventListener('click', () => {
         const pane = getActivePane();
-        openIndicatorModal(pane.chart, pane.refreshChartUi);
+        openIndicatorModal(pane.chart, () => {
+          pane.refreshChartUi();
+          persistChartUserSettingsForChart(pane.chart);
+        });
       });
       mobileBarEl.appendChild(indMobileBtn);
 
@@ -2106,7 +2312,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         }, { passive: true });
         stratMobileBtn.addEventListener('click', () => {
           const pane = getActivePane();
-          openStrategyModal(pane.chart, pane.refreshChartUi);
+          openStrategyModal(pane.chart, () => {
+            pane.refreshChartUi();
+            persistChartUserSettingsForChart(pane.chart);
+          });
         });
         mobileBarEl.appendChild(stratMobileBtn);
       }
@@ -2126,7 +2335,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         tzBtn.textContent = formatTimezoneLabel(getActivePane().chart.config.timezone);
       };
       tzBtn.addEventListener('click', () => {
-        openTimezoneModal(getActivePane().chart, display_refresh_tz);
+        const pane = getActivePane();
+        openTimezoneModal(pane.chart, () => {
+          display_refresh_tz();
+          persistChartUserSettingsForChart(pane.chart);
+        });
       });
 
       const display_update_clock = () => {
@@ -2253,7 +2466,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         onApplyRange: (label) => applyRangeSelection(label),
         onApplyDateRange: (fromSec, toSec) => getActivePane().chart.setVisibleByDateRange?.(fromSec, toSec),
         onGoToDateTime: (targetSec, label) => getActivePane().chart.goToDateTime?.(targetSec, label),
-        onOpenTimezone: (chart, onUpdated) => openTimezoneModal(chart, onUpdated),
+        onOpenTimezone: (chart, onUpdated) => openTimezoneModal(chart, () => {
+          onUpdated();
+          persistChartUserSettingsForChart(chart);
+        }),
         formatDateWithTimezone,
         formatTimezoneLabel,
         onTickerSymbolClick: (symbolId) => {
@@ -2677,6 +2893,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       drawingToolbarDockWidth = normalized;
       strategyReport.setLeftInset(drawingToolbarDockWidth);
       applyViewportOffsets();
+      scheduleChartUserSettingsSync();
     });
     window.addEventListener('chart-open-strategy-report', (event: Event) => {
       const customEvent = event as CustomEvent<{ chart?: unknown }>;
@@ -2705,7 +2922,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         : null;
       const paneId = requestedPaneId ?? paneState.activePaneId;
       const pane = ensurePane(paneId);
-      openStrategyModal(pane.chart, pane.refreshChartUi, { mode: 'frontend' });
+      openStrategyModal(pane.chart, () => {
+        pane.refreshChartUi();
+        persistChartUserSettingsForChart(pane.chart);
+      }, { mode: 'frontend' });
     });
     refreshStrategyReport = (paneChanged = false) => {
       const activePane = getActivePane();

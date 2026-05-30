@@ -15,6 +15,7 @@ import {
 } from '../../domain/chart-service/index.ts';
 import type {
   AuthSessionRecord,
+  ChartUserSettingsRecord,
   ChartServiceRepository,
   EmailOutboxRecord,
   EmailOutboxFilter,
@@ -45,6 +46,7 @@ export type MockChartServiceState = {
   salesTeams: SalesTeamRecord[];
   paymentTransferSettings: PaymentTransferSettingsRecord | null;
   webInfoSettings: WebInfoSettingsRecord | null;
+  chartUserSettings: ChartUserSettingsRecord[];
   signupAgreements: SignupAgreementRecord[];
   publicBoardPosts: PublicBoardPostRecord[];
   referralLedgers: ReferralLedgerRecord[];
@@ -121,6 +123,7 @@ export function createMockChartServiceState(): MockChartServiceState {
     salesTeams: [],
     paymentTransferSettings: null,
     webInfoSettings: null,
+    chartUserSettings: [],
     signupAgreements: [],
     publicBoardPosts: getDefaultPublicBoardPosts(),
     referralLedgers: [
@@ -200,6 +203,7 @@ export function createMockChartServiceRepository(
   state.salesTeams ??= [];
   state.paymentTransferSettings ??= null;
   state.webInfoSettings ??= null;
+  state.chartUserSettings ??= [];
   state.signupAgreements ??= [];
   state.publicBoardPosts ??= getDefaultPublicBoardPosts();
 
@@ -279,6 +283,17 @@ export function createMockChartServiceRepository(
     },
     saveWebInfoSettings(settings) {
       state.webInfoSettings = { ...settings };
+    },
+    getChartUserSettings(userId) {
+      return cloneOrNull(state.chartUserSettings.find((settings) => settings.userId === userId));
+    },
+    saveChartUserSettings(settings) {
+      const index = state.chartUserSettings.findIndex((item) => item.userId === settings.userId);
+      if (index >= 0) {
+        state.chartUserSettings[index] = structuredClone(settings);
+      } else {
+        state.chartUserSettings.push(structuredClone(settings));
+      }
     },
     listSignupAgreementsByUserId(userId) {
       return state.signupAgreements
