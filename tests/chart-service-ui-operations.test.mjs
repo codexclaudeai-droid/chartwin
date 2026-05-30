@@ -683,6 +683,27 @@ test('landing page exposes a completed premium design layer', () => {
   assert.match(cssSource, /\.tc-chart-feature-card:hover/);
 });
 
+test('landing page applies scroll fade in and out motion to sections and cards', () => {
+  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const fadeSource = fs.readFileSync(new URL('../app/landing-scroll-fade-motion.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(pageSource, /import LandingScrollFadeMotion from '\.\/landing-scroll-fade-motion\.tsx'/);
+  assert.match(pageSource, /<LandingScrollFadeMotion \/>/);
+  assert.match(fadeSource, /'use client'/);
+  assert.match(fadeSource, /IntersectionObserver/);
+  assert.match(fadeSource, /landing-scroll-fade/);
+  assert.match(fadeSource, /is-visible/);
+  assert.match(fadeSource, /is-exiting/);
+  assert.match(fadeSource, /landing-section/);
+  assert.match(fadeSource, /tc-chart-feature-card/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-fade\s*\{[^}]*opacity: 0/s);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-fade\.is-visible\s*\{[^}]*opacity: 1/s);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-fade\.is-exiting\s*\{[^}]*opacity: 0/s);
+  assert.match(cssSource, /transition: opacity 520ms ease, transform 620ms/);
+  assert.match(cssSource, /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\.landing-page \.landing-scroll-fade/s);
+});
+
 test('landing page shows a bottom-right scroll-to-top jump button after scrolling', () => {
   const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
   const scrollButtonSource = fs.readFileSync(new URL('../app/landing-scroll-top-button.tsx', import.meta.url), 'utf8');

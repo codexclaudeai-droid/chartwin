@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import LandingHeroSlider from './landing-hero-slider.tsx';
 import LandingChartMotion from './landing-chart-motion.tsx';
+import LandingScrollFadeMotion from './landing-scroll-fade-motion.tsx';
 import LandingScrollTopButton from './landing-scroll-top-button.tsx';
 import { FreeTrialRequestButton } from './shared/free-trial-request-button';
 import { formatPlanPriceParts } from './shared/plan-price-format.ts';
@@ -278,6 +279,7 @@ export default async function HomePage() {
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(landingStructuredData) }}
       />
+      <LandingScrollFadeMotion />
       <LandingHeroSlider />
 
       <nav className="landing-anchor-nav" aria-label="서비스 섹션 바로가기">
