@@ -3626,7 +3626,9 @@ a {
   box-sizing: border-box;
   display: grid;
   gap: 8px;
-  min-height: 220px;
+  height: 264px;
+  min-height: 264px;
+  overflow: auto;
   padding: 14px;
 }
 

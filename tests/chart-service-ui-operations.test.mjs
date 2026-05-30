@@ -1066,7 +1066,9 @@ test('pricing payment method details keep a stable height across tabs', () => {
 
   assert.match(transferInfoStyle, /box-sizing:\s*border-box/);
   assert.match(transferInfoStyle, /align-content:\s*start/);
-  assert.match(transferInfoStyle, /min-height:\s*220px/);
+  assert.match(transferInfoStyle, /height:\s*264px/);
+  assert.match(transferInfoStyle, /min-height:\s*264px/);
+  assert.match(transferInfoStyle, /overflow:\s*auto/);
 });
 
 test('pricing bank transfer shows Naver exchange rate KRW amount and submits the rate', () => {
