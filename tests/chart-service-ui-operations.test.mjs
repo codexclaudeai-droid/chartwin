@@ -1060,6 +1060,15 @@ test('pricing payment method switches with bank and crypto tabs instead of a sel
   assert.match(cssSource, /\.payment-method-tabs/);
 });
 
+test('pricing payment method details keep a stable height across tabs', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const transferInfoStyle = cssSource.match(/\.payment-transfer-info\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? '';
+
+  assert.match(transferInfoStyle, /box-sizing:\s*border-box/);
+  assert.match(transferInfoStyle, /align-content:\s*start/);
+  assert.match(transferInfoStyle, /min-height:\s*220px/);
+});
+
 test('pricing bank transfer shows Naver exchange rate KRW amount and submits the rate', () => {
   const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
 

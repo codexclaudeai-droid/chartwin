@@ -3619,11 +3619,14 @@ a {
 }
 
 .payment-transfer-info {
+  align-content: start;
   background: rgba(12, 102, 90, 0.07);
   border: 1px solid rgba(12, 102, 90, 0.22);
   border-radius: 10px;
+  box-sizing: border-box;
   display: grid;
   gap: 8px;
+  min-height: 220px;
   padding: 14px;
 }
 
