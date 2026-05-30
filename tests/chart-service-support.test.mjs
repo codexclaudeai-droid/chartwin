@@ -569,6 +569,22 @@ test('member support list keeps inquiry bodies collapsed behind title clicks', (
   assert.match(styleSource, /\.support-thread-title-button/);
 });
 
+test('private support threads show a lock icon before the title', () => {
+  const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const adminPanelSource = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /PrivateSupportThreadLockIcon/);
+  assert.match(panelSource, /item\.thread\.visibility === 'private'/);
+  assert.match(panelSource, /support-private-thread-title/);
+  assert.match(panelSource, /aria-label="비공개 게시글"/);
+  assert.match(adminPanelSource, /PrivateSupportThreadLockIcon/);
+  assert.match(adminPanelSource, /item\.thread\.visibility === 'private'/);
+  assert.match(adminPanelSource, /admin-support-private-thread-title/);
+  assert.match(adminPanelSource, /aria-label="비공개 게시글"/);
+  assert.match(styleSource, /\.support-private-lock/);
+});
+
 test('member support list hides payment ids from deposit request titles and bodies', () => {
   const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
   const serviceSource = fs.readFileSync(new URL('../src/server/chart-service/service.ts', import.meta.url), 'utf8');

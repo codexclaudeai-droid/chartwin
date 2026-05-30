@@ -8833,6 +8833,36 @@ body:not(:has(.landing-page)) .support-thread-title-button {
   text-align: left;
 }
 
+body:not(:has(.landing-page)) .support-thread-title-text,
+body:not(:has(.landing-page)) .support-private-thread-title,
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-title-text,
+body:not(:has(.landing-page)) #admin-support .admin-support-private-thread-title {
+  align-items: center;
+  display: inline-flex;
+  gap: 7px;
+  min-width: 0;
+}
+
+body:not(:has(.landing-page)) .support-private-lock {
+  align-items: center;
+  color: rgba(141, 197, 255, 0.92);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 16px;
+  justify-content: center;
+  width: 16px;
+}
+
+body:not(:has(.landing-page)) .support-private-lock svg {
+  display: block;
+  height: 15px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  width: 15px;
+}
+
 body:not(:has(.landing-page)) .support-thread-title-button:hover,
 body:not(:has(.landing-page)) .support-thread-title-button:focus-visible {
   color: var(--tc-ui-blue-2);

@@ -380,7 +380,18 @@ export function SupportAdminPanel() {
             <header className="admin-support-thread-header">
               <div>
                 <span className="admin-support-thread-id">{item.thread.id}</span>
-                <h3 className="admin-support-thread-title">{item.thread.title}</h3>
+                <h3 className="admin-support-thread-title">
+                  <span
+                    className={
+                      item.thread.visibility === 'private'
+                        ? 'admin-support-private-thread-title'
+                        : 'admin-support-thread-title-text'
+                    }
+                  >
+                    {item.thread.visibility === 'private' ? <PrivateSupportThreadLockIcon /> : null}
+                    <span>{item.thread.title}</span>
+                  </span>
+                </h3>
               </div>
               <div className="admin-support-thread-actions">
                 <button className="button secondary compact" type="button" onClick={() => startThreadEdit(item)} disabled={isBusy}>
@@ -549,4 +560,15 @@ function formatDateTime(value: string): string {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function PrivateSupportThreadLockIcon() {
+  return (
+    <span className="support-private-lock" aria-label="비공개 게시글" title="비공개 게시글">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="5.5" y="10.5" width="13" height="9" rx="2.25" />
+        <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+      </svg>
+    </span>
+  );
 }

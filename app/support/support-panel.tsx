@@ -448,7 +448,16 @@ export function SupportPanel() {
                     onClick={() => toggleThreadExpanded(item.thread.id)}
                     type="button"
                   >
-                    {formatSupportThreadDisplayTitle(item.thread)}
+                    <span
+                      className={
+                        item.thread.visibility === 'private'
+                          ? 'support-private-thread-title'
+                          : 'support-thread-title-text'
+                      }
+                    >
+                      {item.thread.visibility === 'private' ? <PrivateSupportThreadLockIcon /> : null}
+                      <span>{formatSupportThreadDisplayTitle(item.thread)}</span>
+                    </span>
                   </button>
                 </h3>
                 {canEditThread ? (
@@ -551,3 +560,14 @@ function getSupportMessageDisplayBody(thread: SupportThreadListItem['thread'], b
 }
 
 const formatSupportMessageDisplayBody = getSupportMessageDisplayBody;
+
+function PrivateSupportThreadLockIcon() {
+  return (
+    <span className="support-private-lock" aria-label="비공개 게시글" title="비공개 게시글">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="5.5" y="10.5" width="13" height="9" rx="2.25" />
+        <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+      </svg>
+    </span>
+  );
+}
