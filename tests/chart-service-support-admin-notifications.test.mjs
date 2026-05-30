@@ -31,7 +31,8 @@ test('creating a support thread notifies admins with direct reply links', () => 
   assert.equal(adminNotifications.length, 1);
   assert.equal(adminNotifications[0].category, 'support_request');
   assert.equal(adminNotifications[0].linkUrl, adminLink);
-  assert.match(adminNotifications[0].title, /support/i);
+  assert.equal(adminNotifications[0].title, 'Need chart help');
+  assert.doesNotMatch(adminNotifications[0].title, /New support request/i);
   assert.match(adminNotifications[0].body, /Need help reading/);
   assert.equal(superAdminNotifications.length, 1);
   assert.equal(superAdminNotifications[0].linkUrl, adminLink);
@@ -65,6 +66,8 @@ test('async support thread creation queues the same admin notification handoff',
   assert.equal(adminNotifications.length, 1);
   assert.equal(adminNotifications[0].category, 'support_request');
   assert.equal(adminNotifications[0].linkUrl, adminLink);
+  assert.equal(adminNotifications[0].title, 'Signal subscription question');
+  assert.doesNotMatch(adminNotifications[0].title, /New support request/i);
   assert.equal(superAdminNotifications.length, 1);
   assert.deepEqual(
     queuedEmails.map((email) => email.recipientEmail).sort(),

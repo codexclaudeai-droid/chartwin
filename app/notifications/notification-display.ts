@@ -106,8 +106,12 @@ const LEGACY_MOJIBAKE_TITLES = new Map<string, string>([
   [LEGACY_SUPPORT_REPLY_TITLE, '고객센터 답변이 등록되었습니다'],
 ]);
 
+const LEGACY_SUPPORT_REQUEST_TITLE_PREFIX = /^New support request:\s*/i;
+
 export function normalizeNotificationTitle(title: string): string {
-  return LEGACY_MOJIBAKE_TITLES.get(title) ?? title;
+  const legacyTitle = LEGACY_MOJIBAKE_TITLES.get(title) ?? title;
+
+  return legacyTitle.replace(LEGACY_SUPPORT_REQUEST_TITLE_PREFIX, '').trim();
 }
 
 export function getNotificationCategoryLabel(category: string): string {

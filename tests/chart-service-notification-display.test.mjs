@@ -62,6 +62,7 @@ test('notification display helpers translate categories and action labels', asyn
   assert.equal(getNotificationNavigationMessage({ category: 'payment', linkUrl: '/profile#payment-pay_1' }), '결제 알림을 읽음 처리하고 진행 상황으로 이동합니다.');
   assert.equal(getNotificationNavigationMessage({ category: 'notice', linkUrl: null }), '알림을 읽음 처리합니다.');
   assert.equal(normalizeNotificationTitle('怨좉컼?쇳꽣 ?듬????깅줉?섏뿀?듬땲??'), '고객센터 답변이 등록되었습니다');
+  assert.equal(normalizeNotificationTitle('New support request: Need chart help'), 'Need chart help');
   assert.equal(normalizeNotificationTitle('새 알림'), '새 알림');
   const notifications = [
     { id: 'n1', category: 'support_request', readAt: null },
