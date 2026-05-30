@@ -590,6 +590,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     timezone?: string;
     indicators?: Record<string, unknown>;
     panelState?: Record<string, unknown>;
+    indicatorsVisible?: boolean;
   };
   type ChartUserSettingsSnapshot = {
     version: 1;
@@ -621,6 +622,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         timezone: typeof parsed.timezone === 'string' ? parsed.timezone : undefined,
         indicators: cloneJsonRecord(parsed.indicators) ?? undefined,
         panelState: cloneJsonRecord(parsed.panelState) ?? undefined,
+        indicatorsVisible: typeof parsed.indicatorsVisible === 'boolean' ? parsed.indicatorsVisible : undefined,
       };
     } catch {
       return { version: 1 };
@@ -650,6 +652,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       timezone: typeof chart.config.timezone === 'string' ? chart.config.timezone : undefined,
       indicators: cloneJsonRecord(chart.config.indicators) ?? undefined,
       panelState: cloneJsonRecord(chart.config.panelState) ?? undefined,
+      indicatorsVisible: chart.isIndicatorsVisible(),
     };
   };
   const applySavedChartConfig = (chart: SimpleChart): void => {
@@ -694,6 +697,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         ...chart.config.panelState,
         ...saved.panelState,
       } as typeof chart.config.panelState;
+    }
+    if (typeof saved.indicatorsVisible === 'boolean') {
+      chart.setIndicatorsVisible(saved.indicatorsVisible);
     }
   };
   const captureSyncedLocalStorageEntries = (): Record<string, string> => {
@@ -3031,6 +3037,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (rawToolId === 'hide-indicators') {
         pane.chart.setIndicatorsVisible(!pane.chart.isIndicatorsVisible());
         pane.refreshChartUi();
+        persistChartUserSettingsForChart(pane.chart);
         emitToolboxTrashCounts();
         return;
       }
@@ -3046,6 +3053,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         pane.chart.setIndicatorsVisible(nextVisible);
         pane.chart.setPatternBoxesVisible(nextVisible);
         pane.refreshChartUi();
+        persistChartUserSettingsForChart(pane.chart);
         emitToolboxTrashCounts();
         return;
       }

@@ -120,3 +120,15 @@ test('chart runtime hydrates and syncs account chart settings', () => {
   assert.match(routeSource, /export async function PATCH/);
   assert.match(routeSource, /getActorFromAsyncRequest/);
 });
+
+test('chart runtime persists indicator configuration and visibility state', () => {
+  const initSource = fs.readFileSync(new URL('../src/app/init.ts', import.meta.url), 'utf8');
+
+  assert.match(initSource, /indicatorsVisible\?: boolean/);
+  assert.match(initSource, /indicators: cloneJsonRecord\(chart\.config\.indicators\)/);
+  assert.match(initSource, /panelState: cloneJsonRecord\(chart\.config\.panelState\)/);
+  assert.match(initSource, /indicatorsVisible: chart\.isIndicatorsVisible\(\)/);
+  assert.match(initSource, /chart\.setIndicatorsVisible\(saved\.indicatorsVisible\)/);
+  assert.match(initSource, /rawToolId === 'hide-indicators'[\s\S]*persistChartUserSettingsForChart\(pane\.chart\)/);
+  assert.match(initSource, /rawToolId === 'hide-all'[\s\S]*persistChartUserSettingsForChart\(pane\.chart\)/);
+});
