@@ -173,6 +173,7 @@ test('tampered signed session cookies do not fall back to unsigned identity clai
 
   assert.equal(claims?.signed, false);
   assert.equal(claims?.userId, undefined);
+  assert.equal(claims?.sessionId, parseSessionCookieClaims(cookie)?.sessionId);
   assert.throws(() => getActorFromSession(
     createMockChartServiceRepository(),
     claims,

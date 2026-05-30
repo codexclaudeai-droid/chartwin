@@ -192,7 +192,7 @@ export function parseSessionCookieClaims(cookieHeader: string | null | undefined
   if (!match) return null;
 
   const value = decodeURIComponent(match.slice(prefix.length));
-  return readSignedSessionCookieValue(value) ?? {
+  return readSignedSessionCookieValue(value) ?? readUnsignedSessionIdFromSignedCookieValue(value) ?? {
     sessionId: value,
     signed: false,
   };
@@ -265,6 +265,24 @@ function readSignedSessionCookieValue(
       userId: String(decoded.uid),
       expiresAt: String(decoded.exp),
       signed: true,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function readUnsignedSessionIdFromSignedCookieValue(value: string): SessionCookieClaims | null {
+  const [version, payload, signature, ...rest] = value.split('.');
+  if (version !== SIGNED_SESSION_VERSION || !payload || !signature || rest.length > 0) {
+    return null;
+  }
+
+  try {
+    const decoded = JSON.parse(base64UrlDecode(payload));
+    if (!decoded?.sid) return null;
+    return {
+      sessionId: String(decoded.sid),
+      signed: false,
     };
   } catch {
     return null;
