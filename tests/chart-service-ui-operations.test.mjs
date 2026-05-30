@@ -721,28 +721,29 @@ test('TradingCore brand identity stays in the shell without duplicating hero sta
 
 test('top navigation links the landing page to the TC Chart route', () => {
   const layoutSource = fs.readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8');
+  const mobileNavSource = fs.readFileSync(new URL('../app/mobile-nav.tsx', import.meta.url), 'utf8');
 
   assert.match(layoutSource, /<nav className="nav" aria-label="Primary">/);
   assert.match(layoutSource, /<Link href="\/chart" aria-label="TC Chart 페이지">TC차트<\/Link>/);
   assert.match(layoutSource, /<Link href="\/#landing-plans">구독<\/Link>/);
   assert.match(layoutSource, /<Link href="\/support">고객센터<\/Link>/);
   assert.match(layoutSource, /<ProfileNavLink \/>/);
-  assert.equal((layoutSource.match(/<Link href="\/#landing-plans">구독<\/Link>/g) ?? []).length, 2);
+  assert.equal(
+    ((layoutSource + mobileNavSource).match(/<Link href="\/#landing-plans">구독<\/Link>/g) ?? []).length,
+    2,
+  );
   assert.doesNotMatch(layoutSource, /<Link href="\/pricing">구독<\/Link>/);
-  assert.match(layoutSource, /<details className="mobile-nav">/);
-  assert.match(layoutSource, /className="mobile-nav-toggle"/);
-  assert.match(layoutSource, /<nav className="mobile-nav-links" aria-label="모바일 메뉴">/);
-  assert.match(layoutSource, /모바일 메뉴 열기/);
+  assert.match(layoutSource, /<MobileNav \/>/);
 
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
-  assert.match(cssSource, /Mobile topbar hamburger menu with open-state morph motion/);
+  assert.match(cssSource, /Mobile topbar hamburger menu with left drawer slide motion/);
   assert.match(cssSource, /\.mobile-nav\s*\{[^}]*outline: 0/s);
-  assert.match(cssSource, /\.mobile-nav:focus-within,\s*\.mobile-nav\[open\]\s*\{[^}]*outline: 0/s);
+  assert.match(cssSource, /\.mobile-nav:focus-within,\s*\.mobile-nav\.open\s*\{[^}]*outline: 0/s);
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*rgba\(15, 29, 52, 0\.98\)/s);
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*border: 1px solid rgba\(125, 183, 255, 0\.24\) !important/s);
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*0 22px 56px rgba\(0, 0, 0, 0\.42\)/s);
-  assert.match(cssSource, /\.mobile-nav\[open\] \.mobile-nav-toggle span:nth-child\(1\)\s*\{[^}]*rotate\(45deg\)/s);
-  assert.match(cssSource, /\.mobile-nav\[open\] \.mobile-nav-toggle span:nth-child\(2\)\s*\{[^}]*opacity: 0/s);
+  assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-toggle span:nth-child\(1\)\s*\{[^}]*rotate\(45deg\)/s);
+  assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-toggle span:nth-child\(2\)\s*\{[^}]*opacity: 0/s);
   assert.match(cssSource, /@media \(max-width: 760px\)\s*\{[\s\S]*?\.topbar > \.nav,[\s\S]*?\.topbar > \.session\s*\{[^}]*display: none/s);
   assert.match(cssSource, /@media \(max-width: 760px\)\s*\{[\s\S]*?\.mobile-nav\s*\{[^}]*display: block/s);
 });
@@ -754,9 +755,35 @@ test('mobile nav toggle morphs to X only while the menu is open', () => {
   assert.doesNotMatch(cssSource, /\.mobile-nav-toggle:focus-visible span:nth-child\(1\),[\s\S]*?rotate\(45deg\)/s);
   assert.doesNotMatch(cssSource, /\.mobile-nav-toggle:hover span:nth-child\(2\),[\s\S]*?opacity: 0/s);
   assert.doesNotMatch(cssSource, /\.mobile-nav-toggle:focus-visible span:nth-child\(2\),[\s\S]*?opacity: 0/s);
-  assert.match(cssSource, /\.mobile-nav\[open\] \.mobile-nav-toggle span:nth-child\(1\)\s*\{[^}]*rotate\(45deg\)/s);
-  assert.match(cssSource, /\.mobile-nav\[open\] \.mobile-nav-toggle span:nth-child\(2\)\s*\{[^}]*opacity: 0/s);
-  assert.match(cssSource, /\.mobile-nav\[open\] \.mobile-nav-toggle span:nth-child\(3\)\s*\{[^}]*rotate\(-45deg\)/s);
+  assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-toggle span:nth-child\(1\)\s*\{[^}]*rotate\(45deg\)/s);
+  assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-toggle span:nth-child\(2\)\s*\{[^}]*opacity: 0/s);
+  assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-toggle span:nth-child\(3\)\s*\{[^}]*rotate\(-45deg\)/s);
+});
+
+test('mobile navigation slides from the left and closes on menu or outside touch', () => {
+  const layoutSource = fs.readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8');
+  const mobileNavSource = fs.readFileSync(new URL('../app/mobile-nav.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(layoutSource, /import \{ MobileNav \} from '\.\/mobile-nav'/);
+  assert.match(mobileNavSource, /'use client'/);
+  assert.match(mobileNavSource, /const \[isOpen, setIsOpen\] = useState\(false\)/);
+  assert.match(mobileNavSource, /className=\{`mobile-nav \$\{isOpen \? 'open' : ''\}`\.trim\(\)\}/);
+  assert.match(mobileNavSource, /aria-expanded=\{isOpen\}/);
+  assert.match(mobileNavSource, /onClick=\{\(\) => setIsOpen\(false\)\}/);
+  assert.match(mobileNavSource, /handlePanelClick/);
+  assert.match(mobileNavSource, /closest\('a, button'\)/);
+  assert.match(mobileNavSource, /setIsOpen\(false\)/);
+  assert.match(cssSource, /\.mobile-nav-toggle\s*\{[^}]*aspect-ratio: 1 \/ 1/s);
+  assert.match(cssSource, /\.mobile-nav-toggle\s*\{[^}]*width: 44px/s);
+  assert.match(cssSource, /\.mobile-nav-toggle\s*\{[^}]*height: 44px/s);
+  assert.match(cssSource, /\.mobile-nav-toggle\s*\{[^}]*z-index: 90/s);
+  assert.match(cssSource, /\.topbar:has\(\.mobile-nav\.open\)\s*\{[^}]*z-index: 90/s);
+  assert.match(cssSource, /\.mobile-nav-backdrop\s*\{[^}]*position: fixed/s);
+  assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*left: 0/s);
+  assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*transform: translateX\(-104%\)/s);
+  assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-panel\s*\{[^}]*transform: translateX\(0\)/s);
+  assert.match(cssSource, /@media \(hover: none\), \(pointer: coarse\)\s*\{[\s\S]*?-webkit-tap-highlight-color: transparent/s);
 });
 
 test('login page uses production account copy without mock wording', () => {

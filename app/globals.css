@@ -97,6 +97,10 @@ a {
   z-index: 20;
 }
 
+.topbar:has(.mobile-nav.open) {
+  z-index: 90;
+}
+
 .brand {
   align-items: center;
   display: inline-flex;
@@ -7908,7 +7912,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   }
 }
 
-/* Mobile topbar hamburger menu with open-state morph motion. */
+/* Mobile topbar hamburger menu with left drawer slide motion. */
 .mobile-nav {
   border: 0;
   box-shadow: none;
@@ -7919,14 +7923,17 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .mobile-nav:focus-within,
-.mobile-nav[open] {
+.mobile-nav.open {
   border: 0;
   box-shadow: none;
   outline: 0;
 }
 
 .mobile-nav-toggle {
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
   align-items: center;
+  aspect-ratio: 1 / 1;
   background: transparent;
   border: 0;
   border-radius: 16px;
@@ -7939,11 +7946,9 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   justify-content: center;
   list-style: none;
   padding: 0;
+  position: relative;
   width: 44px;
-}
-
-.mobile-nav-toggle::-webkit-details-marker {
-  display: none;
+  z-index: 90;
 }
 
 .mobile-nav-toggle span {
@@ -7958,23 +7963,36 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 
 .mobile-nav-toggle:hover span,
 .mobile-nav-toggle:focus-visible span,
-.mobile-nav[open] .mobile-nav-toggle span {
+.mobile-nav.open .mobile-nav-toggle span {
   background: #ffffff;
 }
 
-.mobile-nav[open] .mobile-nav-toggle span:nth-child(1) {
+.mobile-nav.open .mobile-nav-toggle span:nth-child(1) {
   transform: translateY(7px) rotate(45deg);
   width: 22px;
 }
 
-.mobile-nav[open] .mobile-nav-toggle span:nth-child(2) {
+.mobile-nav.open .mobile-nav-toggle span:nth-child(2) {
   opacity: 0;
   transform: scaleX(0.25);
 }
 
-.mobile-nav[open] .mobile-nav-toggle span:nth-child(3) {
+.mobile-nav.open .mobile-nav-toggle span:nth-child(3) {
   transform: translateY(-7px) rotate(-45deg);
   width: 22px;
+}
+
+.mobile-nav-backdrop {
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  background: rgba(2, 7, 19, 0.48);
+  border: 0;
+  cursor: pointer;
+  inset: 0;
+  opacity: 1;
+  padding: 0;
+  position: fixed;
+  z-index: 70;
 }
 
 .mobile-nav-panel {
@@ -7987,24 +8005,28 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   box-shadow:
     0 22px 56px rgba(0, 0, 0, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
-  min-width: min(320px, calc(100vw - 32px));
+  height: 100dvh;
+  left: 0;
+  max-width: 360px;
+  min-width: min(320px, calc(100vw - 36px));
   opacity: 0;
-  padding: 14px;
+  overflow-y: auto;
+  padding: 76px 16px 18px;
   pointer-events: none;
-  position: absolute;
-  right: 0;
-  top: calc(100% + 12px);
-  transform: translateY(-8px) scale(0.98);
-  transform-origin: top right;
-  transition: opacity 180ms ease, transform 180ms ease;
+  position: fixed;
+  top: 0;
+  transform: translateX(-104%);
+  transform-origin: center left;
+  transition: opacity 220ms ease, transform 240ms cubic-bezier(0.2, 0.72, 0.2, 1);
+  width: min(340px, calc(100vw - 36px));
   outline: 0 !important;
-  z-index: 30;
+  z-index: 80;
 }
 
-.mobile-nav[open] .mobile-nav-panel {
+.mobile-nav.open .mobile-nav-panel {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0) scale(1);
+  transform: translateX(0);
 }
 
 .mobile-nav-links,
@@ -8018,6 +8040,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 .mobile-nav-links a,
 .mobile-nav-panel .session a,
 .mobile-nav-panel .session-button {
+  -webkit-tap-highlight-color: transparent;
   align-items: center;
   background: transparent;
   border: 0;
@@ -8049,6 +8072,18 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   border-top: 0;
   margin-top: 6px;
   padding-top: 4px;
+}
+
+@media (hover: none), (pointer: coarse) {
+  a,
+  button,
+  summary,
+  [role="button"],
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 @media (max-width: 760px) {

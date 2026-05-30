@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { AdminNavLink } from './admin-nav-link';
+import { MobileNav } from './mobile-nav';
 import { NotificationNavLink } from './notification-nav-link';
 import { ProfileNavLink } from './profile-nav-link';
 import { SessionNav } from './session-nav';
@@ -63,25 +64,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <AdminNavLink />
             </nav>
             <SessionNav />
-            <details className="mobile-nav">
-              <summary className="mobile-nav-toggle" aria-label="모바일 메뉴 열기">
-                <span aria-hidden="true" />
-                <span aria-hidden="true" />
-                <span aria-hidden="true" />
-              </summary>
-              <div className="mobile-nav-panel">
-                <nav className="mobile-nav-links" aria-label="모바일 메뉴">
-                  <Link href="/">홈</Link>
-                  <Link href="/chart" aria-label="TC Chart 페이지">TC차트</Link>
-                  <Link href="/#landing-plans">구독</Link>
-                  <Link href="/support">고객센터</Link>
-                  <ProfileNavLink />
-                  <NotificationNavLink />
-                  <AdminNavLink />
-                </nav>
-                <SessionNav />
-              </div>
-            </details>
+            <MobileNav />
           </header>
           {children}
         </div>
