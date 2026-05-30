@@ -11954,7 +11954,10 @@ body:not(:has(.landing-page)) .pricing-checkout-card .pricing-plan-card .landing
 }
 
 body:not(:has(.landing-page)) .pricing-checkout-card .pricing-plan-card .button {
+  box-sizing: border-box;
   justify-content: center;
+  max-width: 100%;
+  min-width: 0;
   overflow: hidden;
   position: relative;
   width: 100%;

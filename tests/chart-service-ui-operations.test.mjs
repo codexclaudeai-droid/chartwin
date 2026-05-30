@@ -1154,6 +1154,15 @@ test('pricing plan cards place selection buttons inside each card and highlight 
   assert.match(cssSource, /\.plan-card-select-button/);
 });
 
+test('pricing selected plan buttons stay inside responsive plan cards', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const pricingPlanButtonStyle = cssSource.match(/body:not\(:has\(\.landing-page\)\) \.pricing-checkout-card \.pricing-plan-card \.button\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? '';
+
+  assert.match(pricingPlanButtonStyle, /box-sizing:\s*border-box/);
+  assert.match(pricingPlanButtonStyle, /max-width:\s*100%/);
+  assert.match(pricingPlanButtonStyle, /min-width:\s*0/);
+});
+
 test('pricing payment request advances through step-based checkout states', () => {
   const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
