@@ -203,6 +203,7 @@ type UserDirectorySummary = {
   suspendedCount: number;
   salespersonCount: number;
   adminCount: number;
+  withdrawnCount: number;
 };
 
 export function UserAdminPanel() {
@@ -506,9 +507,19 @@ export function UserAdminPanel() {
     })
     : null;
   const userDirectorySummary = getUserDirectorySummary(users);
+  const isDetailMode = detail !== null;
+
+  function closeDetail() {
+    setDetail(null);
+    setAccountReason('');
+    setDetailMessage('회원을 선택하면 상세 운영 상태를 볼 수 있습니다.');
+  }
+
   return (
     <>
-    <section className="card wide" id="admin-users">
+    <section className={`card wide${isDetailMode ? ' admin-user-detail-mode' : ''}`} id="admin-users">
+      {!isDetailMode && (
+      <>
       <div className="toolbar">
         <h2>회원 검색</h2>
         <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>새로고침</button>
@@ -564,14 +575,17 @@ export function UserAdminPanel() {
         <span className="admin-user-summary-pill">
           정상 <strong>{userDirectorySummary.activeCount.toLocaleString('ko-KR')}</strong>
         </span>
-        <span className="admin-user-summary-pill warning">
-          정지 <strong>{userDirectorySummary.suspendedCount.toLocaleString('ko-KR')}</strong>
-        </span>
         <span className="admin-user-summary-pill">
           영업자 <strong>{userDirectorySummary.salespersonCount.toLocaleString('ko-KR')}</strong>
         </span>
         <span className="admin-user-summary-pill">
           관리자 <strong>{userDirectorySummary.adminCount.toLocaleString('ko-KR')}</strong>
+        </span>
+        <span className="admin-user-summary-pill warning">
+          정지 <strong>{userDirectorySummary.suspendedCount.toLocaleString('ko-KR')}</strong>
+        </span>
+        <span className="admin-user-summary-pill muted">
+          탈퇴 <strong>{userDirectorySummary.withdrawnCount.toLocaleString('ko-KR')}</strong>
         </span>
       </div>
       {dashboardFilterNotice === formatUserRoleLabel('salesperson') && (
@@ -667,22 +681,22 @@ export function UserAdminPanel() {
       <div className="admin-user-mobile-list" aria-label="모바일 회원 카드 목록">
         {users.map((item) => (
           <article className="admin-user-mobile-card" key={`mobile-${item.user.id}`}>
-            <div className="admin-user-mobile-card-header">
+            <div className="admin-user-mobile-card-title-row">
               <div>
                 <strong>{item.user.name}</strong>
                 <small>{item.user.email}</small>
               </div>
+              <button className="button secondary" type="button" onClick={() => openDetail(item.user.id)} disabled={isBusy}>
+                상세 보기
+              </button>
+            </div>
+            <div className="admin-user-mobile-card-status-row">
               <span className={getAccountStatusClassName(item.user.accountStatus)}>
                 {formatUserAccountStatusLabel(item.user.accountStatus)}
               </span>
-            </div>
-            <div className="admin-user-mobile-card-badges">
               <span className="badge admin-user-role-badge">{formatUserRoleLabel(item.user.role)}</span>
-              {item.subscription ? (
-                <span className="badge admin-user-plan-badge">{formatAdminPlanTierLabel(item.subscription)}</span>
-              ) : null}
             </div>
-            <dl className="admin-user-mobile-card-meta">
+            <dl className="admin-user-mobile-card-info-grid">
               <div>
                 <dt>연락번호</dt>
                 <dd>{item.user.phoneNumber || '미등록'}</dd>
@@ -692,35 +706,30 @@ export function UserAdminPanel() {
                 <dd>{formatDateTime(item.user.createdAt)}</dd>
               </div>
               <div>
-                <dt>구독</dt>
+                <dt>추천인</dt>
+                <dd>{item.referrer?.email ?? '없음'}</dd>
+              </div>
+              <div>
+                <dt>구독여부</dt>
                 <dd>{item.subscription ? formatSubscriptionStatusLabel(item.subscription.status) : '구독 없음'}</dd>
               </div>
               <div>
-                <dt>차트 접근</dt>
+                <dt>차트접근</dt>
                 <dd>{formatChartAccessLabel(item.access)}</dd>
               </div>
               <div>
-                <dt>최근 결제</dt>
+                <dt>최근결제</dt>
                 <dd>
                   {item.latestPayment
                     ? `${formatPaymentStatusLabel(item.latestPayment.status)} · ${formatPaymentAmountUsd(item.latestPayment.amountUsd)}`
                     : '결제 없음'}
                 </dd>
               </div>
-              <div>
-                <dt>추천인</dt>
-                <dd>{item.referrer?.email ?? '없음'}</dd>
-              </div>
             </dl>
-            <div className="admin-user-mobile-card-counts" aria-label="운영 상태 요약">
+            <div className="admin-user-mobile-card-ops-grid" aria-label="운영 상태 요약">
               <span>결제 <strong>{item.paymentCount}</strong></span>
               <span>문의 <strong>{item.supportThreadCount}</strong></span>
               <span>알림 <strong>{item.unreadNotificationCount}</strong></span>
-            </div>
-            <div className="admin-user-mobile-card-actions">
-              <button className="button secondary" type="button" onClick={() => openDetail(item.user.id)} disabled={isBusy}>
-                상세 보기
-              </button>
             </div>
           </article>
         ))}
@@ -728,9 +737,20 @@ export function UserAdminPanel() {
           <p className="admin-user-mobile-empty">표시할 회원이 없습니다.</p>
         )}
       </div>
+      </>
+      )}
+      {detail && (
+      <div className="admin-user-detail-screen">
+        <button
+          aria-label="회원 목록으로 돌아가기"
+          className="button secondary admin-user-detail-back"
+          onClick={closeDetail}
+          type="button"
+        >
+          목록으로
+        </button>
       <div className="thread-list admin-detail-panel">
         <p className="notice">{detailMessage}</p>
-        {detail && (
           <article className="thread-card admin-user-detail-card">
             <div className="admin-user-detail-header">
               <div>
@@ -990,8 +1010,9 @@ export function UserAdminPanel() {
               </section>
             </div>
           </article>
-        )}
+        </div>
       </div>
+      )}
     </section>
     {confirmationDialog}
     </>
@@ -1035,6 +1056,7 @@ function getUserDirectorySummary(items: AdminUserDirectoryItem[]): UserDirectory
     if (item.user.accountStatus === 'suspended') summary.suspendedCount += 1;
     if (item.user.role === 'salesperson') summary.salespersonCount += 1;
     if (item.user.role === 'admin' || item.user.role === 'super_admin') summary.adminCount += 1;
+    if (isWithdrawnUser(item.user)) summary.withdrawnCount += 1;
     return summary;
   }, {
     totalCount: 0,
@@ -1042,5 +1064,13 @@ function getUserDirectorySummary(items: AdminUserDirectoryItem[]): UserDirectory
     suspendedCount: 0,
     salespersonCount: 0,
     adminCount: 0,
+    withdrawnCount: 0,
   });
+}
+
+function isWithdrawnUser(user: AdminUserDirectoryItem['user']): boolean {
+  return user.accountStatus === 'suspended' &&
+    user.phoneNumber === null &&
+    user.role !== 'admin' &&
+    user.role !== 'super_admin';
 }

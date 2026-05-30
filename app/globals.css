@@ -6106,13 +6106,14 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   }
 
   .admin-dashboard-menu {
-    display: flex;
+    display: grid;
     gap: 8px;
-    overflow-x: auto;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    overflow: visible;
   }
 
   .admin-dashboard-menu-item {
-    min-width: 156px;
+    min-width: 0;
   }
 }
 
@@ -8780,14 +8781,14 @@ body:not(:has(.landing-page)) #admin-users .admin-user-mobile-list {
 
 body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card {
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.058), rgba(55, 125, 255, 0.026)),
-    rgba(8, 17, 31, 0.86);
-  border: 1px solid rgba(125, 183, 255, 0.16);
-  border-radius: 16px;
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(55, 125, 255, 0.018)),
+    rgba(8, 17, 31, 0.82);
+  border: 1px solid rgba(125, 183, 255, 0.14);
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 10px;
+  padding: 14px 14px 12px;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-header {
@@ -8797,12 +8798,29 @@ body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-header {
   justify-content: space-between;
 }
 
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-title-row,
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-status-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-header strong,
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-title-row strong,
 body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-meta dd {
   color: #ffffff;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-header small {
+  color: rgba(216, 236, 255, 0.7);
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-title-row small {
   color: rgba(216, 236, 255, 0.7);
   display: block;
   font-size: 12px;
@@ -8817,46 +8835,65 @@ body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-counts {
   gap: 8px;
 }
 
-body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-meta {
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-meta,
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-info-grid,
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-ops-grid {
   display: grid;
   gap: 8px;
+  margin: 0;
+}
+
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-meta,
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-info-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 0;
 }
 
-body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-meta div {
-  background: rgba(2, 7, 19, 0.34);
-  border: 1px solid rgba(125, 183, 255, 0.1);
-  border-radius: 12px;
-  min-width: 0;
-  padding: 9px 10px;
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-ops-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-meta dt {
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-meta div,
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-info-grid div {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(125, 183, 255, 0.1);
+  border-radius: 0;
+  min-width: 0;
+  padding: 7px 0 9px;
+}
+
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-meta dt,
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-info-grid dt {
   color: rgba(216, 236, 255, 0.58);
   font-size: 11px;
   font-weight: 800;
   margin: 0 0 4px;
 }
 
-body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-meta dd {
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-meta dd,
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-info-grid dd {
   font-size: 12px;
   font-weight: 760;
   margin: 0;
   overflow-wrap: anywhere;
 }
 
-body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-counts span {
-  background: rgba(125, 183, 255, 0.1);
-  border: 1px solid rgba(125, 183, 255, 0.16);
-  border-radius: 999px;
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-counts span,
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-ops-grid span {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid rgba(125, 183, 255, 0.1);
+  border-radius: 0;
   color: rgba(216, 236, 255, 0.72);
   font-size: 12px;
   font-weight: 800;
-  padding: 6px 9px;
+  padding: 9px 0 0;
+  text-align: left;
 }
 
-body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-counts strong {
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-counts strong,
+body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-ops-grid strong {
   color: #ffffff;
 }
 
@@ -8916,6 +8953,27 @@ body:not(:has(.landing-page)) .admin-dashboard-menu-item.active {
 
 body:not(:has(.landing-page)) .admin-dashboard-menu-item.active {
   box-shadow: inset 3px 0 0 var(--tc-ui-blue-2);
+}
+
+@media (max-width: 960px) {
+  body:not(:has(.landing-page)) .admin-dashboard-shell {
+    grid-template-columns: 1fr;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-sidebar {
+    position: static;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-menu {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    overflow: visible;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-menu-item {
+    min-width: 0;
+  }
 }
 
 body:not(:has(.landing-page)) .admin-dashboard-workspace {
@@ -9048,7 +9106,6 @@ body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll {
     gap: 12px;
   }
 
-  body:not(:has(.landing-page)) #admin-users .admin-user-summary-strip,
   body:not(:has(.landing-page)) #admin-users .admin-user-mobile-card-meta {
     grid-template-columns: 1fr;
   }
@@ -10483,7 +10540,7 @@ body:not(:has(.landing-page)) #admin-users > .admin-filter-row .button {
 
 body:not(:has(.landing-page)) #admin-users .admin-user-summary-strip {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-top: 16px;
   padding: 0;
@@ -10517,6 +10574,14 @@ body:not(:has(.landing-page)) #admin-users .admin-user-summary-pill.warning {
     radial-gradient(circle at 100% 0%, rgba(255, 191, 95, 0.12), transparent 44%),
     rgba(10, 22, 42, 0.76);
   color: rgba(255, 224, 174, 0.78);
+}
+
+body:not(:has(.landing-page)) #admin-users .admin-user-summary-pill.muted {
+  border-color: rgba(216, 236, 255, 0.1);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(216, 236, 255, 0.08), transparent 44%),
+    rgba(10, 22, 42, 0.62);
+  color: rgba(216, 236, 255, 0.62);
 }
 
 body:not(:has(.landing-page)) #admin-users > .notice {
@@ -10788,6 +10853,25 @@ body:not(:has(.landing-page)) #admin-users .admin-detail-panel {
   padding-top: 18px;
 }
 
+body:not(:has(.landing-page)) #admin-users.admin-user-detail-mode {
+  max-width: none;
+}
+
+body:not(:has(.landing-page)) #admin-users .admin-user-detail-screen {
+  display: grid;
+  gap: 16px;
+}
+
+body:not(:has(.landing-page)) #admin-users .admin-user-detail-back {
+  width: fit-content;
+}
+
+body:not(:has(.landing-page)) #admin-users .admin-user-detail-screen .admin-detail-panel {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
 body:not(:has(.landing-page)) #admin-users .admin-detail-panel > .notice {
   border-color: rgba(101, 158, 255, 0.22);
   background: rgba(36, 63, 100, 0.42);
@@ -11012,13 +11096,16 @@ body:not(:has(.landing-page)) #admin-users .admin-user-audit-history-list .audit
 }
 
 @media (max-width: 1100px) {
-  body:not(:has(.landing-page)) #admin-users > .admin-filter-row,
+  body:not(:has(.landing-page)) #admin-users > .admin-filter-row {
+    grid-template-columns: minmax(220px, 1fr) minmax(132px, 0.48fr) minmax(132px, 0.48fr) auto;
+  }
+
   body:not(:has(.landing-page)) #admin-users .admin-user-summary-strip {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   body:not(:has(.landing-page)) #admin-users > .admin-filter-row .button {
-    grid-column: span 2;
+    grid-column: auto;
   }
 
   body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll {
@@ -11045,8 +11132,7 @@ body:not(:has(.landing-page)) #admin-users .admin-user-audit-history-list .audit
 }
 
 @media (max-width: 680px) {
-  body:not(:has(.landing-page)) #admin-users > .admin-filter-row,
-  body:not(:has(.landing-page)) #admin-users .admin-user-summary-strip {
+  body:not(:has(.landing-page)) #admin-users > .admin-filter-row {
     grid-template-columns: 1fr;
   }
 

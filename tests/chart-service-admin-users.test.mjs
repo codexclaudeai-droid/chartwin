@@ -477,16 +477,98 @@ test('admin user directory switches to mobile cards below tablet width', () => {
 
   assert.match(source, /admin-user-mobile-list/);
   assert.match(source, /admin-user-mobile-card/);
-  assert.match(source, /admin-user-mobile-card-header/);
-  assert.match(source, /admin-user-mobile-card-meta/);
-  assert.match(source, /admin-user-mobile-card-actions/);
+  assert.match(source, /admin-user-mobile-card-title-row/);
+  assert.match(source, /admin-user-mobile-card-info-grid/);
+  assert.match(source, /admin-user-mobile-card-ops-grid/);
   assert.match(source, /users\.map\(\(item\) => \(/);
   assert.match(source, /openDetail\(item\.user\.id\)/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-list\s*\{[\s\S]*?display: none/);
   assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-table-scroll\s*\{[\s\S]*?display: none/);
   assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-list\s*\{[\s\S]*?display: grid/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-card\s*\{[\s\S]*?border: 1px solid rgba\(125, 183, 255, 0\.16\)/);
-  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-card-actions \.button\s*\{[\s\S]*?width: 100%/);
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-card-info-grid\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+});
+
+test('admin user summary shows six status pills in three columns with withdrawal count', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /withdrawnCount: number/);
+  assert.match(source, /isWithdrawnUser\(item\.user\)/);
+  assert.match(source, /userDirectorySummary\.withdrawnCount/);
+  assert.match(source, /탈퇴 <strong>\{userDirectorySummary\.withdrawnCount\.toLocaleString\('ko-KR'\)\}<\/strong>/);
+  assert.match(source, /전체 <strong>\{userDirectorySummary\.totalCount\.toLocaleString\('ko-KR'\)\}<\/strong>/);
+  assert.match(source, /정상 <strong>\{userDirectorySummary\.activeCount\.toLocaleString\('ko-KR'\)\}<\/strong>/);
+  assert.match(source, /영업자 <strong>\{userDirectorySummary\.salespersonCount\.toLocaleString\('ko-KR'\)\}<\/strong>/);
+  assert.match(source, /관리자 <strong>\{userDirectorySummary\.adminCount\.toLocaleString\('ko-KR'\)\}<\/strong>/);
+  assert.match(source, /정지 <strong>\{userDirectorySummary\.suspendedCount\.toLocaleString\('ko-KR'\)\}<\/strong>/);
+  assert.match(cssSource, /#admin-users \.admin-user-summary-strip\s*\{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(cssSource, /#admin-users \.admin-user-summary-pill\.muted\s*\{/);
+});
+
+test('admin user search filters keep query role status and submit on one row before mobile', () => {
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const filterRule = cssSource.match(/#admin-users > \.admin-filter-row\s*\{(?<rule>[^}]+)\}/);
+  const tabletRule = cssSource.match(/@media \(max-width: 1100px\)[\s\S]*?#admin-users > \.admin-filter-row\s*\{(?<rule>[^}]+)\}/);
+
+  assert.ok(filterRule?.groups?.rule);
+  assert.ok(tabletRule?.groups?.rule);
+  assert.match(filterRule.groups.rule, /grid-template-columns: minmax\(260px, 1\.6fr\) minmax\(150px, 0\.7fr\) minmax\(150px, 0\.7fr\) auto/);
+  assert.match(tabletRule.groups.rule, /grid-template-columns: minmax\(220px, 1fr\) minmax\(132px, 0\.48fr\) minmax\(132px, 0\.48fr\) auto/);
+  assert.match(cssSource, /@media \(max-width: 680px\)[\s\S]*?#admin-users > \.admin-filter-row\s*\{[\s\S]*?grid-template-columns: 1fr/);
+});
+
+test('admin mobile user cards arrange member fields in requested two-column rows', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /admin-user-mobile-card-title-row/);
+  assert.match(source, /admin-user-mobile-card-status-row/);
+  assert.match(source, /admin-user-mobile-card-info-grid/);
+  assert.match(source, /admin-user-mobile-card-ops-grid/);
+  assert.match(source, /<dt>연락번호<\/dt>[\s\S]*?<dt>가입일<\/dt>[\s\S]*?<dt>추천인<\/dt>[\s\S]*?<dt>구독여부<\/dt>[\s\S]*?<dt>차트접근<\/dt>[\s\S]*?<dt>최근결제<\/dt>/);
+  assert.match(source, /<span>결제 <strong>\{item\.paymentCount\}<\/strong><\/span>[\s\S]*?<span>문의 <strong>\{item\.supportThreadCount\}<\/strong><\/span>[\s\S]*?<span>알림 <strong>\{item\.unreadNotificationCount\}<\/strong><\/span>/);
+  assert.match(cssSource, /#admin-users \.admin-user-mobile-card-info-grid\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(cssSource, /#admin-users \.admin-user-mobile-card-ops-grid\s*\{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+});
+
+test('admin mobile user cards keep inner fields flat instead of nested boxes', () => {
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const infoFieldRule = cssSource.match(
+    /#admin-users \.admin-user-mobile-card-info-grid div\s*\{(?<rule>[^}]+)\}/,
+  );
+  const opsRule = cssSource.match(
+    /#admin-users \.admin-user-mobile-card-ops-grid span\s*\{(?<rule>[^}]+)\}/,
+  );
+
+  assert.ok(infoFieldRule?.groups?.rule);
+  assert.ok(opsRule?.groups?.rule);
+  assert.match(infoFieldRule.groups.rule, /background: transparent/);
+  assert.match(infoFieldRule.groups.rule, /border: 0/);
+  assert.match(infoFieldRule.groups.rule, /border-bottom: 1px solid rgba\(125, 183, 255, 0\.1\)/);
+  assert.match(infoFieldRule.groups.rule, /border-radius: 0/);
+  assert.match(opsRule.groups.rule, /background: transparent/);
+  assert.match(opsRule.groups.rule, /border: 0/);
+  assert.match(opsRule.groups.rule, /border-top: 1px solid rgba\(125, 183, 255, 0\.1\)/);
+  assert.match(opsRule.groups.rule, /border-radius: 0/);
+});
+
+test('admin user detail opens as a full detail screen with a back action', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /const isDetailMode = detail !== null/);
+  assert.match(source, /function closeDetail\(\)/);
+  assert.match(source, /setDetail\(null\)/);
+  assert.match(source, /admin-user-detail-mode/);
+  assert.match(source, /admin-user-detail-screen/);
+  assert.match(source, /admin-user-detail-back/);
+  assert.match(source, /onClick=\{closeDetail\}/);
+  assert.match(source, /aria-label="회원 목록으로 돌아가기"/);
+  assert.match(source, /!\s*isDetailMode && \(/);
+  assert.match(cssSource, /#admin-users\.admin-user-detail-mode\s*\{[\s\S]*?max-width: none/);
+  assert.match(cssSource, /#admin-users \.admin-user-detail-screen\s*\{[\s\S]*?display: grid/);
+  assert.match(cssSource, /#admin-users \.admin-user-detail-back\s*\{[\s\S]*?width: fit-content/);
 });
 
 test('admin user directory detail button matches the role badge pill sizing', () => {

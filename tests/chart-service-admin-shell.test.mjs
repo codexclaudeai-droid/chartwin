@@ -115,6 +115,19 @@ test('admin sidebar submenus roll out on hover and keyboard focus', () => {
   assert.match(cssSource, /\.admin-dashboard-submenu a\[aria-current="page"\]/);
 });
 
+test('admin sidebar menu wraps on small screens instead of horizontal scrolling', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const mobileMenuRule = cssSource.match(
+    /@media \(max-width: 960px\)[\s\S]*?\.admin-dashboard-menu\s*\{(?<rule>[^}]+)\}/,
+  );
+
+  assert.ok(mobileMenuRule?.groups?.rule);
+  assert.match(mobileMenuRule.groups.rule, /display: grid/);
+  assert.match(mobileMenuRule.groups.rule, /grid-template-columns: repeat\(auto-fit, minmax\(150px, 1fr\)\)/);
+  assert.match(mobileMenuRule.groups.rule, /overflow: visible/);
+  assert.doesNotMatch(mobileMenuRule.groups.rule, /overflow-x: auto/);
+});
+
 test('admin dashboard uses polished console design tokens and surfaces', () => {
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
