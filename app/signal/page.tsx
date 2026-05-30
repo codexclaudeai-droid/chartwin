@@ -29,7 +29,7 @@ export default async function SignalPage() {
   return (
     <main className="signal-admin-page">
       <div className="signal-admin-hero">
-        <span>ChartWin Signal</span>
+        <span>TRADINGCORE SIGNAL</span>
         <h1>전략시그널 관리</h1>
         <p>슈퍼관리자 권한으로 종목 노출, 웹훅 수신, 사용자용 전략 표시를 관리합니다.</p>
       </div>
