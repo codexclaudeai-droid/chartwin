@@ -379,6 +379,7 @@ export function PricingPanel({
               exchangeRateMessage={exchangeRateMessage}
               paymentMethod={paymentMethod}
               paymentSettings={paymentSettings}
+              selectedPlanAmountUsd={selectedPlanAmountUsd}
               selectedPlanAmountKrw={selectedPlanAmountKrw}
             />
             {paymentMethod === 'usdt' ? (
@@ -434,6 +435,7 @@ export function PricingPanel({
               exchangeRateMessage={exchangeRateMessage}
               paymentMethod={paymentMethod}
               paymentSettings={paymentSettings}
+              selectedPlanAmountUsd={selectedPlanAmountUsd}
               selectedPlanAmountKrw={selectedPlanAmountKrw}
             />
             <div className="checkout-actions">
@@ -512,11 +514,13 @@ function PaymentTransferInfo({
   exchangeRateMessage,
   paymentMethod,
   paymentSettings,
+  selectedPlanAmountUsd,
   selectedPlanAmountKrw,
 }: {
   exchangeRateMessage: string;
   paymentMethod: 'bank_transfer' | 'usdt';
   paymentSettings: PaymentTransferSettings;
+  selectedPlanAmountUsd: number;
   selectedPlanAmountKrw: number | null;
 }) {
   return (
@@ -540,6 +544,9 @@ function PaymentTransferInfo({
       ) : (
         <>
           <strong>USDT 테더 이체 정보</strong>
+          <strong className="usdt-payment-amount">
+            USDT 전송 수량: {formatUsdtTransferQuantity(selectedPlanAmountUsd)} USDT
+          </strong>
           <span>테더주소: {paymentSettings.usdtAddress}</span>
           <span>네트워크: {paymentSettings.usdtNetwork}</span>
         </>
@@ -567,6 +574,13 @@ function getStepStateClass(step: CheckoutStep, currentStep: CheckoutStep): strin
 
 function discountedAmount(plan: Plan): number {
   return Math.round(plan.basePriceUsd * (1 - plan.discountPercent / 100) * 100) / 100;
+}
+
+function formatUsdtTransferQuantity(amountUsd: number): string {
+  return amountUsd.toLocaleString('en-US', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: Number.isInteger(amountUsd) ? 0 : 2,
+  });
 }
 
 function isRecommendedPlan(plan: Plan): boolean {

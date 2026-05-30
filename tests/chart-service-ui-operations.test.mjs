@@ -1014,6 +1014,17 @@ test('pricing USDT payment request captures and submits the TXID value', () => {
   assert.match(panelSource, /body: JSON\.stringify\(\{/);
 });
 
+test('pricing USDT payment method shows the required transfer quantity', () => {
+  const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /selectedPlanAmountUsd=\{selectedPlanAmountUsd\}/);
+  assert.match(panelSource, /formatUsdtTransferQuantity\(selectedPlanAmountUsd\)/);
+  assert.match(panelSource, /USDT 전송 수량/);
+  assert.match(panelSource, /usdt-payment-amount/);
+  assert.match(cssSource, /\.usdt-payment-amount/);
+});
+
 test('pricing payment request lets members choose a subscription plan from cards', () => {
   const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');

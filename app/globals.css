@@ -3601,6 +3601,11 @@ a {
   font-size: 18px;
 }
 
+.usdt-payment-amount {
+  color: #0c665a;
+  font-size: 18px;
+}
+
 .settings-grid label {
   display: grid;
   gap: 8px;
@@ -9110,6 +9115,10 @@ body:not(:has(.landing-page)) .mini-card span {
 body:not(:has(.landing-page)) .mini-card strong,
 body:not(:has(.landing-page)) .payment-transfer-info strong {
   color: #ffffff;
+}
+
+body:not(:has(.landing-page)) .payment-transfer-info .usdt-payment-amount {
+  color: rgba(188, 255, 226, 0.94);
 }
 
 body:not(:has(.landing-page)) .bank-logo-image {
