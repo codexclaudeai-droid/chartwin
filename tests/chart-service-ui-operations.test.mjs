@@ -811,6 +811,15 @@ test('landing middle sections present plan details without a workflow section', 
   assert.match(cssSource, /\.landing-plan-card-footer/);
 });
 
+test('landing plan cards use admin configured web info plan services', () => {
+  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+
+  assert.match(pageSource, /getAsyncWebInfoSettingsForDisplay/);
+  assert.match(pageSource, /webInfoSettings: await getAsyncWebInfoSettingsForDisplay\(repository\)/);
+  assert.match(pageSource, /const landingPlanFeatures = webInfoSettings\.planServices\[plan\.id\] \?\? getLandingPlanFeatures\(plan\);/);
+  assert.match(pageSource, /landingPlanFeatures\.map\(\(feature\) =>/);
+});
+
 test('landing bottom sections end with FAQ and contact actions', () => {
   const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');

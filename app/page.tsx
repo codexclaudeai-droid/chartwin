@@ -5,7 +5,10 @@ import LandingChartMotion from './landing-chart-motion.tsx';
 import { FreeTrialRequestButton } from './shared/free-trial-request-button';
 import { createPricingPlanHref } from './pricing/plan-selection.ts';
 import type { SubscriptionPlan } from '../src/domain/chart-service/index.ts';
-import { getAsyncChartServicePersistence } from '../src/server/chart-service/index.ts';
+import {
+  getAsyncChartServicePersistence,
+  getAsyncWebInfoSettingsForDisplay,
+} from '../src/server/chart-service/index.ts';
 
 export const metadata: Metadata = {
   title: 'TradingCore | 실시간 알고리즘 트레이딩 시그널',
@@ -250,9 +253,10 @@ function getLandingPlanFeatures(plan: SubscriptionPlan): string[] {
 
 export default async function HomePage() {
   const persistence = getAsyncChartServicePersistence();
-  const plans = await persistence.runRead(async (repository) => (
-    await repository.listPlans()
-  ).filter((plan) => plan.isActive));
+  const { plans, webInfoSettings } = await persistence.runRead(async (repository) => ({
+    plans: (await repository.listPlans()).filter((plan) => plan.isActive),
+    webInfoSettings: await getAsyncWebInfoSettingsForDisplay(repository),
+  }));
 
   return (
     <main className="landing-page">
@@ -307,6 +311,7 @@ export default async function HomePage() {
         <div className="landing-plan-grid">
           {plans.map((plan) => {
             const featured = plan.id === 'plan_half_year';
+            const landingPlanFeatures = webInfoSettings.planServices[plan.id] ?? getLandingPlanFeatures(plan);
             return (
               <article className={featured ? 'landing-plan-card featured' : 'landing-plan-card'} key={plan.id}>
                 <div className="landing-plan-card-header">
@@ -325,7 +330,7 @@ export default async function HomePage() {
                 ) : null}
                 <p>{formatLandingPlanNote(plan)}</p>
                 <ul className="landing-plan-feature-list">
-                  {getLandingPlanFeatures(plan).map((feature) => (
+                  {landingPlanFeatures.map((feature) => (
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
