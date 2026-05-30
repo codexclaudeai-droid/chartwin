@@ -397,7 +397,7 @@ export default async function HomePage() {
       <footer className="landing-footer" aria-label="서비스 하단 고정">
         <div className="landing-footer-grid">
           <div>
-            <strong>TradingCore</strong>
+            <img className="landing-footer-logo" src="/images/TC-main-logo.png" alt="TradingCore" />
             <p>TC Chart, 유료 시그널, 수동 승인형 구독 운영을 연결하는 차트 서비스입니다.</p>
             <small>© TradingCore. All rights reserved.</small>
           </div>

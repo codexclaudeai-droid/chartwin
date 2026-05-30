@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { AdminNavLink } from './admin-nav-link';
 import { NotificationNavLink } from './notification-nav-link';
@@ -9,6 +9,28 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'TradingCore',
   description: 'TC Chart 기반 실시간 알고리즘 트레이딩 시그널 서비스',
+  applicationName: 'TradingCore',
+  manifest: '/site.webmanifest',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+  appleWebApp: {
+    title: 'TradingCore',
+    capable: true,
+    statusBarStyle: 'black-translucent',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#020713',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

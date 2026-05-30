@@ -559,6 +559,55 @@ test('landing page presents a concrete conversion layout for the subscription se
   assert.doesNotMatch(pageSource, /landing-hero-proof-strip/);
 });
 
+test('landing footer uses the header logo image instead of a text wordmark', () => {
+  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(pageSource, /<strong>TradingCore<\/strong>/);
+  assert.match(pageSource, /className="landing-footer-logo"/);
+  assert.match(pageSource, /src="\/images\/TC-main-logo\.png"/);
+  assert.match(pageSource, /alt="TradingCore"/);
+  assert.match(cssSource, /\.landing-footer-logo\s*\{[^}]*height: 24px/s);
+  assert.match(cssSource, /\.landing-footer-logo\s*\{[^}]*width: auto/s);
+});
+
+test('root layout exposes favicon and installable home screen icons', () => {
+  const layoutSource = fs.readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8');
+  const manifestPath = new URL('../public/site.webmanifest', import.meta.url);
+  const iconFiles = [
+    '../public/favicon.ico',
+    '../public/favicon.svg',
+    '../public/favicon-16x16.png',
+    '../public/favicon-32x32.png',
+    '../public/apple-touch-icon.png',
+    '../public/android-chrome-192x192.png',
+    '../public/android-chrome-512x512.png',
+  ];
+
+  assert.match(layoutSource, /manifest: '\/site\.webmanifest'/);
+  assert.match(layoutSource, /icons:\s*\{/);
+  assert.match(layoutSource, /url: '\/favicon\.ico'/);
+  assert.match(layoutSource, /url: '\/favicon\.svg', type: 'image\/svg\+xml'/);
+  assert.match(layoutSource, /url: '\/apple-touch-icon\.png', sizes: '180x180'/);
+  assert.equal(fs.existsSync(manifestPath), true);
+
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.equal(manifest.name, 'TradingCore');
+  assert.deepEqual(
+    manifest.icons.map((icon) => `${icon.src}:${icon.sizes}:${icon.purpose}`).sort(),
+    [
+      '/android-chrome-192x192.png:192x192:any maskable',
+      '/android-chrome-512x512.png:512x512:any maskable',
+    ],
+  );
+
+  for (const iconFile of iconFiles) {
+    const iconPath = new URL(iconFile, import.meta.url);
+    assert.equal(fs.existsSync(iconPath), true, `${iconFile} should exist`);
+    assert.equal(fs.statSync(iconPath).size > 0, true, `${iconFile} should not be empty`);
+  }
+});
+
 test('landing page exposes a completed premium design layer', () => {
   const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
   const heroSource = fs.readFileSync(new URL('../app/landing-hero-slider.tsx', import.meta.url), 'utf8');

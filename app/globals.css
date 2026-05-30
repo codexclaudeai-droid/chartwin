@@ -2536,6 +2536,13 @@ a {
   letter-spacing: -0.03em;
 }
 
+.landing-footer-logo {
+  display: block;
+  height: 24px;
+  object-fit: contain;
+  width: auto;
+}
+
 .landing-footer p,
 .landing-footer small {
   color: rgba(255, 255, 255, 0.68);
