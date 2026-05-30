@@ -6,6 +6,7 @@ import {
 } from '../../domain/chart-service/index.ts';
 import type { AsyncChartServiceRepository } from './async-repository.ts';
 import { createPasswordHash } from './passwords.ts';
+import { isPasswordHashRuntimeCompatible } from './passwords.ts';
 import { createUniqueRandomReferralCode } from './referral-codes.ts';
 import type { ServiceUserRecord } from './repository.ts';
 
@@ -24,6 +25,7 @@ export type ChartServiceBootstrapResult = {
   createdPlanCount: number;
   skippedPlanCount: number;
   createdAdmin: boolean;
+  updatedAdmin: boolean;
   skippedAdmin: boolean;
 };
 
@@ -43,6 +45,7 @@ export async function bootstrapAsyncChartServiceRepository(
     createdPlanCount: 0,
     skippedPlanCount: 0,
     createdAdmin: false,
+    updatedAdmin: false,
     skippedAdmin: false,
   };
 
@@ -59,7 +62,13 @@ export async function bootstrapAsyncChartServiceRepository(
   if (initialAdmin) {
     const existingAdmin = await repository.getUserByEmail(initialAdmin.email);
     if (existingAdmin) {
-      result.skippedAdmin = true;
+      const refreshedAdmin = createRefreshedInitialAdminUser(existingAdmin, initialAdmin);
+      if (shouldRefreshInitialAdminUser(existingAdmin)) {
+        await repository.saveUser(refreshedAdmin);
+        result.updatedAdmin = true;
+      } else {
+        result.skippedAdmin = true;
+      }
     } else {
       await repository.saveUser(await createInitialAdminUser(repository, initialAdmin));
       result.createdAdmin = true;
@@ -112,4 +121,23 @@ async function createInitialAdminUser(
   };
   user.referralCode = createUniqueRandomReferralCode((await repository.listUsers()).map((item) => item.referralCode));
   return user;
+}
+
+function shouldRefreshInitialAdminUser(user: ServiceUserRecord): boolean {
+  return user.role !== USER_ROLES.superAdmin ||
+    user.accountStatus !== USER_ACCOUNT_STATUSES.active ||
+    !isPasswordHashRuntimeCompatible(user.passwordHash);
+}
+
+function createRefreshedInitialAdminUser(
+  user: ServiceUserRecord,
+  input: { email: string; password: string; name: string },
+): ServiceUserRecord {
+  return {
+    ...user,
+    email: input.email,
+    role: USER_ROLES.superAdmin,
+    accountStatus: USER_ACCOUNT_STATUSES.active,
+    passwordHash: createPasswordHash(input.password),
+  };
 }

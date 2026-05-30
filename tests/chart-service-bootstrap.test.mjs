@@ -72,6 +72,7 @@ test('bootstrap creates an initial super admin from env-like credentials once', 
   assert.equal(firstResult.createdAdmin, true);
   assert.equal(secondResult.createdAdmin, false);
   assert.equal(secondResult.skippedAdmin, true);
+  assert.equal(secondResult.updatedAdmin, false);
   assert.equal(user?.email, 'owner@example.com');
   assert.equal(user?.name, 'Service Owner');
   assert.equal(user?.role, 'super_admin');
@@ -79,6 +80,49 @@ test('bootstrap creates an initial super admin from env-like credentials once', 
   assert.equal(user?.passwordHash?.includes('Owner1234!'), false);
   assert.equal(verifyPasswordHash('Owner1234!', user?.passwordHash), true);
   assert.equal((await repository.listUsers()).length, 1);
+});
+
+test('bootstrap refreshes legacy initial admin password hashes for worker compatibility', async () => {
+  const {
+    bootstrapAsyncChartServiceRepository,
+    createAsyncChartServiceRepository,
+    createMockChartServiceRepository,
+    createMockChartServiceState,
+    createPasswordHash,
+    getPasswordHashIterations,
+    verifyPasswordHash,
+  } = await import('../src/server/chart-service/index.ts');
+  const state = createMockChartServiceState();
+  state.users = [{
+    id: 'admin_legacy',
+    email: 'owner@example.com',
+    name: 'Owner',
+    role: 'admin',
+    accountStatus: 'active',
+    phoneNumber: null,
+    referralCode: 'LEGACY',
+    referredByUserId: null,
+    createdAt: '2026-05-23T00:00:00.000Z',
+    passwordHash: createPasswordHash('Owner1234!', { salt: 'legacy_salt', iterations: 210_000 }),
+  }];
+  state.plans = [];
+  const repository = createAsyncChartServiceRepository(createMockChartServiceRepository(state));
+
+  const result = await bootstrapAsyncChartServiceRepository(repository, {
+    initialAdmin: {
+      email: 'owner@example.com',
+      password: 'Owner1234!',
+      name: 'Owner',
+    },
+  });
+  const user = await repository.getUserByEmail('owner@example.com');
+
+  assert.equal(result.createdAdmin, false);
+  assert.equal(result.updatedAdmin, true);
+  assert.equal(result.skippedAdmin, false);
+  assert.equal(user?.role, 'super_admin');
+  assert.equal(getPasswordHashIterations(user?.passwordHash), 100_000);
+  assert.equal(verifyPasswordHash('Owner1234!', user?.passwordHash), true);
 });
 
 test('bootstrap rejects incomplete or weak initial admin credentials', async () => {
@@ -117,4 +161,3 @@ test('bootstrap harness is wired into package scripts and applies migration befo
   assert.match(envExample, /CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL=/);
   assert.match(envExample, /CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD=/);
 });
-

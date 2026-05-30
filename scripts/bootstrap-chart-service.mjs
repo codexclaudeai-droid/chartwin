@@ -31,10 +31,10 @@ try {
       `Seeded plans: ${bootstrap.createdPlanCount}`,
       `existing plans: ${bootstrap.skippedPlanCount}`,
       `created initial admin: ${bootstrap.createdAdmin ? 'yes' : 'no'}`,
+      `updated initial admin: ${bootstrap.updatedAdmin ? 'yes' : 'no'}`,
       `existing initial admin: ${bootstrap.skippedAdmin ? 'yes' : 'no'}`,
     ].join(', '),
   );
 } finally {
   await executor.close();
 }
-

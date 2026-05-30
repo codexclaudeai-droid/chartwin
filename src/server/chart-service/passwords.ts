@@ -1,7 +1,7 @@
 import { pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
 
 const PASSWORD_HASH_ALGORITHM = 'pbkdf2_sha256';
-const PASSWORD_HASH_ITERATIONS = 210_000;
+const PASSWORD_HASH_ITERATIONS = 100_000;
 const PASSWORD_HASH_KEY_LENGTH = 32;
 const PASSWORD_HASH_DIGEST = 'sha256';
 
@@ -37,13 +37,38 @@ export function verifyPasswordHash(password: string, encodedHash: string | null 
     return false;
   }
 
-  const actual = pbkdf2Sync(
-    password,
-    salt,
-    iterations,
-    PASSWORD_HASH_KEY_LENGTH,
-    PASSWORD_HASH_DIGEST,
-  );
+  const actual = safelyCreatePbkdf2Hash(password, salt, iterations);
+  if (!actual) return false;
+
   const expected = Buffer.from(expectedHash, 'base64url');
   return expected.length === actual.length && timingSafeEqual(actual, expected);
+}
+
+export function getPasswordHashIterations(encodedHash: string | null | undefined): number | null {
+  if (!encodedHash) return null;
+
+  const [algorithm, iterationsValue] = encodedHash.split('$');
+  if (algorithm !== PASSWORD_HASH_ALGORITHM || !iterationsValue) return null;
+
+  const iterations = Number(iterationsValue);
+  return Number.isSafeInteger(iterations) && iterations > 0 ? iterations : null;
+}
+
+export function isPasswordHashRuntimeCompatible(encodedHash: string | null | undefined): boolean {
+  const iterations = getPasswordHashIterations(encodedHash);
+  return iterations !== null && iterations <= PASSWORD_HASH_ITERATIONS;
+}
+
+function safelyCreatePbkdf2Hash(password: string, salt: string, iterations: number): Buffer | null {
+  try {
+    return pbkdf2Sync(
+      password,
+      salt,
+      iterations,
+      PASSWORD_HASH_KEY_LENGTH,
+      PASSWORD_HASH_DIGEST,
+    );
+  } catch {
+    return null;
+  }
 }

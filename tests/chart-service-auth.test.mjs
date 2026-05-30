@@ -29,9 +29,11 @@ test('password hashes verify without storing the raw password', async () => {
   } = await import('../src/server/chart-service/index.ts');
 
   const hash = createPasswordHash('Demo1234!', { salt: 'test_salt' });
+  const [, iterations] = hash.split('$');
 
   assert.notEqual(hash, 'Demo1234!');
   assert.match(hash, /^pbkdf2_sha256\$/);
+  assert.equal(Number(iterations), 100_000);
   assert.equal(verifyPasswordHash('Demo1234!', hash), true);
   assert.equal(verifyPasswordHash('Wrong1234!', hash), false);
 });
