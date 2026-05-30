@@ -25,6 +25,8 @@ test('chart service database schema covers repository-backed core tables', () =>
     'sales_teams',
     'payment_transfer_settings',
     'web_info_settings',
+    'chart_user_settings',
+    'signal_admin_settings',
     'signup_agreements',
     'notifications',
     'email_outbox',
@@ -65,6 +67,8 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'web_info_settings')?.columns.privacy_content.type, 'text');
   assert.equal(tables.find((table) => table.name === 'web_info_settings')?.columns.plan_services_json.type, 'jsonb');
   assert.equal(tables.find((table) => table.name === 'web_info_settings')?.columns.updated_by_admin_id.references, 'users.id');
+  assert.equal(tables.find((table) => table.name === 'signal_admin_settings')?.columns.hidden_strategy_ids_json.type, 'jsonb');
+  assert.equal(tables.find((table) => table.name === 'signal_admin_settings')?.columns.selected_strategy_id.type, 'text');
   assert.equal(tables.find((table) => table.name === 'signup_agreements')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'signup_agreements')?.columns.terms_content.type, 'text');
   assert.equal(tables.find((table) => table.name === 'signup_agreements')?.columns.privacy_content.type, 'text');
@@ -122,6 +126,9 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /plan_services_json jsonb not null default '\{\}'::jsonb/i);
   assert.match(sql, /alter table if exists web_info_settings add column if not exists terms_content text/i);
   assert.match(sql, /alter table if exists web_info_settings add column if not exists plan_services_json jsonb/i);
+  assert.match(sql, /create table if not exists signal_admin_settings/i);
+  assert.match(sql, /hidden_strategy_ids_json jsonb not null default '\[\]'::jsonb/i);
+  assert.match(sql, /selected_strategy_id text not null default 'strategy_js_grid_martingale'/i);
   assert.match(sql, /create table if not exists signup_agreements/i);
   assert.match(sql, /terms_accepted_at timestamptz not null/i);
   assert.match(sql, /privacy_accepted_at timestamptz not null/i);

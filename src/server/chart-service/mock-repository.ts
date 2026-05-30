@@ -26,6 +26,7 @@ import type {
   SalesTeamRecord,
   ServiceUserRecord,
   SignupAgreementRecord,
+  SignalAdminSettingsRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 import { getDefaultChartServiceSubscriptionPlans } from './bootstrap.ts';
@@ -47,6 +48,7 @@ export type MockChartServiceState = {
   paymentTransferSettings: PaymentTransferSettingsRecord | null;
   webInfoSettings: WebInfoSettingsRecord | null;
   chartUserSettings: ChartUserSettingsRecord[];
+  signalAdminSettings: SignalAdminSettingsRecord[];
   signupAgreements: SignupAgreementRecord[];
   publicBoardPosts: PublicBoardPostRecord[];
   referralLedgers: ReferralLedgerRecord[];
@@ -124,6 +126,7 @@ export function createMockChartServiceState(): MockChartServiceState {
     paymentTransferSettings: null,
     webInfoSettings: null,
     chartUserSettings: [],
+    signalAdminSettings: [],
     signupAgreements: [],
     publicBoardPosts: getDefaultPublicBoardPosts(),
     referralLedgers: [
@@ -204,6 +207,7 @@ export function createMockChartServiceRepository(
   state.paymentTransferSettings ??= null;
   state.webInfoSettings ??= null;
   state.chartUserSettings ??= [];
+  state.signalAdminSettings ??= [];
   state.signupAgreements ??= [];
   state.publicBoardPosts ??= getDefaultPublicBoardPosts();
 
@@ -294,6 +298,12 @@ export function createMockChartServiceRepository(
       } else {
         state.chartUserSettings.push(structuredClone(settings));
       }
+    },
+    getSignalAdminSettings(id) {
+      return cloneOrNull(state.signalAdminSettings.find((settings) => settings.id === id));
+    },
+    saveSignalAdminSettings(settings) {
+      upsertById(state.signalAdminSettings, settings);
     },
     listSignupAgreementsByUserId(userId) {
       return state.signupAgreements

@@ -43,6 +43,8 @@ import {
   mapSalesTeamToPostgresRow,
   mapSignupAgreementFromPostgresRow,
   mapSignupAgreementToPostgresRow,
+  mapSignalAdminSettingsFromPostgresRow,
+  mapSignalAdminSettingsToPostgresRow,
   mapSubscriptionFromPostgresRow,
   mapSubscriptionToPostgresRow,
   mapSupportMessageFromPostgresRow,
@@ -68,6 +70,7 @@ import type {
   SalesTeamRecord,
   ServiceUserRecord,
   SignupAgreementRecord,
+  SignalAdminSettingsRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 
@@ -260,6 +263,16 @@ export function createPostgresAsyncChartServiceRepository(
         'chart_user_settings',
         mapChartUserSettingsToPostgresRow(settings),
         ['user_id'],
+      ));
+    },
+    async getSignalAdminSettings(id: string): Promise<SignalAdminSettingsRecord | null> {
+      return selectOne('signal_admin_settings', mapSignalAdminSettingsFromPostgresRow, { id });
+    },
+    async saveSignalAdminSettings(settings: SignalAdminSettingsRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'signal_admin_settings',
+        mapSignalAdminSettingsToPostgresRow(settings),
+        ['id'],
       ));
     },
     async listSignupAgreementsByUserId(userId: string): Promise<SignupAgreementRecord[]> {

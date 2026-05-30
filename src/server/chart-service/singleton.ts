@@ -17,6 +17,7 @@ import type {
   PublicBoardPostRecord,
   SalesTeamRecord,
   SignupAgreementRecord,
+  SignalAdminSettingsRecord,
 } from './repository.ts';
 import { getDefaultPublicBoardPosts } from './public-board.ts';
 
@@ -80,6 +81,8 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
     typeof persistence.repository.saveSignupAgreement === 'function' &&
     typeof persistence.repository.getChartUserSettings === 'function' &&
     typeof persistence.repository.saveChartUserSettings === 'function' &&
+    typeof persistence.repository.getSignalAdminSettings === 'function' &&
+    typeof persistence.repository.saveSignalAdminSettings === 'function' &&
     typeof persistence.repository.getSupportMessageById === 'function' &&
     typeof persistence.repository.listSupportMessagesByThreadId === 'function' &&
     typeof persistence.repository.deleteSupportMessage === 'function' &&
@@ -90,6 +93,8 @@ function hasMemoryRepositoryCapabilities(repository: ChartServiceRepository): bo
   return typeof repository.getSupportMessageById === 'function' &&
     typeof repository.getChartUserSettings === 'function' &&
     typeof repository.saveChartUserSettings === 'function' &&
+    typeof repository.getSignalAdminSettings === 'function' &&
+    typeof repository.saveSignalAdminSettings === 'function' &&
     typeof repository.listSupportMessagesByThreadId === 'function' &&
     typeof repository.deleteSupportMessage === 'function' &&
     typeof repository.deleteSupportMessagesByThreadId === 'function';
@@ -132,6 +137,8 @@ function copyRecoverableMemoryRepositoryRecords(
   if (paymentSettings) target.savePaymentTransferSettings(paymentSettings);
   const webInfoSettings = readOptionalRecord(source.getWebInfoSettings);
   if (webInfoSettings) target.saveWebInfoSettings(webInfoSettings);
+  const signalAdminSettings = readOptionalRecord(() => source.getSignalAdminSettings?.('default') ?? null);
+  if (signalAdminSettings) target.saveSignalAdminSettings(signalAdminSettings);
 }
 
 function copyRecords<RecordType>(
@@ -164,6 +171,7 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
   const mutableRepository = repository as ChartServiceRepository & {
     __fallbackSalesTeams?: SalesTeamRecord[];
     __fallbackChartUserSettings?: ChartUserSettingsRecord[];
+    __fallbackSignalAdminSettings?: SignalAdminSettingsRecord[];
     __fallbackPaymentTransferSettings?: PaymentTransferSettingsRecord | null;
     __fallbackPublicBoardPosts?: PublicBoardPostRecord[];
     __fallbackSignupAgreements?: SignupAgreementRecord[];
@@ -171,6 +179,7 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
 
   mutableRepository.__fallbackSalesTeams ??= [];
   mutableRepository.__fallbackChartUserSettings ??= [];
+  mutableRepository.__fallbackSignalAdminSettings ??= [];
   mutableRepository.__fallbackPaymentTransferSettings ??= null;
   mutableRepository.__fallbackPublicBoardPosts ??= getDefaultPublicBoardPosts();
   mutableRepository.__fallbackSignupAgreements ??= [];
@@ -267,6 +276,27 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
         rows.push(structuredClone(settings));
       }
       mutableRepository.__fallbackChartUserSettings = rows;
+    };
+  }
+
+  if (typeof mutableRepository.getSignalAdminSettings !== 'function') {
+    mutableRepository.getSignalAdminSettings = (id) => {
+      const settings = (mutableRepository.__fallbackSignalAdminSettings ?? [])
+        .find((item) => item.id === id);
+      return settings ? structuredClone(settings) : null;
+    };
+  }
+
+  if (typeof mutableRepository.saveSignalAdminSettings !== 'function') {
+    mutableRepository.saveSignalAdminSettings = (settings) => {
+      const rows = mutableRepository.__fallbackSignalAdminSettings ?? [];
+      const index = rows.findIndex((item) => item.id === settings.id);
+      if (index >= 0) {
+        rows[index] = structuredClone(settings);
+      } else {
+        rows.push(structuredClone(settings));
+      }
+      mutableRepository.__fallbackSignalAdminSettings = rows;
     };
   }
 

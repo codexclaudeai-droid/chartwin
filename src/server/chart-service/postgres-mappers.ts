@@ -19,6 +19,7 @@ import type {
   SalesTeamRecord,
   ServiceUserRecord,
   SignupAgreementRecord,
+  SignalAdminSettingsRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 import { createStableFallbackReferralCode } from './referral-codes.ts';
@@ -382,6 +383,30 @@ export function mapChartUserSettingsToPostgresRow(record: ChartUserSettingsRecor
   return {
     user_id: record.userId,
     settings_json: record.settings,
+    updated_at: record.updatedAt,
+  };
+}
+
+export function mapSignalAdminSettingsFromPostgresRow(row: PostgresRow): SignalAdminSettingsRecord {
+  return {
+    id: readString(row.id),
+    hiddenSymbols: readStringArray(row.hidden_symbols_json),
+    disabledSymbols: readStringArray(row.disabled_symbols_json),
+    hiddenStrategyIds: readStringArray(row.hidden_strategy_ids_json),
+    strategyMgmtVisible: readBoolean(row.strategy_mgmt_visible),
+    selectedStrategyId: readString(row.selected_strategy_id),
+    updatedAt: readIsoString(row.updated_at),
+  };
+}
+
+export function mapSignalAdminSettingsToPostgresRow(record: SignalAdminSettingsRecord): PostgresRow {
+  return {
+    id: record.id,
+    hidden_symbols_json: [...record.hiddenSymbols],
+    disabled_symbols_json: [...record.disabledSymbols],
+    hidden_strategy_ids_json: [...record.hiddenStrategyIds],
+    strategy_mgmt_visible: record.strategyMgmtVisible,
+    selected_strategy_id: record.selectedStrategyId,
     updated_at: record.updatedAt,
   };
 }

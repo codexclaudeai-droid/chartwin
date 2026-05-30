@@ -103,6 +103,16 @@ export type ChartUserSettingsRecord = {
   updatedAt: string;
 };
 
+export type SignalAdminSettingsRecord = {
+  id: string;
+  hiddenSymbols: string[];
+  disabledSymbols: string[];
+  hiddenStrategyIds: string[];
+  strategyMgmtVisible: boolean;
+  selectedStrategyId: string;
+  updatedAt: string;
+};
+
 export type SignupAgreementRecord = {
   id: string;
   userId: string;
@@ -169,6 +179,8 @@ export type ChartServiceRepository = {
   saveWebInfoSettings(settings: WebInfoSettingsRecord): void;
   getChartUserSettings(userId: string): ChartUserSettingsRecord | null;
   saveChartUserSettings(settings: ChartUserSettingsRecord): void;
+  getSignalAdminSettings(id: string): SignalAdminSettingsRecord | null;
+  saveSignalAdminSettings(settings: SignalAdminSettingsRecord): void;
   listSignupAgreementsByUserId(userId: string): SignupAgreementRecord[];
   saveSignupAgreement(agreement: SignupAgreementRecord): void;
   listReferralLedgersByPaymentId(paymentRequestId: string): ReferralLedgerRecord[];

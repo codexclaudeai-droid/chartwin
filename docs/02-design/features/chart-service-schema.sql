@@ -240,6 +240,23 @@ create table if not exists web_info_settings (
 
 create index if not exists idx_web_info_settings_updated_by_admin_id on web_info_settings (updated_by_admin_id);
 
+create table if not exists chart_user_settings (
+  user_id text primary key,
+  settings_json jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  foreign key (user_id) references users(id)
+);
+
+create table if not exists signal_admin_settings (
+  id text primary key,
+  hidden_symbols_json jsonb not null default '[]'::jsonb,
+  disabled_symbols_json jsonb not null default '[]'::jsonb,
+  hidden_strategy_ids_json jsonb not null default '[]'::jsonb,
+  strategy_mgmt_visible boolean not null default false,
+  selected_strategy_id text not null default 'strategy_js_grid_martingale',
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists signup_agreements (
   id text primary key,
   user_id text not null,
@@ -425,11 +442,11 @@ update public_board_posts set created_at = now() where created_at is null;
 
 update public_board_posts set updated_at = now() where updated_at is null;
 
-insert into public_board_posts (id, category, title, body, is_published, sort_order, created_at, updated_at, updated_by_admin_id) values ('public_board_notice', 'notice', '서비스 운영 공지', '구독 운영, 결제 안내, 차트 접근 정책 변경 사항을 공개 게시판으로 안내합니다.', true, 10, now(), now(), 'admin_1') on conflict (id) do nothing;
+insert into public_board_posts (id, category, title, body, is_published, sort_order, created_at, updated_at, updated_by_admin_id) values ('public_board_notice', 'notice', '서비스 운영 공지', '구독 운영, 결제 안내, 차트 접근 정책 변경 사항을 공개 게시판으로 안내합니다.', true, 10, now(), now(), null) on conflict (id) do nothing;
 
-insert into public_board_posts (id, category, title, body, is_published, sort_order, created_at, updated_at, updated_by_admin_id) values ('public_board_qna', 'qna', '공개 질문답변', '자주 반복되는 질문은 공개 답변으로 정리하고, 개인정보가 필요한 내용은 1:1 문의로 처리합니다.', true, 20, now(), now(), 'admin_1') on conflict (id) do nothing;
+insert into public_board_posts (id, category, title, body, is_published, sort_order, created_at, updated_at, updated_by_admin_id) values ('public_board_qna', 'qna', '공개 질문답변', '자주 반복되는 질문은 공개 답변으로 정리하고, 개인정보가 필요한 내용은 1:1 문의로 처리합니다.', true, 20, now(), now(), null) on conflict (id) do nothing;
 
-insert into public_board_posts (id, category, title, body, is_published, sort_order, created_at, updated_at, updated_by_admin_id) values ('public_board_faq', 'faq', '자주 묻는 질문', '결제, 승인, 무료체험, 시그널 접근 기준을 가장 앞에서 확인할 수 있게 정리합니다.', true, 30, now(), now(), 'admin_1') on conflict (id) do nothing;
+insert into public_board_posts (id, category, title, body, is_published, sort_order, created_at, updated_at, updated_by_admin_id) values ('public_board_faq', 'faq', '자주 묻는 질문', '결제, 승인, 무료체험, 시그널 접근 기준을 가장 앞에서 확인할 수 있게 정리합니다.', true, 30, now(), now(), null) on conflict (id) do nothing;
 
 create index if not exists idx_public_board_posts_category on public_board_posts (category);
 
@@ -454,6 +471,42 @@ update web_info_settings set plan_services_json = '{}'::jsonb where plan_service
 insert into web_info_settings (id, terms_content, privacy_content, updated_at) values ('default', 'TradingCore 서비스 이용약관', 'TradingCore 개인정보보호정책', now()) on conflict (id) do nothing;
 
 create index if not exists idx_web_info_settings_updated_by_admin_id on web_info_settings (updated_by_admin_id);
+
+create table if not exists chart_user_settings (user_id text primary key references users(id), settings_json jsonb not null default '{}'::jsonb, updated_at timestamptz not null default now());
+
+alter table if exists chart_user_settings add column if not exists settings_json jsonb;
+
+alter table if exists chart_user_settings add column if not exists updated_at timestamptz;
+
+update chart_user_settings set settings_json = '{}'::jsonb where settings_json is null;
+
+update chart_user_settings set updated_at = now() where updated_at is null;
+
+create table if not exists signal_admin_settings (id text primary key, hidden_symbols_json jsonb not null default '[]'::jsonb, disabled_symbols_json jsonb not null default '[]'::jsonb, hidden_strategy_ids_json jsonb not null default '[]'::jsonb, strategy_mgmt_visible boolean not null default false, selected_strategy_id text not null default 'strategy_js_grid_martingale', updated_at timestamptz not null default now());
+
+alter table if exists signal_admin_settings add column if not exists hidden_symbols_json jsonb;
+
+alter table if exists signal_admin_settings add column if not exists disabled_symbols_json jsonb;
+
+alter table if exists signal_admin_settings add column if not exists hidden_strategy_ids_json jsonb;
+
+alter table if exists signal_admin_settings add column if not exists strategy_mgmt_visible boolean;
+
+alter table if exists signal_admin_settings add column if not exists selected_strategy_id text;
+
+alter table if exists signal_admin_settings add column if not exists updated_at timestamptz;
+
+update signal_admin_settings set hidden_symbols_json = '[]'::jsonb where hidden_symbols_json is null;
+
+update signal_admin_settings set disabled_symbols_json = '[]'::jsonb where disabled_symbols_json is null;
+
+update signal_admin_settings set hidden_strategy_ids_json = '[]'::jsonb where hidden_strategy_ids_json is null;
+
+update signal_admin_settings set strategy_mgmt_visible = false where strategy_mgmt_visible is null;
+
+update signal_admin_settings set selected_strategy_id = 'strategy_js_grid_martingale' where selected_strategy_id is null or selected_strategy_id = '';
+
+update signal_admin_settings set updated_at = now() where updated_at is null;
 
 create table if not exists signup_agreements (id text primary key, user_id text not null, terms_accepted_at timestamptz not null, privacy_accepted_at timestamptz not null, terms_content text not null, privacy_content text not null, terms_settings_updated_at timestamptz not null, privacy_settings_updated_at timestamptz not null, ip_address text, user_agent text, created_at timestamptz not null default now());
 

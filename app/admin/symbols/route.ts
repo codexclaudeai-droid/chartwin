@@ -1,0 +1,31 @@
+import {
+  readSignalAdminSettings,
+  requireSignalSuperAdmin,
+  signalAdminJson,
+  toSymbolsResponse,
+  updateSignalAdminSettings,
+} from '../signal-admin-settings.ts';
+
+export async function GET() {
+  return signalAdminJson(toSymbolsResponse(await readSignalAdminSettings()));
+}
+
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return signalAdminJson({ ok: false, message: 'invalid json' }, { status: 400 });
+  }
+  try {
+    await requireSignalSuperAdmin(request);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unauthorized';
+    return signalAdminJson({ ok: false, message }, { status: message.includes('Super admin') ? 403 : 401 });
+  }
+
+  const settings = await updateSignalAdminSettings({
+    hidden: (body as { hidden?: unknown }).hidden as string[],
+    disabled: (body as { disabled?: unknown }).disabled as string[],
+  });
+
+  return signalAdminJson(toSymbolsResponse(settings));
+}
