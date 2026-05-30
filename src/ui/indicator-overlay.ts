@@ -304,11 +304,28 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     const desktopActionGap = 4;
     const mobileTagFixedHeight = touchLarge ? 24 : 22;
     const actionIconSz = isMobileOverlay ? 18 : (compactOverlay ? 12 : desktopActionIconSize);
-    const eyeIconSvg = (visible: boolean): string => (
-      visible
-        ? `<svg viewBox="0 0 24 24" width="${actionIconSz}" height="${actionIconSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12"></path><circle cx="12" cy="12" r="2.8"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`
-        : `<svg viewBox="0 0 24 24" width="${actionIconSz}" height="${actionIconSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12"></path><circle cx="12" cy="12" r="2.8"></circle></svg>`
+    const eyeOffSvg = (size = actionIconSz): string => (
+      `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12"></path><circle cx="12" cy="12" r="2.8"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`
     );
+    const eyeOnSvg = (size = actionIconSz): string => (
+      `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12"></path><circle cx="12" cy="12" r="2.8"></circle></svg>`
+    );
+    const eyeIconSvg = (visible: boolean): string => (
+      visible ? eyeOffSvg(actionIconSz) : eyeOnSvg(actionIconSz)
+    );
+    const isIndicatorGloballyHidden = (): boolean => chart.isIndicatorsVisible?.() === false;
+    const appendHiddenIndicatorMarker = (target: HTMLElement, hidden: boolean) => {
+      if (!hidden) return;
+      target.dataset.indicatorHidden = 'true';
+      const marker = document.createElement('span');
+      marker.className = 'indicator-overlay-hidden-marker';
+      marker.title = '감춘 지표';
+      marker.setAttribute('aria-label', '감춘 지표');
+      marker.innerHTML = eyeOffSvg(isMobileOverlay ? 14 : (compactOverlay ? 11 : 13));
+      marker.style.cssText = `display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+        color:rgba(205,216,236,0.82);opacity:0.95;line-height:1;`;
+      target.appendChild(marker);
+    };
 
     const makeTagActionButton = (title: string, svg: string, onClick: () => void): HTMLButtonElement => {
       const btn = document.createElement('button');
@@ -338,6 +355,8 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       actions.className = 'indicator-overlay-tag-actions';
       const defaultGap = isMobileOverlay ? mobileActionGapBase : (compactOverlay ? 3 : desktopActionGap);
       actions.style.cssText = `display:none;align-items:center;gap:${defaultGap}px;`;
+      const currentlyHidden = isIndicatorGloballyHidden() || !isIndicatorLineVisible(key);
+      appendHiddenIndicatorMarker(tag, currentlyHidden);
       const currentlyVisible = isIndicatorLineVisible(key);
       const hideBtn = makeTagActionButton(
         currentlyVisible ? '감추기' : '표시',
@@ -1040,10 +1059,13 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       });
       if ((headerData?.values?.length ?? 0) > 0) infoWrap.appendChild(valuesWrap);
 
+      const panelVisible = isIndicatorLineVisible(panelId);
+      const panelHidden = isIndicatorGloballyHidden() || !panelVisible;
+      appendHiddenIndicatorMarker(infoWrap, panelHidden);
+
       const actionWrap = document.createElement('div');
       actionWrap.style.cssText = `display:none;align-items:center;gap:2px;height:${titleHeaderBoxHeight}px;overflow:hidden;`;
 
-      const panelVisible = isIndicatorLineVisible(panelId);
       const eyeBtn = iconBtn(iconSvg('eye'), panelVisible ? '감추기' : '표시', () => {
         setIndicatorLineVisible(panelId, !panelVisible);
         refreshAll();
