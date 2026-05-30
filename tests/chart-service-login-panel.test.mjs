@@ -44,3 +44,10 @@ test('login panel sends admin operators to the admin dashboard after authenticat
   assert.match(source, /payload\.user\?\.role/);
   assert.match(source, /window\.location\.assign\('\/admin'\)/);
 });
+
+test('login panel returns normal landing logins to the landing page', () => {
+  const source = readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /navigateToSafeRedirect\(new URLSearchParams\(window\.location\.search\)\)/);
+  assert.match(source, /window\.location\.assign\('\/'\)/);
+});
