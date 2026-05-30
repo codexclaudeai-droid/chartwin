@@ -5,7 +5,9 @@ import {
   CUSTOM_SYMBOLS,
   SYMBOL_CATALOG,
   getSymbolIconUrl,
+  isSymbolAppliedToChart,
   persistSymbolRegistry,
+  setSymbolChartApplied,
 } from '../../src/catalog/symbols.ts';
 
 type ManagedSymbolSource = 'builtin' | 'custom';
@@ -162,6 +164,14 @@ export function AdminSymbolsPanel() {
     setMessage(`${symbol.item.id} 종목을 삭제했습니다.`);
   }
 
+  function toggleChartApplied(symbol: ManagedSymbolRef) {
+    const isApplied = isSymbolAppliedToChart(symbol.item.id);
+    const nextApplied = !isApplied;
+    setSymbolChartApplied(symbol.item.id, nextApplied);
+    setVersion((current) => current + 1);
+    setMessage(`${symbol.item.id} 종목을 차트페이지에 ${nextApplied ? '적용' : '미적용'}했습니다.`);
+  }
+
   return (
     <section id="admin-symbols" className="card admin-symbols-panel">
       <div className="admin-symbols-header">
@@ -261,6 +271,7 @@ export function AdminSymbolsPanel() {
                 <tr>
                   <th>종목</th>
                   <th>카테고리</th>
+                  <th>차트 적용</th>
                   <th>구분</th>
                   <th>관리</th>
                 </tr>
@@ -268,6 +279,7 @@ export function AdminSymbolsPanel() {
               <tbody>
                 {filteredSymbols.map((symbol) => {
                   const iconUrl = getManagedSymbolIconUrl(symbol);
+                  const isApplied = isSymbolAppliedToChart(symbol.item.id);
                   return (
                     <tr key={`${symbol.source}:${symbol.category}:${symbol.item.id}`}>
                       <td>
@@ -288,6 +300,17 @@ export function AdminSymbolsPanel() {
                       </td>
                       <td>{symbol.category}</td>
                       <td>
+                        <button
+                          className={`admin-symbols-apply-switch${isApplied ? ' active' : ''}`}
+                          type="button"
+                          aria-pressed={isApplied}
+                          onClick={() => toggleChartApplied(symbol)}
+                        >
+                          <span aria-hidden="true" />
+                          <strong>{isApplied ? '적용' : '미적용'}</strong>
+                        </button>
+                      </td>
+                      <td>
                         <span className={`badge ${symbol.source === 'builtin' ? 'admin-symbols-builtin' : 'admin-symbols-custom'}`}>
                           {symbol.source === 'builtin' ? '기본' : '커스텀'}
                         </span>
@@ -307,7 +330,7 @@ export function AdminSymbolsPanel() {
                 })}
                 {!filteredSymbols.length && (
                   <tr>
-                    <td colSpan={4}>검색 조건에 맞는 종목이 없습니다.</td>
+                    <td colSpan={5}>검색 조건에 맞는 종목이 없습니다.</td>
                   </tr>
                 )}
               </tbody>

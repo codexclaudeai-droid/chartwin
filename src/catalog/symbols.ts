@@ -194,6 +194,8 @@ function loadSymbolRegistry(): void {
     const parsed = JSON.parse(raw) as {
       catalog?: Record<string, unknown[]>;
       custom?: unknown[];
+      hidden?: unknown[];
+      disabled?: unknown[];
     };
 
     if (parsed.catalog && typeof parsed.catalog === 'object') {
@@ -217,9 +219,24 @@ function loadSymbolRegistry(): void {
         if (normalized) CUSTOM_SYMBOLS.push(normalized);
       });
     }
+
+    hiddenSymbols.clear();
+    disabledSymbols.clear();
+    if (Array.isArray(parsed.hidden)) {
+      parsed.hidden.forEach((symbol) => {
+        if (typeof symbol === 'string') hiddenSymbols.add(normalizeCatalogSymbolId(symbol));
+      });
+    }
+    if (Array.isArray(parsed.disabled)) {
+      parsed.disabled.forEach((symbol) => {
+        if (typeof symbol === 'string') disabledSymbols.add(normalizeCatalogSymbolId(symbol));
+      });
+    }
   } catch {
     restoreDefaultCatalog();
     CUSTOM_SYMBOLS.length = 0;
+    hiddenSymbols.clear();
+    disabledSymbols.clear();
   }
   ensureBuiltinSymbolsPresent();
   applyBuiltinLabelOverrides();
@@ -230,6 +247,8 @@ export function persistSymbolRegistry(): void {
     const payload = {
       catalog: SYMBOL_CATALOG,
       custom: CUSTOM_SYMBOLS,
+      hidden: [...hiddenSymbols],
+      disabled: [...disabledSymbols],
     };
     localStorage.setItem(SYMBOL_STORAGE_KEY, JSON.stringify(payload));
   } catch {
@@ -252,10 +271,10 @@ export async function loadAdminConfig(): Promise<void> {
     hiddenSymbols.clear();
     disabledSymbols.clear();
     if (Array.isArray(json.hidden)) {
-      json.hidden.forEach((s) => { if (typeof s === 'string') hiddenSymbols.add(s.trim().toUpperCase()); });
+      json.hidden.forEach((s) => { if (typeof s === 'string') hiddenSymbols.add(normalizeCatalogSymbolId(s)); });
     }
     if (Array.isArray(json.disabled)) {
-      json.disabled.forEach((s) => { if (typeof s === 'string') disabledSymbols.add(s.trim().toUpperCase()); });
+      json.disabled.forEach((s) => { if (typeof s === 'string') disabledSymbols.add(normalizeCatalogSymbolId(s)); });
     }
   } catch {
     // non-fatal
@@ -265,15 +284,30 @@ export async function loadAdminConfig(): Promise<void> {
 export function getAllSymbolCatalog(): Record<string, SymbolCatalogItem[]> {
   const catalog: Record<string, SymbolCatalogItem[]> = {};
   for (const [category, items] of Object.entries(SYMBOL_CATALOG)) {
-    const visible = items.filter((item) => !hiddenSymbols.has(item.id.toUpperCase()));
+    const visible = items.filter((item) => !hiddenSymbols.has(normalizeCatalogSymbolId(item.id)));
     if (visible.length) catalog[category] = visible.map((item) => ({ ...item, category }));
   }
   for (const item of CUSTOM_SYMBOLS) {
-    if (hiddenSymbols.has(item.id.toUpperCase())) continue;
+    if (hiddenSymbols.has(normalizeCatalogSymbolId(item.id))) continue;
     if (!catalog[item.category]) catalog[item.category] = [];
     catalog[item.category].push(item);
   }
   return catalog;
+}
+
+export function isSymbolAppliedToChart(symbolId: string): boolean {
+  return !hiddenSymbols.has(normalizeCatalogSymbolId(symbolId));
+}
+
+export function setSymbolChartApplied(symbolId: string, applied: boolean): void {
+  const normalized = normalizeCatalogSymbolId(symbolId);
+  if (!normalized) return;
+  if (applied) {
+    hiddenSymbols.delete(normalized);
+  } else {
+    hiddenSymbols.add(normalized);
+  }
+  persistSymbolRegistry();
 }
 
 export function findSymbolItem(symbolId: string): SymbolCatalogItem | undefined {

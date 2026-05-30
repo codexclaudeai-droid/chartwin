@@ -44,6 +44,32 @@ test('admin symbol list shows registered symbol images before the symbol text', 
   assert.match(cssSource, /\.admin-symbols-icon img\s*\{[\s\S]*?object-fit: cover/);
 });
 
+test('admin symbol list exposes a chart apply toggle per symbol', () => {
+  const panelSource = fs.readFileSync(new URL('../app/admin/admin-symbols-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /isSymbolAppliedToChart/);
+  assert.match(panelSource, /setSymbolChartApplied/);
+  assert.match(panelSource, /toggleChartApplied\(symbol\)/);
+  assert.match(panelSource, /aria-pressed=\{isApplied\}/);
+  assert.match(panelSource, /admin-symbols-apply-switch/);
+  assert.match(panelSource, /차트 적용/);
+  assert.match(panelSource, /isApplied \? '적용' : '미적용'/);
+  assert.match(cssSource, /\.admin-symbols-apply-switch\s*\{/);
+  assert.match(cssSource, /\.admin-symbols-apply-switch\.active/);
+});
+
+test('symbol registry persists chart application state for hidden symbols', () => {
+  const catalogSource = fs.readFileSync(new URL('../src/catalog/symbols.ts', import.meta.url), 'utf8');
+
+  assert.match(catalogSource, /hidden:\s*\[\.\.\.hiddenSymbols\]/);
+  assert.match(catalogSource, /parsed\.hidden/);
+  assert.match(catalogSource, /export function isSymbolAppliedToChart/);
+  assert.match(catalogSource, /export function setSymbolChartApplied/);
+  assert.match(catalogSource, /hiddenSymbols\.add\(normalized\)/);
+  assert.match(catalogSource, /hiddenSymbols\.delete\(normalized\)/);
+});
+
 test('admin page renders the symbol management panel inside the dashboard shell', () => {
   const pageSource = fs.readFileSync(new URL('../app/admin/page.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-symbols-panel.tsx', import.meta.url), 'utf8');
