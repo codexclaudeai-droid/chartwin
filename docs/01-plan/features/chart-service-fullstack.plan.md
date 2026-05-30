@@ -18,7 +18,7 @@
 - 차트 코어: `src/chart`, `src/ui/workspace`, `src/app/init.ts`
 - 전략 시스템: `src/strategy`, `src/strategy/strategies`
 - 시세 게이트웨이: `server/data-gateway.mjs`
-- 단순 관리자 화면: `public/admin.html`
+- 단순 전략 시그널 설정 화면: `public/signal.html`
 - 관리자 설정 엔드포인트: 심볼/전략/패스프레이즈 중심
 
 새 서비스 확장에서는 기존 차트 기능을 재작성하지 않고, 인증/권한/구독/알림 레이어에서 감싼다.

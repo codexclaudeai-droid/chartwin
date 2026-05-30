@@ -31,7 +31,7 @@ Do not modify these in this slice:
 - `src/app/init.ts`
 - `src/ui/workspace/*`
 - `server/data-gateway.mjs`
-- `public/admin.html`
+- `public/signal.html`
 
 ## Task 1: Domain Types
 
