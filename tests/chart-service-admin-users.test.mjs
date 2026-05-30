@@ -629,8 +629,37 @@ test('admin user detail panel has dense dark operational styling', () => {
   assert.match(cssSource, /#admin-users \.admin-user-detail-meta\s*\{[\s\S]*?display: flex/);
   assert.match(cssSource, /#admin-users \.admin-user-detail-control-grid\s*\{[\s\S]*?grid-template-columns: minmax\(220px, 1fr\) auto/);
   assert.match(cssSource, /#admin-users \.admin-user-detail-summary-grid\s*\{[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(180px, 1fr\)\)/);
-  assert.match(cssSource, /#admin-users \.admin-user-history-card\s*\{[\s\S]*?background: rgba\(2, 7, 19, 0\.34\)/);
-  assert.match(cssSource, /#admin-users \.admin-user-history-list li\s*\{[\s\S]*?border: 1px solid rgba\(125, 183, 255, 0\.12\)/);
+  assert.match(cssSource, /#admin-users \.admin-user-history-card\s*\{[\s\S]*?background: transparent/);
+  assert.match(cssSource, /#admin-users \.admin-user-history-list li\s*\{[\s\S]*?border-top: 1px solid rgba\(125, 183, 255, 0\.1\)/);
+});
+
+test('admin user detail desktop and tablet surfaces avoid nested padded cards', () => {
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const detailCardRule = cssSource.match(/#admin-users \.admin-user-detail-card\s*\{(?<rule>[^}]+)\}/);
+  const summaryCardRule = cssSource.match(/#admin-users \.admin-user-detail-summary-grid \.mini-card\s*\{(?<rule>[^}]+)\}/);
+  const historyCardRule = cssSource.match(/#admin-users \.admin-user-history-card\s*\{(?<rule>[^}]+)\}/);
+  const historyItemRule = cssSource.match(/#admin-users \.admin-user-history-list li\s*\{(?<rule>[^}]+)\}/);
+
+  assert.ok(detailCardRule?.groups?.rule);
+  assert.ok(summaryCardRule?.groups?.rule);
+  assert.ok(historyCardRule?.groups?.rule);
+  assert.ok(historyItemRule?.groups?.rule);
+  assert.match(detailCardRule.groups.rule, /background: transparent/);
+  assert.match(detailCardRule.groups.rule, /border: 0/);
+  assert.match(detailCardRule.groups.rule, /box-shadow: none/);
+  assert.match(detailCardRule.groups.rule, /padding: 0/);
+  assert.match(summaryCardRule.groups.rule, /background: transparent/);
+  assert.match(summaryCardRule.groups.rule, /border: 0/);
+  assert.match(summaryCardRule.groups.rule, /border-top: 1px solid rgba\(125, 183, 255, 0\.1\)/);
+  assert.match(summaryCardRule.groups.rule, /padding: 12px 0 0/);
+  assert.match(historyCardRule.groups.rule, /background: transparent/);
+  assert.match(historyCardRule.groups.rule, /border: 0/);
+  assert.match(historyCardRule.groups.rule, /border-top: 1px solid rgba\(125, 183, 255, 0\.12\)/);
+  assert.match(historyCardRule.groups.rule, /padding: 14px 0 0/);
+  assert.match(historyItemRule.groups.rule, /background: transparent/);
+  assert.match(historyItemRule.groups.rule, /border: 0/);
+  assert.match(historyItemRule.groups.rule, /border-top: 1px solid rgba\(125, 183, 255, 0\.1\)/);
+  assert.match(historyItemRule.groups.rule, /border-radius: 0/);
 });
 
 test('admin user detail controls do not inherit the light directory filter shell', () => {

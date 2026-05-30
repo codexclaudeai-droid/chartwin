@@ -303,6 +303,29 @@ test('admin payment quick filters remove the outer container outline', () => {
   assert.doesNotMatch(quickFilterRule, /border:\s*1px/);
 });
 
+test('admin payment panel flattens nested queue surfaces to reduce padding buildup', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const quickFilterRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-payments \.quick-filter-row\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const txidRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) \.admin-payment-txid-box\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const memoButtonRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-payments \.admin-payment-action-cell \.quick-memo-button\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(quickFilterRule, /background:\s*transparent/);
+  assert.match(quickFilterRule, /padding:\s*0/);
+  assert.match(txidRule, /background:\s*transparent/);
+  assert.match(txidRule, /border:\s*0/);
+  assert.match(txidRule, /border-top:\s*1px solid rgba\(125, 183, 255, 0\.1\)/);
+  assert.match(txidRule, /border-radius:\s*0/);
+  assert.match(txidRule, /padding:\s*8px 0 0/);
+  assert.match(memoButtonRule, /background:\s*transparent/);
+  assert.match(memoButtonRule, /border-color:\s*rgba\(125, 183, 255, 0\.12\)/);
+});
+
 test('admin payment panel labels confirmation as deposit confirmation only', () => {
   const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
 

@@ -306,6 +306,28 @@ test('admin subscription panel uses a dark operational queue finish', () => {
   assert.match(cssSource, /#admin-subscriptions \.admin-subscription-payment-cell\s*\{[\s\S]*?border:/s);
 });
 
+test('admin subscription panel flattens nested queue surfaces to reduce padding buildup', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const quickFilterRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-subscriptions \.quick-filter-row\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const paymentCellRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-subscriptions \.admin-subscription-payment-cell\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const memoButtonRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-subscriptions \.admin-subscription-action-cell \.quick-memo-button\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(quickFilterRule, /background:\s*transparent/);
+  assert.match(quickFilterRule, /padding:\s*0/);
+  assert.match(paymentCellRule, /background:\s*transparent/);
+  assert.match(paymentCellRule, /border:\s*0/);
+  assert.match(paymentCellRule, /border-left:\s*1px solid rgba\(125, 183, 255, 0\.12\)/);
+  assert.match(paymentCellRule, /border-radius:\s*0/);
+  assert.match(memoButtonRule, /background:\s*transparent/);
+  assert.match(memoButtonRule, /border-color:\s*rgba\(125, 183, 255, 0\.12\)/);
+});
+
 test('admin subscription panel refreshes its filtered queue after local operations without overwriting success context', () => {
   const source = fs.readFileSync(new URL('../app/admin/subscription-admin-panel.tsx', import.meta.url), 'utf8');
 

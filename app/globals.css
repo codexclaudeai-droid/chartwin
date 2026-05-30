@@ -10873,21 +10873,20 @@ body:not(:has(.landing-page)) #admin-users .admin-user-detail-screen .admin-deta
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-detail-panel > .notice {
-  border-color: rgba(101, 158, 255, 0.22);
-  background: rgba(36, 63, 100, 0.42);
+  border-color: rgba(101, 158, 255, 0.18);
+  background: transparent;
   color: rgba(255, 255, 255, 0.78);
+  padding-inline: 0;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-detail-card {
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(76, 141, 255, 0.026)),
-    rgba(2, 7, 19, 0.38);
-  border: 1px solid rgba(125, 183, 255, 0.16);
-  border-radius: 8px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   display: grid;
-  gap: 16px;
-  padding: 20px;
+  gap: 18px;
+  padding: 0;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-detail-header {
@@ -10992,12 +10991,14 @@ body:not(:has(.landing-page)) #admin-users .admin-user-detail-summary-grid {
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-detail-summary-grid .mini-card {
-  background: rgba(7, 21, 47, 0.54);
-  border: 1px solid rgba(125, 183, 255, 0.13);
-  border-radius: 8px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid rgba(125, 183, 255, 0.1);
+  border-radius: 0;
   box-shadow: none;
   color: rgba(216, 236, 255, 0.78);
-  min-height: 128px;
+  min-height: 0;
+  padding: 12px 0 0;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-detail-summary-grid .mini-card span {
@@ -11013,17 +11014,18 @@ body:not(:has(.landing-page)) #admin-users .admin-user-detail-summary-grid .mini
 
 body:not(:has(.landing-page)) #admin-users .admin-history-grid {
   display: grid;
-  gap: 12px;
+  gap: 18px 22px;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-history-card {
-  background: rgba(2, 7, 19, 0.34);
-  border: 1px solid rgba(125, 183, 255, 0.14);
-  border-radius: 8px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid rgba(125, 183, 255, 0.12);
+  border-radius: 0;
   box-shadow: none;
   color: rgba(216, 236, 255, 0.78);
-  padding: 16px;
+  padding: 14px 0 0;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-history-card h4 {
@@ -11042,12 +11044,13 @@ body:not(:has(.landing-page)) #admin-users .admin-user-history-list {
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-history-list li {
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(125, 183, 255, 0.12);
-  border-radius: 8px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid rgba(125, 183, 255, 0.1);
+  border-radius: 0;
   display: grid;
   gap: 6px;
-  padding: 12px;
+  padding: 10px 0 0;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-history-list .admin-history-row {
@@ -11188,13 +11191,11 @@ body:not(:has(.landing-page)) #admin-payments .quick-filter-row {
   grid-template-columns: repeat(auto-fit, minmax(154px, 1fr));
   gap: 10px;
   margin: 16px 0 14px;
-  padding: 14px;
+  padding: 0;
   border: 0;
-  border-radius: 20px;
+  border-radius: 0;
   outline: 0;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(76, 141, 255, 0.024)),
-    rgba(7, 16, 31, 0.72);
+  background: transparent;
   box-shadow: none;
 }
 
@@ -11323,13 +11324,14 @@ body:not(:has(.landing-page)) .admin-payment-amount-cell {
 }
 
 body:not(:has(.landing-page)) .admin-payment-txid-box {
-  border: 1px solid rgba(125, 183, 255, 0.13);
-  border-radius: 14px;
+  border: 0;
+  border-top: 1px solid rgba(125, 183, 255, 0.1);
+  border-radius: 0;
   display: grid;
   gap: 7px;
   margin-top: 10px;
-  padding: 10px;
-  background: rgba(2, 7, 19, 0.34);
+  padding: 8px 0 0;
+  background: transparent;
 }
 
 body:not(:has(.landing-page)) #admin-payments .manual-flow-badge {
@@ -11392,8 +11394,8 @@ body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .quick-
 }
 
 body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .quick-memo-button {
-  border-color: rgba(125, 183, 255, 0.18);
-  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(125, 183, 255, 0.12);
+  background: transparent;
   color: rgba(216, 236, 255, 0.8);
 }
 
@@ -11475,13 +11477,11 @@ body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row {
   grid-template-columns: repeat(auto-fit, minmax(154px, 1fr));
   gap: 10px;
   margin: 16px 0 14px;
-  padding: 14px;
-  border: 1px solid rgba(125, 183, 255, 0.15);
-  border-radius: 20px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(76, 141, 255, 0.024)),
-    rgba(7, 16, 31, 0.72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row .button {
@@ -11608,9 +11608,10 @@ body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-raw-status {
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-payment-cell {
-  border: 1px solid rgba(125, 183, 255, 0.13);
-  border-radius: 14px;
-  background: rgba(2, 7, 19, 0.34);
+  border: 0;
+  border-left: 1px solid rgba(125, 183, 255, 0.12);
+  border-radius: 0;
+  background: transparent;
 }
 
 body:not(:has(.landing-page)) .admin-subscription-empty-text {
@@ -11650,8 +11651,8 @@ body:not(:has(.landing-page)) .admin-subscription-action-cell .quick-memo-row > 
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .quick-memo-button {
-  border-color: rgba(125, 183, 255, 0.18);
-  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(125, 183, 255, 0.12);
+  background: transparent;
   color: rgba(216, 236, 255, 0.8);
 }
 
@@ -12231,13 +12232,11 @@ body:not(:has(.landing-page)) #admin-audit-logs .quick-filter-row {
   grid-template-columns: repeat(auto-fit, minmax(154px, 1fr));
   gap: 10px;
   margin: 16px 0 14px;
-  padding: 14px;
-  border: 1px solid rgba(125, 183, 255, 0.15);
-  border-radius: 20px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(76, 141, 255, 0.024)),
-    rgba(7, 16, 31, 0.72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 body:not(:has(.landing-page)) #admin-audit-logs .quick-filter-row .button {
@@ -12273,10 +12272,10 @@ body:not(:has(.landing-page)) #admin-audit-logs .admin-filter-row {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin: 0 0 14px;
-  padding: 14px;
-  border: 1px solid rgba(125, 183, 255, 0.15);
-  border-radius: 18px;
-  background: rgba(2, 7, 19, 0.32);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 body:not(:has(.landing-page)) #admin-audit-logs .admin-filter-row input {
@@ -12299,15 +12298,14 @@ body:not(:has(.landing-page)) #admin-audit-logs .thread-list {
 }
 
 body:not(:has(.landing-page)) #admin-audit-logs .audit-log-card {
-  border: 1px solid rgba(125, 183, 255, 0.16);
-  border-radius: 18px;
+  border: 0;
+  border-top: 1px solid rgba(125, 183, 255, 0.14);
+  border-radius: 0;
   display: grid;
-  gap: 14px;
-  padding: 16px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(76, 141, 255, 0.026)),
-    rgba(2, 7, 19, 0.4);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  gap: 12px;
+  padding: 14px 0 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 body:not(:has(.landing-page)) #admin-audit-logs .audit-log-header {
@@ -12337,12 +12335,13 @@ body:not(:has(.landing-page)) #admin-audit-logs .audit-log-meta-grid {
 
 body:not(:has(.landing-page)) #admin-audit-logs .audit-log-target-cell,
 body:not(:has(.landing-page)) #admin-audit-logs .audit-log-actor-cell {
-  border: 1px solid rgba(125, 183, 255, 0.13);
-  border-radius: 14px;
+  border: 0;
+  border-top: 1px solid rgba(125, 183, 255, 0.1);
+  border-radius: 0;
   display: grid;
   gap: 5px;
-  padding: 10px 12px;
-  background: rgba(2, 7, 19, 0.34);
+  padding: 10px 0 0;
+  background: transparent;
   overflow-wrap: anywhere;
 }
 
@@ -12377,9 +12376,11 @@ body:not(:has(.landing-page)) #admin-audit-logs .audit-log-summary-list {
   display: grid;
   gap: 8px;
   margin: 0;
-  border-color: rgba(125, 183, 255, 0.14);
-  background: rgba(76, 141, 255, 0.11);
+  border: 0;
+  border-top: 1px solid rgba(125, 183, 255, 0.1);
+  background: transparent;
   color: rgba(232, 242, 255, 0.88);
+  padding: 10px 0 0;
 }
 
 body:not(:has(.landing-page)) #admin-audit-logs .audit-log-summary-list li {
@@ -12387,9 +12388,10 @@ body:not(:has(.landing-page)) #admin-audit-logs .audit-log-summary-list li {
 }
 
 body:not(:has(.landing-page)) #admin-audit-logs .audit-log-json-details {
-  border: 1px solid rgba(125, 183, 255, 0.13);
-  border-radius: 14px;
-  background: rgba(2, 7, 19, 0.34);
+  border: 0;
+  border-top: 1px solid rgba(125, 183, 255, 0.1);
+  border-radius: 0;
+  background: transparent;
   overflow: hidden;
 }
 
@@ -12397,7 +12399,7 @@ body:not(:has(.landing-page)) #admin-audit-logs .audit-log-json-details summary 
   cursor: pointer;
   color: rgba(216, 236, 255, 0.78);
   font-weight: 850;
-  padding: 11px 12px;
+  padding: 10px 0;
 }
 
 body:not(:has(.landing-page)) #admin-audit-logs .audit-json {

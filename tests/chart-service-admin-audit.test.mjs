@@ -243,7 +243,47 @@ test('admin audit log panel uses a dark operational investigation finish', () =>
   assert.match(styleSource, /#admin-audit-logs\s*\{[\s\S]*?linear-gradient/);
   assert.match(styleSource, /#admin-audit-logs \.quick-filter-row\s*\{[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(154px, 1fr\)\)/);
   assert.match(styleSource, /#admin-audit-logs \.admin-filter-row\s*\{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(styleSource, /#admin-audit-logs \.audit-log-card\s*\{[\s\S]*?border:/);
+  assert.match(styleSource, /#admin-audit-logs \.audit-log-card\s*\{[\s\S]*?border-top:/);
   assert.match(styleSource, /#admin-audit-logs \.audit-log-summary-list\s*\{[\s\S]*?display: grid/);
-  assert.match(styleSource, /#admin-audit-logs \.audit-log-json-details\s*\{[\s\S]*?border:/);
+  assert.match(styleSource, /#admin-audit-logs \.audit-log-json-details\s*\{[\s\S]*?border-top:/);
+});
+
+test('admin audit log panel flattens nested investigation cards to reduce padding buildup', () => {
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const quickFilterRule = styleSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-audit-logs \.quick-filter-row\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const filterRule = styleSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-audit-logs \.admin-filter-row\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const cardRule = styleSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-audit-logs \.audit-log-card\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const metaCellRule = styleSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-audit-logs \.audit-log-target-cell,[\s\S]*?#admin-audit-logs \.audit-log-actor-cell\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const summaryRule = styleSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-audit-logs \.audit-log-summary-list\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const detailsRule = styleSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-audit-logs \.audit-log-json-details\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(quickFilterRule, /background:\s*transparent/);
+  assert.match(quickFilterRule, /padding:\s*0/);
+  assert.match(filterRule, /background:\s*transparent/);
+  assert.match(filterRule, /padding:\s*0/);
+  assert.match(cardRule, /background:\s*transparent/);
+  assert.match(cardRule, /border:\s*0/);
+  assert.match(cardRule, /border-top:\s*1px solid rgba\(125, 183, 255, 0\.14\)/);
+  assert.match(cardRule, /padding:\s*14px 0 0/);
+  assert.match(metaCellRule, /background:\s*transparent/);
+  assert.match(metaCellRule, /border:\s*0/);
+  assert.match(metaCellRule, /border-top:\s*1px solid rgba\(125, 183, 255, 0\.1\)/);
+  assert.match(summaryRule, /background:\s*transparent/);
+  assert.match(summaryRule, /border:\s*0/);
+  assert.match(summaryRule, /border-top:\s*1px solid rgba\(125, 183, 255, 0\.1\)/);
+  assert.match(detailsRule, /background:\s*transparent/);
+  assert.match(detailsRule, /border:\s*0/);
+  assert.match(detailsRule, /border-top:\s*1px solid rgba\(125, 183, 255, 0\.1\)/);
 });
