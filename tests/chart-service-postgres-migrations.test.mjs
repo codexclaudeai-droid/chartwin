@@ -107,6 +107,45 @@ test('postgres schema migration runner uses a transaction-capable executor when 
   ]);
 });
 
+test('postgres schema migration runner retries transient deadlocks', async () => {
+  const { runChartServicePostgresSchemaMigration } = await import('../src/server/chart-service/index.ts');
+  let transactionAttempts = 0;
+  const calls = [];
+  const executor = {
+    async query() {
+      throw new Error('base executor should not be used for transactional migrations');
+    },
+    async transaction(operation) {
+      transactionAttempts += 1;
+      calls.push(`tx:${transactionAttempts}`);
+      if (transactionAttempts === 1) {
+        const error = new Error('deadlock detected');
+        error.code = '40P01';
+        throw error;
+      }
+      return await operation({
+        async query(statement) {
+          calls.push(statement.sql);
+          return { rows: [] };
+        },
+      });
+    },
+  };
+
+  const result = await runChartServicePostgresSchemaMigration(executor, {
+    schemaSql: 'create table retry_table (id text);',
+    maxAttempts: 2,
+    retryDelayMs: 0,
+  });
+
+  assert.equal(result.statementCount, 1);
+  assert.deepEqual(calls, [
+    'tx:1',
+    'tx:2',
+    'create table retry_table (id text)',
+  ]);
+});
+
 test('postgres migration harness is wired into package scripts and closes the pg executor', () => {
   const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   const script = fs.readFileSync(new URL('../scripts/run-chart-service-migration.mjs', import.meta.url), 'utf8');

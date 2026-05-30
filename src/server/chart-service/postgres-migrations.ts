@@ -8,6 +8,8 @@ import {
 export type ChartServicePostgresMigrationOptions = {
   schemaSql?: string;
   useTransaction?: boolean;
+  maxAttempts?: number;
+  retryDelayMs?: number;
 };
 
 export type ChartServicePostgresMigrationResult = {
@@ -58,6 +60,27 @@ export async function runChartServicePostgresSchemaMigration(
   executor: PostgresQueryExecutor,
   options: ChartServicePostgresMigrationOptions = {},
 ): Promise<ChartServicePostgresMigrationResult> {
+  const maxAttempts = normalizeMigrationMaxAttempts(options.maxAttempts);
+  const retryDelayMs = normalizeMigrationRetryDelayMs(options.retryDelayMs);
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await runChartServicePostgresSchemaMigrationOnce(executor, options);
+    } catch (error) {
+      if (attempt >= maxAttempts || !isRetryablePostgresMigrationError(error)) {
+        throw error;
+      }
+      await sleep(retryDelayMs * attempt);
+    }
+  }
+
+  throw new Error('Postgres schema migration retry loop exited unexpectedly.');
+}
+
+async function runChartServicePostgresSchemaMigrationOnce(
+  executor: PostgresQueryExecutor,
+  options: ChartServicePostgresMigrationOptions,
+): Promise<ChartServicePostgresMigrationResult> {
   const statements = splitPostgresMigrationStatements(options.schemaSql ?? renderChartServicePostgresSchema());
   const useTransaction = options.useTransaction ?? true;
 
@@ -94,6 +117,25 @@ export async function runChartServicePostgresSchemaMigration(
   return {
     statementCount: statements.length,
   };
+}
+
+function isRetryablePostgresMigrationError(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === '40P01' || code === '40001';
+}
+
+function normalizeMigrationMaxAttempts(value: number | null | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 3;
+  return Math.max(1, Math.floor(value));
+}
+
+function normalizeMigrationRetryDelayMs(value: number | null | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 750;
+  return Math.max(0, Math.floor(value));
+}
+
+function sleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 function createPostgresMigrationStatement(sql: string): PostgresStatement {
