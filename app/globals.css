@@ -3140,21 +3140,61 @@ a {
 }
 
 .admin-symbols-table td:first-child {
-  display: grid;
-  gap: 4px;
   min-width: 220px;
 }
 
-.admin-symbols-table td:first-child strong {
+.admin-symbols-item {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 38px minmax(0, 1fr);
+}
+
+.admin-symbols-icon {
+  align-items: center;
+  background:
+    linear-gradient(145deg, rgba(76, 141, 255, 0.22), rgba(86, 240, 255, 0.08)),
+    rgba(2, 7, 19, 0.72);
+  border: 1px solid rgba(125, 183, 255, 0.2);
+  border-radius: 999px;
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  overflow: hidden;
+  width: 38px;
+}
+
+.admin-symbols-icon img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.admin-symbols-icon-fallback {
+  color: rgba(216, 236, 255, 0.9);
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.admin-symbols-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-symbols-copy strong {
   color: #ffffff;
 }
 
-.admin-symbols-table td:first-child span {
+.admin-symbols-copy span {
   color: #7db7ff;
   font-weight: 850;
 }
 
-.admin-symbols-table td:first-child small {
+.admin-symbols-copy small {
   color: rgba(216, 236, 255, 0.62);
   line-height: 1.4;
 }

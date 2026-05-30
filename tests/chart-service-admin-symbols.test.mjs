@@ -27,6 +27,21 @@ test('admin dashboard exposes symbol management as its own section', () => {
   assert.equal(getAdminDashboardSectionFromLocation('#admin-symbols'), 'symbols');
 });
 
+test('admin symbol list shows registered symbol images before the symbol text', () => {
+  const panelSource = fs.readFileSync(new URL('../app/admin/admin-symbols-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /className="admin-symbols-item"/);
+  assert.match(panelSource, /className="admin-symbols-icon"/);
+  assert.match(panelSource, /symbol\.item\.iconUrl \?/);
+  assert.match(panelSource, /src=\{symbol\.item\.iconUrl\}/);
+  assert.match(panelSource, /alt=\{symbol\.item\.label\}/);
+  assert.match(panelSource, /className="admin-symbols-icon-fallback"/);
+  assert.match(cssSource, /\.admin-symbols-item\s*\{[\s\S]*?grid-template-columns: 38px minmax\(0, 1fr\)/);
+  assert.match(cssSource, /\.admin-symbols-icon\s*\{[\s\S]*?height: 38px/);
+  assert.match(cssSource, /\.admin-symbols-icon img\s*\{[\s\S]*?object-fit: cover/);
+});
+
 test('admin page renders the symbol management panel inside the dashboard shell', () => {
   const pageSource = fs.readFileSync(new URL('../app/admin/page.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-symbols-panel.tsx', import.meta.url), 'utf8');

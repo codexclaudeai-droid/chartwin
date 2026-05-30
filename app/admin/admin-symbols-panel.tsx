@@ -268,9 +268,20 @@ export function AdminSymbolsPanel() {
                 {filteredSymbols.map((symbol) => (
                   <tr key={`${symbol.source}:${symbol.category}:${symbol.item.id}`}>
                     <td>
-                      <strong>{symbol.item.id}</strong>
-                      <span>{symbol.item.label}</span>
-                      <small>{symbol.item.desc}</small>
+                      <div className="admin-symbols-item">
+                        <span className="admin-symbols-icon" aria-hidden={!symbol.item.iconUrl}>
+                          {symbol.item.iconUrl ? (
+                            <img src={symbol.item.iconUrl} alt={symbol.item.label} />
+                          ) : (
+                            <span className="admin-symbols-icon-fallback">{symbol.item.id.slice(0, 1)}</span>
+                          )}
+                        </span>
+                        <span className="admin-symbols-copy">
+                          <strong>{symbol.item.id}</strong>
+                          <span>{symbol.item.label}</span>
+                          <small>{symbol.item.desc}</small>
+                        </span>
+                      </div>
                     </td>
                     <td>{symbol.category}</td>
                     <td>
