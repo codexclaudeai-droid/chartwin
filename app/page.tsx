@@ -142,7 +142,7 @@ function calculateLandingPlanPrice(plan: SubscriptionPlan): string {
 }
 
 function formatLandingPlanPeriod(plan: SubscriptionPlan): string {
-  if (plan.id === 'plan_monthly') return '1개월';
+  if (plan.id === 'plan_monthly') return '/1개월';
   if (plan.id === 'plan_half_year') return '/ 6개월';
   if (plan.id === 'plan_yearly') return '/ 1년';
   return `/ ${plan.durationDays}일`;

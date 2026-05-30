@@ -908,6 +908,16 @@ test('landing plan cards use admin configured web info plan services', () => {
   assert.match(pageSource, /landingPlanFeatures\.map\(\(feature\) =>/);
 });
 
+test('landing and pricing show BASIC plan period with a leading slash', () => {
+  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pricingPanelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(pageSource, /plan\.id === 'plan_monthly'\) return '\/1개월'/);
+  assert.match(pricingPanelSource, /plan\.id === 'plan_monthly'\) return '\/1개월'/);
+  assert.doesNotMatch(pageSource, /plan\.id === 'plan_monthly'\) return '1개월'/);
+  assert.doesNotMatch(pricingPanelSource, /plan\.id === 'plan_monthly'\) return '1개월'/);
+});
+
 test('landing bottom sections end with FAQ and contact actions', () => {
   const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
