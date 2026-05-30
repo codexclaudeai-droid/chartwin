@@ -376,12 +376,13 @@ test('landing page presents a concrete conversion layout for the subscription se
   assert.doesNotMatch(heroSource, /#landing-process/);
   assert.match(pageSource, /TradingCore \| 실시간 알고리즘 트레이딩 시그널/);
   assert.match(heroSource, /무료체험 신청/);
-  assert.match(heroSource, /secondaryHref: '\/signup\?redirect=\/support%3Fcategory%3Dtrial%23support-inquiry-form'/);
+  assert.match(heroSource, /secondaryHref: 'free-trial'/);
+  assert.match(heroSource, /FreeTrialRequestButton/);
   assert.match(pageSource, /tcChartFeatures/);
   assert.match(pageSource, /landing-tc-chart-features/);
   assert.match(pageSource, /TC Chart 기능/);
   assert.match(pageSource, /다중 지표 교차 검증을 통한 고정밀 시그널/);
-  assert.match(pageSource, /시장을 떠나 있어도 기회를 포착하는 즉각 전송 시스템/);
+  assert.match(pageSource, /시장을 떠나 있어도 기회를 포착하는 실시간 알림 시스템/);
   assert.match(pageSource, /프로급 차트와 강력한 분석 도구 지원/);
   assert.match(pageSource, /신뢰할 수 있는 백테스팅 지표 공개/);
   assert.match(pageSource, /온사이트 실시간 알림/);
@@ -418,9 +419,9 @@ test('landing page presents a concrete conversion layout for the subscription se
   assert.match(pageSource, /href="#landing-contact-actions"/);
   assert.match(pageSource, /<details className="landing-faq-card"/);
   assert.match(pageSource, /<summary>/);
-  assert.match(pageSource, /landing-faq-actions/);
-  assert.match(pageSource, /고객센터로 문의하기/);
-  assert.match(pageSource, /구독 플랜 다시 보기/);
+  assert.doesNotMatch(pageSource, /landing-faq-actions/);
+  assert.doesNotMatch(pageSource, /고객센터로 문의하기/);
+  assert.doesNotMatch(pageSource, /구독 플랜 다시 보기/);
   assert.match(pageSource, /landing-footer/);
   assert.match(pageSource, /이용약관/);
   assert.match(pageSource, /개인정보보호정책/);
@@ -655,10 +656,10 @@ test('top navigation links the landing page to the TC Chart route', () => {
   const layoutSource = fs.readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8');
 
   assert.match(layoutSource, /<nav className="nav" aria-label="Primary">/);
-  assert.match(layoutSource, /<Link href="\/chart">차트<\/Link>/);
+  assert.match(layoutSource, /<Link href="\/chart" aria-label="TC Chart 페이지">TC차트<\/Link>/);
   assert.match(layoutSource, /<Link href="\/#landing-plans">구독<\/Link>/);
   assert.match(layoutSource, /<Link href="\/support">고객센터<\/Link>/);
-  assert.match(layoutSource, /<Link href="\/profile">마이프로필<\/Link>/);
+  assert.match(layoutSource, /<ProfileNavLink \/>/);
   assert.equal((layoutSource.match(/<Link href="\/#landing-plans">구독<\/Link>/g) ?? []).length, 2);
   assert.doesNotMatch(layoutSource, /<Link href="\/pricing">구독<\/Link>/);
   assert.match(layoutSource, /<details className="mobile-nav">/);
@@ -704,7 +705,7 @@ test('landing page presents TC Chart feature capabilities under the TradingCore 
   assert.match(pageSource, /TradingCore \| 실시간 알고리즘 트레이딩 시그널/);
   assert.match(pageSource, /다중 지표 교차 검증을 통한 고정밀 시그널/);
   assert.doesNotMatch(pageSource, /TradingCore 차트/);
-  assert.match(pageSource, /시장을 떠나 있어도 기회를 포착하는 즉각 전송 시스템/);
+  assert.match(pageSource, /시장을 떠나 있어도 기회를 포착하는 실시간 알림 시스템/);
   assert.match(pageSource, /프로급 차트와 강력한 분석 도구 지원/);
   assert.match(pageSource, /신뢰할 수 있는 백테스팅 지표 공개/);
   assert.match(pageSource, /온사이트 실시간 알림/);
@@ -823,11 +824,11 @@ test('landing bottom sections end with FAQ and contact actions', () => {
   assert.match(pageSource, /contactActionCards/);
   assert.match(pageSource, /landing-contact-actions/);
   assert.match(pageSource, /\/support\?category=partnership/);
-  assert.match(pageSource, /trialSignupHref/);
-  assert.match(pageSource, /\/signup\?redirect=\/support%3Fcategory%3Dtrial%23support-inquiry-form/);
+  assert.match(pageSource, /FreeTrialRequestButton/);
+  assert.match(pageSource, /href: 'free-trial'/);
   assert.match(pageSource, /1:1 문의하기/);
   assert.match(pageSource, /제휴 문의하기/);
-  assert.match(pageSource, /회원가입 후 무료체험 신청/);
+  assert.match(pageSource, /무료체험 신청/);
   assert.match(pageSource, /TradingCore는 초보 투자자도 바로 사용할 수 있나요/);
   assert.match(pageSource, /시그널이 지원하는 투자 상품이나 시장은 무엇인가요/);
   assert.match(pageSource, /텔레그램 실시간 알림 연동은 어렵지 않나요/);
@@ -835,9 +836,9 @@ test('landing bottom sections end with FAQ and contact actions', () => {
   assert.match(cssSource, /\.landing-contact-grid/);
   assert.match(cssSource, /\.landing-contact-card/);
   assert.match(cssSource, /Contact section final blue system pass/);
-  assert.match(cssSource, /\.landing-page \.landing-contact-actions\s*\{[^}]*rgba\(86, 240, 255, 0\.18\)/s);
-  assert.match(cssSource, /\.landing-page \.landing-contact-actions\s*\{[^}]*rgba\(7, 21, 47, 0\.94\)/s);
-  assert.match(cssSource, /\.landing-page \.landing-contact-card span\s*\{[^}]*var\(--tradingcore-cyan\)/s);
+  assert.match(cssSource, /\.landing-page \.landing-contact-card \.button\.secondary\s*\{[^}]*rgba\(86, 240, 255, 0\.09\)/s);
+  assert.match(cssSource, /\.landing-page \.landing-contact-actions\s*\{[^}]*rgba\(7, 21, 47, 0\.9\)/s);
+  assert.match(cssSource, /\.landing-page \.landing-contact-card span\s*\{[^}]*var\(--tradingcore-azure\)/s);
   assert.match(cssSource, /\.landing-faq-card::before/);
   assert.match(cssSource, /\.landing-footer::before/);
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { FreeTrialRequestButton } from '../shared/free-trial-request-button';
 
 type ChartAccessPayload = {
   ok?: boolean;
@@ -62,7 +63,7 @@ export function ChartRuntime() {
             <div className="chart-access-actions">
               {status === 'login_required' && <a className="button" href="/login?redirect=/chart">로그인</a>}
               <a className="button secondary" href="/pricing">구독하기</a>
-              <a className="button secondary" href="/support">고객센터</a>
+              <FreeTrialRequestButton className="button secondary">무료체험 신청</FreeTrialRequestButton>
             </div>
           )}
         </section>

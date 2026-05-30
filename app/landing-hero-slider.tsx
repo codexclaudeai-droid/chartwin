@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { FreeTrialRequestButton } from './shared/free-trial-request-button';
 
 const landingHeroSlides = [
   {
@@ -11,7 +12,7 @@ const landingHeroSlides = [
     primaryLabel: '회원가입',
     primaryHref: '/signup',
     secondaryLabel: '무료체험 신청',
-    secondaryHref: '/signup?redirect=/support%3Fcategory%3Dtrial%23support-inquiry-form',
+    secondaryHref: 'free-trial',
     backgroundClass: 'hero-bg-approval',
     heroImage: '/images/hero/slide-01.png',
   },
@@ -22,7 +23,7 @@ const landingHeroSlides = [
     primaryLabel: '회원가입',
     primaryHref: '/signup',
     secondaryLabel: '무료체험 신청',
-    secondaryHref: '/signup?redirect=/support%3Fcategory%3Dtrial%23support-inquiry-form',
+    secondaryHref: 'free-trial',
     backgroundClass: 'hero-bg-deposit',
     heroImage: '/images/hero/slide-03.png',
   },
@@ -33,7 +34,7 @@ const landingHeroSlides = [
     primaryLabel: '플랜보기',
     primaryHref: '#landing-plans',
     secondaryLabel: '무료체험 신청',
-    secondaryHref: '/signup?redirect=/support%3Fcategory%3Dtrial%23support-inquiry-form',
+    secondaryHref: 'free-trial',
     backgroundClass: 'hero-bg-workspace',
     heroImage: '/images/hero/slide-02.png',
   },
@@ -98,7 +99,13 @@ export default function LandingHeroSlider() {
                   ) : (
                     <Link className="button" href={slide.primaryHref}>{slide.primaryLabel}</Link>
                   )}
-                  <Link className="button secondary" href={slide.secondaryHref}>{slide.secondaryLabel}</Link>
+                  {slide.secondaryHref === 'free-trial' ? (
+                    <FreeTrialRequestButton className="button secondary">
+                      {slide.secondaryLabel}
+                    </FreeTrialRequestButton>
+                  ) : (
+                    <Link className="button secondary" href={slide.secondaryHref}>{slide.secondaryLabel}</Link>
+                  )}
                 </div>
               </div>
             </div>

@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import LandingHeroSlider from './landing-hero-slider.tsx';
 import LandingChartMotion from './landing-chart-motion.tsx';
+import { FreeTrialRequestButton } from './shared/free-trial-request-button';
 import { createPricingPlanHref } from './pricing/plan-selection.ts';
 import type { SubscriptionPlan } from '../src/domain/chart-service/index.ts';
 import { getAsyncChartServicePersistence } from '../src/server/chart-service/index.ts';
@@ -67,8 +68,6 @@ const landingPlanFeaturesById: Record<string, string[]> = {
     '신규 프리미엄 지표 베타 테스트 우선 참여',
   ],
 };
-const trialSignupHref = '/signup?redirect=/support%3Fcategory%3Dtrial%23support-inquiry-form';
-
 const contactActionCards = [
   {
     label: 'Support',
@@ -88,8 +87,8 @@ const contactActionCards = [
     label: 'Trial',
     title: '무료체험신청',
     body: '일반회원 가입 후 BASIC 플랜의 핵심 시그널과 기본 분석 도구를 먼저 체험할 수 있습니다.',
-    href: trialSignupHref,
-    action: '회원가입 후 무료체험 신청',
+    href: 'free-trial',
+    action: '무료체험 신청',
   },
 ];
 
@@ -375,7 +374,11 @@ export default async function HomePage() {
               <span>{card.label}</span>
               <h3>{card.title}</h3>
               <p>{card.body}</p>
-              <Link className="button secondary" href={card.href}>{card.action}</Link>
+              {card.href === 'free-trial' ? (
+                <FreeTrialRequestButton className="button secondary">{card.action}</FreeTrialRequestButton>
+              ) : (
+                <Link className="button secondary" href={card.href}>{card.action}</Link>
+              )}
             </article>
           ))}
         </div>

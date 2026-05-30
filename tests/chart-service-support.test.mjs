@@ -642,8 +642,9 @@ test('support page exposes public notice qna and faq boards before private inqui
   assert.match(pageSource, /무료체험신청/);
   assert.match(pageSource, /#support-inquiry-form/);
   assert.match(pageSource, /\/support\?category=partnership#support-inquiry-form/);
-  assert.match(pageSource, /\/signup\?redirect=\/support%3Fcategory%3Dtrial%23support-inquiry-form/);
-  assert.match(pageSource, /회원가입 후 무료체험 신청/);
+  assert.match(pageSource, /FreeTrialRequestButton/);
+  assert.match(pageSource, /href: 'free-trial'/);
+  assert.match(pageSource, /무료체험 신청/);
   assert.match(panelSource, /id="support-inquiry-form"/);
   assert.doesNotMatch(pageSource, /SUPPORT_FLOW/);
   assert.doesNotMatch(pageSource, /입금\/결제/);

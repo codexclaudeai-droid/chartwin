@@ -67,6 +67,15 @@ import {
   type TronScanTransactionPayload,
 } from './txid-verification.ts';
 
+export const FREE_TRIAL_DURATION_DAYS = 7;
+
+export type FreeTrialRequestResult = {
+  status: 'started' | 'already_active';
+  subscription: SubscriptionRecord | null;
+  supportThread: SupportThreadRecord | null;
+  endsAt: string | null;
+};
+
 export async function getActorFromAsyncRequest(
   repository: AsyncChartServiceRepository,
   request: { headers: Headers },
@@ -112,6 +121,71 @@ export async function getAsyncChartAccessSnapshot(
     subscriptionStatus,
     fullChart: canUseFullChart(context),
     paidSignals: canViewPaidSignals(context),
+  };
+}
+
+export async function requestAsyncFreeTrial(
+  repository: AsyncChartServiceRepository,
+  input: { actor: Actor; requestedAt: string },
+): Promise<FreeTrialRequestResult> {
+  const user = await repository.getUserById(input.actor.id);
+  if (!user) throw new Error(`User not found: ${input.actor.id}`);
+
+  const existingSubscription = await repository.getSubscriptionByUserId(user.id);
+  const subscriptionStatus = existingSubscription?.status ?? SUBSCRIPTION_STATUSES.none;
+  if (canUseFullChart({ role: user.role, subscriptionStatus })) {
+    return {
+      status: 'already_active',
+      subscription: existingSubscription,
+      supportThread: null,
+      endsAt: existingSubscription?.endsAt ?? null,
+    };
+  }
+
+  if (user.role !== USER_ROLES.member) {
+    throw new Error('무료체험 신청은 일반회원 계정으로만 가능합니다.');
+  }
+
+  const endsAt = addUtcDays(input.requestedAt, FREE_TRIAL_DURATION_DAYS);
+  const subscription: SubscriptionRecord = {
+    id: existingSubscription?.id ?? await repository.nextId('sub'),
+    userId: user.id,
+    planId: null,
+    status: SUBSCRIPTION_STATUSES.trialActive,
+    startsAt: input.requestedAt,
+    endsAt,
+    approvedByAdminId: null,
+    approvedAt: null,
+    cancelledAt: null,
+    refundedAt: null,
+    createdAt: existingSubscription?.createdAt ?? input.requestedAt,
+    updatedAt: input.requestedAt,
+  };
+
+  await repository.saveSubscription(subscription);
+  await createAsyncUserNotification(repository, {
+    userId: user.id,
+    category: 'subscription',
+    title: '무료체험이 시작되었습니다',
+    body: `무료체험이 자동 접수되었습니다. ${FREE_TRIAL_DURATION_DAYS}일 동안 TC Chart와 핵심 시그널을 이용할 수 있습니다.`,
+    linkUrl: '/chart',
+    createdAt: input.requestedAt,
+  });
+
+  const supportResult = await createAsyncSupportThread(repository, {
+    actor: input.actor,
+    category: 'trial',
+    title: '무료체험 신청',
+    body: `무료체험이 자동 접수되었습니다. 종료 예정일: ${endsAt}`,
+    visibility: 'private',
+    createdAt: input.requestedAt,
+  });
+
+  return {
+    status: 'started',
+    subscription,
+    supportThread: supportResult.thread,
+    endsAt,
   };
 }
 
@@ -1508,6 +1582,12 @@ export async function deleteAsyncSupportMessageAsAdmin(
 
 function toPublicActor(user: ServiceUserRecord | null) {
   return user ? toPublicServiceUserRecord(user) : null;
+}
+
+function addUtcDays(isoDate: string, days: number): string {
+  const next = new Date(isoDate);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString();
 }
 
 async function createAsyncUserNotification(

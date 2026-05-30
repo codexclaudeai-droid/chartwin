@@ -5,6 +5,7 @@ import {
   PUBLIC_BOARD_CATEGORY_LABELS,
   type PublicBoardCategory,
 } from '../../src/server/chart-service/index.ts';
+import { FreeTrialRequestButton } from '../shared/free-trial-request-button';
 import { SupportPanel } from './support-panel';
 
 export const dynamic = 'force-dynamic';
@@ -25,8 +26,8 @@ const SUPPORT_CONTACT_ROUTES = [
   {
     title: '무료체험신청',
     description: '일반회원 가입 후 BASIC 플랜의 핵심 시그널과 기본 분석 도구를 먼저 체험할 수 있습니다.',
-    href: '/signup?redirect=/support%3Fcategory%3Dtrial%23support-inquiry-form',
-    action: '회원가입 후 무료체험 신청',
+    href: 'free-trial',
+    action: '무료체험 신청',
   },
 ];
 
@@ -51,7 +52,11 @@ export default async function SupportPage() {
           <article className="support-contact-route-card" key={item.title}>
             <span className="support-route-card-title">{item.title}</span>
             <p className="support-route-card-body">{item.description}</p>
-            <a className="button secondary support-route-action" href={item.href}>{item.action}</a>
+            {item.href === 'free-trial' ? (
+              <FreeTrialRequestButton className="button secondary support-route-action">{item.action}</FreeTrialRequestButton>
+            ) : (
+              <a className="button secondary support-route-action" href={item.href}>{item.action}</a>
+            )}
           </article>
         ))}
       </section>

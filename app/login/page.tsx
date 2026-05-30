@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <LoginPanel />
         <section className="auth-signup-guide" aria-label="회원가입 안내">
           <div>
-            <strong>아직 계정이 없나요?</strong>
+            <strong>TradingCore 계정이 없나요?</strong>
             <p>회원가입 후 무료체험 신청, 구독 관리, 고객센터 문의를 이용할 수 있습니다.</p>
           </div>
           <Link className="button secondary" href={signupHref}>회원가입</Link>

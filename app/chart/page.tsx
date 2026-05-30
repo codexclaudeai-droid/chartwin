@@ -5,6 +5,7 @@ import {
   getAsyncChartAccessSnapshot,
   getAsyncChartServicePersistence,
 } from '../../src/server/chart-service/index.ts';
+import { FreeTrialRequestButton } from '../shared/free-trial-request-button';
 import { ChartRuntime } from './chart-runtime';
 
 export const dynamic = 'force-dynamic';
@@ -35,7 +36,7 @@ export default async function ChartPage() {
           <p>구독 승인 후 TC Chart를 이용할 수 있습니다.</p>
           <div className="chart-access-actions">
             <a className="button" href="/pricing">구독하기</a>
-            <a className="button secondary" href="/support">고객센터</a>
+            <FreeTrialRequestButton className="button secondary">무료체험 신청</FreeTrialRequestButton>
           </div>
         </section>
       </main>

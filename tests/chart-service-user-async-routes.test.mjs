@@ -10,6 +10,7 @@ const userMutationRoutes = [
   '../app/api/profile/image-policy/route.ts',
   '../app/api/subscription/cancel-request/route.ts',
   '../app/api/subscription/refund-request/route.ts',
+  '../app/api/trial/request/route.ts',
   '../app/api/notifications/read-all/route.ts',
   '../app/api/notifications/[id]/read/route.ts',
   '../app/api/notifications/[id]/archive/route.ts',

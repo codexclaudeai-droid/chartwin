@@ -3801,6 +3801,10 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.pricing-auth-modal-actions.single {
+  grid-template-columns: 1fr;
+}
+
 .pricing-auth-modal-close {
   justify-self: end;
 }
