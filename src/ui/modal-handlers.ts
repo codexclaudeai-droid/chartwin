@@ -1348,21 +1348,6 @@ export function openChartSettingsModal(chart: any, onApply: () => void, onSymbol
   fastSyncRow.appendChild(fastSyncControls);
   body.appendChild(fastSyncRow);
 
-  const symbolRow = document.createElement('div');
-  symbolRow.style.cssText = 'margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
-  const symbolLabel = document.createElement('div');
-  symbolLabel.innerHTML = '<div style="font-size:13px;font-weight:700;">심볼 등록 / 관리</div><div style="font-size:11px;color:#84898e;margin-top:2px;">심볼명, 티커, 카테고리, SVG 아이콘 URL을 등록할 수 있습니다.</div>';
-  const symbolBtn = document.createElement('button');
-  symbolBtn.textContent = '심볼 관리';
-  symbolBtn.style.cssText = 'padding:8px 12px;border-radius:6px;border:1px solid #2a2e3e;background:#131722;color:white;cursor:pointer;font-size:12px;';
-  symbolBtn.addEventListener('mouseenter', () => symbolBtn.style.background = '#252a3a');
-  symbolBtn.addEventListener('mouseleave', () => symbolBtn.style.background = '#131722');
-  symbolBtn.addEventListener('click', () => {
-    openSymbolRegistryModal(chart, onApply, onSymbolVisualUpdate);
-  });
-  symbolRow.appendChild(symbolLabel);
-  symbolRow.appendChild(symbolBtn);
-  body.appendChild(symbolRow);
 }
 
 export function openSymbolRegistryModal(chart: any, onApply: () => void, onSymbolVisualUpdate: () => void) {

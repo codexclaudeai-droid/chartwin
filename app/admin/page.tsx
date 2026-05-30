@@ -3,6 +3,7 @@ import { AdminDashboardShell, AdminDashboardShellSection } from './admin-dashboa
 import { AdminDashboardPanel } from './admin-dashboard-panel';
 import { AdminSalesPanel } from './admin-sales-panel';
 import { AdminStatisticsPanel } from './admin-statistics-panel';
+import { AdminSymbolsPanel } from './admin-symbols-panel';
 import { AdminWebInfoSection } from './admin-web-info-section';
 import { AdminPanel } from './admin-panel';
 import { AuditLogPanel } from './audit-log-panel';
@@ -29,6 +30,9 @@ export default function AdminPage() {
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="webInfo">
             <AdminWebInfoSection />
+          </AdminDashboardShellSection>
+          <AdminDashboardShellSection sectionKey="symbols">
+            <AdminSymbolsPanel />
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="users">
             <UserAdminPanel />

@@ -28,7 +28,6 @@ import {
   openIndicatorModal,
   openStrategyModal,
   openSymbolModal,
-  openSymbolRegistryModal,
   openTimezoneModal,
 } from '../ui/modal-handlers';
 import { createIndicatorOverlay } from '../ui/indicator-overlay';

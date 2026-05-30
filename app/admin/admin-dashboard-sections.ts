@@ -1,6 +1,7 @@
 export type AdminDashboardSectionKey =
   | 'overview'
   | 'webInfo'
+  | 'symbols'
   | 'statistics'
   | 'sales'
   | 'users'
@@ -50,6 +51,13 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
       { label: '입금정보관리', href: '#admin-payment-settings' },
       { label: '포인트관리', href: '#admin-point-settings' },
     ],
+  },
+  symbols: {
+    key: 'symbols',
+    eyebrow: 'Symbols',
+    label: '종목관리',
+    description: 'TC Chart에서 제공할 종목, 티커, 카테고리, 아이콘 정보를 관리합니다.',
+    href: '#admin-symbols',
   },
   support: {
     key: 'support',
@@ -109,6 +117,7 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
 export const ADMIN_DASHBOARD_SECTIONS: AdminDashboardSection[] = [
   ADMIN_DASHBOARD_SECTION_META.overview,
   ADMIN_DASHBOARD_SECTION_META.webInfo,
+  ADMIN_DASHBOARD_SECTION_META.symbols,
   ADMIN_DASHBOARD_SECTION_META.users,
   ADMIN_DASHBOARD_SECTION_META.support,
   ADMIN_DASHBOARD_SECTION_META.payments,
@@ -163,6 +172,10 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
     || targetId === 'admin-point-settings'
   ) {
     return 'webInfo';
+  }
+
+  if (targetId === 'admin-symbols' || targetId.startsWith('admin-symbol-')) {
+    return 'symbols';
   }
 
   if (targetId === 'admin-statistics' || targetId.startsWith('admin-statistics-')) {

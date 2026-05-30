@@ -26,6 +26,7 @@ test('admin dashboard sections include sales management menu entry', () => {
   assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.map((section) => section.key), [
     'overview',
     'webInfo',
+    'symbols',
     'users',
     'support',
     'payments',
