@@ -858,6 +858,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   let refreshStrategyReportOnNewSignal = (_paneId: number) => {};
   let setTopBarSignalNotification = (_count: number) => {};
   let onSignalNotificationClick = () => {};
+  let notifyLiveSignalsForPane = (_paneId: number) => {};
   let notifyInsufficientStrategyHistory = (_args: {
     symbol: string;
     strategyName: string;
@@ -1136,8 +1137,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       }
     };
     chart.onStrategyComputed = () => {
-      if (refreshStrategyReportAfterComputed(paneId, chart)) return;
-      markStrategyReportStale();
+      const reportRefreshed = refreshStrategyReportAfterComputed(paneId, chart);
+      if (!reportRefreshed) {
+        markStrategyReportStale();
+      }
+      notifyLiveSignalsForPane(paneId);
     };
     if (persistedSymbol) {
       chart.config.symbol = persistedSymbol;
@@ -2605,6 +2609,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     });
     forceRefreshStrategyReport = () => strategyReport.refresh();
     const announcedSignalKeys = new Set<string>();
+    const signalNoticeBaselineKeyByPane = new Map<number, string>();
     const getSignalNoticeHost = (): HTMLDivElement => {
       const w = window as typeof window & { __signalNoticeHost__?: HTMLDivElement };
       const existing = w.__signalNoticeHost__;
@@ -2768,7 +2773,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         return signalDateKey === todayKey ? acc + 1 : acc;
       }, 0);
     };
-    const findUnannouncedTodaySignals = (paneId: number): Array<{
+    const getSignalNoticeBaselineKey = (paneId: number): string => {
+      const pane = paneControllers.get(paneId) ?? ensurePane(paneId);
+      const strategyName = pane.chart.getActiveStrategyName();
+      if (!strategyName) return '';
+      return `${pane.chart.config.symbol}:${pane.chart.config.timeframe}:${strategyName}`;
+    };
+    const collectTodaySignalNotices = (paneId: number): Array<{
       key: string;
       side: 'LONG' | 'SHORT';
       symbol: string;
@@ -2809,8 +2820,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         });
         if (signalDateKey !== todayKey) continue;
         const key = `${paneId}:${symbol}:${sec}:${sig}`;
-        if (announcedSignalKeys.has(key)) continue;
-        announcedSignalKeys.add(key);
         found.push({
           key,
           side: sig === 1 ? 'LONG' : 'SHORT',
@@ -2822,21 +2831,39 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       }
       return found;
     };
-    const notifyLiveSignals = () => {
-      const paneIds = paneState.currentVisiblePaneIds.length
-        ? paneState.currentVisiblePaneIds
-        : [paneState.activePaneId];
-      const detected: Array<{
-        key: string;
-        side: 'LONG' | 'SHORT';
-        symbol: string;
-        entry: number;
-        timeSec: number;
-        timezone: string;
-      }> = [];
-      paneIds.forEach((paneId) => {
-        detected.push(...findUnannouncedTodaySignals(paneId));
+    const markExistingTodaySignalsAnnounced = (paneId: number) => {
+      const baselineKey = getSignalNoticeBaselineKey(paneId);
+      if (!baselineKey) {
+        signalNoticeBaselineKeyByPane.delete(paneId);
+        return;
+      }
+      collectTodaySignalNotices(paneId).forEach((item) => {
+        announcedSignalKeys.add(item.key);
       });
+      signalNoticeBaselineKeyByPane.set(paneId, baselineKey);
+    };
+    const findUnannouncedTodaySignals = (paneId: number): Array<{
+      key: string;
+      side: 'LONG' | 'SHORT';
+      symbol: string;
+      entry: number;
+      timeSec: number;
+      timezone: string;
+    }> => {
+      const baselineKey = getSignalNoticeBaselineKey(paneId);
+      if (!baselineKey) return [];
+      if (signalNoticeBaselineKeyByPane.get(paneId) !== baselineKey) {
+        markExistingTodaySignalsAnnounced(paneId);
+        return [];
+      }
+      return collectTodaySignalNotices(paneId).filter((item) => {
+        if (announcedSignalKeys.has(item.key)) return false;
+        announcedSignalKeys.add(item.key);
+        return true;
+      });
+    };
+    notifyLiveSignalsForPane = (paneId: number) => {
+      const detected = findUnannouncedTodaySignals(paneId);
       if (!detected.length) return;
       detected
         .sort((a, b) => a.timeSec - b.timeSec)
@@ -2844,9 +2871,17 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           showSignalNoticePopup(item);
           speakSignalNotice(item.side);
         });
-      if (detected.some((item) => item.key.startsWith(`${paneState.activePaneId}:`))) {
-        refreshStrategyReportOnNewSignal(paneState.activePaneId);
+      if (paneId === paneState.activePaneId) {
+        refreshStrategyReportOnNewSignal(paneId);
       }
+    };
+    const notifyLiveSignals = () => {
+      const paneIds = paneState.currentVisiblePaneIds.length
+        ? paneState.currentVisiblePaneIds
+        : [paneState.activePaneId];
+      paneIds.forEach((paneId) => {
+        notifyLiveSignalsForPane(paneId);
+      });
     };
     const refreshSignalNotification = () => {
       const paneId = paneState.activePaneId;
