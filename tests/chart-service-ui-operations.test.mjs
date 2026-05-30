@@ -668,15 +668,28 @@ test('top navigation links the landing page to the TC Chart route', () => {
   assert.match(layoutSource, /모바일 메뉴 열기/);
 
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
-  assert.match(cssSource, /Mobile topbar hamburger menu with hover\/open morph motion/);
+  assert.match(cssSource, /Mobile topbar hamburger menu with open-state morph motion/);
   assert.match(cssSource, /\.mobile-nav\s*\{[^}]*outline: 0/s);
   assert.match(cssSource, /\.mobile-nav:focus-within,\s*\.mobile-nav\[open\]\s*\{[^}]*outline: 0/s);
-  assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*border: 0/s);
-  assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*box-shadow: none/s);
-  assert.match(cssSource, /\.mobile-nav-toggle:hover span:nth-child\(1\),[\s\S]*?\.mobile-nav\[open\] \.mobile-nav-toggle span:nth-child\(1\)\s*\{[^}]*rotate\(45deg\)/s);
-  assert.match(cssSource, /\.mobile-nav-toggle:hover span:nth-child\(2\),[\s\S]*?\.mobile-nav\[open\] \.mobile-nav-toggle span:nth-child\(2\)\s*\{[^}]*opacity: 0/s);
+  assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*rgba\(15, 29, 52, 0\.98\)/s);
+  assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*border: 1px solid rgba\(125, 183, 255, 0\.24\) !important/s);
+  assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*0 22px 56px rgba\(0, 0, 0, 0\.42\)/s);
+  assert.match(cssSource, /\.mobile-nav\[open\] \.mobile-nav-toggle span:nth-child\(1\)\s*\{[^}]*rotate\(45deg\)/s);
+  assert.match(cssSource, /\.mobile-nav\[open\] \.mobile-nav-toggle span:nth-child\(2\)\s*\{[^}]*opacity: 0/s);
   assert.match(cssSource, /@media \(max-width: 760px\)\s*\{[\s\S]*?\.topbar > \.nav,[\s\S]*?\.topbar > \.session\s*\{[^}]*display: none/s);
   assert.match(cssSource, /@media \(max-width: 760px\)\s*\{[\s\S]*?\.mobile-nav\s*\{[^}]*display: block/s);
+});
+
+test('mobile nav toggle morphs to X only while the menu is open', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(cssSource, /\.mobile-nav-toggle:hover span:nth-child\(1\),[\s\S]*?rotate\(45deg\)/s);
+  assert.doesNotMatch(cssSource, /\.mobile-nav-toggle:focus-visible span:nth-child\(1\),[\s\S]*?rotate\(45deg\)/s);
+  assert.doesNotMatch(cssSource, /\.mobile-nav-toggle:hover span:nth-child\(2\),[\s\S]*?opacity: 0/s);
+  assert.doesNotMatch(cssSource, /\.mobile-nav-toggle:focus-visible span:nth-child\(2\),[\s\S]*?opacity: 0/s);
+  assert.match(cssSource, /\.mobile-nav\[open\] \.mobile-nav-toggle span:nth-child\(1\)\s*\{[^}]*rotate\(45deg\)/s);
+  assert.match(cssSource, /\.mobile-nav\[open\] \.mobile-nav-toggle span:nth-child\(2\)\s*\{[^}]*opacity: 0/s);
+  assert.match(cssSource, /\.mobile-nav\[open\] \.mobile-nav-toggle span:nth-child\(3\)\s*\{[^}]*rotate\(-45deg\)/s);
 });
 
 test('login page uses production account copy without mock wording', () => {

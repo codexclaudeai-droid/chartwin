@@ -7836,7 +7836,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   }
 }
 
-/* Mobile topbar hamburger menu with hover/open morph motion. */
+/* Mobile topbar hamburger menu with open-state morph motion. */
 .mobile-nav {
   border: 0;
   box-shadow: none;
@@ -7890,22 +7890,16 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   background: #ffffff;
 }
 
-.mobile-nav-toggle:hover span:nth-child(1),
-.mobile-nav-toggle:focus-visible span:nth-child(1),
 .mobile-nav[open] .mobile-nav-toggle span:nth-child(1) {
   transform: translateY(7px) rotate(45deg);
   width: 22px;
 }
 
-.mobile-nav-toggle:hover span:nth-child(2),
-.mobile-nav-toggle:focus-visible span:nth-child(2),
 .mobile-nav[open] .mobile-nav-toggle span:nth-child(2) {
   opacity: 0;
   transform: scaleX(0.25);
 }
 
-.mobile-nav-toggle:hover span:nth-child(3),
-.mobile-nav-toggle:focus-visible span:nth-child(3),
 .mobile-nav[open] .mobile-nav-toggle span:nth-child(3) {
   transform: translateY(-7px) rotate(-45deg);
   width: 22px;
