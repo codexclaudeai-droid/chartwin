@@ -44,6 +44,14 @@ export function MobileNav() {
         id="mobile-nav-panel"
         onClick={handlePanelClick}
       >
+        <button
+          className="mobile-nav-panel-close"
+          type="button"
+          aria-label="모바일 메뉴 닫기"
+          onClick={() => setIsOpen(false)}
+        >
+          <span aria-hidden="true">×</span>
+        </button>
         <nav className="mobile-nav-links" aria-label="모바일 메뉴">
           <Link href="/">홈</Link>
           <Link href="/chart" aria-label="TC Chart 페이지">TC차트</Link>

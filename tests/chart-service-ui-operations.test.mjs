@@ -786,6 +786,22 @@ test('mobile navigation slides from the left and closes on menu or outside touch
   assert.match(cssSource, /@media \(hover: none\), \(pointer: coarse\)\s*\{[\s\S]*?-webkit-tap-highlight-color: transparent/s);
 });
 
+test('mobile navigation drawer has compact square-edged panel with internal close control and session divider', () => {
+  const mobileNavSource = fs.readFileSync(new URL('../app/mobile-nav.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(mobileNavSource, /className="mobile-nav-panel-close"/);
+  assert.match(mobileNavSource, /aria-label="모바일 메뉴 닫기"/);
+  assert.match(mobileNavSource, /<span aria-hidden="true">×<\/span>/);
+  assert.match(mobileNavSource, /onClick=\{\(\) => setIsOpen\(false\)\}/);
+  assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*border-radius: 0/s);
+  assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*max-width: 288px/s);
+  assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*min-width: min\(256px, calc\(100vw - 84px\)\)/s);
+  assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*width: min\(272px, calc\(100vw - 84px\)\)/s);
+  assert.match(cssSource, /\.mobile-nav-panel-close\s*\{[^}]*align-self: flex-start/s);
+  assert.match(cssSource, /\.mobile-nav-panel \.session\s*\{[^}]*border-top: 1px solid rgba\(125, 183, 255, 0\.22\)/s);
+});
+
 test('login page uses production account copy without mock wording', () => {
   const loginSource = fs.readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
 
