@@ -440,6 +440,7 @@ test('signup panel uses compact agreement rows and required field marks', () => 
   const source = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
   const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const nameField = source.match(/id="signupName"[\s\S]*?\/>/)?.[0] ?? '';
+  const checkboxRowBlock = cssSource.match(/\.checkbox-row\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
 
   assert.match(source, /signup-policy-row/);
   assert.match(source, /가입약관 내용 확인/);
@@ -458,6 +459,20 @@ test('signup panel uses compact agreement rows and required field marks', () => 
   assert.match(cssSource, /\.signup-policy-box\s*\{[\s\S]*?background:\s*transparent/);
   assert.match(cssSource, /\.signup-policy-box details\s*\{[\s\S]*?border:\s*0/);
   assert.match(cssSource, /\.checkbox-row\s*\{[\s\S]*?background:\s*transparent/);
+  assert.match(checkboxRowBlock, /color:\s*#ffffff/);
+});
+
+test('signup panel keeps email duplicate check compact and marks password confirmation required', () => {
+  const source = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const emailButton = source.match(/<button className="button secondary" type="button" onClick=\{checkEmailAvailability\}[\s\S]*?<\/button>/)?.[0] ?? '';
+
+  assert.match(emailButton, /중복확인/);
+  assert.match(source, /<span className="required-mark" aria-hidden="true">\*<\/span>\s*비밀번호 확인/);
+  assert.match(cssSource, /\.email-check-row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s*minmax\(92px,\s*auto\)/);
+  assert.match(cssSource, /\.email-check-row \.button\s*\{[\s\S]*?white-space:\s*nowrap/);
+  assert.match(cssSource, /\.signup-policy-row\s*\{[\s\S]*?align-items:\s*center/);
+  assert.match(cssSource, /\.signup-policy-box summary\s*\{[\s\S]*?line-height:\s*1\.4/);
 });
 
 test('signup phone number formatter inserts hyphens while typing digits', async () => {

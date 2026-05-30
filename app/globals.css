@@ -3423,10 +3423,18 @@ a {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.email-check-row {
+  grid-template-columns: minmax(0, 1fr) minmax(92px, auto);
+}
+
 .email-check-row .button,
 .referral-code-row .button {
   min-height: 44px;
   padding: 0 18px;
+}
+
+.email-check-row .button {
+  white-space: nowrap;
 }
 
 .settings-grid {
@@ -3485,7 +3493,7 @@ a {
 }
 
 .signup-policy-row {
-  align-items: start;
+  align-items: center;
   display: flex;
   gap: 12px;
   justify-content: space-between;
@@ -3503,6 +3511,7 @@ a {
 .signup-policy-box summary {
   cursor: pointer;
   font-weight: 800;
+  line-height: 1.4;
 }
 
 .signup-policy-box pre {
@@ -3520,6 +3529,7 @@ a {
   background: transparent;
   border: 0;
   border-radius: 0;
+  color: #ffffff;
   display: flex;
   gap: 10px;
   font-weight: 700;
@@ -9030,6 +9040,10 @@ body:not(:has(.landing-page)) .checkout-actions {
   gap: 10px;
 }
 
+body:not(:has(.landing-page)) .email-check-row {
+  flex-wrap: nowrap;
+}
+
 body:not(:has(.landing-page)) .support-compose-card .actions.compact {
   justify-content: flex-end;
 }
@@ -9037,6 +9051,16 @@ body:not(:has(.landing-page)) .support-compose-card .actions.compact {
 body:not(:has(.landing-page)) .email-check-row input,
 body:not(:has(.landing-page)) .referral-code-row input {
   flex: 1 1 260px;
+}
+
+body:not(:has(.landing-page)) .email-check-row input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+body:not(:has(.landing-page)) .email-check-row .button {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 body:not(:has(.landing-page)) .field-help {
@@ -9089,7 +9113,7 @@ body:not(:has(.landing-page)) .checkbox-row {
   align-items: center;
   background: transparent;
   border: 0;
-  color: rgba(255, 255, 255, 0.78);
+  color: #ffffff;
   display: flex;
   gap: 10px;
   padding: 0;

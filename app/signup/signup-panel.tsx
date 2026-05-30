@@ -191,7 +191,7 @@ export function SignupPanel() {
             required
           />
           <button className="button secondary" type="button" onClick={checkEmailAvailability} disabled={isCheckingEmail}>
-            {isCheckingEmail ? '확인 중' : '확인'}
+            {isCheckingEmail ? '확인 중' : '중복확인'}
           </button>
         </div>
         {emailCheck && (
@@ -230,7 +230,7 @@ export function SignupPanel() {
           required
         />
 
-        <label htmlFor="signupPasswordConfirm">비밀번호 확인</label>
+        <label htmlFor="signupPasswordConfirm"><span className="required-mark" aria-hidden="true">*</span>비밀번호 확인</label>
         <input
           id="signupPasswordConfirm"
           type="password"
