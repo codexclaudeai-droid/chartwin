@@ -727,6 +727,17 @@ test('landing page applies scroll fade in and out motion to sections and cards',
   assert.match(cssSource, /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\.landing-page \.landing-scroll-fade/s);
 });
 
+test('landing hero removes fine grid overlays from the first viewport', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /Hero first viewport grid removal pass/);
+  assert.match(cssSource, /\.landing-page::before\s*\{[\s\S]*?background:\s*none/);
+  assert.match(cssSource, /\.landing-page \.landing-hero-stage::before\s*\{[\s\S]*?linear-gradient\(145deg, rgba\(255, 255, 255, 0\.08\), rgba\(255, 255, 255, 0\.025\)\)/);
+  assert.match(cssSource, /\.landing-page \.landing-hero-stage::before\s*\{[\s\S]*?background-size:\s*auto/);
+  assert.match(cssSource, /\.landing-page \.landing-hero-slide::after\s*\{[\s\S]*?background:\s*linear-gradient\(90deg, rgba\(2, 7, 19, 0\.02\), rgba\(125, 183, 255, 0\.035\)\)/);
+  assert.match(cssSource, /\.landing-page \.landing-hero-slide::after\s*\{[\s\S]*?opacity:\s*0\.42/);
+});
+
 test('landing page shows a bottom-right scroll-to-top jump button after scrolling', () => {
   const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
   const scrollButtonSource = fs.readFileSync(new URL('../app/landing-scroll-top-button.tsx', import.meta.url), 'utf8');

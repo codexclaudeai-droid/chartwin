@@ -13006,3 +13006,18 @@ body:not(:has(.landing-page)) .profile-page .payment-flow-step small {
     grid-template-columns: minmax(0, 1fr) 64px;
   }
 }
+
+/* Hero first viewport grid removal pass. */
+.landing-page::before {
+  background: none;
+}
+
+.landing-page .landing-hero-stage::before {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025));
+  background-size: auto;
+}
+
+.landing-page .landing-hero-slide::after {
+  background: linear-gradient(90deg, rgba(2, 7, 19, 0.02), rgba(125, 183, 255, 0.035));
+  opacity: 0.42;
+}
