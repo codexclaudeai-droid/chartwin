@@ -11626,7 +11626,7 @@ body:not(:has(.landing-page)) #admin-support .admin-support-reply-edit-actions {
 }
 
 body:not(:has(.landing-page)) #admin-support .admin-support-thread-actions {
-  min-width: min(100%, 380px);
+  min-width: 0;
 }
 
 body:not(:has(.landing-page)) #admin-support .admin-support-thread-edit-panel,
@@ -12107,6 +12107,24 @@ body:not(:has(.landing-page)) .admin-page input[type="date"]::-webkit-calendar-p
   cursor: pointer;
   filter: invert(1) brightness(1.8);
   opacity: 0.9;
+}
+
+body:not(:has(.landing-page)) .admin-page .button.compact,
+body:not(:has(.landing-page)) .admin-symbols-row-actions .button,
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-actions .button {
+  box-shadow: none;
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1;
+  min-height: 28px;
+  padding: 0 10px;
+}
+
+body:not(:has(.landing-page)) .admin-page .button.compact:hover:not(:disabled),
+body:not(:has(.landing-page)) .admin-symbols-row-actions .button:hover:not(:disabled),
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-actions .button:hover:not(:disabled) {
+  box-shadow: none;
+  transform: none;
 }
 
 .notice,
