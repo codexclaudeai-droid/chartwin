@@ -70,6 +70,17 @@ test('symbol registry persists chart application state for hidden symbols', () =
   assert.match(catalogSource, /hiddenSymbols\.delete\(normalized\)/);
 });
 
+test('chart admin config keeps locally toggled symbol visibility', () => {
+  const catalogSource = fs.readFileSync(new URL('../src/catalog/symbols.ts', import.meta.url), 'utf8');
+  const loadAdminConfigSource = catalogSource.slice(
+    catalogSource.indexOf('export async function loadAdminConfig'),
+    catalogSource.indexOf('export function getAllSymbolCatalog'),
+  );
+
+  assert.doesNotMatch(loadAdminConfigSource, /hiddenSymbols\.clear\(\)/);
+  assert.match(loadAdminConfigSource, /hiddenSymbols\.add\(normalizeCatalogSymbolId\(s\)\)/);
+});
+
 test('admin page renders the symbol management panel inside the dashboard shell', () => {
   const pageSource = fs.readFileSync(new URL('../app/admin/page.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-symbols-panel.tsx', import.meta.url), 'utf8');

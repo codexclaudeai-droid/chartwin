@@ -268,8 +268,6 @@ export async function loadAdminConfig(): Promise<void> {
     const res = await fetch(`${base}/admin/symbols`, { cache: 'no-store' });
     if (!res.ok) return;
     const json = await res.json() as { hidden?: unknown; disabled?: unknown };
-    hiddenSymbols.clear();
-    disabledSymbols.clear();
     if (Array.isArray(json.hidden)) {
       json.hidden.forEach((s) => { if (typeof s === 'string') hiddenSymbols.add(normalizeCatalogSymbolId(s)); });
     }
