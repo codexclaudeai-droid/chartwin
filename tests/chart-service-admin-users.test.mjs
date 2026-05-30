@@ -418,10 +418,12 @@ test('admin user directory table keeps stable columns inside a horizontal scroll
   assert.match(shellRule, /overflow-x:\s*auto;/);
   assert.match(shellRule, /max-width:\s*100%;/);
   assert.ok(tableRule);
-  assert.match(tableRule, /min-width:\s*980px;/);
-  assert.match(tableRule, /table-layout:\s*fixed;/);
+  assert.match(tableRule, /min-width:\s*1120px;/);
+  assert.match(tableRule, /table-layout:\s*auto;/);
   assert.ok(memberCellRule);
-  assert.match(memberCellRule, /min-width:\s*0;/);
+  assert.match(memberCellRule, /display:\s*table-cell;/);
+  assert.doesNotMatch(memberCellRule, /display:\s*grid;/);
+  assert.match(memberCellRule, /min-width:\s*320px;/);
   assert.match(cssSource, /#admin-users \.member-directory-cell small\s*\{[\s\S]*?overflow-wrap:\s*anywhere;/);
 });
 

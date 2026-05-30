@@ -9835,24 +9835,25 @@ body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll {
 
 body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1120px;
   margin-top: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th:first-child,
 body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table td:first-child {
-  width: 32%;
+  width: 36%;
+  min-width: 320px;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th:nth-child(2),
 body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table td:nth-child(2) {
-  width: 13%;
+  width: 12%;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th:nth-child(3),
@@ -9861,7 +9862,7 @@ body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th:
 body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table td:nth-child(4),
 body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th:nth-child(5),
 body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table td:nth-child(5) {
-  width: 15%;
+  width: 14%;
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th:nth-child(6),
@@ -9894,10 +9895,9 @@ body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table tbo
 }
 
 body:not(:has(.landing-page)) #admin-users .member-directory-cell {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-  overflow: hidden;
+  display: table-cell;
+  min-width: 320px;
+  overflow: visible;
 }
 
 body:not(:has(.landing-page)) #admin-users .member-directory-title-row {
