@@ -699,7 +699,7 @@ function createDepositSupportThreadDraft(input: {
     id: input.threadId,
     authorUserId: input.userId,
     category: 'deposit',
-    title: `입금확인 요청 - ${input.paymentId}`,
+    title: '입금확인 요청',
     visibility: 'private',
     status: 'waiting',
     createdAt: input.createdAt,
@@ -711,7 +711,6 @@ function createDepositSupportThreadDraft(input: {
     authorUserId: input.userId,
     body: [
       '입금확인 요청입니다.',
-      `결제 ID: ${input.paymentId}`,
       `플랜: ${input.plan.name}`,
       `결제 방식: ${input.method === 'usdt' ? 'USDT' : '무통장 입금'}`,
       `입금자명: ${input.depositorName || '미입력'}`,

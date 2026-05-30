@@ -43,7 +43,7 @@ export function createSupportThread(
     authorUserId: input.actor.id,
     category: input.category,
     title: input.title.trim(),
-    visibility: input.visibility,
+    visibility: getSupportThreadVisibility(input.category, input.visibility),
     status: 'waiting',
     createdAt: input.createdAt,
     updatedAt: input.createdAt,
@@ -66,6 +66,13 @@ export function createSupportThread(
     createdAt: input.createdAt,
   });
   return { thread, message };
+}
+
+function getSupportThreadVisibility(
+  category: SupportCategory,
+  requestedVisibility: SupportVisibility,
+): SupportVisibility {
+  return category === 'deposit' ? 'private' : requestedVisibility;
 }
 
 export function listVisibleSupportThreads(

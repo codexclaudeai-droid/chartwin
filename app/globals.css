@@ -8776,6 +8776,26 @@ body:not(:has(.landing-page)) .support-thread-title {
   margin: 12px 0 10px;
 }
 
+body:not(:has(.landing-page)) .support-thread-title-button {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0;
+  padding: 0;
+  text-align: left;
+}
+
+body:not(:has(.landing-page)) .support-thread-title-button:hover,
+body:not(:has(.landing-page)) .support-thread-title-button:focus-visible {
+  color: var(--tc-ui-blue-2);
+  outline: 0;
+}
+
 body:not(:has(.landing-page)) .support-deep-link-notice {
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.065), rgba(55, 125, 255, 0.03)),

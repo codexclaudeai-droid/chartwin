@@ -580,7 +580,7 @@ export function ProfilePanel() {
           <h2>최근 결제 요청</h2>
           {latestPayment ? (
             <div className="payment-list">
-              {dashboard.payments.slice(0, 3).map((payment) => (
+              {dashboard.payments.slice(0, 3).map((payment, paymentIndex) => (
                 <article
                   className={`payment-card${targetPaymentId === payment.id ? ' payment-card-target' : ''}`}
                   id={`payment-${payment.id}`}
@@ -588,7 +588,7 @@ export function ProfilePanel() {
                 >
                   <div className="payment-card-summary">
                     <div>
-                      <strong>{payment.id}</strong>
+                      <strong>결제 요청 {paymentIndex + 1}</strong>
                       <p>{formatPaymentAmountUsd(payment.amountUsd)} / {payment.method}</p>
                     </div>
                     <div>
@@ -596,7 +596,7 @@ export function ProfilePanel() {
                       <p>{formatDateTime(payment.updatedAt)}</p>
                     </div>
                   </div>
-                  <ol className="payment-flow-steps" aria-label={`${payment.id} 결제 진행 단계`}>
+                  <ol className="payment-flow-steps" aria-label={`결제 요청 ${paymentIndex + 1} 진행 단계`}>
                     {getProfilePaymentFlowSteps({
                       paymentStatus: payment.status,
                       subscriptionStatus,

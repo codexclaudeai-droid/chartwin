@@ -596,7 +596,7 @@ export async function createAsyncSupportThread(
     authorUserId: input.actor.id,
     category: input.category,
     title: input.title.trim(),
-    visibility: input.visibility,
+    visibility: getAsyncSupportThreadVisibility(input.category, input.visibility),
     status: 'waiting',
     createdAt: input.createdAt,
     updatedAt: input.createdAt,
@@ -619,6 +619,13 @@ export async function createAsyncSupportThread(
     createdAt: input.createdAt,
   });
   return { thread, message };
+}
+
+function getAsyncSupportThreadVisibility(
+  category: SupportCategory,
+  requestedVisibility: SupportVisibility,
+): SupportVisibility {
+  return category === 'deposit' ? 'private' : requestedVisibility;
 }
 
 export async function listAsyncVisibleSupportThreads(
@@ -1544,7 +1551,7 @@ function createDepositSupportThreadDraft(input: {
     id: input.threadId,
     authorUserId: input.userId,
     category: 'deposit',
-    title: `입금확인 요청 - ${input.paymentId}`,
+    title: '입금확인 요청',
     visibility: 'private',
     status: 'waiting',
     createdAt: input.createdAt,
@@ -1556,7 +1563,6 @@ function createDepositSupportThreadDraft(input: {
     authorUserId: input.userId,
     body: [
       '입금확인 요청입니다.',
-      `결제 ID: ${input.paymentId}`,
       `플랜: ${input.plan.name}`,
       `결제 방식: ${input.method === 'usdt' ? 'USDT' : '무통장 입금'}`,
       `입금자명: ${input.depositorName || '미입력'}`,

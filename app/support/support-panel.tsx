@@ -62,10 +62,13 @@ export function SupportPanel() {
   const [authSession, setAuthSession] = useState<AuthSessionState | null>(null);
   const [showAuthPromptModal, setShowAuthPromptModal] = useState(false);
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
+  const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(() => new Set());
   const [threadEditById, setThreadEditById] = useState<Record<string, { title: string; body: string }>>({});
   const presetCategory = searchParams.get('category');
   const targetThreadId = searchParams.get('thread');
   const isTrialPreset = presetCategory === 'trial';
+  const isDepositCategory = category === 'deposit';
+  const effectiveVisibility = isDepositCategory ? 'private' : visibility;
   const canSubmitTrialRequest = !isTrialPreset || (authSession?.authenticated && authSession.user?.role === 'member');
   const targetThread = targetThreadId
     ? threads.find((item) => item.thread.id === targetThreadId) ?? null
@@ -103,6 +106,11 @@ export function SupportPanel() {
 
     const target = document.getElementById(`support-${targetThreadId}`);
     target?.scrollIntoView({ block: 'center' });
+    setExpandedThreadIds((current) => {
+      const next = new Set(current);
+      next.add(targetThreadId);
+      return next;
+    });
   }, [targetThreadId, threads]);
 
   async function refresh() {
@@ -154,7 +162,7 @@ export function SupportPanel() {
     const response = await fetch('/api/support/threads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ category, title: input.title, body: input.body, visibility }),
+      body: JSON.stringify({ category, title: input.title, body: input.body, visibility: effectiveVisibility }),
     });
     const payload = await response.json();
     setIsBusy(false);
@@ -182,6 +190,18 @@ export function SupportPanel() {
     return authSession.user.id === item.thread.authorUserId ||
       authSession.user.role === 'admin' ||
       authSession.user.role === 'super_admin';
+  }
+
+  function toggleThreadExpanded(threadId: string) {
+    setExpandedThreadIds((current) => {
+      const next = new Set(current);
+      if (next.has(threadId)) {
+        next.delete(threadId);
+      } else {
+        next.add(threadId);
+      }
+      return next;
+    });
   }
 
   function startThreadEdit(item: SupportThreadListItem) {
@@ -280,10 +300,18 @@ export function SupportPanel() {
           </label>
           <label className="support-field" htmlFor="supportVisibility">
             <span>공개 범위</span>
-            <select id="supportVisibility" value={visibility} onChange={(event) => setVisibility(event.target.value)}>
+            <select
+              disabled={isDepositCategory}
+              id="supportVisibility"
+              value={effectiveVisibility}
+              onChange={(event) => setVisibility(event.target.value)}
+            >
               <option value="private">{formatSupportVisibilityLabel('private')}</option>
               <option value="public">{formatSupportVisibilityLabel('public')}</option>
             </select>
+            {isDepositCategory ? (
+              <small>입금확인은 비공개로만 접수됩니다.</small>
+            ) : null}
           </label>
           <label className="support-field support-field-full" htmlFor="supportTitle">
             <span>제목</span>
@@ -326,7 +354,7 @@ export function SupportPanel() {
                   <span>{formatSupportCategoryLabel(targetThread.thread.category)}</span>
                   <span>{formatSupportVisibilityLabel(targetThread.thread.visibility)}</span>
                 </div>
-                <strong>{targetThread.thread.title}</strong>
+                <strong>{formatSupportThreadDisplayTitle(targetThread.thread)}</strong>
                 {latestAdminReply ? (
                   <p>
                     <b>최근 관리자 답변</b>: {latestAdminReply.body}
@@ -386,6 +414,7 @@ export function SupportPanel() {
             const replyPreview = item.messages.filter((threadMessage) => threadMessage.isAdminReply).at(-1) ?? null;
             const canEditThread = canManageThread(item);
             const isEditingThread = editingThreadId === item.thread.id;
+            const isExpandedThread = expandedThreadIds.has(item.thread.id);
             const threadEditDraft = threadEditById[item.thread.id] ?? {
               title: item.thread.title,
               body: getCustomerMessage(item)?.body ?? '',
@@ -411,7 +440,17 @@ export function SupportPanel() {
                   <span>작성 {formatDateTime(item.thread.createdAt)}</span>
                   <span>{item.author?.email ?? 'system'}</span>
                 </div>
-                <h3 className="support-thread-title">{item.thread.title}</h3>
+                <h3 className="support-thread-title">
+                  <button
+                    aria-controls={`support-messages-${item.thread.id}`}
+                    aria-expanded={isExpandedThread}
+                    className="support-thread-title-button"
+                    onClick={() => toggleThreadExpanded(item.thread.id)}
+                    type="button"
+                  >
+                    {formatSupportThreadDisplayTitle(item.thread)}
+                  </button>
+                </h3>
                 {canEditThread ? (
                   <div className="support-thread-actions">
                     <button className="button secondary compact" type="button" onClick={() => startThreadEdit(item)} disabled={isBusy}>
@@ -460,14 +499,20 @@ export function SupportPanel() {
                     </div>
                   </div>
                 ) : null}
-                <div aria-label="문의 대화" className="support-message-list">
-                  {item.messages.map((threadMessage) => (
-                    <p className={threadMessage.isAdminReply ? 'admin-reply' : undefined} key={threadMessage.id}>
-                      {threadMessage.isAdminReply ? '관리자 답변: ' : '문의 내용: '}
-                      {threadMessage.body}
-                    </p>
-                  ))}
-                </div>
+                {isExpandedThread ? (
+                  <div
+                    aria-label="문의 대화"
+                    className="support-message-list"
+                    id={`support-messages-${item.thread.id}`}
+                  >
+                    {item.messages.map((threadMessage) => (
+                      <p className={threadMessage.isAdminReply ? 'admin-reply' : undefined} key={threadMessage.id}>
+                        {threadMessage.isAdminReply ? '관리자 답변: ' : '문의 내용: '}
+                        {formatSupportMessageDisplayBody(item.thread, threadMessage.body)}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
               </article>
             );
           })}
@@ -483,3 +528,26 @@ function formatDateTime(value: string): string {
     timeStyle: 'short',
   }).format(new Date(value));
 }
+
+const PAYMENT_ID_IN_DEPOSIT_TITLE_PATTERN = /\s*-\s*pay_[^\s]+/i;
+const PAYMENT_ID_DETAIL_LINE_PATTERN = /^결제 ID:\s*.+$/i;
+
+function getSupportThreadDisplayTitle(thread: SupportThreadListItem['thread']): string {
+  if (thread.category !== 'deposit') return thread.title;
+
+  return thread.title.replace(PAYMENT_ID_IN_DEPOSIT_TITLE_PATTERN, '').trim() || '입금확인 요청';
+}
+
+const formatSupportThreadDisplayTitle = getSupportThreadDisplayTitle;
+
+function getSupportMessageDisplayBody(thread: SupportThreadListItem['thread'], body: string): string {
+  if (thread.category !== 'deposit') return body;
+
+  return body
+    .split(/\r?\n/)
+    .filter((line) => !PAYMENT_ID_DETAIL_LINE_PATTERN.test(line.trim()))
+    .join('\n')
+    .trim();
+}
+
+const formatSupportMessageDisplayBody = getSupportMessageDisplayBody;

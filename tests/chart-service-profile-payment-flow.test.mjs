@@ -49,7 +49,9 @@ test('profile payment panel renders the payment progress timeline', () => {
   assert.match(source, /getProfilePaymentFlowSteps/);
   assert.match(source, /payment-flow-steps/);
   assert.match(source, /id=\{`payment-\$\{payment\.id\}`\}/);
-  assert.match(source, /aria-label=\{`\$\{payment\.id\} 결제 진행 단계`\}/);
+  assert.match(source, /aria-label=\{`결제 요청 \$\{paymentIndex \+ 1\} 진행 단계`\}/);
+  assert.doesNotMatch(source, /<strong>\{payment\.id\}<\/strong>/);
+  assert.doesNotMatch(source, /\$\{payment\.id\} 결제 진행 단계/);
 });
 
 test('profile payment summary is grouped below the service status column', () => {

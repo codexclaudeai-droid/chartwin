@@ -42,7 +42,8 @@ test('authenticated payment request creates a private deposit support thread', (
   assert.equal(result.supportThread.status, 'waiting');
   assert.equal(result.supportMessage.threadId, result.supportThread.id);
   assert.equal(result.supportMessage.isAdminReply, false);
-  assert.match(result.supportMessage.body, new RegExp(result.payment.id));
+  assert.doesNotMatch(result.supportThread.title, new RegExp(result.payment.id));
+  assert.doesNotMatch(result.supportMessage.body, new RegExp(result.payment.id));
   assert.match(result.supportMessage.body, /Trial User/);
   assert.match(result.supportMessage.body, /Monthly/);
   assert.match(result.supportMessage.body, /관리자가 실제 입금 내역을 수동 확인/);

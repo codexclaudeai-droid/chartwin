@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import test from 'node:test';
 import {
   createAsyncChartServiceRepository,
+  createAsyncSupportThread,
   createMockChartServiceRepository,
   createSupportThread,
   deleteAsyncSupportMessageAsAdmin,
@@ -36,6 +37,37 @@ test('member can create a private support thread with an initial message', () =>
   assert.equal(result.thread.visibility, 'private');
   assert.equal(result.message.threadId, result.thread.id);
   assert.equal(result.message.isAdminReply, false);
+});
+
+test('deposit support requests are always private for guests and other members', async () => {
+  const repository = createMockChartServiceRepository();
+
+  const result = createSupportThread(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'deposit',
+    title: '입금 확인 부탁드립니다',
+    body: '방금 입금했습니다.',
+    visibility: 'public',
+    createdAt: '2026-05-23T11:00:00.000Z',
+  });
+
+  assert.equal(result.thread.visibility, 'private');
+  assert.equal(listVisibleSupportThreads(repository, { actor: null }).some((item) => item.thread.id === result.thread.id), false);
+  assert.equal(listVisibleSupportThreads(repository, { actor: { id: 'user_subscriber', role: 'member' } }).some((item) => item.thread.id === result.thread.id), false);
+  assert.equal(listVisibleSupportThreads(repository, { actor: { id: 'user_member', role: 'member' } }).some((item) => item.thread.id === result.thread.id), true);
+  assert.equal(listVisibleSupportThreads(repository, { actor: { id: 'admin_1', role: 'admin' } }).some((item) => item.thread.id === result.thread.id), true);
+
+  const asyncRepository = createAsyncChartServiceRepository(createMockChartServiceRepository());
+  const asyncResult = await createAsyncSupportThread(asyncRepository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'deposit',
+    title: '입금 확인 부탁드립니다',
+    body: '방금 입금했습니다.',
+    visibility: 'public',
+    createdAt: '2026-05-23T11:00:00.000Z',
+  });
+
+  assert.equal(asyncResult.thread.visibility, 'private');
 });
 
 test('free trial support requests require a normal member account', () => {
@@ -487,6 +519,47 @@ test('member support panel supports notification deep links to a thread', () => 
   assert.match(styleSource, /\.support-target-badge/);
   assert.doesNotMatch(styleSource, /\.support-reply-preview/);
   assert.match(styleSource, /\.support-deep-link-notice/);
+});
+
+test('member support list keeps inquiry bodies collapsed behind title clicks', () => {
+  const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /expandedThreadIds/);
+  assert.match(panelSource, /toggleThreadExpanded/);
+  assert.match(panelSource, /className="support-thread-title-button"/);
+  assert.match(panelSource, /aria-expanded=\{isExpandedThread\}/);
+  assert.match(panelSource, /onClick=\{\(\) => toggleThreadExpanded\(item\.thread\.id\)\}/);
+  assert.match(panelSource, /\{isExpandedThread \? \(/);
+  assert.doesNotMatch(panelSource, /<h3 className="support-thread-title">\{item\.thread\.title\}<\/h3>/);
+  assert.match(styleSource, /\.support-thread-title-button/);
+});
+
+test('member support list hides payment ids from deposit request titles and bodies', () => {
+  const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const serviceSource = fs.readFileSync(new URL('../src/server/chart-service/service.ts', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /getSupportThreadDisplayTitle/);
+  assert.match(panelSource, /getSupportMessageDisplayBody/);
+  assert.match(panelSource, /formatSupportThreadDisplayTitle\(item\.thread\)/);
+  assert.match(panelSource, /formatSupportMessageDisplayBody\(item\.thread, threadMessage\.body\)/);
+  assert.match(panelSource, /PAYMENT_ID_IN_DEPOSIT_TITLE_PATTERN/);
+  assert.match(panelSource, /PAYMENT_ID_DETAIL_LINE_PATTERN/);
+  assert.doesNotMatch(serviceSource, /title: `입금확인 요청 - \$\{input\.paymentId\}`/);
+});
+
+test('deposit support compose forces private visibility in the member form', () => {
+  const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const routeSource = fs.readFileSync(new URL('../app/api/support/threads/route.ts', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /isDepositCategory/);
+  assert.match(panelSource, /effectiveVisibility/);
+  assert.match(panelSource, /value=\{effectiveVisibility\}/);
+  assert.match(panelSource, /disabled=\{isDepositCategory\}/);
+  assert.match(panelSource, /입금확인은 비공개로만 접수됩니다/);
+  assert.match(panelSource, /visibility: effectiveVisibility/);
+  assert.match(routeSource, /normalizeSupportThreadVisibility/);
+  assert.match(routeSource, /category === 'deposit' \? 'private'/);
 });
 
 test('member support panel supports trial request presets from landing links', () => {

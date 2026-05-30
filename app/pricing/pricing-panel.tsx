@@ -264,7 +264,7 @@ export function PricingPanel({
       dispatchNotificationsRefreshEvent();
       setSubmittedPaymentId(payload.payment.id);
       setCheckoutStep('submitted');
-      setMessage(`입금확인 요청 ${payload.payment.id}가 접수되었습니다. 관리자 수동 입금 확인 전까지 상태: ${payload.payment.status}`);
+      setMessage(`입금확인 요청이 접수되었습니다. 관리자 수동 입금 확인 전까지 상태: ${payload.payment.status}`);
       return;
     }
     setMessage(payload.message || '결제 요청에 실패했습니다. 먼저 로그인해 주세요.');

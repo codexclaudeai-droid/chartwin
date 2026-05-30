@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         category: normalizeCategory(body.category),
         title: String(body.title || ''),
         body: String(body.body || ''),
-        visibility: normalizeVisibility(body.visibility),
+        visibility: normalizeSupportThreadVisibility(normalizeCategory(body.category), body.visibility),
         createdAt: new Date().toISOString(),
       });
     });
@@ -142,4 +142,11 @@ function normalizeCategory(value: unknown): SupportCategory {
 
 function normalizeVisibility(value: unknown): SupportVisibility {
   return value === 'public' ? 'public' : 'private';
+}
+
+function normalizeSupportThreadVisibility(
+  category: SupportCategory,
+  value: unknown,
+): SupportVisibility {
+  return category === 'deposit' ? 'private' : normalizeVisibility(value);
 }
