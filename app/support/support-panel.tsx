@@ -171,7 +171,7 @@ export function SupportPanel() {
     }
     setTitle('');
     setBody('');
-    setMessage(`문의 ${payload.thread.id}가 등록되었습니다. 답변이 오면 알림으로 알려드릴게요.`);
+    setMessage('문의가 등록되었습니다. 답변이 오면 알림으로 알려드릴게요.');
     await refresh();
   }
 

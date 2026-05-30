@@ -2,6 +2,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
+test('support inquiry completion message hides the internal support thread id', () => {
+  const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(panelSource, /setMessage\(`[\s\S]*payload\.thread\.id[\s\S]*`\);/);
+  assert.match(panelSource, /setMessage\('문의가 등록되었습니다\. 답변이 오면 알림으로 알려드릴게요\.'\);/);
+});
+
 test('support display labels translate customer-facing states', async () => {
   const {
     formatSupportCategoryLabel,
