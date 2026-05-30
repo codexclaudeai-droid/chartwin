@@ -281,6 +281,42 @@ test('profile panel renders my referral list with individual and total points', 
   assert.match(panelSource, /추천개별포인트/);
 });
 
+test('profile payment flow localizes payment methods and exposes stage highlight tones', async () => {
+  const {
+    formatProfilePaymentMethodLabel,
+    getProfilePaymentFlowTone,
+  } = await import('../app/profile/profile-payment-flow.ts');
+
+  assert.equal(formatProfilePaymentMethodLabel('bank_transfer'), '은행이체');
+  assert.equal(formatProfilePaymentMethodLabel('usdt'), 'USDT전송');
+  assert.equal(formatProfilePaymentMethodLabel('manual'), 'manual');
+  assert.equal(getProfilePaymentFlowTone({ paymentStatus: 'pending' }), 'pending');
+  assert.equal(getProfilePaymentFlowTone({
+    paymentStatus: 'confirmed',
+    subscriptionStatus: 'payment_requested',
+  }), 'confirmed');
+  assert.equal(getProfilePaymentFlowTone({
+    paymentStatus: 'confirmed',
+    subscriptionStatus: 'active',
+  }), 'approved');
+  assert.equal(getProfilePaymentFlowTone({ paymentStatus: 'rejected' }), 'rejected');
+  assert.equal(getProfilePaymentFlowTone({ paymentStatus: 'refunded' }), 'refunded');
+});
+
+test('profile recent payment cards use localized methods and highlighted flow containers', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /formatProfilePaymentMethodLabel\(payment\.method\)/);
+  assert.match(panelSource, /getProfilePaymentFlowTone/);
+  assert.match(panelSource, /payment-flow-steps \$\{paymentFlowTone\}/);
+  assert.match(styleSource, /\.payment-flow-steps\.pending/);
+  assert.match(styleSource, /\.payment-flow-steps\.confirmed/);
+  assert.match(styleSource, /\.payment-flow-steps\.approved/);
+  assert.match(styleSource, /\.payment-flow-steps\.rejected/);
+  assert.match(styleSource, /\.payment-flow-steps\.refunded/);
+});
+
 test('profile API mutation path is routed through the async persistence boundary', () => {
   const routeSource = fs.readFileSync(new URL('../app/api/profile/route.ts', import.meta.url), 'utf8');
 

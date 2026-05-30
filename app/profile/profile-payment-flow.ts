@@ -5,12 +5,51 @@ import type {
 
 export type ProfilePaymentFlowStepState = 'done' | 'current' | 'waiting' | 'blocked';
 
+export type ProfilePaymentFlowTone = 'pending' | 'confirmed' | 'approved' | 'rejected' | 'refunded';
+
 export type ProfilePaymentFlowStep = {
   key: 'request' | 'deposit' | 'approval';
   label: string;
   description: string;
   state: ProfilePaymentFlowStepState;
 };
+
+export function formatProfilePaymentMethodLabel(method: string): string {
+  const normalizedMethod = method.trim().toLowerCase();
+  const labels: Record<string, string> = {
+    bank_transfer: '은행이체',
+    bank: '은행이체',
+    usdt: 'USDT전송',
+    usdt_transfer: 'USDT전송',
+  };
+
+  return labels[normalizedMethod] ?? method;
+}
+
+export function getProfilePaymentFlowTone(input: {
+  paymentStatus: PaymentStatus;
+  subscriptionStatus?: SubscriptionStatus | null;
+}): ProfilePaymentFlowTone {
+  const subscriptionStatus = input.subscriptionStatus ?? 'none';
+
+  if (input.paymentStatus === 'rejected' || input.paymentStatus === 'cancelled') {
+    return 'rejected';
+  }
+
+  if (input.paymentStatus === 'refunded') {
+    return 'refunded';
+  }
+
+  if (input.paymentStatus === 'confirmed' && isApprovedSubscription(subscriptionStatus)) {
+    return 'approved';
+  }
+
+  if (input.paymentStatus === 'confirmed') {
+    return 'confirmed';
+  }
+
+  return 'pending';
+}
 
 export function getProfilePaymentFlowSteps(input: {
   paymentStatus: PaymentStatus;

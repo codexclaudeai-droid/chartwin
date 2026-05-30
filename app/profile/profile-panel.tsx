@@ -13,7 +13,11 @@ import {
   type SubscriptionStatus,
 } from '../../src/domain/chart-service/index.ts';
 import { createProfileImagePolicyPayload } from './profile-image-policy';
-import { getProfilePaymentFlowSteps } from './profile-payment-flow';
+import {
+  formatProfilePaymentMethodLabel,
+  getProfilePaymentFlowSteps,
+  getProfilePaymentFlowTone,
+} from './profile-payment-flow';
 import { getSubscriptionActionAvailability } from './subscription-action-policy';
 
 type Dashboard = {
@@ -580,35 +584,42 @@ export function ProfilePanel() {
           <h2>최근 결제 요청</h2>
           {latestPayment ? (
             <div className="payment-list">
-              {dashboard.payments.slice(0, 3).map((payment, paymentIndex) => (
-                <article
-                  className={`payment-card${targetPaymentId === payment.id ? ' payment-card-target' : ''}`}
-                  id={`payment-${payment.id}`}
-                  key={payment.id}
-                >
-                  <div className="payment-card-summary">
-                    <div>
-                      <strong>결제 요청 {paymentIndex + 1}</strong>
-                      <p>{formatPaymentAmountUsd(payment.amountUsd)} / {payment.method}</p>
+              {dashboard.payments.slice(0, 3).map((payment, paymentIndex) => {
+                const paymentFlowTone = getProfilePaymentFlowTone({
+                  paymentStatus: payment.status,
+                  subscriptionStatus,
+                });
+
+                return (
+                  <article
+                    className={`payment-card${targetPaymentId === payment.id ? ' payment-card-target' : ''}`}
+                    id={`payment-${payment.id}`}
+                    key={payment.id}
+                  >
+                    <div className="payment-card-summary">
+                      <div>
+                        <strong>결제 요청 {paymentIndex + 1}</strong>
+                        <p>{formatPaymentAmountUsd(payment.amountUsd)} / {formatProfilePaymentMethodLabel(payment.method)}</p>
+                      </div>
+                      <div>
+                        <span className="badge">{formatPaymentStatusLabel(payment.status)}</span>
+                        <p>{formatDateTime(payment.updatedAt)}</p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="badge">{formatPaymentStatusLabel(payment.status)}</span>
-                      <p>{formatDateTime(payment.updatedAt)}</p>
-                    </div>
-                  </div>
-                  <ol className="payment-flow-steps" aria-label={`결제 요청 ${paymentIndex + 1} 진행 단계`}>
-                    {getProfilePaymentFlowSteps({
-                      paymentStatus: payment.status,
-                      subscriptionStatus,
-                    }).map((step) => (
-                      <li className={`payment-flow-step ${step.state}`} key={step.key}>
-                        <span>{step.label}</span>
-                        <small>{step.description}</small>
-                      </li>
-                    ))}
-                  </ol>
-                </article>
-              ))}
+                    <ol className={`payment-flow-steps ${paymentFlowTone}`} aria-label={`결제 요청 ${paymentIndex + 1} 진행 단계`}>
+                      {getProfilePaymentFlowSteps({
+                        paymentStatus: payment.status,
+                        subscriptionStatus,
+                      }).map((step) => (
+                        <li className={`payment-flow-step ${step.state}`} key={step.key}>
+                          <span>{step.label}</span>
+                          <small>{step.description}</small>
+                        </li>
+                      ))}
+                    </ol>
+                  </article>
+                );
+              })}
             </div>
           ) : (
             <p className="notice">아직 결제 요청이 없습니다. 구독 페이지에서 입금 확인 요청을 접수할 수 있습니다.</p>
