@@ -180,7 +180,13 @@ test('support thread owners and admins can update and delete customer posts', ()
       .some((item) => item.thread.id === thread.id),
     false,
   );
-  assert.equal(repository.listAuditLogs().at(-1)?.action, 'support.thread.deleted');
+  const deleteAuditLog = repository.listAuditLogs().at(-1);
+  assert.equal(deleteAuditLog?.action, 'support.thread.deleted');
+  assert.deepEqual(deleteAuditLog?.afterJson, {
+    thread: null,
+    deletedAt: '2026-05-23T11:20:00.000Z',
+    detachedPaymentIds: [],
+  });
 });
 
 test('admins can update and delete admin-authored support posts through the thread edit flow', async () => {
@@ -332,6 +338,34 @@ test('async support thread deletion can remove messages without a bulk message d
   assert.equal(deleted.messages.length, 2);
   assert.equal(backingRepository.getSupportThreadById(thread.id), null);
   assert.equal(backingRepository.listSupportMessagesByThreadId(thread.id).length, 0);
+});
+
+test('async admin support thread deletion records a non-null audit after payload', async () => {
+  const backingRepository = createMockChartServiceRepository();
+  const { thread } = createSupportThread(backingRepository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'usage',
+    title: 'Thread delete audit title',
+    body: 'Thread delete audit body',
+    visibility: 'private',
+    createdAt: '2026-05-23T11:00:00.000Z',
+  });
+  const asyncRepository = createAsyncChartServiceRepository(backingRepository);
+
+  await deleteAsyncSupportThread(asyncRepository, {
+    actor: { id: 'admin_1', role: 'admin' },
+    threadId: thread.id,
+    deletedAt: '2026-05-23T11:30:00.000Z',
+  });
+
+  const auditLogs = await asyncRepository.listAuditLogs();
+  const deleteAuditLog = auditLogs.at(-1);
+  assert.equal(deleteAuditLog?.action, 'support.thread.deleted');
+  assert.deepEqual(deleteAuditLog?.afterJson, {
+    thread: null,
+    deletedAt: '2026-05-23T11:30:00.000Z',
+    detachedPaymentIds: [],
+  });
 });
 
 test('admin support panel disables blank manual replies before posting', () => {

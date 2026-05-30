@@ -187,7 +187,11 @@ export function deleteSupportThread(
       targetType: 'support_thread',
       targetId: thread.id,
       beforeJson: { thread, messages, detachedPaymentIds },
-      afterJson: null,
+      afterJson: {
+        thread: null,
+        deletedAt: input.deletedAt,
+        detachedPaymentIds,
+      },
     }));
   }
 
