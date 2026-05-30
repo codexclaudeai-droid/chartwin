@@ -7951,7 +7951,8 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   z-index: 90;
 }
 
-.mobile-nav-toggle span {
+.mobile-nav-toggle span,
+.mobile-nav-panel-close span {
   background: rgba(216, 236, 255, 0.92);
   border-radius: 999px;
   display: block;
@@ -7963,7 +7964,10 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 
 .mobile-nav-toggle:hover span,
 .mobile-nav-toggle:focus-visible span,
-.mobile-nav.open .mobile-nav-toggle span {
+.mobile-nav-panel-close:hover span,
+.mobile-nav-panel-close:focus-visible span,
+.mobile-nav.open .mobile-nav-toggle span,
+.mobile-nav.open .mobile-nav-panel-close span {
   background: #ffffff;
 }
 
@@ -7978,6 +7982,21 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .mobile-nav.open .mobile-nav-toggle span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+  width: 22px;
+}
+
+.mobile-nav.open .mobile-nav-panel-close span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+  width: 22px;
+}
+
+.mobile-nav.open .mobile-nav-panel-close span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0.25);
+}
+
+.mobile-nav.open .mobile-nav-panel-close span:nth-child(3) {
   transform: translateY(-7px) rotate(-45deg);
   width: 22px;
 }
@@ -8013,7 +8032,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   min-width: min(256px, calc(100vw - 84px));
   opacity: 0;
   overflow-y: auto;
-  padding: 16px 12px 18px;
+  padding: 8px 12px 18px;
   pointer-events: none;
   position: fixed;
   top: 0;
@@ -8038,18 +8057,17 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   appearance: none;
   background: transparent;
   border: 0;
+  border-radius: 16px;
   box-shadow: none;
-  color: rgba(216, 236, 255, 0.92);
   cursor: pointer;
   display: inline-flex;
-  font-size: 24px;
-  font-weight: 750;
-  height: 36px;
+  flex-direction: column;
+  gap: 5px;
+  height: 44px;
   justify-content: center;
-  line-height: 1;
   margin: 0 0 8px;
   padding: 0;
-  width: 36px;
+  width: 44px;
 }
 
 .mobile-nav-panel-close:hover,

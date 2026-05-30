@@ -792,13 +792,21 @@ test('mobile navigation drawer has compact square-edged panel with internal clos
 
   assert.match(mobileNavSource, /className="mobile-nav-panel-close"/);
   assert.match(mobileNavSource, /aria-label="모바일 메뉴 닫기"/);
-  assert.match(mobileNavSource, /<span aria-hidden="true">×<\/span>/);
+  assert.equal((mobileNavSource.match(/<span aria-hidden="true" \/>/g) ?? []).length, 6);
+  assert.doesNotMatch(mobileNavSource, />×<\/span>/);
   assert.match(mobileNavSource, /onClick=\{\(\) => setIsOpen\(false\)\}/);
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*border-radius: 0/s);
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*max-width: 288px/s);
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*min-width: min\(256px, calc\(100vw - 84px\)\)/s);
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*width: min\(272px, calc\(100vw - 84px\)\)/s);
+  assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*padding: 8px 12px 18px/s);
   assert.match(cssSource, /\.mobile-nav-panel-close\s*\{[^}]*align-self: flex-start/s);
+  assert.match(cssSource, /\.mobile-nav-panel-close\s*\{[^}]*height: 44px/s);
+  assert.match(cssSource, /\.mobile-nav-panel-close\s*\{[^}]*width: 44px/s);
+  assert.match(cssSource, /\.mobile-nav-toggle span,\s*\.mobile-nav-panel-close span\s*\{[^}]*transition: transform 180ms ease, opacity 180ms ease, width 180ms ease, background 180ms ease/s);
+  assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-panel-close span:nth-child\(1\)\s*\{[^}]*rotate\(45deg\)/s);
+  assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-panel-close span:nth-child\(2\)\s*\{[^}]*opacity: 0/s);
+  assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-panel-close span:nth-child\(3\)\s*\{[^}]*rotate\(-45deg\)/s);
   assert.match(cssSource, /\.mobile-nav-panel \.session\s*\{[^}]*border-top: 1px solid rgba\(125, 183, 255, 0\.22\)/s);
 });
 

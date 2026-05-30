@@ -50,7 +50,9 @@ export function MobileNav() {
           aria-label="모바일 메뉴 닫기"
           onClick={() => setIsOpen(false)}
         >
-          <span aria-hidden="true">×</span>
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
         </button>
         <nav className="mobile-nav-links" aria-label="모바일 메뉴">
           <Link href="/">홈</Link>
