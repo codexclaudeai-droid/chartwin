@@ -6,6 +6,7 @@ import {
   createMockChartServiceRepository,
   createSupportThread,
   deleteAsyncSupportMessageAsAdmin,
+  deleteAsyncSupportThread,
   deleteSupportMessageAsAdmin,
   deleteSupportThread,
   listPublishedPublicBoardPosts,
@@ -268,6 +269,37 @@ test('async admin support reply mutations can locate a reply from the supplied t
 
   assert.equal(deleted.message.id, message.id);
   assert.equal(deleted.thread.status, 'waiting');
+});
+
+test('async support thread deletion can remove messages without a bulk message delete method', async () => {
+  const backingRepository = createMockChartServiceRepository();
+  const { thread } = createSupportThread(backingRepository, {
+    actor: { id: 'user_member', role: 'member' },
+    category: 'usage',
+    title: 'Thread delete title',
+    body: 'Thread delete body',
+    visibility: 'private',
+    createdAt: '2026-05-23T11:00:00.000Z',
+  });
+  replyToSupportThreadAsAdmin(backingRepository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    threadId: thread.id,
+    body: 'Admin reply to delete with thread',
+    createdAt: '2026-05-23T11:10:00.000Z',
+  });
+  const asyncRepository = createAsyncChartServiceRepository(backingRepository);
+  delete asyncRepository.deleteSupportMessagesByThreadId;
+
+  const deleted = await deleteAsyncSupportThread(asyncRepository, {
+    actor: { id: 'user_member', role: 'member' },
+    threadId: thread.id,
+    deletedAt: '2026-05-23T11:30:00.000Z',
+  });
+
+  assert.equal(deleted.thread.id, thread.id);
+  assert.equal(deleted.messages.length, 2);
+  assert.equal(backingRepository.getSupportThreadById(thread.id), null);
+  assert.equal(backingRepository.listSupportMessagesByThreadId(thread.id).length, 0);
 });
 
 test('admin support panel disables blank manual replies before posting', () => {

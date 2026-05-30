@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { subscribeAuthSessionChangedEvent } from '../auth-events';
+import { dispatchAuthSessionChangedEvent, subscribeAuthSessionChangedEvent } from '../auth-events';
 import { getNotificationCenterHref } from '../notifications/notification-display';
 import {
   formatChartAccessLabel,
@@ -229,12 +229,12 @@ export function ProfilePanel() {
   }
 
   async function copyReferralValue(label: string, value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
+    if (await copyTextToClipboard(value)) {
       setSettingsMessage(`${label}를 클립보드에 복사했습니다.`);
-    } catch {
-      setSettingsMessage(`${label} 복사에 실패했습니다. 직접 선택해서 복사해주세요.`);
+      return;
     }
+
+    setSettingsMessage(`${label} 복사에 실패했습니다. 직접 선택해서 복사해주세요.`);
   }
 
   async function validateImagePolicy(event: React.FormEvent<HTMLFormElement>) {
@@ -278,6 +278,34 @@ export function ProfilePanel() {
       : '환불 요청이 관리자 확인 대기 상태로 접수되었습니다.');
   }
 
+  async function withdrawAccount() {
+    if (!canWithdrawAccount(dashboard?.user.role)) {
+      setSettingsMessage('관리자 계정은 회원관리에서 계정 상태를 변경해주세요.');
+      return;
+    }
+    if (!window.confirm('회원탈퇴 후 현재 계정으로 로그인할 수 없습니다. 계속 진행할까요?')) {
+      return;
+    }
+
+    setIsBusy(true);
+    const response = await fetch('/api/profile', { method: 'DELETE' });
+    const payload = await response.json().catch(() => ({}));
+    setIsBusy(false);
+
+    if (!response.ok) {
+      setSettingsMessage(payload.message || '회원탈퇴 처리에 실패했습니다.');
+      return;
+    }
+
+    setDashboard(null);
+    setMessage('회원탈퇴가 완료되었습니다. 홈으로 이동합니다.');
+    setSettingsMessage('회원탈퇴가 완료되었습니다.');
+    dispatchAuthSessionChangedEvent();
+    window.setTimeout(() => {
+      window.location.assign('/');
+    }, 600);
+  }
+
   if (!dashboard) {
     return (
       <section className="card wide">
@@ -299,6 +327,7 @@ export function ProfilePanel() {
   const latestPayment = dashboard.payments[0] ?? null;
   const notificationCenterHref = getNotificationCenterHref(dashboard.notifications.unreadCount);
   const referralLink = getReferralLink(dashboard.user.referralCode);
+  const canWithdraw = canWithdrawAccount(dashboard.user.role);
 
   return (
     <section className="profile-layout">
@@ -480,95 +509,111 @@ export function ProfilePanel() {
           )}
           <button className="button secondary" type="submit" disabled={isBusy}>이미지 정책 확인</button>
         </form>
-      </div>
-
-      <div className="card wide">
-        <h2>서비스 상태</h2>
-        <div className="summary-grid">
-          <article className="mini-card">
-            <span>구독</span>
-            <strong>{formatSubscriptionStatusLabel(subscriptionStatus)}</strong>
-            <p>{dashboard.subscription?.endsAt ? `만료일 ${formatDateTime(dashboard.subscription.endsAt)}` : '승인 전 구독은 관리자 확인 후 활성화됩니다.'}</p>
-          </article>
-          <article className="mini-card">
-            <span>차트 접근</span>
-            <strong>{formatChartAccessLabel(dashboard.access)}</strong>
-            <p>차트: {dashboard.access.fullChart ? '허용' : '제한'} / 시그널: {dashboard.access.paidSignals ? '허용' : '제한'}</p>
-          </article>
-          <article className="mini-card">
-            <span>알림</span>
-            <strong>읽지 않음 {dashboard.notifications.unreadCount}건</strong>
-            <p>총 {dashboard.notifications.totalCount}건의 처리 알림이 있습니다.</p>
-          </article>
-          <article className="mini-card">
-            <span>고객센터</span>
-            <strong>대기 {dashboard.support.waitingThreadCount}건</strong>
-            <p>확인 가능한 문의 {dashboard.support.visibleThreadCount}건</p>
-          </article>
-        </div>
-        <div className="actions">
-          <Link className="button" href="/pricing">구독 관리</Link>
-          <Link className="button secondary" href={notificationCenterHref}>알림 보기</Link>
-          <Link className="button secondary" href="/support">고객센터</Link>
-        </div>
-        <div className="actions compact subscription-actions-inline">
-          <button
-            className="button secondary"
-            disabled={isBusy || !subscriptionActionAvailability.canCancel}
-            onClick={() => void requestSubscriptionAction('cancel')}
-            type="button"
-          >
-            취소 요청
-          </button>
+        <div className="profile-danger-zone">
+          <div>
+            <strong>회원탈퇴</strong>
+            <p>{canWithdraw ? '탈퇴하면 현재 세션이 종료되고 계정 로그인이 차단됩니다.' : '관리자 계정은 회원관리에서 상태를 변경해주세요.'}</p>
+          </div>
           <button
             className="button danger"
-            disabled={isBusy || !subscriptionActionAvailability.canRefund}
-            onClick={() => void requestSubscriptionAction('refund')}
+            disabled={isBusy || !canWithdraw}
+            onClick={() => void withdrawAccount()}
             type="button"
           >
-            환불 요청
+            회원탈퇴
           </button>
         </div>
-        <p className="notice compact">{subscriptionActionAvailability.reason}</p>
       </div>
 
-      <div className="card wide">
-        <h2>최근 결제 요청</h2>
-        {latestPayment ? (
-          <div className="payment-list">
-            {dashboard.payments.slice(0, 3).map((payment) => (
-              <article
-                className={`payment-card${targetPaymentId === payment.id ? ' payment-card-target' : ''}`}
-                id={`payment-${payment.id}`}
-                key={payment.id}
-              >
-                <div className="payment-card-summary">
-                  <div>
-                    <strong>{payment.id}</strong>
-                    <p>{formatPaymentAmountUsd(payment.amountUsd)} / {payment.method}</p>
-                  </div>
-                  <div>
-                    <span className="badge">{formatPaymentStatusLabel(payment.status)}</span>
-                    <p>{formatDateTime(payment.updatedAt)}</p>
-                  </div>
-                </div>
-                <ol className="payment-flow-steps" aria-label={`${payment.id} 결제 진행 단계`}>
-                  {getProfilePaymentFlowSteps({
-                    paymentStatus: payment.status,
-                    subscriptionStatus,
-                  }).map((step) => (
-                    <li className={`payment-flow-step ${step.state}`} key={step.key}>
-                      <span>{step.label}</span>
-                      <small>{step.description}</small>
-                    </li>
-                  ))}
-                </ol>
-              </article>
-            ))}
+      <div className="profile-service-column">
+        <div className="card wide">
+          <h2>서비스 상태</h2>
+          <div className="summary-grid">
+            <article className="mini-card">
+              <span>구독</span>
+              <strong>{formatSubscriptionStatusLabel(subscriptionStatus)}</strong>
+              <p>{dashboard.subscription?.endsAt ? `만료일 ${formatDateTime(dashboard.subscription.endsAt)}` : '승인 전 구독은 관리자 확인 후 활성화됩니다.'}</p>
+            </article>
+            <article className="mini-card">
+              <span>차트 접근</span>
+              <strong>{formatChartAccessLabel(dashboard.access)}</strong>
+              <p>차트: {dashboard.access.fullChart ? '허용' : '제한'} / 시그널: {dashboard.access.paidSignals ? '허용' : '제한'}</p>
+            </article>
+            <article className="mini-card">
+              <span>알림</span>
+              <strong>읽지 않음 {dashboard.notifications.unreadCount}건</strong>
+              <p>총 {dashboard.notifications.totalCount}건의 처리 알림이 있습니다.</p>
+            </article>
+            <article className="mini-card">
+              <span>고객센터</span>
+              <strong>대기 {dashboard.support.waitingThreadCount}건</strong>
+              <p>확인 가능한 문의 {dashboard.support.visibleThreadCount}건</p>
+            </article>
           </div>
-        ) : (
-          <p className="notice">아직 결제 요청이 없습니다. 구독 페이지에서 입금 확인 요청을 접수할 수 있습니다.</p>
-        )}
+          <div className="actions">
+            <Link className="button" href="/pricing">구독 관리</Link>
+            <Link className="button secondary" href={notificationCenterHref}>알림 보기</Link>
+            <Link className="button secondary" href="/support">고객센터</Link>
+          </div>
+          <div className="actions compact subscription-actions-inline">
+            <button
+              className="button secondary"
+              disabled={isBusy || !subscriptionActionAvailability.canCancel}
+              onClick={() => void requestSubscriptionAction('cancel')}
+              type="button"
+            >
+              취소 요청
+            </button>
+            <button
+              className="button danger"
+              disabled={isBusy || !subscriptionActionAvailability.canRefund}
+              onClick={() => void requestSubscriptionAction('refund')}
+              type="button"
+            >
+              환불 요청
+            </button>
+          </div>
+          <p className="notice compact">{subscriptionActionAvailability.reason}</p>
+        </div>
+
+        <div className="card wide profile-payment-summary-card">
+          <h2>최근 결제 요청</h2>
+          {latestPayment ? (
+            <div className="payment-list">
+              {dashboard.payments.slice(0, 3).map((payment) => (
+                <article
+                  className={`payment-card${targetPaymentId === payment.id ? ' payment-card-target' : ''}`}
+                  id={`payment-${payment.id}`}
+                  key={payment.id}
+                >
+                  <div className="payment-card-summary">
+                    <div>
+                      <strong>{payment.id}</strong>
+                      <p>{formatPaymentAmountUsd(payment.amountUsd)} / {payment.method}</p>
+                    </div>
+                    <div>
+                      <span className="badge">{formatPaymentStatusLabel(payment.status)}</span>
+                      <p>{formatDateTime(payment.updatedAt)}</p>
+                    </div>
+                  </div>
+                  <ol className="payment-flow-steps" aria-label={`${payment.id} 결제 진행 단계`}>
+                    {getProfilePaymentFlowSteps({
+                      paymentStatus: payment.status,
+                      subscriptionStatus,
+                    }).map((step) => (
+                      <li className={`payment-flow-step ${step.state}`} key={step.key}>
+                        <span>{step.label}</span>
+                        <small>{step.description}</small>
+                      </li>
+                    ))}
+                  </ol>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="notice">아직 결제 요청이 없습니다. 구독 페이지에서 입금 확인 요청을 접수할 수 있습니다.</p>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -596,6 +641,43 @@ function getReferralLink(referralCode: string): string {
   if (typeof window === 'undefined') return path;
 
   return `${window.location.origin}${path}`;
+}
+
+async function copyTextToClipboard(value: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    // Fall through to textarea-based copy for browsers that block Clipboard API.
+  }
+
+  return copyTextWithHiddenTextarea(value);
+}
+
+function copyTextWithHiddenTextarea(value: string): boolean {
+  if (typeof document === 'undefined') return false;
+
+  const textarea = document.createElement('textarea');
+  textarea.value = value;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  textarea.style.top = '0';
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  try {
+    return document.execCommand('copy');
+  } finally {
+    textarea.remove();
+  }
+}
+
+function canWithdrawAccount(role: string | undefined): boolean {
+  return role !== 'admin' && role !== 'super_admin';
 }
 
 function formatReferralPoints(value: number): string {

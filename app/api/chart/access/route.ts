@@ -8,16 +8,28 @@ import {
 
 export async function GET(request: NextRequest) {
   const persistence = getAsyncChartServicePersistence();
-  const access = await persistence.runRead(async (repository) => {
-    let userId = request.nextUrl.searchParams.get('userId') || 'user_member';
-    try {
-      userId = (await getActorFromAsyncRequest(repository, request, new Date().toISOString())).id;
-    } catch {
-      // Keep the preview query fallback until every chart entrypoint is auth-first.
+  try {
+    const access = await persistence.runRead(async (repository) => {
+      const actor = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
+      return getAsyncChartAccessSnapshot(repository, actor.id);
+    });
+
+    if (!access.fullChart) {
+      return NextResponse.json({
+        ok: false,
+        message: '구독 승인 후 이용 가능',
+        access,
+      }, { status: 403 });
     }
 
-    return getAsyncChartAccessSnapshot(repository, userId);
-  });
-
-  return NextResponse.json(access);
+    return NextResponse.json({
+      ok: true,
+      ...access,
+    });
+  } catch (error) {
+    return NextResponse.json({
+      ok: false,
+      message: error instanceof Error ? error.message : 'chart access unavailable',
+    }, { status: 401 });
+  }
 }

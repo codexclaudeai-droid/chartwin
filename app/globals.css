@@ -4047,6 +4047,18 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   grid-template-columns: minmax(280px, 0.7fr) minmax(360px, 1.3fr);
 }
 
+.profile-service-column {
+  display: grid;
+  gap: 22px;
+  margin-top: 22px;
+  min-width: 0;
+}
+
+.profile-service-column > .card {
+  margin-top: 0;
+  width: 100%;
+}
+
 .summary-grid {
   display: grid;
   gap: 14px;
@@ -4858,6 +4870,27 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   border-top: 1px solid var(--line);
   margin-top: 16px;
   padding-top: 16px;
+}
+
+.profile-danger-zone {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+.profile-danger-zone strong {
+  display: block;
+  font-size: 14px;
+}
+
+.profile-danger-zone p {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 6px 0 0;
 }
 
 .profile-edit-modal-backdrop {
@@ -7843,10 +7876,15 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .mobile-nav-panel {
-  background: transparent;
-  border: 0 !important;
-  border-radius: 0;
-  box-shadow: none !important;
+  backdrop-filter: blur(18px);
+  background:
+    linear-gradient(145deg, rgba(15, 29, 52, 0.98), rgba(5, 12, 26, 0.96)),
+    var(--tc-ui-surface-strong);
+  border: 1px solid rgba(125, 183, 255, 0.24) !important;
+  border-radius: 18px;
+  box-shadow:
+    0 22px 56px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
   min-width: min(320px, calc(100vw - 32px));
   opacity: 0;
   padding: 14px;
@@ -7858,6 +7896,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   transform-origin: top right;
   transition: opacity 180ms ease, transform 180ms ease;
   outline: 0 !important;
+  z-index: 30;
 }
 
 .mobile-nav[open] .mobile-nav-panel {
@@ -8431,9 +8470,55 @@ body:not(:has(.landing-page)) .chart-runtime-page {
   padding: 0;
 }
 
+body:not(:has(.landing-page)) .chart-runtime-page:not(.chart-runtime-allowed) {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
 body:not(:has(.landing-page)) .chart-runtime-root {
   height: 100%;
   width: 100%;
+}
+
+body:not(:has(.landing-page)) .chart-access-gate {
+  max-width: 520px;
+  border: 1px solid rgba(125, 183, 255, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(76, 141, 255, 0.035)),
+    rgba(8, 19, 39, 0.94);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
+  color: #ffffff;
+  display: grid;
+  gap: 14px;
+  padding: 28px;
+}
+
+body:not(:has(.landing-page)) .chart-access-gate h1 {
+  font-size: clamp(28px, 4vw, 42px);
+  letter-spacing: 0;
+  line-height: 1.1;
+  margin: 0;
+}
+
+body:not(:has(.landing-page)) .chart-access-gate p {
+  color: rgba(216, 236, 255, 0.78);
+  font-weight: 650;
+  line-height: 1.65;
+  margin: 0;
+}
+
+body:not(:has(.landing-page)) .chart-access-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+body:not(:has(.landing-page)) .chart-access-actions .button {
+  justify-content: center;
 }
 
 body:has(.chart-runtime-page) .topbar {
@@ -9717,43 +9802,54 @@ body:not(:has(.landing-page)) #admin-users > .notice {
   color: rgba(255, 255, 255, 0.78);
 }
 
-body:not(:has(.landing-page)) #admin-users > .table {
-  width: 100%;
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll {
+  max-width: 100%;
   margin-top: 0;
   border: 1px solid rgba(125, 183, 255, 0.16);
   border-radius: 20px;
   background: rgba(2, 7, 19, 0.44);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table {
+  width: 100%;
+  min-width: 980px;
+  margin-top: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   border-collapse: separate;
   border-spacing: 0;
-  overflow: hidden;
   table-layout: fixed;
 }
 
-body:not(:has(.landing-page)) #admin-users > .table th:first-child,
-body:not(:has(.landing-page)) #admin-users > .table td:first-child {
-  width: 30%;
-  min-width: 280px;
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th:first-child,
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table td:first-child {
+  width: 32%;
 }
 
-body:not(:has(.landing-page)) #admin-users > .table th:nth-child(2),
-body:not(:has(.landing-page)) #admin-users > .table td:nth-child(2) {
-  width: 11%;
-  min-width: 112px;
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th:nth-child(2),
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table td:nth-child(2) {
+  width: 13%;
 }
 
-body:not(:has(.landing-page)) #admin-users > .table th:nth-child(3),
-body:not(:has(.landing-page)) #admin-users > .table td:nth-child(3),
-body:not(:has(.landing-page)) #admin-users > .table th:nth-child(4),
-body:not(:has(.landing-page)) #admin-users > .table td:nth-child(4),
-body:not(:has(.landing-page)) #admin-users > .table th:nth-child(5),
-body:not(:has(.landing-page)) #admin-users > .table td:nth-child(5),
-body:not(:has(.landing-page)) #admin-users > .table th:nth-child(6),
-body:not(:has(.landing-page)) #admin-users > .table td:nth-child(6) {
-  width: 14.75%;
-  min-width: 132px;
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th:nth-child(3),
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table td:nth-child(3),
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th:nth-child(4),
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table td:nth-child(4),
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th:nth-child(5),
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table td:nth-child(5) {
+  width: 15%;
 }
 
-body:not(:has(.landing-page)) #admin-users > .table th {
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th:nth-child(6),
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table td:nth-child(6) {
+  width: 10%;
+}
+
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table th {
   padding: 14px 16px;
   background: rgba(76, 141, 255, 0.12);
   color: rgba(255, 255, 255, 0.9);
@@ -9763,7 +9859,7 @@ body:not(:has(.landing-page)) #admin-users > .table th {
   white-space: nowrap;
 }
 
-body:not(:has(.landing-page)) #admin-users > .table td {
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table td {
   padding: 18px 16px;
   border-top: 1px solid rgba(125, 183, 255, 0.1);
   background: rgba(255, 255, 255, 0.025);
@@ -9773,13 +9869,15 @@ body:not(:has(.landing-page)) #admin-users > .table td {
   vertical-align: top;
 }
 
-body:not(:has(.landing-page)) #admin-users > .table tbody tr:hover td {
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table tbody tr:hover td {
   background: rgba(76, 141, 255, 0.095);
 }
 
 body:not(:has(.landing-page)) #admin-users .member-directory-cell {
   display: grid;
   gap: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 body:not(:has(.landing-page)) #admin-users .member-directory-title-row {
@@ -9787,12 +9885,15 @@ body:not(:has(.landing-page)) #admin-users .member-directory-title-row {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
 }
 
 body:not(:has(.landing-page)) #admin-users .member-directory-cell strong {
   color: #ffffff;
   font-size: 1rem;
   letter-spacing: -0.02em;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 body:not(:has(.landing-page)) #admin-users .member-directory-actions {
@@ -9815,6 +9916,7 @@ body:not(:has(.landing-page)) #admin-users .member-directory-cell small {
   color: rgba(125, 183, 255, 0.88);
   font-size: 0.88rem;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 body:not(:has(.landing-page)) #admin-users .member-directory-meta-grid {
@@ -9839,6 +9941,8 @@ body:not(:has(.landing-page)) #admin-users .member-directory-meta-grid span {
   border: 0;
   background: transparent;
   box-shadow: none;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 body:not(:has(.landing-page)) #admin-users .badge {
@@ -9924,7 +10028,7 @@ body:not(:has(.landing-page)) #admin-users .admin-user-ops-grid strong {
   font-size: 0.9rem;
 }
 
-body:not(:has(.landing-page)) #admin-users > .table .button.secondary {
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table .button.secondary {
   min-width: 76px;
   min-height: 42px;
   justify-content: center;
@@ -9933,12 +10037,12 @@ body:not(:has(.landing-page)) #admin-users > .table .button.secondary {
   color: #ffffff;
 }
 
-body:not(:has(.landing-page)) #admin-users > .table .button.secondary:hover {
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table .button.secondary:hover {
   border-color: rgba(98, 166, 255, 0.58);
   background: rgba(76, 141, 255, 0.18);
 }
 
-body:not(:has(.landing-page)) #admin-users > .table .member-directory-actions .button.secondary {
+body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table .member-directory-actions .button.secondary {
   min-width: auto;
   min-height: auto;
   padding: 4px 10px;
@@ -10185,13 +10289,16 @@ body:not(:has(.landing-page)) #admin-users .admin-user-audit-history-list .audit
     grid-column: span 2;
   }
 
-  body:not(:has(.landing-page)) #admin-users > .table {
-    display: block;
+  body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll {
     overflow-x: auto;
-    white-space: nowrap;
   }
 
-  body:not(:has(.landing-page)) #admin-users > .table td {
+  body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table {
+    display: table;
+    white-space: normal;
+  }
+
+  body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table td {
     white-space: normal;
   }
 

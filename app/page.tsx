@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import LandingHeroSlider from './landing-hero-slider.tsx';
 import LandingChartMotion from './landing-chart-motion.tsx';
+import { createPricingPlanHref } from './pricing/plan-selection.ts';
 import type { SubscriptionPlan } from '../src/domain/chart-service/index.ts';
 import { getAsyncChartServicePersistence } from '../src/server/chart-service/index.ts';
 
@@ -332,7 +333,7 @@ export default async function HomePage() {
                 <small>{plan.durationDays}일 이용권 · 정가 ${plan.basePriceUsd.toLocaleString('en-US')}</small>
                 <div className="landing-plan-card-footer">
                   <span>{featured ? 'Best value for active traders' : 'Flexible trading access'}</span>
-                  <Link className={featured ? 'button' : 'button secondary'} href="/pricing">
+                  <Link className={featured ? 'button' : 'button secondary'} href={createPricingPlanHref(plan.id)}>
                     플랜 선택하기
                   </Link>
                 </div>

@@ -192,6 +192,29 @@ export async function updateAsyncAuthenticatedUserProfile(
   return updatedUser;
 }
 
+export async function withdrawAsyncAuthenticatedUserAccount(
+  repository: AsyncChartServiceRepository,
+  input: { actor: Actor; withdrawnAt: string },
+): Promise<{ user: ServiceUserRecord; deletedSessionCount: number }> {
+  const user = await repository.getUserById(input.actor.id);
+  if (!user) throw new Error(`User not found: ${input.actor.id}`);
+  if (isAdminRole(user.role)) {
+    throw new Error('Admin accounts cannot withdraw from profile');
+  }
+
+  const updatedUser: ServiceUserRecord = {
+    ...user,
+    accountStatus: USER_ACCOUNT_STATUSES.suspended,
+    phoneNumber: null,
+    passwordHash: null,
+  };
+  const sessions = await repository.listSessionsByUserId(user.id);
+  await repository.saveUser(updatedUser);
+  await Promise.all(sessions.map((session) => repository.deleteSession(session.id)));
+
+  return { user: updatedUser, deletedSessionCount: sessions.length };
+}
+
 export async function createAsyncSessionForUser(
   repository: AsyncChartServiceRepository,
   input: { userId: string; createdAt: string; ttlSeconds?: number },
@@ -1405,7 +1428,7 @@ export async function deleteAsyncSupportThread(
     }));
   }
 
-  await repository.deleteSupportMessagesByThreadId(thread.id);
+  await deleteAsyncSupportMessagesByThreadId(repository, thread.id, messages);
   await repository.deleteSupportThread(thread.id);
   return { thread, messages, detachedPaymentIds };
 }
@@ -1590,11 +1613,32 @@ async function deleteAsyncSupportMessage(
   }
 
   const threadMessages = await repository.listSupportMessagesByThreadId(message.threadId);
-  await repository.deleteSupportMessagesByThreadId(message.threadId);
+  await deleteAsyncSupportMessagesByThreadId(repository, message.threadId, threadMessages);
   await Promise.all(
     threadMessages
       .filter((item) => item.id !== message.id)
       .map((item) => repository.saveSupportMessage(item)),
+  );
+}
+
+async function deleteAsyncSupportMessagesByThreadId(
+  repository: AsyncChartServiceRepository,
+  threadId: string,
+  knownMessages?: SupportMessageRecord[],
+): Promise<void> {
+  if (typeof repository.deleteSupportMessagesByThreadId === 'function') {
+    await repository.deleteSupportMessagesByThreadId(threadId);
+    return;
+  }
+
+  if (typeof repository.deleteSupportMessage === 'function') {
+    const messages = knownMessages ?? await repository.listSupportMessagesByThreadId(threadId);
+    await Promise.all(messages.map((message) => repository.deleteSupportMessage(message.id)));
+    return;
+  }
+
+  throw new Error(
+    'Support message delete repository capability missing: deleteSupportMessagesByThreadId or deleteSupportMessage',
   );
 }
 

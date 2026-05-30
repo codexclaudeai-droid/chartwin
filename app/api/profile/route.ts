@@ -1,11 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server.js';
 import {
   assertSameOriginMutationRequest,
+  createClearSessionCookie,
   getActorFromAsyncRequest,
   getAsyncChartServicePersistence,
+  getAuthenticatedMutationErrorStatus,
   getAsyncUserDashboardSummary,
   guardMutationRequest,
   updateAsyncAuthenticatedUserProfile,
+  withdrawAsyncAuthenticatedUserAccount,
 } from '../../../src/server/chart-service/index.ts';
 
 export async function GET(request: NextRequest) {
@@ -74,5 +77,42 @@ export async function PATCH(request: NextRequest) {
       ok: false,
       message: error instanceof Error ? error.message : 'profile update failed',
     }, { status: 400 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const mutationGuard = guardMutationRequest(request);
+  if (mutationGuard) return mutationGuard;
+
+  try {
+    assertSameOriginMutationRequest(request);
+  } catch (error) {
+    return NextResponse.json({
+      ok: false,
+      message: error instanceof Error ? error.message : 'cross-site request blocked',
+    }, { status: 403 });
+  }
+
+  const persistence = getAsyncChartServicePersistence();
+
+  try {
+    const result = await persistence.runMutation(async (repository) => {
+      const actor = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
+      return withdrawAsyncAuthenticatedUserAccount(repository, {
+        actor,
+        withdrawnAt: new Date().toISOString(),
+      });
+    });
+    const response = NextResponse.json({
+      ok: true,
+      deletedSessionCount: result.deletedSessionCount,
+    });
+    response.headers.set('Set-Cookie', createClearSessionCookie());
+    return response;
+  } catch (error) {
+    return NextResponse.json({
+      ok: false,
+      message: error instanceof Error ? error.message : 'profile withdrawal failed',
+    }, { status: getAuthenticatedMutationErrorStatus(error) });
   }
 }

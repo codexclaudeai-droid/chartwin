@@ -156,3 +156,36 @@ test('global memory persistence repairs stale repository singletons after new me
     globals.__asyncChartServicePersistenceSignature = previousAsyncSignature;
   }
 });
+
+test('global memory persistence replaces stale repositories that cannot support message deletion', async () => {
+  const env = { CHART_SERVICE_REPOSITORY: 'memory' };
+  const globals = globalThis;
+  const previousSync = globals.__chartServiceRepository;
+  const previousSyncSignature = globals.__chartServiceRepositorySignature;
+  const previousAsync = globals.__asyncChartServicePersistence;
+  const previousAsyncSignature = globals.__asyncChartServicePersistenceSignature;
+  const staleRepository = {
+    ...createMockChartServiceRepository(),
+  };
+
+  delete staleRepository.deleteSupportMessage;
+  delete staleRepository.deleteSupportMessagesByThreadId;
+
+  try {
+    globals.__chartServiceRepository = staleRepository;
+    globals.__chartServiceRepositorySignature = getChartServiceRepositoryConfigSignature(env);
+    globals.__asyncChartServicePersistence = undefined;
+    globals.__asyncChartServicePersistenceSignature = undefined;
+
+    const persistence = getAsyncChartServicePersistence(env);
+
+    assert.notEqual(globals.__chartServiceRepository, staleRepository);
+    assert.equal(typeof persistence.repository.deleteSupportMessage, 'function');
+    assert.equal(typeof persistence.repository.deleteSupportMessagesByThreadId, 'function');
+  } finally {
+    globals.__chartServiceRepository = previousSync;
+    globals.__chartServiceRepositorySignature = previousSyncSignature;
+    globals.__asyncChartServicePersistence = previousAsync;
+    globals.__asyncChartServicePersistenceSignature = previousAsyncSignature;
+  }
+});

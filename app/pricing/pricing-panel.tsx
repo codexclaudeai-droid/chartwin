@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { dispatchNotificationsRefreshEvent } from '../notification-events';
 import { AuthPromptModal } from '../shared/auth-prompt-modal';
+import { resolveInitialPricingPlanId } from './plan-selection.ts';
 
 type CheckoutStep = 'plan' | 'payment' | 'confirm' | 'submitted';
 
@@ -109,16 +110,20 @@ const CHECKOUT_STEPS: Array<{ key: CheckoutStep; label: string; description: str
 ];
 
 export function PricingPanel({
+  initialPlanId,
   plans,
   paymentSettings,
   planServices,
 }: {
+  initialPlanId?: string | null;
   plans: Plan[];
   paymentSettings: PaymentTransferSettings;
   planServices: Record<string, string[]>;
 }) {
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>('plan');
-  const [selectedPlanId, setSelectedPlanId] = useState(plans[0]?.id ?? 'plan_monthly');
+  const [selectedPlanId, setSelectedPlanId] = useState(() => (
+    resolveInitialPricingPlanId(plans, initialPlanId)
+  ));
   const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'usdt'>('bank_transfer');
   const [depositorName, setDepositorName] = useState('');
   const [transactionId, setTransactionId] = useState('');

@@ -400,16 +400,41 @@ test('admin user panel groups directory state into readable table cells', () => 
   assert.match(cssSource, /\.admin-user-ops-grid/);
 });
 
+test('admin user directory table keeps stable columns inside a horizontal scroll shell', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const shellRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-table-scroll\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body;
+  const tableRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-table-scroll > \.table\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body;
+  const memberCellRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-users \.member-directory-cell\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body;
+
+  assert.match(source, /className="admin-user-table-scroll"/);
+  assert.ok(shellRule);
+  assert.match(shellRule, /overflow-x:\s*auto;/);
+  assert.match(shellRule, /max-width:\s*100%;/);
+  assert.ok(tableRule);
+  assert.match(tableRule, /min-width:\s*980px;/);
+  assert.match(tableRule, /table-layout:\s*fixed;/);
+  assert.ok(memberCellRule);
+  assert.match(memberCellRule, /min-width:\s*0;/);
+  assert.match(cssSource, /#admin-users \.member-directory-cell small\s*\{[\s\S]*?overflow-wrap:\s*anywhere;/);
+});
+
 test('admin user directory detail button matches the role badge pill sizing', () => {
   const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const tableButtonIndex = cssSource.indexOf(
-    'body:not(:has(.landing-page)) #admin-users > .table .button.secondary',
+    'body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table .button.secondary',
   );
   const detailButtonIndex = cssSource.indexOf(
-    'body:not(:has(.landing-page)) #admin-users > .table .member-directory-actions .button.secondary',
+    'body:not(:has(.landing-page)) #admin-users .admin-user-table-scroll > .table .member-directory-actions .button.secondary',
   );
   const detailButtonRule = cssSource.match(
-    /body:not\(:has\(\.landing-page\)\) #admin-users > \.table \.member-directory-actions \.button\.secondary\s*\{(?<body>[^}]*)\}/,
+    /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-table-scroll > \.table \.member-directory-actions \.button\.secondary\s*\{(?<body>[^}]*)\}/,
   )?.groups?.body;
 
   assert.ok(tableButtonIndex >= 0);

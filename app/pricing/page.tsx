@@ -7,7 +7,13 @@ import { PricingPanel } from './pricing-panel';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PricingPage() {
+type PricingPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function PricingPage({ searchParams }: PricingPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const initialPlanId = getSearchParamValue(resolvedSearchParams?.plan);
   const persistence = getAsyncChartServicePersistence();
   const { paymentSettings, plans, webInfoSettings } = await persistence.runRead(async (repository) => ({
     plans: await repository.listPlans(),
@@ -26,7 +32,17 @@ export default async function PricingPage() {
         </p>
       </section>
 
-      <PricingPanel plans={plans} paymentSettings={paymentSettings} planServices={webInfoSettings.planServices} />
+      <PricingPanel
+        initialPlanId={initialPlanId}
+        plans={plans}
+        paymentSettings={paymentSettings}
+        planServices={webInfoSettings.planServices}
+      />
     </main>
   );
+}
+
+function getSearchParamValue(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
 }

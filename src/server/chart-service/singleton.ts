@@ -38,6 +38,15 @@ export function getChartServiceRepository(env?: ChartServiceRepositoryRuntimeEnv
   }
 
   ensureMemoryRepositoryCapabilities(globalForChartService.__chartServiceRepository);
+  if (!hasMemoryRepositoryCapabilities(globalForChartService.__chartServiceRepository)) {
+    const staleRepository = globalForChartService.__chartServiceRepository;
+    const replacementRepository = createChartServiceRepositoryFromConfig(config);
+    copyRecoverableMemoryRepositoryRecords(staleRepository, replacementRepository);
+    ensureMemoryRepositoryCapabilities(replacementRepository);
+    globalForChartService.__chartServiceRepository = replacementRepository;
+    globalForChartService.__chartServiceRepositorySignature = signature;
+  }
+
   return globalForChartService.__chartServiceRepository;
 }
 
@@ -72,6 +81,76 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
     typeof persistence.repository.listSupportMessagesByThreadId === 'function' &&
     typeof persistence.repository.deleteSupportMessage === 'function' &&
     typeof persistence.repository.deleteSupportMessagesByThreadId === 'function';
+}
+
+function hasMemoryRepositoryCapabilities(repository: ChartServiceRepository): boolean {
+  return typeof repository.getSupportMessageById === 'function' &&
+    typeof repository.listSupportMessagesByThreadId === 'function' &&
+    typeof repository.deleteSupportMessage === 'function' &&
+    typeof repository.deleteSupportMessagesByThreadId === 'function';
+}
+
+function copyRecoverableMemoryRepositoryRecords(
+  source: Partial<ChartServiceRepository>,
+  target: ChartServiceRepository,
+): void {
+  copyRecords(source.listPlans, target.savePlan);
+  copyRecords(source.listUsers, target.saveUser);
+  copyRecords(source.listSubscriptions, target.saveSubscription);
+  copyRecords(source.listPayments, target.savePayment);
+  copyRecords(source.listSalesTeams, target.saveSalesTeam);
+  copyRecords(source.listPublicBoardPosts, target.savePublicBoardPost);
+  copyRecords(source.listSupportThreads, target.saveSupportThread);
+  copyRecords(source.listAuditLogs, target.appendAuditLog);
+  copyRecords(() => source.listEmailOutboxRecords?.() ?? [], target.saveEmailOutboxRecord);
+
+  const users = readRecords(source.listUsers);
+  users.forEach((user) => {
+    copyRecords(() => source.listSessionsByUserId?.(user.id) ?? [], target.saveSession);
+    copyRecords(() => source.listNotificationsByUserId?.(user.id) ?? [], target.saveNotification);
+    copyRecords(() => source.listSignupAgreementsByUserId?.(user.id) ?? [], target.saveSignupAgreement);
+  });
+
+  readRecords(source.listPayments).forEach((payment) => {
+    copyRecords(() => source.listReferralLedgersByPaymentId?.(payment.id) ?? [], target.saveReferralLedger);
+  });
+
+  readRecords(source.listSupportThreads).forEach((thread) => {
+    copyRecords(() => source.listSupportMessagesByThreadId?.(thread.id) ?? [], target.saveSupportMessage);
+  });
+
+  const referralSettings = readOptionalRecord(source.getReferralProgramSettings);
+  if (referralSettings) target.saveReferralProgramSettings(referralSettings);
+  const paymentSettings = readOptionalRecord(source.getPaymentTransferSettings);
+  if (paymentSettings) target.savePaymentTransferSettings(paymentSettings);
+  const webInfoSettings = readOptionalRecord(source.getWebInfoSettings);
+  if (webInfoSettings) target.saveWebInfoSettings(webInfoSettings);
+}
+
+function copyRecords<RecordType>(
+  read: (() => RecordType[]) | undefined,
+  write: ((record: RecordType) => void) | undefined,
+): void {
+  if (!read || !write) return;
+  readRecords(read).forEach((record) => write(record));
+}
+
+function readRecords<RecordType>(read: (() => RecordType[]) | undefined): RecordType[] {
+  if (!read) return [];
+  try {
+    return read();
+  } catch {
+    return [];
+  }
+}
+
+function readOptionalRecord<RecordType>(read: (() => RecordType | null) | undefined): RecordType | null {
+  if (!read) return null;
+  try {
+    return read();
+  } catch {
+    return null;
+  }
 }
 
 function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository): void {
@@ -174,6 +253,18 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
         if (message) return structuredClone(message);
       }
       return null;
+    };
+  }
+
+  if (
+    typeof mutableRepository.deleteSupportMessagesByThreadId !== 'function' &&
+    typeof mutableRepository.listSupportMessagesByThreadId === 'function' &&
+    typeof mutableRepository.deleteSupportMessage === 'function'
+  ) {
+    mutableRepository.deleteSupportMessagesByThreadId = (threadId) => {
+      mutableRepository
+        .listSupportMessagesByThreadId(threadId)
+        .forEach((message) => mutableRepository.deleteSupportMessage(message.id));
     };
   }
 

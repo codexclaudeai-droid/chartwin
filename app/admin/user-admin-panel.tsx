@@ -582,83 +582,85 @@ export function UserAdminPanel() {
         </div>
       )}
       <p className="notice">{message}</p>
-      <table className="table">
-        <thead>
-          <tr>
-            <th>회원</th>
-            <th>권한</th>
-            <th>구독</th>
-            <th>차트 접근</th>
-            <th>최근 결제</th>
-            <th>운영 상태</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((item) => (
-            <tr className="admin-user-row" key={item.user.id}>
-              <td className="member-directory-cell">
-                <div className="member-directory-title-row">
-                  <strong>{item.user.name}</strong>
-                  <div className="member-directory-actions">
-                    <button className="button secondary" type="button" onClick={() => openDetail(item.user.id)} disabled={isBusy}>
-                      상세
-                    </button>
-                  </div>
-                </div>
-                <small>{item.user.email}</small>
-                <div className="member-directory-meta-grid">
-                  <span>연락번호 {item.user.phoneNumber || '미등록'}</span>
-                  <span>추천인 {item.referrer?.email ?? '없음'}</span>
-                  <span>가입일 {formatDateTime(item.user.createdAt)}</span>
-                </div>
-              </td>
-              <td className="admin-user-role-cell">
-                <span className="badge admin-user-role-badge">{formatUserRoleLabel(item.user.role)}</span>
-                <span className={getAccountStatusClassName(item.user.accountStatus)}>
-                  {formatUserAccountStatusLabel(item.user.accountStatus)}
-                </span>
-              </td>
-              <td className="admin-user-subscription-cell">
-                {item.subscription ? (
-                  <>
-                    <strong>{formatSubscriptionStatusLabel(item.subscription.status)}</strong>
-                    {item.subscription.endsAt && <small>만료 {formatDateTime(item.subscription.endsAt)}</small>}
-                  </>
-                ) : (
-                  <span className="admin-user-empty-text">구독 없음</span>
-                )}
-              </td>
-              <td className="admin-user-access-cell">
-                <span>{formatChartAccessLabel(item.access)}</span>
-              </td>
-              <td className="admin-user-payment-cell">
-                {item.latestPayment ? (
-                  <>
-                    <strong>{formatPaymentStatusLabel(item.latestPayment.status)}</strong>
-                    <small>
-                      {formatPaymentAmountUsd(item.latestPayment.amountUsd)} / {formatDateTime(item.latestPayment.updatedAt)}
-                    </small>
-                  </>
-                ) : (
-                  <span className="admin-user-empty-text">결제 없음</span>
-                )}
-              </td>
-              <td className="admin-user-ops-cell">
-                <div className="admin-user-ops-grid" aria-label="운영 상태 요약">
-                  <span>결제 <strong>{item.paymentCount}</strong></span>
-                  <span>문의 <strong>{item.supportThreadCount}</strong></span>
-                  <span>알림 <strong>{item.unreadNotificationCount}</strong></span>
-                </div>
-              </td>
-            </tr>
-          ))}
-          {users.length === 0 && (
+      <div className="admin-user-table-scroll">
+        <table className="table">
+          <thead>
             <tr>
-              <td colSpan={6}>표시할 회원이 없습니다.</td>
+              <th>회원</th>
+              <th>권한</th>
+              <th>구독</th>
+              <th>차트 접근</th>
+              <th>최근 결제</th>
+              <th>운영 상태</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {users.map((item) => (
+              <tr className="admin-user-row" key={item.user.id}>
+                <td className="member-directory-cell">
+                  <div className="member-directory-title-row">
+                    <strong>{item.user.name}</strong>
+                    <div className="member-directory-actions">
+                      <button className="button secondary" type="button" onClick={() => openDetail(item.user.id)} disabled={isBusy}>
+                        상세
+                      </button>
+                    </div>
+                  </div>
+                  <small>{item.user.email}</small>
+                  <div className="member-directory-meta-grid">
+                    <span>연락번호 {item.user.phoneNumber || '미등록'}</span>
+                    <span>추천인 {item.referrer?.email ?? '없음'}</span>
+                    <span>가입일 {formatDateTime(item.user.createdAt)}</span>
+                  </div>
+                </td>
+                <td className="admin-user-role-cell">
+                  <span className="badge admin-user-role-badge">{formatUserRoleLabel(item.user.role)}</span>
+                  <span className={getAccountStatusClassName(item.user.accountStatus)}>
+                    {formatUserAccountStatusLabel(item.user.accountStatus)}
+                  </span>
+                </td>
+                <td className="admin-user-subscription-cell">
+                  {item.subscription ? (
+                    <>
+                      <strong>{formatSubscriptionStatusLabel(item.subscription.status)}</strong>
+                      {item.subscription.endsAt && <small>만료 {formatDateTime(item.subscription.endsAt)}</small>}
+                    </>
+                  ) : (
+                    <span className="admin-user-empty-text">구독 없음</span>
+                  )}
+                </td>
+                <td className="admin-user-access-cell">
+                  <span>{formatChartAccessLabel(item.access)}</span>
+                </td>
+                <td className="admin-user-payment-cell">
+                  {item.latestPayment ? (
+                    <>
+                      <strong>{formatPaymentStatusLabel(item.latestPayment.status)}</strong>
+                      <small>
+                        {formatPaymentAmountUsd(item.latestPayment.amountUsd)} / {formatDateTime(item.latestPayment.updatedAt)}
+                      </small>
+                    </>
+                  ) : (
+                    <span className="admin-user-empty-text">결제 없음</span>
+                  )}
+                </td>
+                <td className="admin-user-ops-cell">
+                  <div className="admin-user-ops-grid" aria-label="운영 상태 요약">
+                    <span>결제 <strong>{item.paymentCount}</strong></span>
+                    <span>문의 <strong>{item.supportThreadCount}</strong></span>
+                    <span>알림 <strong>{item.unreadNotificationCount}</strong></span>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={6}>표시할 회원이 없습니다.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
       <div className="thread-list admin-detail-panel">
         <p className="notice">{detailMessage}</p>
         {detail && (

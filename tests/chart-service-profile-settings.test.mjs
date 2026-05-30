@@ -134,6 +134,34 @@ test('profile patch API updates contact number and password', async () => {
   assert.equal(verifyPasswordHash('NextDemo1234!', repository.getUserById('user_member')?.passwordHash), true);
 });
 
+test('profile delete API withdraws the signed-in member and clears active sessions', async () => {
+  const repository = getChartServiceRepository();
+  const user = repository.getUserById('user_trial');
+  assert.ok(user);
+  repository.saveUser({ ...user, accountStatus: 'active' });
+  const { session } = createSessionForUser(repository, {
+    userId: 'user_trial',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  });
+  const { DELETE } = await import('../app/api/profile/route.ts');
+
+  const response = await DELETE(new Request('http://localhost/api/profile', {
+    method: 'DELETE',
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${session.id}`,
+      origin: 'http://localhost',
+    },
+  }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.ok, true);
+  assert.equal(repository.getUserById('user_trial')?.accountStatus, 'suspended');
+  assert.equal(repository.listSessionsByUserId('user_trial').length, 0);
+  assert.match(response.headers.get('set-cookie') ?? '', /Max-Age=0/);
+});
+
 test('profile page and panel expose my profile edit modal and referral controls', () => {
   const layoutSource = fs.readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8');
   const pageSource = fs.readFileSync(new URL('../app/profile/page.tsx', import.meta.url), 'utf8');
@@ -144,7 +172,7 @@ test('profile page and panel expose my profile edit modal and referral controls'
   assert.match(panelSource, /프로필수정/);
   assert.match(panelSource, /role="dialog"/);
 
-  assert.match(layoutSource, /마이프로필/);
+  assert.match(layoutSource, /ProfileNavLink/);
   assert.match(pageSource, /마이프로필/);
   assert.match(panelSource, /phoneDraft/);
   assert.match(panelSource, /htmlFor="profilePhoneNumber"/);
@@ -223,11 +251,22 @@ test('profile referral card exposes copy icon buttons for code and link', () => 
 
   assert.match(panelSource, /copyReferralValue/);
   assert.match(panelSource, /navigator\.clipboard\.writeText/);
+  assert.match(panelSource, /copyTextWithHiddenTextarea/);
+  assert.match(panelSource, /document\.execCommand\('copy'\)/);
   assert.match(panelSource, /aria-label="추천코드 복사"/);
   assert.match(panelSource, /aria-label="추천링크 복사"/);
   assert.match(panelSource, /referral-copy-row/);
   assert.match(styleSource, /\.copy-icon-button/);
   assert.match(styleSource, /\.screen-reader-only/);
+});
+
+test('profile panel exposes a member withdrawal danger action', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /withdrawAccount/);
+  assert.match(panelSource, /method: 'DELETE'/);
+  assert.match(panelSource, /회원탈퇴/);
+  assert.match(panelSource, /canWithdrawAccount/);
 });
 
 test('profile panel renders my referral list with individual and total points', () => {

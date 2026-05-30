@@ -52,6 +52,18 @@ test('profile payment panel renders the payment progress timeline', () => {
   assert.match(source, /aria-label=\{`\$\{payment\.id\} 결제 진행 단계`\}/);
 });
 
+test('profile payment summary is grouped below the service status column', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(
+    panelSource,
+    /<div className="profile-service-column">[\s\S]*<h2>서비스 상태<\/h2>[\s\S]*<div className="card wide profile-payment-summary-card">[\s\S]*<h2>최근 결제 요청<\/h2>/,
+  );
+  assert.match(cssSource, /\.profile-service-column\s*\{[\s\S]*display: grid;[\s\S]*margin-top: 22px;/);
+  assert.match(cssSource, /\.profile-service-column > \.card\s*\{[\s\S]*margin-top: 0;/);
+});
+
 test('profile payment target has a visual anchor treatment', () => {
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
   const source = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
