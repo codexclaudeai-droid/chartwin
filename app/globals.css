@@ -6547,6 +6547,46 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   color: var(--tradingcore-cyan);
 }
 
+.landing-page .landing-scroll-top-button {
+  align-items: center;
+  backdrop-filter: blur(18px);
+  background:
+    linear-gradient(145deg, rgba(76, 141, 255, 0.22), rgba(25, 199, 184, 0.16)),
+    rgba(5, 14, 29, 0.84);
+  border: 1px solid rgba(125, 183, 255, 0.38);
+  border-radius: 999px;
+  bottom: clamp(22px, 4vw, 42px);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36), 0 0 24px rgba(76, 141, 255, 0.18);
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 950;
+  height: 52px;
+  justify-content: center;
+  letter-spacing: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: fixed;
+  right: clamp(18px, 3vw, 34px);
+  transform: translateY(12px);
+  transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  width: 52px;
+  z-index: 80;
+}
+
+.landing-page .landing-scroll-top-button.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.landing-page .landing-scroll-top-button:hover,
+.landing-page .landing-scroll-top-button:focus-visible {
+  border-color: rgba(216, 236, 255, 0.72);
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.42), 0 0 30px rgba(86, 240, 255, 0.26);
+}
+
 .landing-page .landing-section::after {
   background: linear-gradient(90deg, transparent, rgba(86, 240, 255, 0.22), transparent);
 }
@@ -6641,6 +6681,13 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
     background: rgba(2, 7, 19, 0.9);
     border-color: rgba(255, 255, 255, 0.14);
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+  }
+
+  .landing-page .landing-scroll-top-button {
+    bottom: 92px;
+    height: 46px;
+    right: 18px;
+    width: 46px;
   }
 }
 

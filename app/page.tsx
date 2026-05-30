@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import LandingHeroSlider from './landing-hero-slider.tsx';
 import LandingChartMotion from './landing-chart-motion.tsx';
+import LandingScrollTopButton from './landing-scroll-top-button.tsx';
 import { FreeTrialRequestButton } from './shared/free-trial-request-button';
 import { createPricingPlanHref } from './pricing/plan-selection.ts';
 import type { SubscriptionPlan } from '../src/domain/chart-service/index.ts';
@@ -393,6 +394,8 @@ export default async function HomePage() {
         <Link className="button" href="/pricing">구독 신청</Link>
         <Link className="button secondary" href="/signup">회원가입</Link>
       </nav>
+
+      <LandingScrollTopButton />
 
       <footer className="landing-footer" aria-label="서비스 하단 고정">
         <div className="landing-footer-grid">

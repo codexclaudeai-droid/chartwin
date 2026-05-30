@@ -683,6 +683,24 @@ test('landing page exposes a completed premium design layer', () => {
   assert.match(cssSource, /\.tc-chart-feature-card:hover/);
 });
 
+test('landing page shows a bottom-right scroll-to-top jump button after scrolling', () => {
+  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const scrollButtonSource = fs.readFileSync(new URL('../app/landing-scroll-top-button.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(pageSource, /LandingScrollTopButton/);
+  assert.match(pageSource, /<LandingScrollTopButton \/>/);
+  assert.match(scrollButtonSource, /'use client'/);
+  assert.match(scrollButtonSource, /window\.scrollY > 420/);
+  assert.match(scrollButtonSource, /window\.scrollTo\(\{ top: 0, behavior: 'smooth' \}\)/);
+  assert.match(scrollButtonSource, /landing-scroll-top-button/);
+  assert.match(scrollButtonSource, /aria-label="페이지 상단으로 이동"/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button\s*\{[\s\S]*?position: fixed/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button\s*\{[\s\S]*?right: clamp\(18px, 3vw, 34px\)/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button\s*\{[\s\S]*?bottom: clamp\(22px, 4vw, 42px\)/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button\.visible\s*\{[\s\S]*?opacity: 1/);
+});
+
 test('TradingCore brand identity stays in the shell without duplicating hero stamp content', () => {
   const layoutSource = fs.readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8');
   const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
