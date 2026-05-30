@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import {
   CUSTOM_SYMBOLS,
   SYMBOL_CATALOG,
+  getSymbolIconUrl,
   persistSymbolRegistry,
 } from '../../src/catalog/symbols.ts';
 
@@ -265,42 +266,45 @@ export function AdminSymbolsPanel() {
                 </tr>
               </thead>
               <tbody>
-                {filteredSymbols.map((symbol) => (
-                  <tr key={`${symbol.source}:${symbol.category}:${symbol.item.id}`}>
-                    <td>
-                      <div className="admin-symbols-item">
-                        <span className="admin-symbols-icon" aria-hidden={!symbol.item.iconUrl}>
-                          {symbol.item.iconUrl ? (
-                            <img src={symbol.item.iconUrl} alt={symbol.item.label} />
-                          ) : (
-                            <span className="admin-symbols-icon-fallback">{symbol.item.id.slice(0, 1)}</span>
-                          )}
+                {filteredSymbols.map((symbol) => {
+                  const iconUrl = getManagedSymbolIconUrl(symbol);
+                  return (
+                    <tr key={`${symbol.source}:${symbol.category}:${symbol.item.id}`}>
+                      <td>
+                        <div className="admin-symbols-item">
+                          <span className="admin-symbols-icon" aria-hidden={!iconUrl}>
+                            {iconUrl ? (
+                              <img src={iconUrl} alt={symbol.item.label} />
+                            ) : (
+                              <span className="admin-symbols-icon-fallback">{symbol.item.id.slice(0, 1)}</span>
+                            )}
+                          </span>
+                          <span className="admin-symbols-copy">
+                            <strong>{symbol.item.id}</strong>
+                            <span>{symbol.item.label}</span>
+                            <small>{symbol.item.desc}</small>
+                          </span>
+                        </div>
+                      </td>
+                      <td>{symbol.category}</td>
+                      <td>
+                        <span className={`badge ${symbol.source === 'builtin' ? 'admin-symbols-builtin' : 'admin-symbols-custom'}`}>
+                          {symbol.source === 'builtin' ? '기본' : '커스텀'}
                         </span>
-                        <span className="admin-symbols-copy">
-                          <strong>{symbol.item.id}</strong>
-                          <span>{symbol.item.label}</span>
-                          <small>{symbol.item.desc}</small>
-                        </span>
-                      </div>
-                    </td>
-                    <td>{symbol.category}</td>
-                    <td>
-                      <span className={`badge ${symbol.source === 'builtin' ? 'admin-symbols-builtin' : 'admin-symbols-custom'}`}>
-                        {symbol.source === 'builtin' ? '기본' : '커스텀'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="admin-symbols-row-actions">
-                        <button className="button secondary" type="button" onClick={() => startEdit(symbol)}>
-                          수정
-                        </button>
-                        <button className="button danger" type="button" onClick={() => deleteSymbol(symbol)}>
-                          삭제
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td>
+                        <div className="admin-symbols-row-actions">
+                          <button className="button secondary" type="button" onClick={() => startEdit(symbol)}>
+                            수정
+                          </button>
+                          <button className="button danger" type="button" onClick={() => deleteSymbol(symbol)}>
+                            삭제
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {!filteredSymbols.length && (
                   <tr>
                     <td colSpan={4}>검색 조건에 맞는 종목이 없습니다.</td>
@@ -334,6 +338,10 @@ function listManagedSymbols(): ManagedSymbolRef[] {
     });
   });
   return rows;
+}
+
+function getManagedSymbolIconUrl(symbol: ManagedSymbolRef): string | undefined {
+  return symbol.item.iconUrl || getSymbolIconUrl(symbol.item.id);
 }
 
 function findManagedSymbol(key: Exclude<EditingSymbolKey, null>): ManagedSymbolRef | null {

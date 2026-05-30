@@ -33,8 +33,10 @@ test('admin symbol list shows registered symbol images before the symbol text', 
 
   assert.match(panelSource, /className="admin-symbols-item"/);
   assert.match(panelSource, /className="admin-symbols-icon"/);
-  assert.match(panelSource, /symbol\.item\.iconUrl \?/);
-  assert.match(panelSource, /src=\{symbol\.item\.iconUrl\}/);
+  assert.match(panelSource, /getSymbolIconUrl/);
+  assert.match(panelSource, /const iconUrl = getManagedSymbolIconUrl\(symbol\)/);
+  assert.match(panelSource, /iconUrl \?/);
+  assert.match(panelSource, /src=\{iconUrl\}/);
   assert.match(panelSource, /alt=\{symbol\.item\.label\}/);
   assert.match(panelSource, /className="admin-symbols-icon-fallback"/);
   assert.match(cssSource, /\.admin-symbols-item\s*\{[\s\S]*?grid-template-columns: 38px minmax\(0, 1fr\)/);
