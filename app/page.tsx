@@ -4,6 +4,7 @@ import LandingHeroSlider from './landing-hero-slider.tsx';
 import LandingChartMotion from './landing-chart-motion.tsx';
 import LandingScrollTopButton from './landing-scroll-top-button.tsx';
 import { FreeTrialRequestButton } from './shared/free-trial-request-button';
+import { formatPlanPriceParts } from './shared/plan-price-format.ts';
 import { createPricingPlanHref } from './pricing/plan-selection.ts';
 import type { SubscriptionPlan } from '../src/domain/chart-service/index.ts';
 import {
@@ -136,9 +137,20 @@ const landingStructuredData = {
   })),
 };
 
-function calculateLandingPlanPrice(plan: SubscriptionPlan): string {
-  const amount = Math.round(plan.basePriceUsd * (1 - plan.discountPercent / 100) * 100) / 100;
-  return `$${amount.toLocaleString('en-US', { minimumFractionDigits: amount % 1 === 0 ? 0 : 1 })}`;
+function calculateLandingPlanPrice(plan: SubscriptionPlan): number {
+  return Math.round(plan.basePriceUsd * (1 - plan.discountPercent / 100) * 100) / 100;
+}
+
+function renderLandingPlanPrice(plan: SubscriptionPlan) {
+  const price = formatPlanPriceParts(calculateLandingPlanPrice(plan));
+
+  return (
+    <strong className="landing-plan-price" aria-label={`${price.currency}${price.whole}${price.fraction}`}>
+      <span>{price.currency}</span>
+      <span>{price.whole}</span>
+      {price.fraction ? <span className="landing-plan-price-fraction">{price.fraction}</span> : null}
+    </strong>
+  );
 }
 
 function formatLandingPlanPeriod(plan: SubscriptionPlan): string {
@@ -323,7 +335,7 @@ export default async function HomePage() {
                   {featured ? <span className="landing-plan-badge">★ RECOMMENDED</span> : null}
                 </div>
                 <div className="landing-plan-price-row">
-                  <strong>{calculateLandingPlanPrice(plan)}</strong>
+                  {renderLandingPlanPrice(plan)}
                   <span className="landing-plan-period">{formatLandingPlanPeriod(plan)}</span>
                 </div>
                 {formatLandingPlanDiscount(plan) ? (

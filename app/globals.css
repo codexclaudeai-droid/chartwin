@@ -1865,6 +1865,19 @@ a {
   letter-spacing: -0.03em;
 }
 
+.landing-plan-price {
+  align-items: baseline;
+  display: inline-flex;
+  gap: 1px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.landing-plan-price-fraction {
+  font-size: 0.6em;
+  line-height: 1;
+}
+
 .landing-plan-price-row {
   align-items: baseline;
   display: flex;

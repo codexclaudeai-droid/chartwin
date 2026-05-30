@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { dispatchNotificationsRefreshEvent } from '../notification-events';
 import { AuthPromptModal } from '../shared/auth-prompt-modal';
+import { formatPlanPriceParts } from '../shared/plan-price-format.ts';
 import { resolveInitialPricingPlanId } from './plan-selection.ts';
 
 type CheckoutStep = 'plan' | 'payment' | 'confirm' | 'submitted';
@@ -65,6 +66,18 @@ function formatPricingLandingPlanNote(plan: Plan): string {
   if (plan.id === 'plan_half_year') return '일관된 매매 원칙을 다지고 체계적인 중단기 전략을 선호하는 액티브 트레이더 추천 요금제';
   if (plan.id === 'plan_yearly') return '최적의 속도와 맞춤형 지원을 통해 최상의 결과를 추구하는 프로/기업 사용자용 패키지';
   return `${plan.durationDays}일 이용 · ${plan.discountPercent}% 할인`;
+}
+
+function renderPricingLandingPlanPrice(plan: Plan) {
+  const price = formatPlanPriceParts(discountedAmount(plan));
+
+  return (
+    <strong className="landing-plan-price" aria-label={`${price.currency}${price.whole}${price.fraction}`}>
+      <span>{price.currency}</span>
+      <span>{price.whole}</span>
+      {price.fraction ? <span className="landing-plan-price-fraction">{price.fraction}</span> : null}
+    </strong>
+  );
 }
 
 function formatPricingLandingPlanIconType(plan: Plan): 'basic' | 'pro' | 'elite' {
@@ -330,7 +343,7 @@ export function PricingPanel({
                       {isRecommended ? <span className="landing-plan-badge">★ RECOMMENDED</span> : null}
                     </div>
                     <div className="landing-plan-price-row">
-                      <strong>${discountedAmount(plan)}</strong>
+                      {renderPricingLandingPlanPrice(plan)}
                       <span className="landing-plan-period">{formatPricingLandingPlanPeriod(plan)}</span>
                     </div>
                     {formatPricingLandingPlanDiscount(plan) ? (

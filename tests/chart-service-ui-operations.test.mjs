@@ -918,6 +918,22 @@ test('landing and pricing show BASIC plan period with a leading slash', () => {
   assert.doesNotMatch(pricingPanelSource, /plan\.id === 'plan_monthly'\) return '1개월'/);
 });
 
+test('landing and pricing plan prices format thousands and render decimal as subunit', async () => {
+  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pricingPanelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const { formatPlanPriceParts } = await import('../app/shared/plan-price-format.ts');
+
+  assert.deepEqual(formatPlanPriceParts(1014.9), { currency: '$', whole: '1,014', fraction: '.9' });
+  assert.deepEqual(formatPlanPriceParts(1671.6), { currency: '$', whole: '1,671', fraction: '.6' });
+  assert.deepEqual(formatPlanPriceParts(199), { currency: '$', whole: '199', fraction: '' });
+  assert.match(pageSource, /formatPlanPriceParts/);
+  assert.match(pricingPanelSource, /formatPlanPriceParts/);
+  assert.match(pageSource, /landing-plan-price-fraction/);
+  assert.match(pricingPanelSource, /landing-plan-price-fraction/);
+  assert.match(cssSource, /\.landing-plan-price-fraction\s*\{[^}]*font-size: 0\.6em/s);
+});
+
 test('landing bottom sections end with FAQ and contact actions', () => {
   const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
