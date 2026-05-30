@@ -6,6 +6,13 @@ import {
   type TimeframeKey,
 } from '../catalog/time';
 import {
+  cloneJsonRecord,
+  mergeJsonRecords,
+  mergeStoredChartConfig,
+  normalizeStoredChartConfig,
+  type StoredChartConfig,
+} from './chart-user-settings';
+import {
   createSymbolIconElement,
   findSymbolItem,
   getSymbolIconUrl,
@@ -582,15 +589,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       // ignore
     }
   };
-  type StoredChartConfig = {
-    version: 1;
-    layout?: Record<string, unknown>;
-    candleStyle?: Record<string, unknown>;
-    timezone?: string;
-    indicators?: Record<string, unknown>;
-    panelState?: Record<string, unknown>;
-    indicatorsVisible?: boolean;
-  };
   type ChartUserSettingsSnapshot = {
     version: 1;
     localStorage: Record<string, string>;
@@ -599,37 +597,19 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   };
   let chartUserSettingsSyncTimer: number | null = null;
 
-  const cloneJsonRecord = (value: unknown): Record<string, unknown> | null => {
-    if (!isRecord(value) || Array.isArray(value)) return null;
-    try {
-      const parsed = JSON.parse(JSON.stringify(value)) as unknown;
-      return isRecord(parsed) && !Array.isArray(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
-  };
   const readStoredChartConfig = (): StoredChartConfig => {
     try {
       const raw = localStorage.getItem(CHART_CONFIG_STORAGE_KEY);
       if (!raw) return { version: 1 };
       const parsed = JSON.parse(raw) as unknown;
-      if (!isRecord(parsed)) return { version: 1 };
-      return {
-        version: 1,
-        layout: cloneJsonRecord(parsed.layout) ?? undefined,
-        candleStyle: cloneJsonRecord(parsed.candleStyle) ?? undefined,
-        timezone: typeof parsed.timezone === 'string' ? parsed.timezone : undefined,
-        indicators: cloneJsonRecord(parsed.indicators) ?? undefined,
-        panelState: cloneJsonRecord(parsed.panelState) ?? undefined,
-        indicatorsVisible: typeof parsed.indicatorsVisible === 'boolean' ? parsed.indicatorsVisible : undefined,
-      };
+      return normalizeStoredChartConfig(parsed);
     } catch {
       return { version: 1 };
     }
   };
   const saveStoredChartConfig = (config: StoredChartConfig): void => {
     try {
-      localStorage.setItem(CHART_CONFIG_STORAGE_KEY, JSON.stringify({ ...config, version: 1 }));
+      localStorage.setItem(CHART_CONFIG_STORAGE_KEY, JSON.stringify(normalizeStoredChartConfig(config)));
     } catch {
       // ignore
     }
@@ -677,25 +657,25 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       chart.config.layout.mobileCrosshairTooltipEnabled = layout.mobileCrosshairTooltipEnabled;
     }
     if (saved.candleStyle) {
-      chart.config.candleStyle = {
-        ...chart.config.candleStyle,
-        ...saved.candleStyle,
-      } as typeof chart.config.candleStyle;
+      chart.config.candleStyle = mergeJsonRecords(
+        chart.config.candleStyle as unknown as Record<string, unknown>,
+        saved.candleStyle,
+      ) as unknown as typeof chart.config.candleStyle;
     }
     if (saved.timezone) {
       chart.config.timezone = saved.timezone;
     }
     if (saved.indicators) {
-      chart.config.indicators = {
-        ...chart.config.indicators,
-        ...saved.indicators,
-      } as typeof chart.config.indicators;
+      chart.config.indicators = mergeJsonRecords(
+        chart.config.indicators as unknown as Record<string, unknown>,
+        saved.indicators,
+      ) as unknown as typeof chart.config.indicators;
     }
     if (saved.panelState) {
-      chart.config.panelState = {
-        ...chart.config.panelState,
-        ...saved.panelState,
-      } as typeof chart.config.panelState;
+      chart.config.panelState = mergeJsonRecords(
+        chart.config.panelState as unknown as Record<string, unknown>,
+        saved.panelState,
+      ) as unknown as typeof chart.config.panelState;
     }
     if (typeof saved.indicatorsVisible === 'boolean') {
       chart.setIndicatorsVisible(saved.indicatorsVisible);
@@ -736,11 +716,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (!isRecord(payload.settings)) return;
       applySyncedLocalStorageEntries(payload.settings.localStorage);
       if (isRecord(payload.settings.chartConfig)) {
-        saveStoredChartConfig({
-          ...readStoredChartConfig(),
-          ...payload.settings.chartConfig,
-          version: 1,
-        } as StoredChartConfig);
+        saveStoredChartConfig(mergeStoredChartConfig(
+          readStoredChartConfig(),
+          normalizeStoredChartConfig(payload.settings.chartConfig),
+        ));
       }
     } catch {
       // The chart should still load with device-local settings if account sync is unavailable.
@@ -1314,7 +1293,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       resizePanelBoundary,
     });
     let refreshChartUi = () => {};
-    const refreshOverlay = createIndicatorOverlay(chartArea, chart, () => refreshChartUi());
+    const refreshOverlay = createIndicatorOverlay(chartArea, chart, () => {
+      refreshChartUi();
+      persistChartUserSettingsForChart(chart);
+    });
     dividerManager.setOnAfterResize(() => {
       refreshOverlay();
       persistChartUserSettingsForChart(chart);

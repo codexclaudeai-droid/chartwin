@@ -123,8 +123,9 @@ test('chart runtime hydrates and syncs account chart settings', () => {
 
 test('chart runtime persists indicator configuration and visibility state', () => {
   const initSource = fs.readFileSync(new URL('../src/app/init.ts', import.meta.url), 'utf8');
+  const chartUserSettingsSource = fs.readFileSync(new URL('../src/app/chart-user-settings.ts', import.meta.url), 'utf8');
 
-  assert.match(initSource, /indicatorsVisible\?: boolean/);
+  assert.match(chartUserSettingsSource, /indicatorsVisible\?: boolean/);
   assert.match(initSource, /indicators: cloneJsonRecord\(chart\.config\.indicators\)/);
   assert.match(initSource, /panelState: cloneJsonRecord\(chart\.config\.panelState\)/);
   assert.match(initSource, /indicatorsVisible: chart\.isIndicatorsVisible\(\)/);
