@@ -901,8 +901,13 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
   render();
 }
 
-export function openChartSettingsModal(chart: any, onApply: () => void, onSymbolVisualUpdate: () => void) {
-  const { body } = createModal('차트 설정');
+export function openChartSettingsModal(
+  chart: any,
+  onApply: () => void,
+  onSymbolVisualUpdate: () => void,
+  onResetOptions?: () => void,
+) {
+  const { body, close } = createModal('차트 설정');
   const GAP_MODE_STORAGE_KEY = 'my-chart-lib.chart-gap-mode.v1';
   const PATTERN_SCOPE_STORAGE_KEY = 'my-chart-lib.pattern-analysis-scope.v1';
   const PATTERN_ALERT_ENABLED_STORAGE_KEY = 'my-chart-lib.pattern-alert-enabled.v1';
@@ -1347,6 +1352,50 @@ export function openChartSettingsModal(chart: any, onApply: () => void, onSymbol
   fastSyncRow.appendChild(fastSyncLabel);
   fastSyncRow.appendChild(fastSyncControls);
   body.appendChild(fastSyncRow);
+
+  if (onResetOptions) {
+    const resetRow = document.createElement('div');
+    resetRow.style.cssText = [
+      'margin-top:18px',
+      'padding-top:14px',
+      'border-top:1px solid #363a45',
+      'display:flex',
+      'justify-content:space-between',
+      'align-items:center',
+      'gap:12px',
+    ].join(';');
+    const resetLabel = document.createElement('div');
+    resetLabel.innerHTML = '<div style="font-size:13px;font-weight:700;">차트 설정 초기화</div><div style="font-size:11px;color:#84898e;margin-top:2px;">지표, 캔들, 레이아웃, 표시 옵션을 기본값으로 되돌립니다.</div>';
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.textContent = '차트 설정 초기화';
+    resetBtn.style.cssText = [
+      'padding:8px 12px',
+      'border-radius:6px',
+      'border:1px solid #5a2e34',
+      'background:#2b1b1f',
+      'color:#ff9b9b',
+      'font-size:12px',
+      'font-weight:700',
+      'cursor:pointer',
+      'white-space:nowrap',
+    ].join(';');
+    resetBtn.addEventListener('mouseenter', () => {
+      resetBtn.style.background = '#3a2028';
+    });
+    resetBtn.addEventListener('mouseleave', () => {
+      resetBtn.style.background = '#2b1b1f';
+    });
+    resetBtn.addEventListener('click', () => {
+      const shouldReset = window.confirm('저장된 차트 설정 옵션을 기본값으로 초기화할까요?');
+      if (!shouldReset) return;
+      onResetOptions();
+      close();
+    });
+    resetRow.appendChild(resetLabel);
+    resetRow.appendChild(resetBtn);
+    body.appendChild(resetRow);
+  }
 
 }
 

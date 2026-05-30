@@ -133,3 +133,21 @@ test('chart runtime persists indicator configuration and visibility state', () =
   assert.match(initSource, /rawToolId === 'hide-indicators'[\s\S]*persistChartUserSettingsForChart\(pane\.chart\)/);
   assert.match(initSource, /rawToolId === 'hide-all'[\s\S]*persistChartUserSettingsForChart\(pane\.chart\)/);
 });
+
+test('chart settings modal can reset persisted user chart options', () => {
+  const initSource = fs.readFileSync(new URL('../src/app/init.ts', import.meta.url), 'utf8');
+  const modalSource = fs.readFileSync(new URL('../src/ui/modal-handlers.ts', import.meta.url), 'utf8');
+
+  assert.match(initSource, /CHART_SETTINGS_OPTION_STORAGE_KEYS = \[/);
+  assert.match(initSource, /const resetChartUserSettingsOptions = \(\): void =>/);
+  assert.match(initSource, /localStorage\.removeItem\(CHART_CONFIG_STORAGE_KEY\)/);
+  assert.match(initSource, /CHART_SETTINGS_OPTION_STORAGE_KEYS\.forEach\(\(key\) => \{\s*localStorage\.removeItem\(key\);/);
+  assert.match(initSource, /method: 'PATCH'[\s\S]*body: JSON\.stringify\(\{ settings \}\)/);
+  assert.match(initSource, /window\.location\.reload\(\)/);
+  assert.match(initSource, /openChartSettingsModal\([\s\S]*resetChartUserSettingsOptions/);
+
+  assert.match(modalSource, /onResetOptions\?: \(\) => void/);
+  assert.match(modalSource, /resetBtn\.textContent = '차트 설정 초기화'/);
+  assert.match(modalSource, /window\.confirm\('저장된 차트 설정 옵션을 기본값으로 초기화할까요\?'/);
+  assert.match(modalSource, /onResetOptions\(\)/);
+});

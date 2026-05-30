@@ -222,15 +222,18 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   const QUOTE_CURRENCY_STORAGE_KEY = 'my-chart-lib.quote-currency.v1';
   const CHART_CONFIG_STORAGE_KEY = 'my-chart-lib.chart-config.v1';
   const CHART_USER_SETTINGS_ENDPOINT = '/api/chart/settings';
-  const CHART_SYNCED_LOCAL_STORAGE_KEYS = [
-    SYMBOL_STORAGE_KEY,
-    TIMEFRAME_STORAGE_KEY,
-    QUOTE_CURRENCY_STORAGE_KEY,
+  const CHART_SETTINGS_OPTION_STORAGE_KEYS = [
     'my-chart-lib.toolbox-hidden.v1',
     'my-chart-lib.chart-gap-mode.v1',
     'my-chart-lib.pattern-analysis-scope.v1',
     'my-chart-lib.pattern-alert-enabled.v1',
     'my-chart-lib.gateway-fast-sync.v1',
+  ] as const;
+  const CHART_SYNCED_LOCAL_STORAGE_KEYS = [
+    SYMBOL_STORAGE_KEY,
+    TIMEFRAME_STORAGE_KEY,
+    QUOTE_CURRENCY_STORAGE_KEY,
+    ...CHART_SETTINGS_OPTION_STORAGE_KEYS,
   ] as const;
   type PersistedDrawingEntry = {
     symbol: string;
@@ -744,6 +747,32 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   const persistChartUserSettingsForChart = (chart: SimpleChart): void => {
     saveStoredChartConfig(captureChartConfig(chart));
     scheduleChartUserSettingsSync(chart);
+  };
+  const resetChartUserSettingsOptions = (): void => {
+    if (chartUserSettingsSyncTimer !== null) {
+      window.clearTimeout(chartUserSettingsSyncTimer);
+      chartUserSettingsSyncTimer = null;
+    }
+    try {
+      localStorage.removeItem(CHART_CONFIG_STORAGE_KEY);
+      CHART_SETTINGS_OPTION_STORAGE_KEYS.forEach((key) => {
+        localStorage.removeItem(key);
+      });
+    } catch {
+      // The reset should still continue so the account copy can be cleared.
+    }
+    const settings = captureChartUserSettingsSnapshot(null);
+    void fetch(CHART_USER_SETTINGS_ENDPOINT, {
+      method: 'PATCH',
+      cache: 'no-store',
+      credentials: 'include',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ settings }),
+    })
+      .catch(() => {})
+      .finally(() => {
+        window.location.reload();
+      });
   };
   await hydrateChartUserSettings();
   const persistedSymbol = loadSavedSymbol();
@@ -1976,7 +2005,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           pane.refreshChartUi();
           pane.refreshHeader();
           persistChartUserSettingsForChart(pane.chart);
-        }, pane.refreshHeader);
+        }, pane.refreshHeader, resetChartUserSettingsOptions);
       },
       isPaneMaximized: () => paneState.maximizedPaneId !== null,
       onExitMaximize: exitMaximize,
