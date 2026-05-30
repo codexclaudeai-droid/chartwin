@@ -46,7 +46,7 @@ export function renderSubPanelCrosshairAxis(params: RenderSubPanelCrosshairAxisP
   ctx.font = `600 12px ${fontStack}`;
   const boxWidth = Math.ceil(ctx.measureText(labelText).width) + 12;
   const boxHeight = 18;
-  const boxX = width - boxWidth - 2;
+  const boxX = axisSide === 'left' ? 2 : width - boxWidth - 2;
   const boxY = Math.max(panelTop + 2, Math.min(panelTop + panelHeight - boxHeight - 2, clampedY - boxHeight / 2));
   const plusRadius = 9;
   const plusX = axisSide === 'left'

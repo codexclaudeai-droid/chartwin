@@ -119,7 +119,7 @@ export interface RenderSubPanelsParams {
   subChartW: number;
   subChartRight: number;
   subAxisStart: number;
-  geometry: { axisPad: number };
+  geometry: { axisPad: number; side: 'left' | 'right' };
   subLine: SubPanelRenderContext['subLine'];
   subHorizontalLine: SubPanelRenderContext['subHorizontalLine'];
   getSubPlotBounds: (top: number, panelHeight: number) => SubPanelPlotBounds;
@@ -193,6 +193,8 @@ export function renderSubPanels(chart: SubPanelHostChart, params: RenderSubPanel
     chartLeft,
     subChartRight,
     subAxisStart,
+    axisPad: geometry.axisPad,
+    axisSide: geometry.side,
     fontStack,
     textColor: chartTextSecondary,
     getSubPlotBounds,
@@ -202,6 +204,7 @@ export function renderSubPanels(chart: SubPanelHostChart, params: RenderSubPanel
     ctx,
     width,
     axisPad: geometry.axisPad,
+    axisSide: geometry.side,
     fontStack,
     getSubPlotBounds,
   });
@@ -213,6 +216,7 @@ export function renderSubPanels(chart: SubPanelHostChart, params: RenderSubPanel
     subChartRight,
     width,
     axisPad: geometry.axisPad,
+    axisSide: geometry.side,
     fontStack,
     getSubPlotBounds,
     formatVolume: (value) => formatKUnit(value, 2),
@@ -247,8 +251,8 @@ export function renderSubPanels(chart: SubPanelHostChart, params: RenderSubPanel
       ctx.strokeStyle = '#2a3142';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(subAxisStart - 0.5, top);
-      ctx.lineTo(subAxisStart - 0.5, top + pH);
+      ctx.moveTo(geometry.side === 'left' ? subAxisStart + geometry.axisPad - 0.5 : subAxisStart - 0.5, top);
+      ctx.lineTo(geometry.side === 'left' ? subAxisStart + geometry.axisPad - 0.5 : subAxisStart - 0.5, top + pH);
       ctx.stroke();
       ctx.restore();
     }

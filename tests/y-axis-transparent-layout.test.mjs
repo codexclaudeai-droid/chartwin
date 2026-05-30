@@ -6,6 +6,9 @@ import path from 'node:path';
 const sourcePath = path.resolve('src/chart/SimpleChart.ts');
 const source = fs.readFileSync(sourcePath, 'utf8');
 const axisOverlaySource = fs.readFileSync(path.resolve('src/chart/renderers/axis-overlay-renderer.ts'), 'utf8');
+const subPanelOrchestratorSource = fs.readFileSync(path.resolve('src/chart/renderers/subpanel-render-orchestrator.ts'), 'utf8');
+const subPanelUtilsSource = fs.readFileSync(path.resolve('src/chart/renderers/subpanel-render-utils.ts'), 'utf8');
+const subPanelCrosshairAxisSource = fs.readFileSync(path.resolve('src/chart/renderers/subpanel-crosshair-axis-renderer.ts'), 'utf8');
 
 test('transparent Y-axis can still use the full visible width after the initial render', () => {
   assert.match(
@@ -59,5 +62,48 @@ test('transparent Y-axis redraws price labels as the final overlay layer', () =>
     axisOverlaySource,
     /const transparentAxisTextX = geometry\.side === 'left' \? geometry\.axisPad - 6 : chartRight \+ 4;/,
     'transparent Y-axis should place labels directly inside the axis strip like the indicator panels do',
+  );
+});
+
+test('sub-panel Y-axis follows the selected market info side', () => {
+  assert.match(
+    source,
+    /const subAxisStart = geometry\.side === 'left' \? 0 : width - geometry\.axisPad;/,
+    'sub-panel axis strip should move left when the main market info side is left',
+  );
+  assert.match(
+    source,
+    /const subChartRight = geometry\.side === 'left' \? width : subAxisStart;/,
+    'sub-panel plot extent should mirror the main chart side behavior',
+  );
+  assert.match(
+    source,
+    /if \(meta\.axisSide === 'right'\) \{\s*if \(x < meta\.subAxisStart\) return null;\s*\} else \{\s*if \(x < 0 \|\| x > meta\.axisPad\) return null;\s*\}/s,
+    'sub-panel Y-axis mouse hit testing should use the active axis side',
+  );
+  assert.match(
+    subPanelOrchestratorSource,
+    /geometry: \{ axisPad: number; side: 'left' \| 'right' \};/,
+    'sub-panel render orchestration should receive the Y-axis side, not only the width',
+  );
+  assert.match(
+    subPanelOrchestratorSource,
+    /ctx\.fillRect\(subAxisStart, top, geometry\.axisPad, pH\);[\s\S]*ctx\.moveTo\(geometry\.side === 'left' \? subAxisStart \+ geometry\.axisPad - 0\.5 : subAxisStart - 0\.5, top\);/,
+    'opaque sub-panel axis background and boundary should render on the active side',
+  );
+  assert.match(
+    subPanelUtilsSource,
+    /ctx\.textAlign = axisSide === 'left' \? 'right' : 'left';/,
+    'sub-panel grid labels should align to the active Y-axis side',
+  );
+  assert.match(
+    subPanelUtilsSource,
+    /const boxX = axisSide === 'left' \? 2 : width - boxW - 2;/,
+    'sub-panel value and alert boxes should anchor to the active Y-axis side',
+  );
+  assert.match(
+    subPanelCrosshairAxisSource,
+    /const boxX = axisSide === 'left' \? 2 : width - boxWidth - 2;/,
+    'sub-panel crosshair value box should anchor to the active Y-axis side',
   );
 });

@@ -83,6 +83,8 @@ export function createSubGridRenderer(params: {
   chartLeft: number;
   subChartRight: number;
   subAxisStart: number;
+  axisPad: number;
+  axisSide: 'left' | 'right';
   fontStack: string;
   textColor: string;
   getSubPlotBounds: (top: number, panelHeight: number) => SubPanelPlotBounds;
@@ -95,7 +97,7 @@ export function createSubGridRenderer(params: {
   hi: number,
   formatter?: (value: number) => string,
 ) => void {
-  const { ctx, chartLeft, subChartRight, subAxisStart, fontStack, textColor, getSubPlotBounds, formatDefault } = params;
+  const { ctx, chartLeft, subChartRight, subAxisStart, axisPad, axisSide, fontStack, textColor, getSubPlotBounds, formatDefault } = params;
   return (values, top, panelHeight, lo, hi, formatter) => {
     const { plotTop, plotH } = getSubPlotBounds(top, panelHeight);
     const range = hi - lo || 1;
@@ -103,7 +105,8 @@ export function createSubGridRenderer(params: {
     ctx.strokeStyle = '#1e2230';
     ctx.fillStyle = textColor;
     ctx.font = `12px ${fontStack}`;
-    ctx.textAlign = 'left';
+    ctx.textAlign = axisSide === 'left' ? 'right' : 'left';
+    const axisTextX = axisSide === 'left' ? axisPad - 4 : subAxisStart + 4;
     values.forEach((value) => {
       const snapped = snapSubAxisValue(value, lo, hi);
       const clamped = Math.min(hi, Math.max(lo, snapped));
@@ -112,7 +115,7 @@ export function createSubGridRenderer(params: {
       ctx.moveTo(chartLeft, y);
       ctx.lineTo(subChartRight, y);
       ctx.stroke();
-      ctx.fillText(formatter ? formatter(clamped) : formatDefault(clamped), subAxisStart + 4, y + 4);
+      ctx.fillText(formatter ? formatter(clamped) : formatDefault(clamped), axisTextX, y + 4);
     });
     ctx.restore();
   };
@@ -122,16 +125,17 @@ export function createSubAxisValueRenderer(params: {
   ctx: CanvasRenderingContext2D;
   width: number;
   axisPad: number;
+  axisSide: 'left' | 'right';
   fontStack: string;
   getSubPlotBounds: (top: number, panelHeight: number) => SubPanelPlotBounds;
 }): (value: number, top: number, panelHeight: number, lo: number, hi: number, color: string, text?: string) => void {
-  const { ctx, width, axisPad, fontStack, getSubPlotBounds } = params;
+  const { ctx, width, axisPad, axisSide, fontStack, getSubPlotBounds } = params;
   return (value, top, panelHeight, lo, hi, color, text) => {
     const { plotTop, plotH } = getSubPlotBounds(top, panelHeight);
     const range = hi - lo || 1;
     const y = plotTop + (hi - value) / range * plotH;
     const boxW = Math.max(40, Math.min(axisPad - 22, 56));
-    const boxX = width - boxW - 2;
+    const boxX = axisSide === 'left' ? 2 : width - boxW - 2;
     const normalizedText = text == null ? snapSubAxisValue(value, lo, hi).toString() : String(text);
     ctx.save();
     ctx.fillStyle = toRgba(color, 0.28, 'rgba(96,125,139,0.28)');
@@ -152,11 +156,12 @@ export function createSubAlertLinesRenderer(params: {
   subChartRight: number;
   width: number;
   axisPad: number;
+  axisSide: 'left' | 'right';
   fontStack: string;
   getSubPlotBounds: (top: number, panelHeight: number) => SubPanelPlotBounds;
   formatVolume: (value: number) => string;
 }): (panelId: string, top: number, panelHeight: number, lo: number, hi: number) => void {
-  const { ctx, alerts, hitAreas, chartLeft, subChartRight, width, axisPad, fontStack, getSubPlotBounds, formatVolume } = params;
+  const { ctx, alerts, hitAreas, chartLeft, subChartRight, width, axisPad, axisSide, fontStack, getSubPlotBounds, formatVolume } = params;
   return (panelId, top, panelHeight, lo, hi) => {
     const panelAlerts = alerts.filter((alert) => alert.enabled && alert.panelId === panelId);
     if (!panelAlerts.length) return;
@@ -186,7 +191,7 @@ export function createSubAlertLinesRenderer(params: {
       ctx.save();
       ctx.font = `12px ${fontStack}`;
       const boxW = Math.max(40, Math.min(axisPad - 22, Math.ceil(ctx.measureText(labelText).width) + 12));
-      const boxX = width - boxW - 2;
+      const boxX = axisSide === 'left' ? 2 : width - boxW - 2;
       ctx.fillStyle = toRgba(alert.color, 0.32, 'rgba(255,197,66,0.32)');
       ctx.fillRect(boxX, y - 8, boxW, 16);
       ctx.fillStyle = '#ffffff';

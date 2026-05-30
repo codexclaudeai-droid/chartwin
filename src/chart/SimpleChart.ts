@@ -5540,8 +5540,8 @@ export class SimpleChart {
     const chartLeft = geometry.chartLeft;
     const chartRight = geometry.chartRight;
     const chartW = geometry.chartWidth;
-    const subAxisStart = width - geometry.axisPad;
-    const subChartRight = subAxisStart;
+    const subAxisStart = geometry.side === 'left' ? 0 : width - geometry.axisPad;
+    const subChartRight = geometry.side === 'left' ? width : subAxisStart;
     const subChartW = Math.max(1, subChartRight - chartLeft);
     const yAxisTransparent = this.isYAxisBackgroundTransparent();
     const axisClearLeft = geometry.side === 'left' ? 0 : chartRight;
@@ -8170,7 +8170,11 @@ export class SimpleChart {
   private getSubYAxisPanel(x: number, y: number): string | null {
     const meta = this.lastDrawMeta as any;
     if (!meta?.panelTops || meta.subAxisStart == null) return null;
-    if (x < meta.subAxisStart) return null;
+    if (meta.axisSide === 'right') {
+      if (x < meta.subAxisStart) return null;
+    } else {
+      if (x < 0 || x > meta.axisPad) return null;
+    }
     const tops = meta.panelTops as Record<string, number>;
     const heights = meta.subPanelHeights as Record<string, number>;
     for (const id of Object.keys(tops)) {
