@@ -471,6 +471,24 @@ test('admin user directory table keeps stable columns inside a horizontal scroll
   assert.match(cssSource, /#admin-users \.member-directory-cell small\s*\{[\s\S]*?overflow-wrap:\s*anywhere;/);
 });
 
+test('admin user directory switches to mobile cards below tablet width', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /admin-user-mobile-list/);
+  assert.match(source, /admin-user-mobile-card/);
+  assert.match(source, /admin-user-mobile-card-header/);
+  assert.match(source, /admin-user-mobile-card-meta/);
+  assert.match(source, /admin-user-mobile-card-actions/);
+  assert.match(source, /users\.map\(\(item\) => \(/);
+  assert.match(source, /openDetail\(item\.user\.id\)/);
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-list\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-table-scroll\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-list\s*\{[\s\S]*?display: grid/);
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-card\s*\{[\s\S]*?border: 1px solid rgba\(125, 183, 255, 0\.16\)/);
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-card-actions \.button\s*\{[\s\S]*?width: 100%/);
+});
+
 test('admin user directory detail button matches the role badge pill sizing', () => {
   const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const tableButtonIndex = cssSource.indexOf(

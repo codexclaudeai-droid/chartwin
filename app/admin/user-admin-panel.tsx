@@ -664,6 +664,70 @@ export function UserAdminPanel() {
           </tbody>
         </table>
       </div>
+      <div className="admin-user-mobile-list" aria-label="모바일 회원 카드 목록">
+        {users.map((item) => (
+          <article className="admin-user-mobile-card" key={`mobile-${item.user.id}`}>
+            <div className="admin-user-mobile-card-header">
+              <div>
+                <strong>{item.user.name}</strong>
+                <small>{item.user.email}</small>
+              </div>
+              <span className={getAccountStatusClassName(item.user.accountStatus)}>
+                {formatUserAccountStatusLabel(item.user.accountStatus)}
+              </span>
+            </div>
+            <div className="admin-user-mobile-card-badges">
+              <span className="badge admin-user-role-badge">{formatUserRoleLabel(item.user.role)}</span>
+              {item.subscription ? (
+                <span className="badge admin-user-plan-badge">{formatAdminPlanTierLabel(item.subscription)}</span>
+              ) : null}
+            </div>
+            <dl className="admin-user-mobile-card-meta">
+              <div>
+                <dt>연락번호</dt>
+                <dd>{item.user.phoneNumber || '미등록'}</dd>
+              </div>
+              <div>
+                <dt>가입일</dt>
+                <dd>{formatDateTime(item.user.createdAt)}</dd>
+              </div>
+              <div>
+                <dt>구독</dt>
+                <dd>{item.subscription ? formatSubscriptionStatusLabel(item.subscription.status) : '구독 없음'}</dd>
+              </div>
+              <div>
+                <dt>차트 접근</dt>
+                <dd>{formatChartAccessLabel(item.access)}</dd>
+              </div>
+              <div>
+                <dt>최근 결제</dt>
+                <dd>
+                  {item.latestPayment
+                    ? `${formatPaymentStatusLabel(item.latestPayment.status)} · ${formatPaymentAmountUsd(item.latestPayment.amountUsd)}`
+                    : '결제 없음'}
+                </dd>
+              </div>
+              <div>
+                <dt>추천인</dt>
+                <dd>{item.referrer?.email ?? '없음'}</dd>
+              </div>
+            </dl>
+            <div className="admin-user-mobile-card-counts" aria-label="운영 상태 요약">
+              <span>결제 <strong>{item.paymentCount}</strong></span>
+              <span>문의 <strong>{item.supportThreadCount}</strong></span>
+              <span>알림 <strong>{item.unreadNotificationCount}</strong></span>
+            </div>
+            <div className="admin-user-mobile-card-actions">
+              <button className="button secondary" type="button" onClick={() => openDetail(item.user.id)} disabled={isBusy}>
+                상세 보기
+              </button>
+            </div>
+          </article>
+        ))}
+        {users.length === 0 && (
+          <p className="admin-user-mobile-empty">표시할 회원이 없습니다.</p>
+        )}
+      </div>
       <div className="thread-list admin-detail-panel">
         <p className="notice">{detailMessage}</p>
         {detail && (
