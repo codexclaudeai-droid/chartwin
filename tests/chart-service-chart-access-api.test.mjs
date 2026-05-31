@@ -67,9 +67,14 @@ test('chart access API blocks authenticated members before subscription approval
   assert.match(payload.message, /구독 승인 후 이용 가능/);
 });
 
-test('chart runtime waits for access approval before importing the chart engine', () => {
+test('chart runtime skips the duplicate client access check after server approval', () => {
   const source = readFileSync(new URL('../app/chart/chart-runtime.tsx', import.meta.url), 'utf8');
+  const pageSource = readFileSync(new URL('../app/chart/page.tsx', import.meta.url), 'utf8');
 
+  assert.match(pageSource, /<ChartRuntime accessVerified \/>/);
+  assert.match(source, /accessVerified = false/);
+  assert.match(source, /accessVerified \? 'allowed' : 'checking'/);
+  assert.match(source, /if \(accessVerified\)/);
   assert.match(source, /fetch\('\/api\/chart\/access'/);
   assert.match(source, /payload\.fullChart !== true/);
   assert.match(source, /void import\('\.\.\/\.\.\/src\/main\.ts'\)/);

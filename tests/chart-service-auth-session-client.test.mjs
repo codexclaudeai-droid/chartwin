@@ -116,3 +116,34 @@ test('auth session client does not let stale in-flight checks overwrite a primed
     globalThis.fetch = originalFetch;
   }
 });
+
+test('auth session client preserves admin role when optional profile fields are absent', async () => {
+  const {
+    clearAuthSessionCache,
+    getAuthSession,
+  } = await import('../app/auth-session-client.ts');
+  const originalFetch = globalThis.fetch;
+
+  try {
+    clearAuthSessionCache();
+    globalThis.fetch = async () => new Response(JSON.stringify({
+      authenticated: true,
+      actor: { id: 'admin_1', role: 'admin' },
+      user: {
+        id: 'admin_1',
+        email: 'admin@example.com',
+        name: 'Admin',
+        role: 'admin',
+      },
+    }), { status: 200 });
+
+    const session = await getAuthSession();
+
+    assert.equal(session.authenticated, true);
+    assert.equal(session.user?.role, 'admin');
+    assert.equal(session.user?.profileImageDataUrl, null);
+  } finally {
+    clearAuthSessionCache();
+    globalThis.fetch = originalFetch;
+  }
+});

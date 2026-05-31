@@ -4,9 +4,9 @@ export type AuthSessionUser = {
   id: string;
   email: string;
   name: string;
-  profileImageDataUrl: string | null;
+  profileImageDataUrl?: string | null;
   role: string;
-  accountStatus: string;
+  accountStatus?: string;
 };
 
 export type AuthSessionPayload = {
@@ -84,19 +84,38 @@ function normalizeAuthSessionPayload(payload: unknown): AuthSessionPayload {
   return {
     authenticated: true,
     actor: payload.actor,
-    user: isAuthSessionUser(payload.user) ? payload.user : null,
+    user: normalizeAuthSessionUser(payload.user),
     message: typeof payload.message === 'string' ? payload.message : undefined,
   };
 }
 
-function isAuthSessionUser(value: unknown): value is AuthSessionUser {
-  return isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.email === 'string' &&
-    typeof value.name === 'string' &&
-    (typeof value.profileImageDataUrl === 'string' || value.profileImageDataUrl === null) &&
-    typeof value.role === 'string' &&
-    typeof value.accountStatus === 'string';
+function normalizeAuthSessionUser(value: unknown): AuthSessionUser | null {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    typeof value.email !== 'string' ||
+    typeof value.name !== 'string' ||
+    typeof value.role !== 'string'
+  ) {
+    return null;
+  }
+
+  const profileImageDataUrl = normalizeNullableString(value.profileImageDataUrl);
+  const accountStatus = typeof value.accountStatus === 'string' ? value.accountStatus : undefined;
+
+  return {
+    id: value.id,
+    email: value.email,
+    name: value.name,
+    role: value.role,
+    profileImageDataUrl,
+    accountStatus,
+  };
+}
+
+function normalizeNullableString(value: unknown): string | null {
+  if (typeof value === 'string') return value;
+  return null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

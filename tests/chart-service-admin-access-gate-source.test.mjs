@@ -16,3 +16,8 @@ test('admin access gate redirects unauthenticated visitors to login entry', () =
   assert.match(gateSource, /router\.replace\('\/login\?redirect=\/admin'\)/);
   assert.match(gateSource, /state === 'login_required'/);
 });
+
+test('admin access gate can authorize from actor role fallback', () => {
+  assert.match(gateSource, /actor\?: \{/);
+  assert.match(gateSource, /payload\.user\?\.role \?\? payload\.actor\?\.role/);
+});

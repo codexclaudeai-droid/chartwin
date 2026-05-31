@@ -11,13 +11,27 @@ type ChartAccessPayload = {
 
 type ChartRuntimeStatus = 'checking' | 'allowed' | 'login_required' | 'blocked' | 'error';
 
-export function ChartRuntime() {
+type ChartRuntimeProps = {
+  accessVerified?: boolean;
+};
+
+export function ChartRuntime({ accessVerified = false }: ChartRuntimeProps) {
   const bootedRef = useRef(false);
-  const [status, setStatus] = useState<ChartRuntimeStatus>('checking');
+  const [status, setStatus] = useState<ChartRuntimeStatus>(() => (
+    accessVerified ? 'allowed' : 'checking'
+  ));
   const [message, setMessage] = useState('차트 접근 권한을 확인하고 있습니다.');
 
   useEffect(() => {
     let cancelled = false;
+
+    function bootChartEngine() {
+      window.requestAnimationFrame(() => {
+        if (cancelled || bootedRef.current) return;
+        bootedRef.current = true;
+        void import('../../src/main.ts');
+      });
+    }
 
     async function verifyAccess() {
       try {
@@ -33,11 +47,7 @@ export function ChartRuntime() {
 
         if (cancelled) return;
         setStatus('allowed');
-        window.requestAnimationFrame(() => {
-          if (cancelled || bootedRef.current) return;
-          bootedRef.current = true;
-          void import('../../src/main.ts');
-        });
+        bootChartEngine();
       } catch {
         if (cancelled) return;
         setStatus('error');
@@ -45,12 +55,20 @@ export function ChartRuntime() {
       }
     }
 
+    if (accessVerified) {
+      setStatus('allowed');
+      bootChartEngine();
+      return () => {
+        cancelled = true;
+      };
+    }
+
     void verifyAccess();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [accessVerified]);
 
   return (
     <main className={`chart-runtime-page chart-runtime-${status}`} aria-label="TC Chart 런타임">

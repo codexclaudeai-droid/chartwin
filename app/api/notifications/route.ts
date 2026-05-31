@@ -8,19 +8,25 @@ import {
 
 export async function GET(request: NextRequest) {
   const persistence = getAsyncChartServicePersistence();
+  const summaryOnly = request.nextUrl.searchParams.get('summary') === '1';
   try {
     const result = await persistence.runRead(async (repository) => {
       const actor = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
-      const [notifications, summary] = await Promise.all([
-        listAsyncNotificationsForUser(repository, { actor }),
-        getAsyncNotificationSummaryForUser(repository, { actor }),
-      ]);
+      if (summaryOnly) {
+        const summary = await getAsyncNotificationSummaryForUser(repository, { actor });
+        return { notifications: null, summary };
+      }
+      const notifications = await listAsyncNotificationsForUser(repository, { actor });
+      const summary = {
+        totalCount: notifications.length,
+        unreadCount: notifications.filter((notification) => !notification.readAt).length,
+      };
       return { notifications, summary };
     });
 
     return NextResponse.json({
       ok: true,
-      notifications: result.notifications,
+      ...(summaryOnly ? {} : { notifications: result.notifications }),
       summary: result.summary,
     });
   } catch (error) {

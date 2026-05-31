@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { formatNotificationBadgeCount } from '../src/domain/chart-service/index.ts';
 import { subscribeAuthSessionChangedEvent } from './auth-events';
 import { subscribeNotificationsRefreshEvent } from './notification-events';
+import { getNotificationSummary } from './notification-summary-client';
 import { getNotificationCenterHref } from './notifications/notification-display';
 
 const NOTIFICATION_BADGE_POLL_INTERVAL_MS = 60 * 1000;
@@ -16,16 +17,15 @@ export function NotificationNavLink() {
   useEffect(() => {
     let isMounted = true;
 
-    async function refreshBadge() {
-      const response = await fetch('/api/notifications', { cache: 'no-store' });
-      if (!response.ok) {
+    async function refreshBadge(options: { force?: boolean } = {}) {
+      const payload = await getNotificationSummary(options);
+      if (!payload.ok || !payload.summary) {
         if (isMounted) {
           setBadge(null);
           setNotificationHref('/notifications');
         }
         return;
       }
-      const payload = await response.json();
       if (isMounted) {
         const unreadCount = payload.summary?.unreadCount ?? 0;
         setBadge(formatNotificationBadgeCount(unreadCount));
@@ -35,14 +35,14 @@ export function NotificationNavLink() {
 
     void refreshBadge();
     const unsubscribe = subscribeNotificationsRefreshEvent(() => {
-      void refreshBadge();
+      void refreshBadge({ force: true });
     });
     const unsubscribeAuth = subscribeAuthSessionChangedEvent(() => {
-      void refreshBadge();
+      void refreshBadge({ force: true });
     });
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible') {
-        void refreshBadge();
+        void refreshBadge({ force: true });
       }
     }
 

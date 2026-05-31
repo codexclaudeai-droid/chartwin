@@ -42,6 +42,17 @@ test('user read routes use the async persistence boundary', () => {
   }
 });
 
+test('notifications API supports a summary-only badge request path', () => {
+  const routeSource = readFileSync(new URL('../app/api/notifications/route.ts', import.meta.url), 'utf8');
+  const navSource = readFileSync(new URL('../app/notification-nav-link.tsx', import.meta.url), 'utf8');
+
+  assert.match(routeSource, /summaryOnly/);
+  assert.match(routeSource, /request\.nextUrl\.searchParams\.get\('summary'\) === '1'/);
+  assert.match(routeSource, /getAsyncNotificationSummaryForUser/);
+  assert.match(navSource, /getNotificationSummary/);
+  assert.doesNotMatch(navSource, /fetch\('\/api\/notifications'/);
+});
+
 test('auth responses do not expose password hashes', async () => {
   const { resetChartServiceRateLimits } = await import('../src/server/chart-service/index.ts');
   const loginRoute = await import('../app/api/auth/login/route.ts');

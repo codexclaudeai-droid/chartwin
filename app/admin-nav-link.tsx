@@ -8,8 +8,11 @@ import { canShowAdminNavigation } from './admin-nav-model';
 
 type AdminNavSessionPayload = {
   authenticated?: boolean;
+  actor?: {
+    role?: string;
+  } | null;
   user?: {
-    role: string;
+    role?: string;
   } | null;
 };
 
@@ -18,7 +21,7 @@ export function AdminNavLink() {
 
   async function refreshAccess() {
     const payload = await getAuthSession() as AdminNavSessionPayload;
-    setCanShow(Boolean(payload.authenticated) && canShowAdminNavigation(payload.user?.role));
+    setCanShow(Boolean(payload.authenticated) && canShowAdminNavigation(payload.user?.role ?? payload.actor?.role));
   }
 
   useEffect(() => {

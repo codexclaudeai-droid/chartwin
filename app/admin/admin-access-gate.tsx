@@ -9,8 +9,11 @@ import { getAdminAccessState, type AdminAccessState } from './admin-access-model
 
 type AdminAccessPayload = {
   authenticated?: boolean;
+  actor?: {
+    role?: string;
+  } | null;
   user?: {
-    role: string;
+    role?: string;
   } | null;
   message?: string;
 };
@@ -36,7 +39,7 @@ export function AdminAccessGate({ children }: Readonly<{ children: ReactNode }>)
 
     const nextState = getAdminAccessState({
       authenticated: Boolean(payload.authenticated),
-      role: payload.user?.role,
+      role: payload.user?.role ?? payload.actor?.role,
     });
     setState(nextState);
     if (nextState === 'login_required') {

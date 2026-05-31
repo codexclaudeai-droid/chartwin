@@ -25,7 +25,7 @@ export default async function ChartPage() {
     });
 
     if (access.fullChart) {
-      return <ChartRuntime />;
+      return <ChartRuntime accessVerified />;
     }
 
     return (
