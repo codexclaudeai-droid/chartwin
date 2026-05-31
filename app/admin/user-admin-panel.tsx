@@ -10,6 +10,7 @@ import {
   type UserRole,
 } from '../../src/domain/chart-service/index.ts';
 import { subscribeAuthSessionChangedEvent } from '../auth-events';
+import { NumberStepper } from '../shared/number-stepper';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
 import { formatAdminDisplayId, getAdminDisplaySequence } from './admin-display-id';
 import { subscribeAdminQueuePresetEvent } from './admin-queue-preset-events';
@@ -974,13 +975,12 @@ export function UserAdminPanel() {
             </div>
             {accountPermissionNotice && <p className="notice">{accountPermissionNotice}</p>}
             <div className="admin-filter-row admin-user-detail-control-grid free-trial-allowance">
-              <input
-                aria-label="무료체험 재신청 가능 횟수"
-                inputMode="numeric"
-                min="0"
-                type="number"
-                value={freeTrialAllowanceCount}
-                onChange={(event) => setFreeTrialAllowanceCount(event.target.value)}
+              <NumberStepper
+                ariaLabel="무료체험 재신청 가능 횟수"
+                id="admin-user-free-trial-allowance-count"
+                min={0}
+                value={Number(freeTrialAllowanceCount) || 0}
+                onChange={(value) => setFreeTrialAllowanceCount(String(value))}
                 placeholder="무료체험 재신청 가능 횟수"
               />
               <input

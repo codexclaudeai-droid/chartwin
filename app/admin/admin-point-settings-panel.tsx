@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { NumberStepper } from '../shared/number-stepper';
 import { AdminRefreshButton } from './admin-refresh-button';
 
 type PointProgramSettings = {
@@ -63,10 +64,10 @@ export function AdminPointSettingsPanel() {
     setMessage('포인트 정책을 저장했습니다. 이후 생성되는 포인트와 영업팀에 적용됩니다.');
   }
 
-  function updatePercent(field: keyof Omit<PointProgramSettings, 'updatedAt'>, value: string) {
+  function updatePercent(field: keyof Omit<PointProgramSettings, 'updatedAt'>, value: number) {
     setSettings((current) => ({
       ...current,
-      [field]: Number(value),
+      [field]: value,
     }));
   }
 
@@ -83,52 +84,56 @@ export function AdminPointSettingsPanel() {
         <div className="settings-grid">
           <label>
             정회원 구독 캐시백포인트
-            <input
-              aria-label="정회원 구독 캐시백포인트"
-              max="100"
-              min="0"
-              onChange={(event) => updatePercent('subscriberCashbackPercent', event.target.value)}
-              step="0.01"
-              type="number"
+            <NumberStepper
+              ariaLabel="정회원 구독 캐시백포인트"
+              id="point-subscriber-cashback-percent"
+              max={100}
+              min={0}
+              onChange={(value) => updatePercent('subscriberCashbackPercent', value)}
+              step={0.01}
+              inputMode="decimal"
               value={settings.subscriberCashbackPercent}
               required
             />
           </label>
           <label>
             추천포인트
-            <input
-              aria-label="추천포인트"
-              max="100"
-              min="0"
-              onChange={(event) => updatePercent('rewardPercent', event.target.value)}
-              step="0.01"
-              type="number"
+            <NumberStepper
+              ariaLabel="추천포인트"
+              id="point-reward-percent"
+              max={100}
+              min={0}
+              onChange={(value) => updatePercent('rewardPercent', value)}
+              step={0.01}
+              inputMode="decimal"
               value={settings.rewardPercent}
               required
             />
           </label>
           <label>
             영업자 포인트
-            <input
-              aria-label="영업자 포인트"
-              max="100"
-              min="0"
-              onChange={(event) => updatePercent('salespersonRewardPercent', event.target.value)}
-              step="0.01"
-              type="number"
+            <NumberStepper
+              ariaLabel="영업자 포인트"
+              id="point-salesperson-reward-percent"
+              max={100}
+              min={0}
+              onChange={(value) => updatePercent('salespersonRewardPercent', value)}
+              step={0.01}
+              inputMode="decimal"
               value={settings.salespersonRewardPercent}
               required
             />
           </label>
           <label>
             영업팀 포인트
-            <input
-              aria-label="영업팀 포인트"
-              max="100"
-              min="0"
-              onChange={(event) => updatePercent('salesTeamRewardPercent', event.target.value)}
-              step="0.01"
-              type="number"
+            <NumberStepper
+              ariaLabel="영업팀 포인트"
+              id="point-sales-team-reward-percent"
+              max={100}
+              min={0}
+              onChange={(value) => updatePercent('salesTeamRewardPercent', value)}
+              step={0.01}
+              inputMode="decimal"
               value={settings.salesTeamRewardPercent}
               required
             />

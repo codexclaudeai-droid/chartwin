@@ -148,13 +148,13 @@ test('admin web info panel and routes are wired into operations UI', () => {
 test('admin web info submenu uses dark admin tab styling', () => {
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const submenuRule = cssSource.match(
-    /body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-web-info-tabs\s*\{(?<body>[^}]*)\}/,
+    /body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-web-info-tabs[\s\S]*?\{(?<body>[^}]*)\}/,
   )?.groups?.body ?? '';
   const linkRule = cssSource.match(
-    /body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-web-info-tabs a\s*\{(?<body>[^}]*)\}/,
+    /body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-web-info-tabs a[\s\S]*?\{(?<body>[^}]*)\}/,
   )?.groups?.body ?? '';
   const activeRule = cssSource.match(
-    /body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-web-info-tabs a:hover,[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-web-info-tabs a\[aria-current="page"\]\s*\{(?<body>[^}]*)\}/,
+    /body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-web-info-tabs a:hover,[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-web-info-tabs a\[aria-current="page"\][\s\S]*?\{(?<body>[^}]*)\}/,
   )?.groups?.body ?? '';
 
   assert.match(submenuRule, /background:\s*rgba\(2, 7, 19, 0\.62\)/);
@@ -169,14 +169,24 @@ test('admin web info submenu uses dark admin tab styling', () => {
   assert.match(activeRule, /box-shadow:\s*none/);
 });
 
-test('admin web info save button centers its label', () => {
+test('global button style centers labels by default', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const baseButtonRule = cssSource.match(
+    /\.button\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(baseButtonRule, /display:\s*inline-flex/);
+  assert.match(baseButtonRule, /align-items:\s*center/);
+  assert.match(baseButtonRule, /justify-content:\s*center/);
+  assert.match(baseButtonRule, /text-align:\s*center/);
+});
+
+test('admin web info save button keeps full width while using global label centering', () => {
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const saveButtonRule = cssSource.match(
     /body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-web-info-form > \.button\s*\{(?<body>[^}]*)\}/,
   )?.groups?.body ?? '';
 
-  assert.match(saveButtonRule, /justify-content:\s*center/);
-  assert.match(saveButtonRule, /text-align:\s*center/);
   assert.match(saveButtonRule, /width:\s*100%/);
 });
 
@@ -203,18 +213,16 @@ test('admin plan service editor separates each service into editable rows', () =
   assert.match(rowRule, /grid-template-columns:\s*minmax\(0, 1fr\) auto/);
 });
 
-test('admin payment settings save button centers its label', () => {
+test('admin payment settings save button keeps full width while using global label centering', () => {
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const saveButtonRule = cssSource.match(
     /body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-payment-settings-form > \.button\s*\{(?<body>[^}]*)\}/,
   )?.groups?.body ?? '';
 
-  assert.match(saveButtonRule, /justify-content:\s*center/);
-  assert.match(saveButtonRule, /text-align:\s*center/);
   assert.match(saveButtonRule, /width:\s*100%/);
 });
 
-test('admin point settings save button centers its label', () => {
+test('admin point settings save button keeps full width while using global label centering', () => {
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-point-settings-panel.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const saveButtonRule = cssSource.match(
@@ -224,7 +232,5 @@ test('admin point settings save button centers its label', () => {
   assert.match(panelSource, /salesTeamRewardPercent/);
   assert.match(panelSource, /영업팀 포인트/);
   assert.match(panelSource, /salesTeamRewardPercent: 50/);
-  assert.match(saveButtonRule, /justify-content:\s*center/);
-  assert.match(saveButtonRule, /text-align:\s*center/);
   assert.match(saveButtonRule, /width:\s*100%/);
 });

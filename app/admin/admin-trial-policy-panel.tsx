@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { NumberStepper } from '../shared/number-stepper';
 import { AdminRefreshButton } from './admin-refresh-button';
 
 type FreeTrialPolicySettings = {
@@ -87,26 +88,27 @@ export function AdminTrialPolicyPanel() {
         <div className="settings-grid">
           <label>
             기본 무료체험 일수
-            <input
-              aria-label="기본 무료체험 일수"
-              min="1"
-              max="365"
-              onChange={(event) => updateSetting('baseDurationDays', Number(event.target.value))}
-              type="number"
+            <NumberStepper
+              ariaLabel="기본 무료체험 일수"
+              id="trial-policy-base-duration-days"
+              min={1}
+              max={365}
+              onChange={(value) => updateSetting('baseDurationDays', value)}
               value={settings.baseDurationDays}
               required
             />
           </label>
           <label>
             이벤트 무료체험 일수
-            <input
-              aria-label="이벤트 무료체험 일수"
-              min="1"
-              max="365"
-              onChange={(event) => updateSetting('eventDurationDays', event.target.value ? Number(event.target.value) : null)}
+            <NumberStepper
+              ariaLabel="이벤트 무료체험 일수"
+              id="trial-policy-event-duration-days"
+              min={1}
+              max={365}
+              onChange={(value) => updateSetting('eventDurationDays', value === '' ? null : value)}
               placeholder="기본 일수 사용"
-              type="number"
               value={settings.eventDurationDays ?? ''}
+              allowEmpty
             />
           </label>
           <label>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { NumberStepper } from '../shared/number-stepper';
 import { formatAdminPlanPeriodLabel } from './admin-plan-labels';
 import { dispatchAdminQueuePresetEvent } from './admin-queue-preset-events';
 import { AdminRefreshButton } from './admin-refresh-button';
@@ -142,8 +143,8 @@ export function AdminSalesPanel() {
   const [selectedSalespersonId, setSelectedSalespersonId] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState('');
-  const [commissionPercent, setCommissionPercent] = useState('30');
-  const [teamCommissionPercent, setTeamCommissionPercent] = useState('50');
+  const [commissionPercent, setCommissionPercent] = useState(30);
+  const [teamCommissionPercent, setTeamCommissionPercent] = useState(50);
   const [teamName, setTeamName] = useState('');
   const [isSalespersonSearchOpen, setIsSalespersonSearchOpen] = useState(false);
   const [highlightedSalespersonIndex, setHighlightedSalespersonIndex] = useState(0);
@@ -295,7 +296,7 @@ export function AdminSalesPanel() {
       body: JSON.stringify({
         action: 'updateSalesTeamCommission',
         teamId: selectedTeamId,
-        commissionPercent: Number(teamCommissionPercent),
+        commissionPercent: teamCommissionPercent,
       }),
     });
     const payload = await response.json() as SalesResponse;
@@ -322,7 +323,7 @@ export function AdminSalesPanel() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         salespersonId: selectedSalespersonId,
-        commissionPercent: Number(commissionPercent),
+        commissionPercent,
       }),
     });
     const payload = await response.json() as SalesResponse;
@@ -377,8 +378,8 @@ export function AdminSalesPanel() {
         ? currentCustomerId
         : nextSummary.customers[0]?.id ?? ''
     ));
-    setCommissionPercent(String(nextSummary.selectedSalesperson?.commissionPercent ?? nextSummary.defaultPercent));
-    setTeamCommissionPercent(String(nextSummary.selectedTeam?.commissionPercent ?? nextSummary.defaultTeamPercent));
+    setCommissionPercent(nextSummary.selectedSalesperson?.commissionPercent ?? nextSummary.defaultPercent);
+    setTeamCommissionPercent(nextSummary.selectedTeam?.commissionPercent ?? nextSummary.defaultTeamPercent);
   }
 
   function selectSalesperson(salespersonId: string) {
@@ -642,12 +643,14 @@ export function AdminSalesPanel() {
             <div className="sales-commission-row">
               <label>
                 <span>영업팀 정산율</span>
-                <input
-                  max="100"
-                  min="0"
-                  onChange={(event) => setTeamCommissionPercent(event.target.value)}
-                  step="0.1"
-                  type="number"
+                <NumberStepper
+                  ariaLabel="영업팀 정산율"
+                  id="sales-team-commission-percent"
+                  max={100}
+                  min={0}
+                  onChange={setTeamCommissionPercent}
+                  step={0.1}
+                  inputMode="decimal"
                   value={teamCommissionPercent}
                 />
               </label>
@@ -740,12 +743,14 @@ export function AdminSalesPanel() {
           <div className="sales-commission-row">
             <label>
               <span>개별 정산율</span>
-              <input
-                max="100"
-                min="0"
-                onChange={(event) => setCommissionPercent(event.target.value)}
-                step="0.1"
-                type="number"
+              <NumberStepper
+                ariaLabel="개별 정산율"
+                id="salesperson-commission-percent"
+                max={100}
+                min={0}
+                onChange={setCommissionPercent}
+                step={0.1}
+                inputMode="decimal"
                 value={commissionPercent}
               />
             </label>

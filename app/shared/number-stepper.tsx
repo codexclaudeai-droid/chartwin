@@ -1,31 +1,61 @@
 'use client';
 
-type NumberStepperProps = {
+type NumberStepperBaseProps = {
   id: string;
-  value: number;
-  onChange: (value: number) => void;
   disabled?: boolean;
   min?: number;
   max?: number;
   step?: number;
   className?: string;
+  ariaLabel?: string;
+  placeholder?: string;
+  required?: boolean;
+  inputMode?: 'numeric' | 'decimal';
 };
 
-export function NumberStepper({
-  id,
-  value,
-  onChange,
-  disabled = false,
-  min,
-  max,
-  step = 1,
-  className = '',
-}: NumberStepperProps) {
-  const classNames = ['number-stepper', className].filter(Boolean).join(' ');
+type StrictNumberStepperProps = NumberStepperBaseProps & {
+  value: number;
+  onChange: (value: number) => void;
+  allowEmpty?: false;
+};
 
-  function updateValue(nextValue: number) {
+type EmptyNumberStepperProps = NumberStepperBaseProps & {
+  value: number | '';
+  onChange: (value: number | '') => void;
+  allowEmpty: true;
+};
+
+type NumberStepperProps = StrictNumberStepperProps | EmptyNumberStepperProps;
+
+export function NumberStepper(props: NumberStepperProps) {
+  const {
+    id,
+    value,
+    disabled = false,
+    min,
+    max,
+    step = 1,
+    className = '',
+    ariaLabel,
+    placeholder,
+    required = false,
+    inputMode = 'numeric',
+  } = props;
+  const classNames = ['number-stepper', className].filter(Boolean).join(' ');
+  const numericValue = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+
+  function updateValue(nextValue: number | '') {
+    if (nextValue === '') {
+      if (props.allowEmpty) props.onChange('');
+      return;
+    }
     if (!Number.isFinite(nextValue)) return;
-    onChange(clampNumber(nextValue, min, max));
+    const clampedValue = clampNumber(nextValue, min, max);
+    if (props.allowEmpty) {
+      props.onChange(clampedValue);
+      return;
+    }
+    props.onChange(clampedValue);
   }
 
   return (
@@ -33,28 +63,31 @@ export function NumberStepper({
       <input
         disabled={disabled}
         id={id}
-        inputMode="numeric"
+        aria-label={ariaLabel}
+        inputMode={inputMode}
         max={max}
         min={min}
+        placeholder={placeholder}
+        required={required}
         step={step}
         type="number"
         value={value}
-        onChange={(event) => updateValue(Number(event.target.value))}
+        onChange={(event) => updateValue(event.target.value === '' ? '' : Number(event.target.value))}
       />
       <div className="number-stepper-controls" aria-hidden="true">
         <button
           type="button"
           tabIndex={-1}
-          disabled={disabled || (typeof max === 'number' && value >= max)}
-          onClick={() => updateValue(value + step)}
+          disabled={disabled || (typeof max === 'number' && numericValue >= max)}
+          onClick={() => updateValue(numericValue + step)}
         >
           <ChevronUpIcon />
         </button>
         <button
           type="button"
           tabIndex={-1}
-          disabled={disabled || (typeof min === 'number' && value <= min)}
-          onClick={() => updateValue(value - step)}
+          disabled={disabled || (typeof min === 'number' && numericValue <= min)}
+          onClick={() => updateValue(numericValue - step)}
         >
           <ChevronDownIcon />
         </button>
