@@ -6,6 +6,7 @@ export * from './auth.ts';
 export * from './passwords.ts';
 export * from './password-reset.ts';
 export * from './email-verification.ts';
+export * from './social-auth.ts';
 export * from './email-delivery.ts';
 export * from './csrf.ts';
 export * from './mutation-guard.ts';

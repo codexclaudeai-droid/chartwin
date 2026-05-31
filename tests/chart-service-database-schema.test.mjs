@@ -13,6 +13,7 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.deepEqual(tableNames, [
     'users',
     'auth_sessions',
+    'social_auth_accounts',
     'password_reset_tokens',
     'email_verification_tokens',
     'subscription_plans',
@@ -45,6 +46,9 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'users')?.columns.referred_by_user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'users')?.columns.created_at.type, 'timestamptz');
   assert.equal(tables.find((table) => table.name === 'users')?.columns.email_verified_at.nullable, true);
+  assert.equal(tables.find((table) => table.name === 'social_auth_accounts')?.columns.provider.type, 'text');
+  assert.equal(tables.find((table) => table.name === 'social_auth_accounts')?.columns.provider_user_id.type, 'text');
+  assert.equal(tables.find((table) => table.name === 'social_auth_accounts')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'password_reset_tokens')?.columns.token_hash.type, 'text');
   assert.equal(tables.find((table) => table.name === 'password_reset_tokens')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'email_verification_tokens')?.columns.token_hash.type, 'text');

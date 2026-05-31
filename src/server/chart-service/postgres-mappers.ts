@@ -25,6 +25,7 @@ import type {
   ServiceUserRecord,
   SignupAgreementRecord,
   SignalAdminSettingsRecord,
+  SocialAuthAccountRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 import { createStableFallbackReferralCode } from './referral-codes.ts';
@@ -109,6 +110,30 @@ export function mapAuthSessionToPostgresRow(record: AuthSessionRecord): Postgres
     user_id: record.userId,
     created_at: record.createdAt,
     expires_at: record.expiresAt,
+  };
+}
+
+export function mapSocialAuthAccountFromPostgresRow(row: PostgresRow): SocialAuthAccountRecord {
+  return {
+    id: readString(row.id),
+    provider: readString(row.provider) as SocialAuthAccountRecord['provider'],
+    providerUserId: readString(row.provider_user_id),
+    userId: readString(row.user_id),
+    email: readString(row.email),
+    createdAt: readIsoString(row.created_at),
+    updatedAt: readIsoString(row.updated_at),
+  };
+}
+
+export function mapSocialAuthAccountToPostgresRow(record: SocialAuthAccountRecord): PostgresRow {
+  return {
+    id: record.id,
+    provider: record.provider,
+    provider_user_id: record.providerUserId,
+    user_id: record.userId,
+    email: record.email,
+    created_at: record.createdAt,
+    updated_at: record.updatedAt,
   };
 }
 

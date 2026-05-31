@@ -32,6 +32,8 @@ import type {
   ServiceUserRecord,
   SignupAgreementRecord,
   SignalAdminSettingsRecord,
+  SocialAuthAccountRecord,
+  SocialAuthProvider,
   WebInfoSettingsRecord,
 } from './repository.ts';
 import { getDefaultChartServiceSubscriptionPlans } from './bootstrap.ts';
@@ -42,6 +44,7 @@ import { createStableFallbackReferralCode } from './referral-codes.ts';
 export type MockChartServiceState = {
   idSeq: number;
   users: ServiceUserRecord[];
+  socialAuthAccounts: SocialAuthAccountRecord[];
   sessions: AuthSessionRecord[];
   passwordResetTokens: PasswordResetTokenRecord[];
   emailVerificationTokens: EmailVerificationTokenRecord[];
@@ -85,6 +88,7 @@ export function createMockChartServiceState(): MockChartServiceState {
       createMockUser({ id: 'admin_1', email: 'admin@example.com', name: 'Admin', role: USER_ROLES.admin }),
       createMockUser({ id: 'super_1', email: 'super@example.com', name: 'Super Admin', role: USER_ROLES.superAdmin }),
     ],
+    socialAuthAccounts: [],
     sessions: [],
     passwordResetTokens: [],
     emailVerificationTokens: [],
@@ -219,6 +223,7 @@ export function createMockChartServiceRepository(
   state: MockChartServiceState = createMockChartServiceState(),
 ): ChartServiceRepository {
   state.passwordResetTokens ??= [];
+  state.socialAuthAccounts ??= [];
   state.emailVerificationTokens ??= [];
   state.emailOutbox ??= [];
   state.referralProgramSettings ??= null;
@@ -249,6 +254,19 @@ export function createMockChartServiceRepository(
     getUserByEmail: (email) => cloneOrNull(state.users.find((user) => user.email.toLowerCase() === email.toLowerCase())),
     saveUser(user) {
       upsertById(state.users, user);
+    },
+    getSocialAuthAccount(provider: SocialAuthProvider, providerUserId: string) {
+      return cloneOrNull(state.socialAuthAccounts.find((account) => (
+        account.provider === provider && account.providerUserId === providerUserId
+      )));
+    },
+    listSocialAuthAccountsByUserId(userId: string) {
+      return state.socialAuthAccounts
+        .filter((account) => account.userId === userId)
+        .map((account) => ({ ...account }));
+    },
+    saveSocialAuthAccount(account: SocialAuthAccountRecord) {
+      upsertByCompositeKey(state.socialAuthAccounts, account, ['provider', 'providerUserId']);
     },
     getSessionById: (id) => cloneOrNull(state.sessions.find((session) => session.id === id)),
     listSessionsByUserId(userId) {
@@ -483,6 +501,19 @@ function upsertById<T extends { id: string }>(rows: T[], row: T): void {
 
 function upsertByKey<T extends Record<string, unknown>, K extends keyof T>(rows: T[], row: T, key: K): void {
   const index = rows.findIndex((item) => item[key] === row[key]);
+  if (index >= 0) {
+    rows[index] = structuredClone(row);
+  } else {
+    rows.push(structuredClone(row));
+  }
+}
+
+function upsertByCompositeKey<T extends Record<string, unknown>, K extends keyof T>(
+  rows: T[],
+  row: T,
+  keys: K[],
+): void {
+  const index = rows.findIndex((item) => keys.every((key) => item[key] === row[key]));
   if (index >= 0) {
     rows[index] = structuredClone(row);
   } else {

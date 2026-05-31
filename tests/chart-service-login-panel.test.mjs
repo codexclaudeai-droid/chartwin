@@ -6,9 +6,25 @@ test('login panel uses email and password instead of userId-only demo login', ()
   const source = readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
 
   assert.match(source, /name="email"/);
-  assert.match(source, /type="password"/);
+  assert.match(source, /name="password"/);
   assert.doesNotMatch(source, /name="userId"/);
   assert.doesNotMatch(source, /JSON\.stringify\(\{ userId/);
+});
+
+test('login panel lets users reveal and hide the password input', () => {
+  const source = readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /import \{ Eye, EyeOff \} from 'lucide-react';/);
+  assert.match(source, /const \[isPasswordVisible, setIsPasswordVisible\] = useState\(false\);/);
+  assert.match(source, /type=\{isPasswordVisible \? 'text' : 'password'\}/);
+  assert.match(source, /aria-label=\{isPasswordVisible \? '비밀번호 숨기기' : '비밀번호 보기'\}/);
+  assert.match(source, /aria-pressed=\{isPasswordVisible\}/);
+  assert.match(source, /className="password-input-shell"/);
+  assert.match(source, /className="password-visibility-toggle"/);
+  assert.match(source, /isPasswordVisible \? <EyeOff aria-hidden="true" \/> : <Eye aria-hidden="true" \/>/);
+  assert.match(styleSource, /\.password-input-shell/);
+  assert.match(styleSource, /\.password-visibility-toggle/);
 });
 
 test('login panel does not expose demo account shortcuts or default credentials', () => {

@@ -645,9 +645,12 @@ test('signup panel keeps email duplicate check compact and marks password confir
   const emailButton = source.match(/<button className="button secondary" type="button" onClick=\{checkEmailAvailability\}[\s\S]*?<\/button>/)?.[0] ?? '';
 
   assert.match(emailButton, /중복확인/);
+  assert.match(source, /signup-field-row/);
   assert.match(source, /<span className="required-mark" aria-hidden="true">\*<\/span>\s*비밀번호 확인/);
   assert.match(cssSource, /\.email-check-row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s*minmax\(92px,\s*auto\)/);
   assert.match(cssSource, /\.email-check-row \.button\s*\{[\s\S]*?white-space:\s*nowrap/);
+  assert.match(cssSource, /\.signup-field-row\s*\{[\s\S]*?grid-template-columns:\s*116px minmax\(0,\s*1fr\)/);
+  assert.match(cssSource, /@media \(max-width:\s*640px\)\s*\{[\s\S]*?\.signup-field-row\s*\{[\s\S]*?grid-template-columns:\s*1fr/);
   assert.match(cssSource, /\.signup-policy-row\s*\{[\s\S]*?align-items:\s*center/);
   assert.match(cssSource, /\.signup-policy-box summary\s*\{[\s\S]*?line-height:\s*1\.4/);
 });

@@ -55,6 +55,8 @@ import {
   mapSignupAgreementToPostgresRow,
   mapSignalAdminSettingsFromPostgresRow,
   mapSignalAdminSettingsToPostgresRow,
+  mapSocialAuthAccountFromPostgresRow,
+  mapSocialAuthAccountToPostgresRow,
   mapSubscriptionFromPostgresRow,
   mapSubscriptionToPostgresRow,
   mapSupportMessageFromPostgresRow,
@@ -86,6 +88,8 @@ import type {
   ServiceUserRecord,
   SignupAgreementRecord,
   SignalAdminSettingsRecord,
+  SocialAuthAccountRecord,
+  SocialAuthProvider,
   WebInfoSettingsRecord,
 } from './repository.ts';
 
@@ -165,6 +169,25 @@ export function createPostgresAsyncChartServiceRepository(
     },
     async saveUser(user: ServiceUserRecord): Promise<void> {
       await execute(createPostgresUpsertStatement('users', mapUserToPostgresRow(user), ['id']));
+    },
+    async getSocialAuthAccount(
+      provider: SocialAuthProvider,
+      providerUserId: string,
+    ): Promise<SocialAuthAccountRecord | null> {
+      return selectOne('social_auth_accounts', mapSocialAuthAccountFromPostgresRow, {
+        provider,
+        provider_user_id: providerUserId,
+      });
+    },
+    async listSocialAuthAccountsByUserId(userId: string): Promise<SocialAuthAccountRecord[]> {
+      return selectMany('social_auth_accounts', mapSocialAuthAccountFromPostgresRow, { user_id: userId });
+    },
+    async saveSocialAuthAccount(account: SocialAuthAccountRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'social_auth_accounts',
+        mapSocialAuthAccountToPostgresRow(account),
+        ['provider', 'provider_user_id'],
+      ));
     },
     async getSessionById(id: string): Promise<AuthSessionRecord | null> {
       return selectOne('auth_sessions', mapAuthSessionFromPostgresRow, { id });

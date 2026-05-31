@@ -59,6 +59,22 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       ],
     },
     {
+      name: 'social_auth_accounts',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        provider: { type: 'text', check: "provider in ('google', 'naver', 'kakao')" },
+        provider_user_id: { type: 'text' },
+        user_id: { type: 'text', references: 'users.id' },
+        email: { type: 'text' },
+        created_at: { type: 'timestamptz' },
+        updated_at: { type: 'timestamptz' },
+      },
+      indexes: [
+        { name: 'idx_social_auth_accounts_provider_user', columns: ['provider', 'provider_user_id'] },
+        { name: 'idx_social_auth_accounts_user_id', columns: ['user_id'] },
+      ],
+    },
+    {
       name: 'password_reset_tokens',
       columns: {
         id: { type: 'text', primaryKey: true },
@@ -534,6 +550,9 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     'update users set email_verified_at = created_at where email_verified_at is null;',
     'create index if not exists idx_users_referral_code on users (referral_code);',
     'create index if not exists idx_users_referred_by_user_id on users (referred_by_user_id);',
+    "create table if not exists social_auth_accounts (id text primary key, provider text not null, provider_user_id text not null, user_id text not null references users(id), email text not null, created_at timestamptz not null, updated_at timestamptz not null, constraint chk_social_auth_accounts_provider check (provider in ('google', 'naver', 'kakao')));",
+    'create unique index if not exists idx_social_auth_accounts_provider_user on social_auth_accounts (provider, provider_user_id);',
+    'create index if not exists idx_social_auth_accounts_user_id on social_auth_accounts (user_id);',
     'create table if not exists email_verification_tokens (id text primary key, user_id text not null references users(id), token_hash text not null, created_at timestamptz not null, expires_at timestamptz not null, used_at timestamptz);',
     'create index if not exists idx_email_verification_tokens_token_hash on email_verification_tokens (token_hash);',
     'create index if not exists idx_email_verification_tokens_user_id on email_verification_tokens (user_id);',

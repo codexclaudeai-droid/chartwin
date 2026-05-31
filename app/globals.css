@@ -10028,6 +10028,151 @@ body:not(:has(.landing-page)) .auth-card .login-actions {
   justify-content: flex-end;
 }
 
+body:not(:has(.landing-page)) .signup-field-row {
+  align-items: center;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 116px minmax(0, 1fr);
+}
+
+body:not(:has(.landing-page)) .signup-field-row > label {
+  margin: 0;
+  min-width: 0;
+}
+
+body:not(:has(.landing-page)) .signup-field-row > :not(label) {
+  min-width: 0;
+}
+
+body:not(:has(.landing-page)) .social-auth-divider {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  margin: 4px 0 2px;
+}
+
+body:not(:has(.landing-page)) .social-auth-divider::before,
+body:not(:has(.landing-page)) .social-auth-divider::after {
+  background: rgba(216, 236, 255, 0.16);
+  content: "";
+  flex: 1 1 0;
+  height: 1px;
+}
+
+body:not(:has(.landing-page)) .signup-social-auth-actions {
+  display: grid;
+  gap: 10px;
+}
+
+body:not(:has(.landing-page)) .social-auth-button {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  box-shadow: none;
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  min-height: 50px;
+  padding: 0 16px;
+  text-align: center;
+  transition: transform 0.12s ease, border-color 0.12s ease, filter 0.12s ease;
+  width: 100%;
+}
+
+body:not(:has(.landing-page)) .social-auth-button:hover,
+body:not(:has(.landing-page)) .social-auth-button:focus-visible,
+body:not(:has(.landing-page)) .social-auth-icon-button:hover,
+body:not(:has(.landing-page)) .social-auth-icon-button:focus-visible {
+  filter: brightness(1.04);
+  outline: 0;
+  transform: translateY(-1px);
+}
+
+body:not(:has(.landing-page)) .social-auth-logo {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+body:not(:has(.landing-page)) .social-auth-logo-svg {
+  display: block;
+  height: 20px;
+  width: 20px;
+}
+
+body:not(:has(.landing-page)) .social-auth-logo .google-logo-svg,
+body:not(:has(.landing-page)) .social-auth-icon-google .google-logo-svg {
+  height: 22px;
+  width: 22px;
+}
+
+body:not(:has(.landing-page)) .social-auth-logo .kakao-logo-svg {
+  height: 24px;
+  width: 24px;
+}
+
+body:not(:has(.landing-page)) .social-auth-button-google {
+  background: #ffffff;
+  border-color: rgba(20, 28, 40, 0.18);
+  color: #202124;
+}
+
+body:not(:has(.landing-page)) .social-auth-button-google .social-auth-logo,
+body:not(:has(.landing-page)) .social-auth-icon-google {
+  background: #ffffff;
+}
+
+body:not(:has(.landing-page)) .social-auth-button-naver {
+  background: #03c75a;
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) .social-auth-button-naver .social-auth-logo,
+body:not(:has(.landing-page)) .social-auth-icon-naver {
+  background: #03c75a;
+  color: #ffffff;
+}
+
+body:not(:has(.landing-page)) .social-auth-button-kakao {
+  background: #fee500;
+  color: #181600;
+}
+
+body:not(:has(.landing-page)) .social-auth-button-kakao .social-auth-logo,
+body:not(:has(.landing-page)) .social-auth-icon-kakao {
+  background: #fee500;
+  color: #181600;
+}
+
+body:not(:has(.landing-page)) .login-social-auth-actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  padding-top: 2px;
+}
+
+body:not(:has(.landing-page)) .social-auth-icon-button {
+  align-items: center;
+  border: 1px solid rgba(216, 236, 255, 0.16);
+  border-radius: 999px;
+  box-shadow: none;
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font: inherit;
+  height: 44px;
+  justify-content: center;
+  padding: 0;
+  transition: transform 0.12s ease, filter 0.12s ease;
+  width: 44px;
+}
+
 body:not(:has(.landing-page)) .email-check-row input,
 body:not(:has(.landing-page)) .referral-code-row input {
   flex: 1 1 260px;
@@ -10041,6 +10186,11 @@ body:not(:has(.landing-page)) .email-check-row input {
 body:not(:has(.landing-page)) .email-check-row .button {
   flex: 0 0 auto;
   white-space: nowrap;
+}
+
+body:not(:has(.landing-page)) .signup-form-card > .form > .field-help,
+body:not(:has(.landing-page)) .signup-form-card > .form > .signup-referral-note {
+  margin-left: 130px;
 }
 
 body:not(:has(.landing-page)) .password-visibility-toggle {
@@ -10100,6 +10250,19 @@ body:not(:has(.landing-page)) .signup-policy-content {
 
 body:not(:has(.landing-page)) .signup-policy-content.html {
   white-space: normal;
+}
+
+@media (max-width: 640px) {
+  body:not(:has(.landing-page)) .signup-field-row {
+    align-items: stretch;
+    gap: 8px;
+    grid-template-columns: 1fr;
+  }
+
+  body:not(:has(.landing-page)) .signup-form-card > .form > .field-help,
+  body:not(:has(.landing-page)) .signup-form-card > .form > .signup-referral-note {
+    margin-left: 0;
+  }
 }
 
 body:not(:has(.landing-page)) .checkbox-row {

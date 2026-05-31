@@ -27,6 +27,8 @@ import {
   mapSalesTeamToPostgresRow,
   mapSignupAgreementFromPostgresRow,
   mapSignupAgreementToPostgresRow,
+  mapSocialAuthAccountFromPostgresRow,
+  mapSocialAuthAccountToPostgresRow,
   mapSubscriptionFromPostgresRow,
   mapSubscriptionToPostgresRow,
   mapSupportMessageFromPostgresRow,
@@ -149,6 +151,37 @@ test('postgres session subscription and payment mappers preserve nullable and nu
   assert.equal(mapPaymentToPostgresRow(payment).transaction_verification_status, 'verified');
   assert.equal(mapPaymentToPostgresRow(payment).transaction_verification_message, 'TronScan confirmed 199 USDT');
   assert.equal(mapPaymentToPostgresRow(payment).transaction_verified_at, '2026-05-23T00:10:00.000Z');
+});
+
+test('postgres social auth mapper preserves provider account links', () => {
+  const record = mapSocialAuthAccountFromPostgresRow({
+    id: 'social_auth_1',
+    provider: 'google',
+    provider_user_id: 'google-123',
+    user_id: 'user_1',
+    email: 'member@example.com',
+    created_at: '2026-06-01T10:00:00.000Z',
+    updated_at: '2026-06-01T10:01:00.000Z',
+  });
+
+  assert.deepEqual(record, {
+    id: 'social_auth_1',
+    provider: 'google',
+    providerUserId: 'google-123',
+    userId: 'user_1',
+    email: 'member@example.com',
+    createdAt: '2026-06-01T10:00:00.000Z',
+    updatedAt: '2026-06-01T10:01:00.000Z',
+  });
+  assert.deepEqual(mapSocialAuthAccountToPostgresRow(record), {
+    id: 'social_auth_1',
+    provider: 'google',
+    provider_user_id: 'google-123',
+    user_id: 'user_1',
+    email: 'member@example.com',
+    created_at: '2026-06-01T10:00:00.000Z',
+    updated_at: '2026-06-01T10:01:00.000Z',
+  });
 });
 
 test('postgres audit row and upsert statement builder use safe parameter placeholders', () => {

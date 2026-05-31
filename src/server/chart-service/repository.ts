@@ -29,6 +29,18 @@ export type ServiceUserRecord = {
 
 export type PublicServiceUserRecord = Omit<ServiceUserRecord, 'passwordHash'>;
 
+export type SocialAuthProvider = 'google' | 'naver' | 'kakao';
+
+export type SocialAuthAccountRecord = {
+  id: string;
+  provider: SocialAuthProvider;
+  providerUserId: string;
+  userId: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AuthSessionRecord = {
   id: string;
   userId: string;
@@ -213,6 +225,9 @@ export type ChartServiceRepository = {
   getUserById(id: string): ServiceUserRecord | null;
   getUserByEmail(email: string): ServiceUserRecord | null;
   saveUser(user: ServiceUserRecord): void;
+  getSocialAuthAccount(provider: SocialAuthProvider, providerUserId: string): SocialAuthAccountRecord | null;
+  listSocialAuthAccountsByUserId(userId: string): SocialAuthAccountRecord[];
+  saveSocialAuthAccount(account: SocialAuthAccountRecord): void;
   getSessionById(id: string): AuthSessionRecord | null;
   listSessionsByUserId(userId: string): AuthSessionRecord[];
   saveSession(session: AuthSessionRecord): void;
