@@ -11,6 +11,7 @@ import {
   formatPaymentAmountUsd,
   formatPaymentStatusLabel,
   formatSubscriptionStatusLabel,
+  DEFAULT_PROFILE_AVATARS,
   type PaymentStatus,
   type SubscriptionStatus,
 } from '../../src/domain/chart-service/index.ts';
@@ -123,6 +124,7 @@ export function ProfilePanel() {
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [selectedAvatarPath, setSelectedAvatarPath] = useState('');
   const [message, setMessage] = useState('마이프로필 정보를 불러오는 중입니다.');
   const [settingsMessage, setSettingsMessage] = useState('연락번호, 비밀번호, 추천 정보를 관리할 수 있습니다.');
   const [referralCopyMessage, setReferralCopyMessage] = useState('');
@@ -130,6 +132,7 @@ export function ProfilePanel() {
   const [targetPaymentId, setTargetPaymentId] = useState(() => getTargetPaymentIdFromHash());
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
   const profileNameInputRef = useRef<HTMLInputElement | null>(null);
+  const profileImageFileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     void refresh();
@@ -171,6 +174,7 @@ export function ProfilePanel() {
     setDashboard(payload.dashboard);
     setNameDraft(payload.dashboard.user.name);
     setPhoneDraft(payload.dashboard.user.phoneNumber ?? '');
+    setSelectedAvatarPath(resolveDefaultProfileAvatarPath(payload.dashboard.user.profileImageDataUrl));
     setMessage('최신 계정 상태를 불러왔습니다.');
   }
 
@@ -291,19 +295,22 @@ export function ProfilePanel() {
 
   async function uploadProfileImage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedImageFile) {
+    if (!selectedImageFile && !selectedAvatarPath) {
       setSettingsMessage('프로필 이미지 파일을 먼저 선택해주세요.');
       return;
     }
 
     setIsBusy(true);
+    const requestBody = selectedImageFile
+      ? {
+          ...createProfileImagePolicyPayload(selectedImageFile),
+          dataUrl: await readFileAsDataUrl(selectedImageFile),
+        }
+      : { avatarPath: selectedAvatarPath };
     const response = await fetch('/api/profile/avatar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...createProfileImagePolicyPayload(selectedImageFile),
-        dataUrl: await readFileAsDataUrl(selectedImageFile),
-      }),
+      body: JSON.stringify(requestBody),
     });
     const payload = await response.json() as ProfileResponse;
     setIsBusy(false);
@@ -315,6 +322,8 @@ export function ProfilePanel() {
 
     setDashboard(payload.dashboard);
     setSelectedImageFile(null);
+    setSelectedAvatarPath(resolveDefaultProfileAvatarPath(payload.dashboard.user.profileImageDataUrl));
+    if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
     setSettingsMessage('프로필 이미지가 저장되었습니다.');
     dispatchAuthSessionChangedEvent();
   }
@@ -588,12 +597,39 @@ export function ProfilePanel() {
           )}
         </div>
         <form className="form profile-settings-form" onSubmit={uploadProfileImage}>
+          <span className="form-section-label">기본 아바타 선택</span>
+          <div className="profile-avatar-option-groups">
+            <ProfileAvatarOptionGroup
+              gender="male"
+              label="남성"
+              selectedAvatarPath={selectedAvatarPath}
+              onSelect={(avatarPath) => {
+                setSelectedAvatarPath(avatarPath);
+                setSelectedImageFile(null);
+                if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
+              }}
+            />
+            <ProfileAvatarOptionGroup
+              gender="female"
+              label="여성"
+              selectedAvatarPath={selectedAvatarPath}
+              onSelect={(avatarPath) => {
+                setSelectedAvatarPath(avatarPath);
+                setSelectedImageFile(null);
+                if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
+              }}
+            />
+          </div>
           <label htmlFor="profileImageFile">프로필 이미지 파일</label>
           <div className="profile-image-file-row">
             <input
               accept="image/png,image/jpeg,image/webp"
               id="profileImageFile"
-              onChange={(event) => setSelectedImageFile(event.target.files?.[0] ?? null)}
+              ref={profileImageFileInputRef}
+              onChange={(event) => {
+                setSelectedImageFile(event.target.files?.[0] ?? null);
+                setSelectedAvatarPath('');
+              }}
               type="file"
             />
           </div>
@@ -808,6 +844,47 @@ function getReferralLinkGuideMessage(): string {
 
 function getReferralCopyAlertMessage(label: string): string {
   return label === '추천코드' ? '추천코드가 카피되었습니다' : '추천링크가 카피되었습니다';
+}
+
+function resolveDefaultProfileAvatarPath(value: string | null): string {
+  return DEFAULT_PROFILE_AVATARS.some((avatar) => avatar.path === value) ? String(value) : '';
+}
+
+function ProfileAvatarOptionGroup({
+  gender,
+  label,
+  selectedAvatarPath,
+  onSelect,
+}: {
+  gender: 'male' | 'female';
+  label: string;
+  selectedAvatarPath: string;
+  onSelect: (avatarPath: string) => void;
+}) {
+  const avatars = DEFAULT_PROFILE_AVATARS.filter((avatar) => avatar.gender === gender);
+
+  return (
+    <fieldset className="profile-avatar-option-group">
+      <legend>{label}</legend>
+      <div className="profile-avatar-option-list">
+        {avatars.map((avatar) => {
+          const isSelected = selectedAvatarPath === avatar.path;
+          return (
+            <button
+              aria-pressed={isSelected}
+              className={`profile-avatar-option${isSelected ? ' selected' : ''}`}
+              key={avatar.id}
+              onClick={() => onSelect(avatar.path)}
+              type="button"
+            >
+              <img alt="" src={avatar.path} />
+              <span>{avatar.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {

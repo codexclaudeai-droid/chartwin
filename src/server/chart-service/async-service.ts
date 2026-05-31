@@ -19,6 +19,7 @@ import {
   type AuditLogDraft,
   validatePasswordPolicy,
   validateProfileImageUpload,
+  isDefaultProfileAvatarPath,
   type Actor,
   type NotificationCategory,
   type NotificationRecord,
@@ -291,6 +292,27 @@ export async function updateAsyncAuthenticatedUserProfileImage(
   const updatedUser = {
     ...user,
     profileImageDataUrl: input.dataUrl,
+  };
+  await repository.saveUser(updatedUser);
+  return updatedUser;
+}
+
+export async function updateAsyncAuthenticatedUserProfileAvatar(
+  repository: AsyncChartServiceRepository,
+  input: {
+    actor: Actor;
+    avatarPath: string;
+  },
+): Promise<ServiceUserRecord> {
+  const user = await repository.getUserById(input.actor.id);
+  if (!user) throw new Error(`User not found: ${input.actor.id}`);
+  if (!isDefaultProfileAvatarPath(input.avatarPath)) {
+    throw new Error('Default profile avatar path invalid');
+  }
+
+  const updatedUser = {
+    ...user,
+    profileImageDataUrl: input.avatarPath,
   };
   await repository.saveUser(updatedUser);
   return updatedUser;

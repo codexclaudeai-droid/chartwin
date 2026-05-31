@@ -4,6 +4,7 @@ export * from './subscriptions.ts';
 export * from './payments.ts';
 export * from './referrals.ts';
 export * from './security.ts';
+export * from './profile-avatars.ts';
 export * from './fixtures.ts';
 export * from './notifications.ts';
 export * from './presentation.ts';

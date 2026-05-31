@@ -5416,6 +5416,74 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   padding-top: 16px;
 }
 
+.profile-avatar-option-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-avatar-option-group {
+  border: 0;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.profile-avatar-option-group legend {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+  padding: 0;
+}
+
+.profile-avatar-option-list {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.profile-avatar-option {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  gap: 5px;
+  justify-items: center;
+  min-width: 0;
+  padding: 6px 4px;
+}
+
+.profile-avatar-option img {
+  aspect-ratio: 1;
+  background: rgba(12, 102, 90, 0.08);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  object-fit: cover;
+  width: 48px;
+}
+
+.profile-avatar-option span {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.profile-avatar-option:hover,
+.profile-avatar-option:focus-visible,
+.profile-avatar-option.selected {
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  color: var(--ink);
+  outline: 0;
+}
+
+.profile-avatar-option.selected img {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
 .profile-image-file-row {
   align-items: center;
   display: grid;

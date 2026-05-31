@@ -6,6 +6,7 @@ import {
   getAuthenticatedMutationErrorStatus,
   getAsyncUserDashboardSummary,
   guardMutationRequest,
+  updateAsyncAuthenticatedUserProfileAvatar,
   updateAsyncAuthenticatedUserProfileImage,
 } from '../../../../src/server/chart-service/index.ts';
 
@@ -28,13 +29,20 @@ export async function POST(request: NextRequest) {
   try {
     const dashboard = await persistence.runMutation(async (repository) => {
       const actor = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
-      await updateAsyncAuthenticatedUserProfileImage(repository, {
-        actor,
-        filename: String(body.filename || ''),
-        mimeType: String(body.mimeType || ''),
-        sizeBytes: Number(body.sizeBytes || 0),
-        dataUrl: String(body.dataUrl || ''),
-      });
+      if (typeof body.avatarPath === 'string' && body.avatarPath) {
+        await updateAsyncAuthenticatedUserProfileAvatar(repository, {
+          actor,
+          avatarPath: body.avatarPath,
+        });
+      } else {
+        await updateAsyncAuthenticatedUserProfileImage(repository, {
+          actor,
+          filename: String(body.filename || ''),
+          mimeType: String(body.mimeType || ''),
+          sizeBytes: Number(body.sizeBytes || 0),
+          dataUrl: String(body.dataUrl || ''),
+        });
+      }
       return getAsyncUserDashboardSummary(repository, { actor });
     });
 

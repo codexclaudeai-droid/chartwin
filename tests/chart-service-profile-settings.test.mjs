@@ -9,6 +9,7 @@ import {
   updateAuthenticatedUserProfile,
   verifyPasswordHash,
 } from '../src/server/chart-service/index.ts';
+import { DEFAULT_PROFILE_AVATARS } from '../src/domain/chart-service/index.ts';
 import { createProfileImagePolicyPayload } from '../app/profile/profile-image-policy.ts';
 import { getSubscriptionActionAvailability } from '../app/profile/subscription-action-policy.ts';
 
@@ -105,6 +106,56 @@ test('profile image upload route stores the avatar data url on the dashboard use
   assert.equal(response.status, 200);
   assert.equal(payload.dashboard.user.profileImageDataUrl, dataUrl);
   assert.equal(repository.getUserById('user_member')?.profileImageDataUrl, dataUrl);
+});
+
+test('profile avatar route stores a selected default avatar path', async () => {
+  const repository = getChartServiceRepository();
+  const { session } = createSessionForUser(repository, {
+    userId: 'user_member',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  });
+  const { POST } = await import('../app/api/profile/avatar/route.ts');
+  const avatarPath = DEFAULT_PROFILE_AVATARS.find((avatar) => avatar.id === 'female-1')?.path;
+
+  const response = await POST(new Request('http://localhost/api/profile/avatar', {
+    method: 'POST',
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${session.id}`,
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ avatarPath }),
+  }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.dashboard.user.profileImageDataUrl, avatarPath);
+  assert.equal(repository.getUserById('user_member')?.profileImageDataUrl, avatarPath);
+});
+
+test('profile avatar route rejects paths outside the default avatar set', async () => {
+  const repository = getChartServiceRepository();
+  const { session } = createSessionForUser(repository, {
+    userId: 'user_member',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  });
+  const { POST } = await import('../app/api/profile/avatar/route.ts');
+
+  const response = await POST(new Request('http://localhost/api/profile/avatar', {
+    method: 'POST',
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${session.id}`,
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ avatarPath: '/avatars/unknown.png' }),
+  }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.match(payload.message, /Default profile avatar path invalid/);
 });
 
 test('profile patch API updates the signed-in users dashboard name', async () => {
@@ -378,12 +429,23 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(panelSource, /profile-avatar-default-icon/);
   assert.match(panelSource, /readFileAsDataUrl/);
   assert.match(panelSource, /\/api\/profile\/avatar/);
+  assert.match(panelSource, /DEFAULT_PROFILE_AVATARS/);
+  assert.match(panelSource, /ProfileAvatarOptionGroup/);
+  assert.match(panelSource, /selectedAvatarPath/);
+  assert.match(panelSource, /avatarPath: selectedAvatarPath/);
+  assert.match(panelSource, /기본 아바타 선택/);
+  assert.match(panelSource, /남성/);
+  assert.match(panelSource, /여성/);
   assert.match(panelSource, /프로필 이미지 저장/);
   assert.match(panelSource, /profile-image-save-button/);
   assert.match(panelSource, /profile-image-file-row/);
   assert.match(panelSource, /profile-image-file-help/);
   assert.match(panelSource, /<\/div>\s*<p className="profile-image-file-help">/);
   assert.match(styleSource, /\.profile-avatar-preview/);
+  assert.match(styleSource, /\.profile-avatar-option-groups/);
+  assert.match(styleSource, /\.profile-avatar-option-list/);
+  assert.match(styleSource, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
+  assert.match(styleSource, /\.profile-avatar-option\.selected img/);
   assert.match(styleSource, /\.profile-card-header/);
   assert.match(styleSource, /\.profile-card-header \.toolbar-actions/);
   assert.match(styleSource, /\.profile-avatar-default-icon/);
