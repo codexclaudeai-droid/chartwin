@@ -54,6 +54,7 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'referral_program_settings')?.columns.reward_percent.type, 'numeric(5,2)');
   assert.equal(tables.find((table) => table.name === 'referral_program_settings')?.columns.subscriber_cashback_percent.default, '3');
   assert.equal(tables.find((table) => table.name === 'referral_program_settings')?.columns.salesperson_reward_percent.default, '30');
+  assert.equal(tables.find((table) => table.name === 'referral_program_settings')?.columns.sales_team_reward_percent.default, '50');
   assert.equal(tables.find((table) => table.name === 'referral_program_settings')?.columns.updated_by_admin_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'sales_teams')?.columns.commission_percent.type, 'numeric(5,2)');
   assert.equal(tables.find((table) => table.name === 'sales_teams')?.columns.salesperson_ids.type, 'jsonb');
@@ -104,6 +105,7 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /alter table if exists referral_program_settings add column if not exists reward_percent numeric\(5,2\)/i);
   assert.match(sql, /alter table if exists referral_program_settings add column if not exists subscriber_cashback_percent numeric\(5,2\)/i);
   assert.match(sql, /alter table if exists referral_program_settings add column if not exists salesperson_reward_percent numeric\(5,2\)/i);
+  assert.match(sql, /alter table if exists referral_program_settings add column if not exists sales_team_reward_percent numeric\(5,2\)/i);
   assert.match(sql, /create table if not exists sales_teams/i);
   assert.match(sql, /commission_percent numeric\(5,2\) not null default 30/i);
   assert.match(sql, /salesperson_ids jsonb not null default '\[\]'::jsonb/i);

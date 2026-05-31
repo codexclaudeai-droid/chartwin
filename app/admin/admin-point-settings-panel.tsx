@@ -7,6 +7,7 @@ type PointProgramSettings = {
   subscriberCashbackPercent: number;
   rewardPercent: number;
   salespersonRewardPercent: number;
+  salesTeamRewardPercent: number;
   updatedAt: string;
 };
 
@@ -14,6 +15,7 @@ const defaultSettings: PointProgramSettings = {
   subscriberCashbackPercent: 3,
   rewardPercent: 10,
   salespersonRewardPercent: 30,
+  salesTeamRewardPercent: 50,
   updatedAt: '',
 };
 
@@ -37,8 +39,8 @@ export function AdminPointSettingsPanel() {
       return;
     }
 
-    setSettings(payload.settings);
-    setMessage('정회원 캐시백, 추천, 영업자 포인트 기본 적립률을 관리합니다.');
+    setSettings({ ...defaultSettings, ...payload.settings });
+    setMessage('정회원 캐시백, 추천, 영업자, 영업팀 포인트 기본 적립률을 관리합니다.');
   }
 
   async function saveSettings(event: React.FormEvent<HTMLFormElement>) {
@@ -57,8 +59,8 @@ export function AdminPointSettingsPanel() {
       return;
     }
 
-    setSettings(payload.settings);
-    setMessage('포인트 정책을 저장했습니다. 이후 생성되는 포인트부터 적용됩니다.');
+    setSettings({ ...defaultSettings, ...payload.settings });
+    setMessage('포인트 정책을 저장했습니다. 이후 생성되는 포인트와 영업팀에 적용됩니다.');
   }
 
   function updatePercent(field: keyof Omit<PointProgramSettings, 'updatedAt'>, value: string) {
@@ -80,9 +82,9 @@ export function AdminPointSettingsPanel() {
       <form className="form admin-point-settings-form" onSubmit={saveSettings}>
         <div className="settings-grid">
           <label>
-            정회원구독 캐시백포인트
+            정회원 구독 캐시백포인트
             <input
-              aria-label="정회원구독 캐시백포인트"
+              aria-label="정회원 구독 캐시백포인트"
               max="100"
               min="0"
               onChange={(event) => updatePercent('subscriberCashbackPercent', event.target.value)}
@@ -106,15 +108,28 @@ export function AdminPointSettingsPanel() {
             />
           </label>
           <label>
-            영업자포인트
+            영업자 포인트
             <input
-              aria-label="영업자포인트"
+              aria-label="영업자 포인트"
               max="100"
               min="0"
               onChange={(event) => updatePercent('salespersonRewardPercent', event.target.value)}
               step="0.01"
               type="number"
               value={settings.salespersonRewardPercent}
+              required
+            />
+          </label>
+          <label>
+            영업팀 포인트
+            <input
+              aria-label="영업팀 포인트"
+              max="100"
+              min="0"
+              onChange={(event) => updatePercent('salesTeamRewardPercent', event.target.value)}
+              step="0.01"
+              type="number"
+              value={settings.salesTeamRewardPercent}
               required
             />
           </label>

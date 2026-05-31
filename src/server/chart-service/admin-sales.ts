@@ -12,7 +12,7 @@ import { getAsyncReferralProgramSettings, getReferralProgramSettings } from './r
 import { toPublicServiceUserRecord } from './user-serialization.ts';
 
 export const DEFAULT_SALES_COMMISSION_PERCENT = 30;
-export const DEFAULT_SALES_TEAM_COMMISSION_PERCENT = 30;
+export const DEFAULT_SALES_TEAM_COMMISSION_PERCENT = 50;
 export const SALES_TEAM_PAGE_SIZE = 10;
 
 export type AdminSalesManagementInput = {
@@ -131,7 +131,7 @@ export function getAdminSalesManagementSummary(
     payments: repository.listPayments(),
     plans: repository.listPlans(),
     settings: getSalesCommissionSettings(repository, pointSettings.salespersonRewardPercent),
-    teamSettings: createSalesTeamSettings(repository.listSalesTeams(), pointSettings.salespersonRewardPercent),
+    teamSettings: createSalesTeamSettings(repository.listSalesTeams(), pointSettings.salesTeamRewardPercent),
   }, input);
 }
 
@@ -153,7 +153,7 @@ export async function getAsyncAdminSalesManagementSummary(
     payments,
     plans,
     settings: getSalesCommissionSettings(repository, pointSettings.salespersonRewardPercent),
-    teamSettings: createSalesTeamSettings(teams, pointSettings.salespersonRewardPercent),
+    teamSettings: createSalesTeamSettings(teams, pointSettings.salesTeamRewardPercent),
   }, input);
 }
 
@@ -222,7 +222,7 @@ export function createAdminSalesTeam(
   assertAdminActor(input.admin);
   const team = createSalesTeamRecord(repository, {
     ...input,
-    commissionPercent: getReferralProgramSettings(repository).salespersonRewardPercent,
+    commissionPercent: getReferralProgramSettings(repository).salesTeamRewardPercent,
   });
   repository.appendAuditLog(createAuditLogDraft({
     actor: input.admin,
@@ -243,7 +243,7 @@ export async function createAsyncAdminSalesTeam(
   const pointSettings = await getAsyncReferralProgramSettings(repository);
   const team = await createAsyncSalesTeamRecord(repository, {
     ...input,
-    commissionPercent: pointSettings.salespersonRewardPercent,
+    commissionPercent: pointSettings.salesTeamRewardPercent,
   });
   await repository.appendAuditLog(createAuditLogDraft({
     actor: input.admin,

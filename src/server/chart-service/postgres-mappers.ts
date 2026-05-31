@@ -283,6 +283,7 @@ export function mapReferralProgramSettingsFromPostgresRow(row: PostgresRow): Ref
     subscriberCashbackPercent: readNullableNumber(row.subscriber_cashback_percent) ?? 3,
     rewardPercent: readNumber(row.reward_percent),
     salespersonRewardPercent: readNullableNumber(row.salesperson_reward_percent) ?? 30,
+    salesTeamRewardPercent: readNullableNumber(row.sales_team_reward_percent) ?? 50,
     updatedByAdminId: readNullableString(row.updated_by_admin_id),
     updatedAt: readIsoString(row.updated_at),
   };
@@ -294,6 +295,7 @@ export function mapReferralProgramSettingsToPostgresRow(record: ReferralProgramS
     subscriber_cashback_percent: record.subscriberCashbackPercent,
     reward_percent: record.rewardPercent,
     salesperson_reward_percent: record.salespersonRewardPercent,
+    sales_team_reward_percent: record.salesTeamRewardPercent,
     updated_by_admin_id: record.updatedByAdminId,
     updated_at: record.updatedAt,
   };

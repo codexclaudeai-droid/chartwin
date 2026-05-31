@@ -43,6 +43,7 @@ export async function PATCH(request: NextRequest) {
         subscriberCashbackPercent: Number(body.subscriberCashbackPercent),
         rewardPercent: Number(body.rewardPercent),
         salespersonRewardPercent: Number(body.salespersonRewardPercent),
+        salesTeamRewardPercent: Number(body.salesTeamRewardPercent),
         updatedAt: new Date().toISOString(),
       });
     });

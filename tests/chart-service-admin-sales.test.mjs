@@ -110,6 +110,7 @@ test('admin sales management summary uses point settings as the default salesper
     subscriberCashbackPercent: 3,
     rewardPercent: 10,
     salespersonRewardPercent: 25,
+    salesTeamRewardPercent: 55,
     updatedAt: '2026-05-25T09:00:00.000Z',
   });
   const summary = getAdminSalesManagementSummary(repository, { salespersonId: salesperson.id });
@@ -117,6 +118,31 @@ test('admin sales management summary uses point settings as the default salesper
   assert.equal(summary.defaultPercent, 25);
   assert.equal(summary.selectedSalesperson?.commissionPercent, 25);
   assert.equal(summary.rows[0].commissionPercent, 25);
+});
+
+test('admin sales management summary uses point settings as the default sales team percent', () => {
+  const repository = createMockChartServiceRepository();
+  const salesperson = repository.getUserById('user_subscriber');
+  if (!salesperson) throw new Error('fixture salesperson missing');
+  repository.saveUser({ ...salesperson, role: USER_ROLES.salesperson });
+
+  updatePointProgramSettings(repository, {
+    admin: { id: 'super_1', role: 'super_admin' },
+    subscriberCashbackPercent: 3,
+    rewardPercent: 10,
+    salespersonRewardPercent: 25,
+    salesTeamRewardPercent: 55,
+    updatedAt: '2026-05-25T09:00:00.000Z',
+  });
+  const team = createAdminSalesTeam(repository, {
+    admin: { id: 'admin_1', role: USER_ROLES.admin },
+    name: 'Point Settings Team',
+    createdAt: '2026-05-25T10:00:00.000Z',
+  });
+  const summary = getAdminSalesManagementSummary(repository, { teamId: team.id });
+
+  assert.equal(summary.defaultTeamPercent, 55);
+  assert.equal(summary.selectedTeam?.commissionPercent, 55);
 });
 
 test('super admin can apply individual salesperson commission percent', () => {
@@ -221,15 +247,15 @@ test('admin can register sales teams assign salespeople and aggregate team reven
     to: '2026-05-31',
   });
 
-  assert.equal(summary.defaultTeamPercent, 30);
+  assert.equal(summary.defaultTeamPercent, 50);
   assert.equal(summary.teamPageSize, 10);
   assert.equal(summary.selectedTeam?.name, 'Alpha Team');
-  assert.equal(summary.selectedTeam?.commissionPercent, 30);
+  assert.equal(summary.selectedTeam?.commissionPercent, 50);
   assert.equal(summary.selectedTeamSalespeople.length, 1);
   assert.deepEqual(summary.teamTotals, {
     salesCount: 1,
     salesUsd: 500,
-    points: 150,
+    points: 250,
   });
   assert.equal(summary.selectedTeamSalespeople[0].sequence, 1);
   assert.equal(summary.selectedTeamSalespeople[0].name, 'Subscriber');

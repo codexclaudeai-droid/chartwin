@@ -143,7 +143,7 @@ export function AdminSalesPanel() {
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [commissionPercent, setCommissionPercent] = useState('30');
-  const [teamCommissionPercent, setTeamCommissionPercent] = useState('30');
+  const [teamCommissionPercent, setTeamCommissionPercent] = useState('50');
   const [teamName, setTeamName] = useState('');
   const [isSalespersonSearchOpen, setIsSalespersonSearchOpen] = useState(false);
   const [highlightedSalespersonIndex, setHighlightedSalespersonIndex] = useState(0);

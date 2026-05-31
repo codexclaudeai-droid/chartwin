@@ -63,6 +63,7 @@ export type ReferralProgramSettingsRecord = {
   subscriberCashbackPercent: number;
   rewardPercent: number;
   salespersonRewardPercent: number;
+  salesTeamRewardPercent: number;
   updatedByAdminId: string | null;
   updatedAt: string;
 };

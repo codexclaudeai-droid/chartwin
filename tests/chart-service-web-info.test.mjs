@@ -215,11 +215,15 @@ test('admin payment settings save button centers its label', () => {
 });
 
 test('admin point settings save button centers its label', () => {
+  const panelSource = fs.readFileSync(new URL('../app/admin/admin-point-settings-panel.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const saveButtonRule = cssSource.match(
     /body:not\(:has\(\.landing-page\)\) #admin-section-webInfo \.admin-point-settings-form > \.button\s*\{(?<body>[^}]*)\}/,
   )?.groups?.body ?? '';
 
+  assert.match(panelSource, /salesTeamRewardPercent/);
+  assert.match(panelSource, /영업팀 포인트/);
+  assert.match(panelSource, /salesTeamRewardPercent: 50/);
   assert.match(saveButtonRule, /justify-content:\s*center/);
   assert.match(saveButtonRule, /text-align:\s*center/);
   assert.match(saveButtonRule, /width:\s*100%/);

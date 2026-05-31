@@ -19,6 +19,7 @@ import { toPublicServiceUserRecord } from './user-serialization.ts';
 export const DEFAULT_REFERRAL_REWARD_PERCENT = 10;
 export const DEFAULT_SUBSCRIBER_CASHBACK_PERCENT = 3;
 export const DEFAULT_SALESPERSON_REWARD_PERCENT = 30;
+export const DEFAULT_SALES_TEAM_REWARD_PERCENT = 50;
 const DEFAULT_REFERRAL_SETTINGS_ID = 'default';
 const REFERRAL_CONFIRM_WINDOW_DAYS = 7;
 
@@ -27,6 +28,7 @@ type ReferralProgramSettingsInput = {
   subscriberCashbackPercent?: number;
   rewardPercent: number;
   salespersonRewardPercent?: number;
+  salesTeamRewardPercent?: number;
   updatedAt: string;
 };
 
@@ -127,6 +129,10 @@ function createReferralProgramSettingsFromInput(
     salespersonRewardPercent: normalizeRewardPercent(
       input.salespersonRewardPercent ?? before.salespersonRewardPercent,
       'Salesperson reward percent',
+    ),
+    salesTeamRewardPercent: normalizeRewardPercent(
+      input.salesTeamRewardPercent ?? before.salesTeamRewardPercent,
+      'Sales team reward percent',
     ),
     updatedByAdminId: input.admin.id,
     updatedAt: input.updatedAt,
@@ -301,6 +307,7 @@ function createDefaultReferralProgramSettings(): ReferralProgramSettingsRecord {
     subscriberCashbackPercent: DEFAULT_SUBSCRIBER_CASHBACK_PERCENT,
     rewardPercent: DEFAULT_REFERRAL_REWARD_PERCENT,
     salespersonRewardPercent: DEFAULT_SALESPERSON_REWARD_PERCENT,
+    salesTeamRewardPercent: DEFAULT_SALES_TEAM_REWARD_PERCENT,
     updatedByAdminId: null,
     updatedAt: '1970-01-01T00:00:00.000Z',
   };

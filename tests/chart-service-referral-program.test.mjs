@@ -14,7 +14,7 @@ import {
   updateReferralProgramSettings,
 } from '../src/server/chart-service/index.ts';
 
-test('point program defaults to subscriber cashback referral and salesperson percents', () => {
+test('point program defaults to subscriber cashback referral salesperson and sales team percents', () => {
   const repository = createMockChartServiceRepository();
 
   const settings = getReferralProgramSettings(repository);
@@ -22,6 +22,7 @@ test('point program defaults to subscriber cashback referral and salesperson per
   assert.equal(settings.subscriberCashbackPercent, 3);
   assert.equal(settings.rewardPercent, 10);
   assert.equal(settings.salespersonRewardPercent, 30);
+  assert.equal(settings.salesTeamRewardPercent, 50);
 });
 
 test('manual payment request from a referred user creates pending referral points', () => {
@@ -86,6 +87,7 @@ test('super admin can change referral reward percent for future payment requests
     planId: 'plan_monthly',
     method: 'bank_transfer',
     requestedAt: '2026-05-24T10:10:00.000Z',
+    depositorName: 'Member',
   });
   const ledgers = repository.listReferralLedgersByPaymentId(payment.id);
 
@@ -103,12 +105,14 @@ test('super admin can change all point program percents together', () => {
     subscriberCashbackPercent: 4,
     rewardPercent: 12,
     salespersonRewardPercent: 28,
+    salesTeamRewardPercent: 50,
     updatedAt: '2026-05-24T10:00:00.000Z',
   });
 
   assert.equal(settings.subscriberCashbackPercent, 4);
   assert.equal(settings.rewardPercent, 12);
   assert.equal(settings.salespersonRewardPercent, 28);
+  assert.equal(settings.salesTeamRewardPercent, 50);
   assert.equal(repository.listAuditLogs().at(-1)?.action, 'admin.points.settings.update');
 });
 
@@ -130,14 +134,16 @@ test('profile and admin summaries expose referred users and point totals', () =>
   });
   const adminDetail = getAdminUserDetail(repository, 'user_subscriber');
   const directSummary = getUserReferralSummary(repository, 'user_subscriber', {
-    nowIso: '2026-05-29T00:00:00.000Z',
+    nowIso: new Date().toISOString(),
   });
 
   assert.equal(profileSummary.referrals.referredUserCount, 1);
-  assert.equal(profileSummary.referrals.pendingPoints, 19.9);
+  assert.equal(profileSummary.referrals.pendingPoints, 0);
+  assert.equal(profileSummary.referrals.confirmedPoints, 19.9);
   assert.equal(profileSummary.referrals.totalPoints, 19.9);
   assert.equal(profileSummary.referrals.referredUsers[0].user.email, 'member@example.com');
-  assert.equal(profileSummary.referrals.referredUsers[0].pendingPoints, 19.9);
+  assert.equal(profileSummary.referrals.referredUsers[0].pendingPoints, 0);
+  assert.equal(profileSummary.referrals.referredUsers[0].confirmedPoints, 19.9);
   assert.equal(adminDetail.referrals.referredUsers[0].user.email, 'member@example.com');
   assert.deepEqual(profileSummary.referrals, directSummary);
 });
@@ -169,6 +175,7 @@ test('point settings API is readable by admins and writable only by super admins
       subscriberCashbackPercent: 4,
       rewardPercent: 12,
       salespersonRewardPercent: 28,
+      salesTeamRewardPercent: 50,
     }),
   }));
   const updated = await PATCH(new Request('http://localhost/api/admin/point-settings', {
@@ -181,6 +188,7 @@ test('point settings API is readable by admins and writable only by super admins
       subscriberCashbackPercent: 4,
       rewardPercent: 12,
       salespersonRewardPercent: 28,
+      salesTeamRewardPercent: 50,
     }),
   }));
   const readablePayload = await readable.json();
@@ -190,9 +198,11 @@ test('point settings API is readable by admins and writable only by super admins
   assert.equal(readablePayload.settings.subscriberCashbackPercent, 3);
   assert.equal(readablePayload.settings.rewardPercent, 10);
   assert.equal(readablePayload.settings.salespersonRewardPercent, 30);
+  assert.equal(readablePayload.settings.salesTeamRewardPercent, 50);
   assert.equal(denied.status, 403);
   assert.equal(updated.status, 200);
   assert.equal(updatedPayload.settings.subscriberCashbackPercent, 4);
   assert.equal(updatedPayload.settings.rewardPercent, 12);
   assert.equal(updatedPayload.settings.salespersonRewardPercent, 28);
+  assert.equal(updatedPayload.settings.salesTeamRewardPercent, 50);
 });
