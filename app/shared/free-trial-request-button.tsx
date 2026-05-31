@@ -10,10 +10,12 @@ type FreeTrialRequestButtonProps = {
   loginHref?: string;
   signupHref?: string;
   returnHref?: string;
+  requestSource?: string;
   confirmTitle?: string;
   confirmDescription?: string;
   confirmActionLabel?: string;
   confirmCancelLabel?: string;
+  redirectOnSuccess?: boolean;
 };
 
 type TrialRequestPayload = {
@@ -34,10 +36,12 @@ export function FreeTrialRequestButton({
   loginHref = '/login?redirect=/',
   signupHref = '/signup?redirect=/',
   returnHref = '/',
+  requestSource = 'landing',
   confirmTitle,
   confirmDescription,
   confirmActionLabel = '진행하기',
   confirmCancelLabel = '취소',
+  redirectOnSuccess = false,
 }: FreeTrialRequestButtonProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
@@ -64,7 +68,7 @@ export function FreeTrialRequestButton({
       const response = await fetch('/api/trial/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: 'landing' }),
+        body: JSON.stringify({ source: requestSource }),
       });
       const payload = await response.json().catch(() => ({})) as TrialRequestPayload;
 
@@ -81,12 +85,17 @@ export function FreeTrialRequestButton({
         return;
       }
 
+      if (redirectOnSuccess) {
+        window.location.assign(returnHref);
+        return;
+      }
+
       const endDateText = payload.endsAt ? formatKoreanDateTime(payload.endsAt) : null;
       setResultModal({
         title: payload.status === 'already_active' ? '무료체험 이용 중입니다' : '무료체험 신청이 접수되었습니다',
         description: endDateText
           ? `TC Chart 무료체험이 활성화되었습니다. 종료 예정일은 ${endDateText}입니다.`
-          : 'TC Chart 이용 권한이 이미 활성화되어 있습니다.',
+          : 'TC Chart 이용 권한이 곧 활성화됩니다.',
       });
     } finally {
       setIsSubmitting(false);
@@ -127,7 +136,7 @@ export function FreeTrialRequestButton({
       {showAuthPrompt ? (
         <AuthPromptModal
           title="무료체험 신청은 로그인이 필요합니다"
-          description="로그인 또는 회원가입 후 무료체험을 바로 신청할 수 있습니다."
+          description="이미 가입된 경우 로그인 후 신청할 수 있습니다. 아직 회원가입 전이라면 가입을 완료한 뒤 무료체험을 바로 신청할 수 있습니다."
           loginHref={loginHref}
           signupHref={signupHref}
           onClose={() => setShowAuthPrompt(false)}

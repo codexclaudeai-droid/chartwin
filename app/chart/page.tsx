@@ -4,7 +4,6 @@ import {
   getAsyncChartAccessSnapshot,
   getAsyncChartServicePersistence,
 } from '../../src/server/chart-service/index.ts';
-import { FreeTrialRequestButton } from '../shared/free-trial-request-button';
 import { ChartAccessPreview } from './chart-access-preview';
 import { ChartRuntime } from './chart-runtime';
 
@@ -28,20 +27,8 @@ export default async function ChartPage() {
       return <ChartRuntime accessVerified />;
     }
 
-    return (
-      <main className="chart-runtime-page chart-runtime-blocked" aria-label="TC Chart 접근 제한">
-        <section className="chart-access-gate" role="status">
-          <span className="eyebrow">TC Chart Access</span>
-          <h1>차트 이용 권한이 필요합니다</h1>
-          <p>구독 승인 후 TC Chart를 이용할 수 있습니다.</p>
-          <div className="chart-access-actions">
-            <a className="button" href="/pricing">구독하기</a>
-            <FreeTrialRequestButton className="button secondary">무료체험 신청</FreeTrialRequestButton>
-          </div>
-        </section>
-      </main>
-    );
+    return <ChartAccessPreview audience="member" />;
   } catch {
-    return <ChartAccessPreview />;
+    return <ChartAccessPreview audience="guest" />;
   }
 }

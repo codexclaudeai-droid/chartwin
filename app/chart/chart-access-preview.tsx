@@ -10,6 +10,7 @@ declare global {
 }
 
 type ChartAccessPreviewProps = {
+  audience?: 'guest' | 'member';
   signupHref?: string;
   loginHref?: string;
 };
@@ -17,12 +18,14 @@ type ChartAccessPreviewProps = {
 const THREE_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
 
 export function ChartAccessPreview({
+  audience = 'guest',
   signupHref = '/signup?redirect=/chart',
   loginHref = '/login?redirect=/chart',
 }: ChartAccessPreviewProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const [ready, setReady] = useState(false);
+  const isMember = audience === 'member';
 
   useEffect(() => {
     let cancelled = false;
@@ -50,22 +53,25 @@ export function ChartAccessPreview({
 
   return (
     <main className={`chart-preview-page${ready ? ' ready' : ''}`} aria-label="TC Chart preview">
+      <div className="chart-preview-space" aria-hidden="true" />
       <div className="chart-preview-canvas" ref={mountRef} aria-hidden="true" />
-      <section className="chart-preview-content" aria-labelledby="chart-preview-title">
+      <section className="chart-preview-content" aria-label="TradingCore">
         <img className="chart-preview-logo" src="/images/logo.png" alt="TradingCore" />
-        <h1 id="chart-preview-title">TC Chart를 무료로 먼저 경험해보세요</h1>
-        <p>회원가입 후 무료체험을 신청하면 실시간 차트와 전략 도구를 바로 확인할 수 있습니다.</p>
       </section>
       <div className="chart-preview-actions" aria-label="Chart preview actions">
         <FreeTrialRequestButton
           className="button chart-preview-primary"
-          confirmTitle="무료체험 신청을 진행할까요?"
-          confirmDescription="이미 가입된 경우 로그인 후 무료체험을 신청할 수 있습니다. 아직 회원가입 전이라면 가입을 완료한 뒤 무료체험을 바로 자동 접수해드립니다."
-          confirmActionLabel="다음 절차로 진행"
+          confirmTitle={isMember ? '7일 무료체험을 시작할까요?' : '무료체험 신청을 진행할까요?'}
+          confirmDescription={isMember
+            ? '무료체험 신청 즉시 7일간 TC Chart 이용 권한이 열립니다. 확인 후 바로 차트 화면으로 이동합니다.'
+            : '이미 가입된 경우 로그인 후 무료체험을 신청할 수 있습니다. 아직 회원가입 전이라면 가입을 완료한 뒤 무료체험을 바로 신청할 수 있습니다.'}
+          confirmActionLabel={isMember ? '7일 무료체험 시작' : '다음 절차로 진행'}
           confirmCancelLabel="나중에"
           loginHref={loginHref}
-          signupHref={signupHref}
+          requestSource={isMember ? 'chart-preview-member' : 'chart-preview-guest'}
           returnHref="/chart"
+          signupHref={signupHref}
+          redirectOnSuccess={isMember}
         >
           무료체험 신청
         </FreeTrialRequestButton>
@@ -100,12 +106,18 @@ function mountParticlePreview(
   onReady: () => void,
 ): () => void {
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(72, 1, 0.1, 2000);
-  camera.position.z = 500;
+  const camera = new THREE.PerspectiveCamera(72, 1, 0.1, 2200);
+  camera.position.z = 520;
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   container.appendChild(renderer.domElement);
+
+  const aurora = createAurora(THREE);
+  scene.add(aurora);
+
+  const stars = createStars(THREE);
+  scene.add(stars);
 
   const particleCount = window.matchMedia('(max-width: 720px)').matches ? 7000 : 12000;
   const geometry = new THREE.BufferGeometry();
@@ -169,10 +181,18 @@ function mountParticlePreview(
     }
   }
 
-  function render() {
+  function render(now: number) {
     frameId = window.requestAnimationFrame(render);
+    const time = now * 0.001;
     particles.rotation.y += 0.002;
     particles.rotation.x += 0.001;
+    stars.rotation.y -= 0.00035;
+    aurora.children.forEach((ribbon: any, index: number) => {
+      ribbon.position.x = Math.sin(time * 0.35 + index) * 18;
+      ribbon.position.y = -120 + Math.sin(time * 0.42 + index * 0.7) * 20;
+      ribbon.rotation.z = Math.sin(time * 0.24 + index) * 0.035;
+      ribbon.material.opacity = 0.18 + Math.sin(time * 0.6 + index) * 0.045;
+    });
     camera.position.x += (mouseX - camera.position.x) * 0.04;
     camera.position.y += (-mouseY - camera.position.y) * 0.04;
     camera.lookAt(scene.position);
@@ -191,7 +211,7 @@ function mountParticlePreview(
     startedAt = now;
     updateIntro(now);
   });
-  render();
+  render(performance.now());
 
   return () => {
     window.cancelAnimationFrame(frameId);
@@ -201,9 +221,76 @@ function mountParticlePreview(
     geometry.dispose();
     material.map?.dispose?.();
     material.dispose();
+    stars.geometry.dispose();
+    stars.material.dispose();
+    aurora.children.forEach((ribbon: any) => {
+      ribbon.geometry.dispose();
+      ribbon.material.dispose();
+    });
     renderer.dispose();
     renderer.domElement.remove();
   };
+}
+
+function createAurora(THREE: any) {
+  const group = new THREE.Group();
+  const colors = [0x2df7c8, 0x43a7ff, 0x9a7cff];
+
+  colors.forEach((color, ribbonIndex) => {
+    const widthSegments = 96;
+    const heightSegments = 8;
+    const geometry = new THREE.PlaneGeometry(900, 180, widthSegments, heightSegments);
+    const positions = geometry.attributes.position;
+
+    for (let index = 0; index < positions.count; index += 1) {
+      const x = positions.getX(index);
+      const y = positions.getY(index);
+      const wave = Math.sin((x * 0.018) + ribbonIndex * 1.7) * 34;
+      const ripple = Math.sin((x * 0.045) + (y * 0.02)) * 10;
+      positions.setY(index, y + wave + ripple);
+    }
+
+    geometry.computeVertexNormals();
+    const material = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.16 + ribbonIndex * 0.035,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(0, -130 + ribbonIndex * 54, -260 - ribbonIndex * 35);
+    mesh.rotation.z = -0.08 + ribbonIndex * 0.055;
+    group.add(mesh);
+  });
+
+  return group;
+}
+
+function createStars(THREE: any) {
+  const count = 900;
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(count * 3);
+
+  for (let star = 0; star < count; star += 1) {
+    const offset = star * 3;
+    positions[offset] = (Math.random() - 0.5) * 1600;
+    positions[offset + 1] = (Math.random() - 0.5) * 1000;
+    positions[offset + 2] = -420 - Math.random() * 760;
+  }
+
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const material = new THREE.PointsMaterial({
+    size: 1.25,
+    color: 0xbfe8ff,
+    transparent: true,
+    opacity: 0.72,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+
+  return new THREE.Points(geometry, material);
 }
 
 function createParticleTexture(THREE: any) {
