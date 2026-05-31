@@ -76,6 +76,37 @@ test('profile image policy payload uses the selected browser file metadata', () 
   });
 });
 
+test('profile image upload route stores the avatar data url on the dashboard user', async () => {
+  const repository = getChartServiceRepository();
+  const { session } = createSessionForUser(repository, {
+    userId: 'user_member',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  });
+  const { POST } = await import('../app/api/profile/avatar/route.ts');
+  const dataUrl = 'data:image/png;base64,AAAA';
+
+  const response = await POST(new Request('http://localhost/api/profile/avatar', {
+    method: 'POST',
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${session.id}`,
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      filename: 'avatar.png',
+      mimeType: 'image/png',
+      sizeBytes: 4,
+      dataUrl,
+    }),
+  }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.dashboard.user.profileImageDataUrl, dataUrl);
+  assert.equal(repository.getUserById('user_member')?.profileImageDataUrl, dataUrl);
+});
+
 test('profile patch API updates the signed-in users dashboard name', async () => {
   const repository = getChartServiceRepository();
   const { session } = createSessionForUser(repository, {
@@ -262,6 +293,15 @@ test('profile referral card exposes copy icon buttons for code and link', () => 
   assert.match(panelSource, /navigator\.clipboard\.writeText/);
   assert.match(panelSource, /copyTextWithHiddenTextarea/);
   assert.match(panelSource, /document\.execCommand\('copy'\)/);
+  assert.match(panelSource, /referralCopyMessage/);
+  assert.match(panelSource, /className="referral-copy-message"/);
+  assert.match(panelSource, /role="status"/);
+  assert.match(panelSource, /회원 초대 시 이 코드를 입력하면 추천인 정보가 입력됩니다\./);
+  assert.match(panelSource, /회원 초대 시 이 링크를 전달하면 추천인 정보가 자동입력됩니다\./);
+  assert.match(panelSource, /window\.alert\(getReferralCopyAlertMessage\(label\)\)/);
+  assert.match(panelSource, /추천코드가 카피되었습니다/);
+  assert.match(panelSource, /추천링크가 카피되었습니다/);
+  assert.doesNotMatch(panelSource, /회원 초대 시 이 링크를 전달하면 추천인 정보를 추적할 수 있습니다\./);
   assert.match(panelSource, /aria-label="추천코드 복사"/);
   assert.match(panelSource, /aria-label="추천링크 복사"/);
   assert.match(panelSource, /aria-label="추천링크 공유"/);
@@ -269,10 +309,20 @@ test('profile referral card exposes copy icon buttons for code and link', () => 
   assert.match(panelSource, /추천코드.*복사했습니다|추천코드.*복사/);
   assert.match(panelSource, /CopyIcon/);
   assert.match(panelSource, /ShareIcon/);
+  assert.match(panelSource, /<rect x="5\.5" y="8\.5"/);
+  assert.match(panelSource, /<rect x="9" y="5"/);
+  assert.match(panelSource, /<circle cx="7" cy="12"/);
   assert.match(panelSource, /referral-copy-row/);
   assert.match(styleSource, /\.referral-icon-button/);
+  assert.match(styleSource, /\.referral-copy-message/);
+  assert.match(styleSource, /\.referral-card \.referral-copy-message\s*\{[\s\S]*?color: var\(--muted\)/);
+  assert.match(styleSource, /body:not\(:has\(\.landing-page\)\) \.profile-page \.referral-card \.referral-copy-message\s*\{[\s\S]*?color: rgba\(216, 236, 255, 0\.68\)/);
+  assert.match(styleSource, /\.profile-page \.referral-card\s*\{[\s\S]*?background: transparent/);
+  assert.match(styleSource, /\.profile-page \.referral-card\s*\{[\s\S]*?border-top: 1px solid var\(--line\)/);
+  assert.match(styleSource, /body:not\(:has\(\.landing-page\)\) \.profile-page \.referral-card\s*\{[\s\S]*?border-top: 1px solid rgba\(125, 183, 255, 0\.14\)/);
   assert.match(styleSource, /background: transparent/);
   assert.match(styleSource, /border: 0/);
+  assert.match(styleSource, /outline: 0/);
   assert.match(styleSource, /\.screen-reader-only/);
 });
 
@@ -301,11 +351,33 @@ test('profile image file control keeps the picker and guide text vertically alig
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
   const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
+  assert.match(panelSource, /profile-card-header/);
+  assert.doesNotMatch(panelSource, /<h2>마이프로필<\/h2>/);
+  assert.match(panelSource, /<button className="button" type="button" onClick=\{openProfileEditModal\}>프로필수정<\/button>\s*<RefreshIconButton/);
+  assert.match(panelSource, /profile-avatar-preview/);
+  assert.match(panelSource, /dashboard\.user\.profileImageDataUrl/);
+  assert.match(panelSource, /DefaultProfileIcon/);
+  assert.match(panelSource, /profile-avatar-default-icon/);
+  assert.match(panelSource, /readFileAsDataUrl/);
+  assert.match(panelSource, /\/api\/profile\/avatar/);
+  assert.match(panelSource, /프로필 이미지 저장/);
+  assert.match(panelSource, /profile-image-save-button/);
   assert.match(panelSource, /profile-image-file-row/);
   assert.match(panelSource, /profile-image-file-help/);
+  assert.match(panelSource, /<\/div>\s*<p className="profile-image-file-help">/);
+  assert.match(styleSource, /\.profile-avatar-preview/);
+  assert.match(styleSource, /\.profile-card-header/);
+  assert.match(styleSource, /\.profile-card-header \.toolbar-actions/);
+  assert.match(styleSource, /\.profile-avatar-default-icon/);
+  assert.match(styleSource, /\.profile-image-save-button/);
+  assert.match(styleSource, /justify-content: center/);
   assert.match(styleSource, /\.profile-image-file-row/);
   assert.match(styleSource, /align-items: center/);
-  assert.match(styleSource, /grid-template-columns: max-content minmax\(0, 1fr\)/);
+  assert.match(styleSource, /grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(styleSource, /\.profile-image-file-row input\[type="file"\]/);
+  assert.match(styleSource, /line-height: 44px/);
+  assert.match(styleSource, /::file-selector-button/);
+  assert.match(styleSource, /height: 30px/);
 });
 
 test('profile panel renders my referral list with individual and total points', () => {

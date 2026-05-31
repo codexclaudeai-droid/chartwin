@@ -35,6 +35,7 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'users')?.columns.account_status.type, 'text');
   assert.equal(tables.find((table) => table.name === 'users')?.columns.password_hash.type, 'text');
   assert.equal(tables.find((table) => table.name === 'users')?.columns.phone_number.nullable, true);
+  assert.equal(tables.find((table) => table.name === 'users')?.columns.profile_image_data_url.nullable, true);
   assert.equal(tables.find((table) => table.name === 'users')?.columns.referral_code.type, 'text');
   assert.equal(tables.find((table) => table.name === 'users')?.columns.referred_by_user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'users')?.columns.created_at.type, 'timestamptz');
@@ -85,6 +86,7 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /create table if not exists users/i);
   assert.match(sql, /password_hash text not null/i);
   assert.match(sql, /phone_number text/i);
+  assert.match(sql, /profile_image_data_url text/i);
   assert.match(sql, /referral_code text not null/i);
   assert.match(sql, /referred_by_user_id text/i);
   assert.match(sql, /created_at timestamptz not null/i);
@@ -146,6 +148,7 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /alter table if exists payment_requests add column if not exists transaction_verification_message text/i);
   assert.match(sql, /alter table if exists payment_requests add column if not exists transaction_verified_at timestamptz/i);
   assert.match(sql, /alter table if exists users add column if not exists phone_number text/i);
+  assert.match(sql, /alter table if exists users add column if not exists profile_image_data_url text/i);
   assert.match(sql, /alter table if exists users add column if not exists referral_code text/i);
   assert.match(sql, /update users set referral_code = upper\(substr\(md5\(id\), 1, 6\)\)/i);
   assert.match(sql, /referral_code !~ '\^\[A-Z0-9\]\{6\}\$'/i);

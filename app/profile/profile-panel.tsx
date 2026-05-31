@@ -27,6 +27,7 @@ type Dashboard = {
     email: string;
     name: string;
     phoneNumber: string | null;
+    profileImageDataUrl: string | null;
     referralCode: string;
     role: string;
   };
@@ -112,6 +113,7 @@ export function ProfilePanel() {
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [message, setMessage] = useState('마이프로필 정보를 불러오는 중입니다.');
   const [settingsMessage, setSettingsMessage] = useState('연락번호, 비밀번호, 추천 정보를 관리할 수 있습니다.');
+  const [referralCopyMessage, setReferralCopyMessage] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const [targetPaymentId, setTargetPaymentId] = useState(() => getTargetPaymentIdFromHash());
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
@@ -234,13 +236,18 @@ export function ProfilePanel() {
     }
   }
 
-  async function copyReferralValue(label: string, value: string) {
+  async function copyReferralValue(label: string, value: string, successMessage?: string) {
     if (await copyTextToClipboard(value)) {
-      setSettingsMessage(`${label}를 복사했습니다.`);
+      const nextMessage = successMessage ?? `${label}를 복사했습니다.`;
+      setReferralCopyMessage(nextMessage);
+      setSettingsMessage(nextMessage);
+      window.alert(getReferralCopyAlertMessage(label));
       return;
     }
 
-    setSettingsMessage(`${label} 복사에 실패했습니다. 직접 선택해서 복사해주세요.`);
+    const nextMessage = `${label} 복사에 실패했습니다. 직접 선택해서 복사해주세요.`;
+    setReferralCopyMessage(nextMessage);
+    setSettingsMessage(nextMessage);
   }
 
   async function shareReferralLink() {
@@ -253,7 +260,8 @@ export function ProfilePanel() {
     if (navigator.share) {
       try {
         await navigator.share(sharePayload);
-        setSettingsMessage('추천링크 공유창을 열었습니다.');
+        setReferralCopyMessage(getReferralLinkGuideMessage());
+        setSettingsMessage(getReferralLinkGuideMessage());
         return;
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
@@ -262,15 +270,14 @@ export function ProfilePanel() {
       }
     }
 
-    await copyReferralValue('추천링크', referralLink);
-    setSettingsMessage('공유를 지원하지 않는 환경이라 추천링크를 복사했습니다.');
+    await copyReferralValue('추천링크', referralLink, getReferralLinkGuideMessage());
   }
 
   function handleProfilePhoneNumberChange(event: React.ChangeEvent<HTMLInputElement>) {
     setPhoneDraft(formatSignupPhoneNumber(event.currentTarget.value));
   }
 
-  async function validateImagePolicy(event: React.FormEvent<HTMLFormElement>) {
+  async function uploadProfileImage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedImageFile) {
       setSettingsMessage('프로필 이미지 파일을 먼저 선택해주세요.');
@@ -278,17 +285,26 @@ export function ProfilePanel() {
     }
 
     setIsBusy(true);
-    const response = await fetch('/api/profile/image-policy', {
+    const response = await fetch('/api/profile/avatar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(createProfileImagePolicyPayload(selectedImageFile)),
+      body: JSON.stringify({
+        ...createProfileImagePolicyPayload(selectedImageFile),
+        dataUrl: await readFileAsDataUrl(selectedImageFile),
+      }),
     });
-    const payload = await response.json();
+    const payload = await response.json() as ProfileResponse;
     setIsBusy(false);
 
-    setSettingsMessage(response.ok && payload.policy?.ok
-      ? '프로필 이미지 업로드 정책을 통과했습니다. 실제 저장소 연결은 다음 단계에서 붙일 수 있습니다.'
-      : `프로필 이미지 정책 실패: ${payload.policy?.reason || payload.message || 'unknown'}`);
+    if (!response.ok || !payload.dashboard) {
+      setSettingsMessage(payload.message || '프로필 이미지 저장에 실패했습니다.');
+      return;
+    }
+
+    setDashboard(payload.dashboard);
+    setSelectedImageFile(null);
+    setSettingsMessage('프로필 이미지가 저장되었습니다.');
+    dispatchAuthSessionChangedEvent();
   }
 
   async function requestSubscriptionAction(action: 'cancel' | 'refund') {
@@ -365,11 +381,17 @@ export function ProfilePanel() {
   return (
     <section className="profile-layout">
       <div className="card">
-        <div className="toolbar">
-          <h2>마이프로필</h2>
+        <div className="profile-card-header">
+          <div className="profile-avatar-preview">
+            {dashboard.user.profileImageDataUrl ? (
+              <img alt={`${dashboard.user.name} 프로필 이미지`} src={dashboard.user.profileImageDataUrl} />
+            ) : (
+              <DefaultProfileIcon />
+            )}
+          </div>
           <div className="toolbar-actions">
-            <RefreshIconButton onClick={refresh} disabled={isBusy} />
             <button className="button" type="button" onClick={openProfileEditModal}>프로필수정</button>
+            <RefreshIconButton onClick={refresh} disabled={isBusy} />
           </div>
         </div>
         <div className="status-list">
@@ -479,7 +501,7 @@ export function ProfilePanel() {
             <button
               aria-label="추천코드 복사"
               className="referral-icon-button"
-              onClick={() => void copyReferralValue('추천코드', dashboard.user.referralCode)}
+              onClick={() => void copyReferralValue('추천코드', dashboard.user.referralCode, getReferralCodeGuideMessage())}
               title="추천코드 복사"
               type="button"
             >
@@ -493,7 +515,7 @@ export function ProfilePanel() {
               <button
                 aria-label="추천링크 복사"
                 className="referral-icon-button"
-                onClick={() => void copyReferralValue('추천링크', referralLink)}
+                onClick={() => void copyReferralValue('추천링크', referralLink, getReferralLinkGuideMessage())}
                 title="추천링크 복사"
                 type="button"
               >
@@ -512,7 +534,9 @@ export function ProfilePanel() {
               </button>
             </div>
           </div>
-          <small>회원 초대 시 이 링크를 전달하면 추천인 정보를 추적할 수 있습니다.</small>
+          {referralCopyMessage && (
+            <p className="referral-copy-message" role="status">{referralCopyMessage}</p>
+          )}
         </div>
         <div className="referral-card referral-list-card">
           <span>나의 추천리스트</span>
@@ -551,7 +575,7 @@ export function ProfilePanel() {
             <small>아직 추천 가입 회원이 없습니다. 추천링크를 공유하면 이곳에 집계됩니다.</small>
           )}
         </div>
-        <form className="form profile-settings-form" onSubmit={validateImagePolicy}>
+        <form className="form profile-settings-form" onSubmit={uploadProfileImage}>
           <label htmlFor="profileImageFile">프로필 이미지 파일</label>
           <div className="profile-image-file-row">
             <input
@@ -560,14 +584,14 @@ export function ProfilePanel() {
               onChange={(event) => setSelectedImageFile(event.target.files?.[0] ?? null)}
               type="file"
             />
-            <p className="profile-image-file-help">PNG, JPG, WEBP 파일만 등록할 수 있습니다.</p>
           </div>
+          <p className="profile-image-file-help">PNG, JPG, WEBP 파일만 등록할 수 있습니다.</p>
           {selectedImageFile && (
             <p className="notice profile-image-file-selection">
               선택 파일: {selectedImageFile.name} / {selectedImageFile.type || 'unknown'} / {selectedImageFile.size} bytes
             </p>
           )}
-          <button className="button secondary" type="submit" disabled={isBusy}>이미지 정책 확인</button>
+          <button className="button secondary profile-image-save-button" type="submit" disabled={isBusy}>프로필 이미지 저장</button>
         </form>
         {canWithdraw && (
           <div className="profile-danger-zone">
@@ -715,11 +739,41 @@ function getReferralLink(referralCode: string): string {
   return `${window.location.origin}${path}`;
 }
 
+function getReferralCodeGuideMessage(): string {
+  return '회원 초대 시 이 코드를 입력하면 추천인 정보가 입력됩니다.';
+}
+
+function getReferralLinkGuideMessage(): string {
+  return '회원 초대 시 이 링크를 전달하면 추천인 정보가 자동입력됩니다.';
+}
+
+function getReferralCopyAlertMessage(label: string): string {
+  return label === '추천코드' ? '추천코드가 카피되었습니다' : '추천링크가 카피되었습니다';
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => resolve(String(reader.result || '')));
+    reader.addEventListener('error', () => reject(reader.error ?? new Error('file read failed')));
+    reader.readAsDataURL(file);
+  });
+}
+
+function DefaultProfileIcon() {
+  return (
+    <svg aria-hidden="true" className="profile-avatar-default-icon" viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.8 20c1.15-4.35 3.55-6.5 7.2-6.5s6.05 2.15 7.2 6.5" />
+    </svg>
+  );
+}
+
 function CopyIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">
-      <rect x="8" y="7" width="11" height="11" rx="2.2" />
-      <rect x="5" y="4" width="11" height="11" rx="2.2" />
+      <rect x="5.5" y="8.5" width="10" height="10" rx="2" />
+      <rect x="9" y="5" width="10" height="10" rx="2" />
     </svg>
   );
 }
@@ -727,9 +781,11 @@ function CopyIcon() {
 function ShareIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">
-      <path d="M12 16V5" />
-      <path d="M8 9l4-4 4 4" />
-      <path d="M6 13v4.5A1.5 1.5 0 0 0 7.5 19h9a1.5 1.5 0 0 0 1.5-1.5V13" />
+      <circle cx="7" cy="12" r="2.6" />
+      <circle cx="17" cy="7" r="2.6" />
+      <circle cx="17" cy="17" r="2.6" />
+      <path d="M9.35 10.85 14.65 8.2" />
+      <path d="M9.35 13.15 14.65 15.8" />
     </svg>
   );
 }

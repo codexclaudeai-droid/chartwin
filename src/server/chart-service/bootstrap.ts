@@ -114,6 +114,7 @@ async function createInitialAdminUser(
     role: USER_ROLES.superAdmin,
     accountStatus: USER_ACCOUNT_STATUSES.active,
     phoneNumber: null,
+    profileImageDataUrl: null,
     referralCode: '',
     referredByUserId: null,
     createdAt: new Date().toISOString(),

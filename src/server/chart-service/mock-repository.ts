@@ -179,6 +179,7 @@ function createMockUser(input: {
   role: ServiceUserRecord['role'];
   accountStatus?: ServiceUserRecord['accountStatus'];
   phoneNumber?: string | null;
+  profileImageDataUrl?: string | null;
   referralCode?: string;
   referredByUserId?: string | null;
   createdAt?: string;
@@ -190,6 +191,7 @@ function createMockUser(input: {
     role: input.role,
     accountStatus: input.accountStatus ?? USER_ACCOUNT_STATUSES.active,
     phoneNumber: input.phoneNumber ?? null,
+    profileImageDataUrl: input.profileImageDataUrl ?? null,
     referralCode: input.referralCode ?? createStableFallbackReferralCode(input.id),
     referredByUserId: input.referredByUserId ?? null,
     createdAt: input.createdAt ?? '2026-05-23T00:00:00.000Z',

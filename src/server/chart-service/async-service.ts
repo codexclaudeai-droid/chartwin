@@ -18,6 +18,7 @@ import {
   reverseReferralLedger,
   type AuditLogDraft,
   validatePasswordPolicy,
+  validateProfileImageUpload,
   type Actor,
   type NotificationCategory,
   type NotificationRecord,
@@ -266,6 +267,31 @@ export async function updateAsyncAuthenticatedUserProfile(
   return updatedUser;
 }
 
+export async function updateAsyncAuthenticatedUserProfileImage(
+  repository: AsyncChartServiceRepository,
+  input: {
+    actor: Actor;
+    filename: string;
+    mimeType: string;
+    sizeBytes: number;
+    dataUrl: string;
+  },
+): Promise<ServiceUserRecord> {
+  const user = await repository.getUserById(input.actor.id);
+  if (!user) throw new Error(`User not found: ${input.actor.id}`);
+
+  const policy = validateProfileImageUpload(input);
+  if (!policy.ok) throw new Error(`Profile image policy failed: ${policy.reason}`);
+  assertProfileImageDataUrl(input.dataUrl, input.mimeType);
+
+  const updatedUser = {
+    ...user,
+    profileImageDataUrl: input.dataUrl,
+  };
+  await repository.saveUser(updatedUser);
+  return updatedUser;
+}
+
 export async function withdrawAsyncAuthenticatedUserAccount(
   repository: AsyncChartServiceRepository,
   input: { actor: Actor; withdrawnAt: string },
@@ -366,6 +392,7 @@ export async function registerAsyncMockUserAccount(
     role: USER_ROLES.member,
     accountStatus: USER_ACCOUNT_STATUSES.active,
     phoneNumber: normalizeProfilePhoneNumber(input.phoneNumber),
+    profileImageDataUrl: null,
     referralCode: '',
     referredByUserId,
     createdAt: input.createdAt,
@@ -406,6 +433,17 @@ function normalizeProfilePhoneNumber(value: string | null | undefined): string |
     throw new Error('Contact phone number invalid');
   }
   return phoneNumber;
+}
+
+function assertProfileImageDataUrl(dataUrl: string, mimeType: string): void {
+  const prefix = `data:${mimeType.toLowerCase()};base64,`;
+  if (!dataUrl.toLowerCase().startsWith(prefix)) {
+    throw new Error('Profile image data URL invalid');
+  }
+  const encoded = dataUrl.slice(prefix.length);
+  if (!encoded || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) {
+    throw new Error('Profile image data URL invalid');
+  }
 }
 
 function getUpdatedPasswordHash(

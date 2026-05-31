@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
         id: result.user.id,
         email: result.user.email,
         name: result.user.name,
+        profileImageDataUrl: result.user.profileImageDataUrl,
         role: result.user.role,
         accountStatus: result.user.accountStatus,
       } : null,

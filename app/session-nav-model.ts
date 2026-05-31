@@ -1,6 +1,7 @@
 export type SessionNavUser = {
   email: string;
   name: string | null;
+  profileImageDataUrl?: string | null;
 };
 
 const ROLE_LABELS: Record<string, string> = {

@@ -1,4 +1,8 @@
-import { validatePasswordPolicy, type Actor } from '../../domain/chart-service/index.ts';
+import {
+  validatePasswordPolicy,
+  validateProfileImageUpload,
+  type Actor,
+} from '../../domain/chart-service/index.ts';
 import { createPasswordHash, verifyPasswordHash } from './passwords.ts';
 import type { ChartServiceRepository, ServiceUserRecord } from './repository.ts';
 
@@ -34,6 +38,42 @@ export function updateAuthenticatedUserProfile(
   };
   repository.saveUser(updatedUser);
   return updatedUser;
+}
+
+export function updateAuthenticatedUserProfileImage(
+  repository: ChartServiceRepository,
+  input: {
+    actor: Actor;
+    filename: string;
+    mimeType: string;
+    sizeBytes: number;
+    dataUrl: string;
+  },
+): ServiceUserRecord {
+  const user = repository.getUserById(input.actor.id);
+  if (!user) throw new Error(`User not found: ${input.actor.id}`);
+
+  const policy = validateProfileImageUpload(input);
+  if (!policy.ok) throw new Error(`Profile image policy failed: ${policy.reason}`);
+  assertProfileImageDataUrl(input.dataUrl, input.mimeType);
+
+  const updatedUser = {
+    ...user,
+    profileImageDataUrl: input.dataUrl,
+  };
+  repository.saveUser(updatedUser);
+  return updatedUser;
+}
+
+export function assertProfileImageDataUrl(dataUrl: string, mimeType: string): void {
+  const prefix = `data:${mimeType.toLowerCase()};base64,`;
+  if (!dataUrl.toLowerCase().startsWith(prefix)) {
+    throw new Error('Profile image data URL invalid');
+  }
+  const encoded = dataUrl.slice(prefix.length);
+  if (!encoded || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) {
+    throw new Error('Profile image data URL invalid');
+  }
 }
 
 function normalizeProfilePhoneNumber(value: string | null | undefined): string | null {

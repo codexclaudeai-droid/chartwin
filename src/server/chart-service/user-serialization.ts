@@ -11,6 +11,7 @@ export function normalizeServiceUserRecord(user: ServiceUserRecord): ServiceUser
   return {
     ...user,
     phoneNumber: user.phoneNumber ?? null,
+    profileImageDataUrl: user.profileImageDataUrl ?? null,
     referralCode: user.referralCode || createStableFallbackReferralCode(user.id),
     referredByUserId: user.referredByUserId ?? null,
     createdAt: user.createdAt || '1970-01-01T00:00:00.000Z',

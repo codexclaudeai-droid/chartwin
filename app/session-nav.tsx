@@ -68,7 +68,14 @@ export function SessionNav() {
     return (
       <div className="session session-auth">
         <Link className="session-user" href="/profile">
-          <span>{formatSessionUserLabel(user)}</span>
+          <span className="session-avatar" aria-hidden="true">
+            {user.profileImageDataUrl ? (
+              <img alt="" src={user.profileImageDataUrl} />
+            ) : (
+              <DefaultSessionAvatarIcon />
+            )}
+          </span>
+          <span className="session-user-name">{formatSessionUserLabel(user)}</span>
           <span className="session-role">{formatSessionRoleLabel(user.role)}</span>
         </Link>
         <button className="session-button" type="button" onClick={logout} disabled={isBusy}>
@@ -83,6 +90,15 @@ export function SessionNav() {
       <Link href="/login">로그인</Link>
       <HeaderSignupEclipseButton />
     </div>
+  );
+}
+
+function DefaultSessionAvatarIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.8 20c1.15-4.35 3.55-6.5 7.2-6.5s6.05 2.15 7.2 6.5" />
+    </svg>
   );
 }
 

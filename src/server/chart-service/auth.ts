@@ -90,6 +90,7 @@ export function registerMockUserAccount(
     role: USER_ROLES.member,
     accountStatus: USER_ACCOUNT_STATUSES.active,
     phoneNumber: normalizeSignupPhoneNumber(input.phoneNumber),
+    profileImageDataUrl: null,
     referralCode: '',
     referredByUserId,
     createdAt: input.createdAt,

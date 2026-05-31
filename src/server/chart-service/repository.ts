@@ -19,6 +19,7 @@ export type ServiceUserRecord = {
   role: UserRole;
   accountStatus: UserAccountStatus;
   phoneNumber: string | null;
+  profileImageDataUrl: string | null;
   referralCode: string;
   referredByUserId: string | null;
   createdAt: string;

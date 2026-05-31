@@ -203,6 +203,43 @@ a {
   gap: 8px;
 }
 
+.session-avatar {
+  align-items: center;
+  background: rgba(12, 102, 90, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 999px;
+  color: var(--accent);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 28px;
+  justify-content: center;
+  overflow: hidden;
+  width: 28px;
+}
+
+.session-avatar img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.session-avatar svg {
+  fill: none;
+  height: 17px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  width: 17px;
+}
+
+.session-user-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .session-role {
   background: rgba(183, 255, 42, 0.12);
   border: 1px solid rgba(183, 255, 42, 0.34);
@@ -5244,8 +5281,23 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 .profile-image-file-row {
   align-items: center;
   display: grid;
-  gap: 10px 14px;
-  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.profile-image-file-row input[type="file"] {
+  box-sizing: border-box;
+  font-size: 13px;
+  height: 46px;
+  line-height: 44px;
+  padding: 0 10px;
+}
+
+.profile-image-file-row input[type="file"]::file-selector-button {
+  font-size: 13px;
+  height: 30px;
+  margin: 7px 8px 7px 0;
+  padding: 0 10px;
+  vertical-align: middle;
 }
 
 .profile-image-file-help {
@@ -5253,11 +5305,16 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
-  margin: 0;
+  margin: -4px 0 0;
 }
 
 .profile-image-file-selection {
   margin: 0;
+}
+
+.profile-image-save-button {
+  justify-content: center;
+  text-align: center;
 }
 
 .profile-danger-zone {
@@ -5279,6 +5336,49 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   color: var(--muted);
   line-height: 1.5;
   margin: 6px 0 0;
+}
+
+.profile-card-header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.profile-card-header .toolbar-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.profile-avatar-preview {
+  align-items: center;
+  background: rgba(12, 102, 90, 0.1);
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
+  border-radius: 999px;
+  display: inline-flex;
+  height: 84px;
+  justify-content: center;
+  overflow: hidden;
+  width: 84px;
+}
+
+.profile-avatar-preview img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.profile-avatar-default-icon {
+  fill: none;
+  height: 46px;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  width: 46px;
 }
 
 .profile-edit-modal-backdrop {
@@ -5394,11 +5494,24 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   padding: 10px 12px;
 }
 
+.referral-card .referral-copy-message {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  margin: 0;
+  padding: 0;
+}
+
 .copy-icon-button,
 .referral-icon-button {
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
   align-items: center;
   background: transparent;
   border: 0;
+  box-shadow: none;
   color: var(--muted);
   cursor: pointer;
   display: inline-flex;
@@ -5420,12 +5533,15 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 
 .copy-icon-button:hover,
 .copy-icon-button:focus-visible,
+.copy-icon-button:active,
 .referral-icon-button:hover,
-.referral-icon-button:focus-visible {
+.referral-icon-button:focus-visible,
+.referral-icon-button:active {
   background: transparent;
+  border: 0;
+  box-shadow: none;
   color: var(--ink);
-  outline: 2px solid rgba(12, 102, 90, 0.2);
-  outline-offset: 2px;
+  outline: 0;
 }
 
 .screen-reader-only {
@@ -5440,6 +5556,16 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 .referral-card small {
   color: var(--muted);
   line-height: 1.5;
+}
+
+.profile-page .referral-card {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  margin-top: 18px;
+  padding: 18px 0 0;
 }
 
 .referral-list-card {
@@ -6302,6 +6428,12 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   background: rgba(25, 199, 184, 0.1);
   border-color: rgba(25, 199, 184, 0.28);
   color: #087a72;
+}
+
+.session-avatar {
+  background: rgba(2, 7, 19, 0.62);
+  border-color: rgba(255, 255, 255, 0.42);
+  color: rgba(216, 236, 255, 0.9);
 }
 
 .landing-page {
@@ -9956,6 +10088,14 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
     padding: 24px 16px 92px;
   }
 
+  .profile-card-header {
+    align-items: center;
+  }
+
+  .profile-card-header .toolbar-actions {
+    gap: 10px;
+  }
+
   .profile-image-file-row {
     align-items: start;
     grid-template-columns: 1fr;
@@ -12935,7 +13075,6 @@ body:not(:has(.landing-page)) .pricing-checkout-card .pricing-plan-card .button.
   color: #ffffff;
 }
 
-body:not(:has(.landing-page)) .profile-page .referral-card,
 body:not(:has(.landing-page)) .profile-page .mini-card,
 body:not(:has(.landing-page)) .profile-page .payment-card {
   background:
@@ -12947,6 +13086,16 @@ body:not(:has(.landing-page)) .profile-page .payment-card {
   color: #ffffff;
 }
 
+body:not(:has(.landing-page)) .profile-page .referral-card {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid rgba(125, 183, 255, 0.14);
+  border-radius: 0;
+  box-shadow: none;
+  color: #ffffff;
+  padding: 18px 0 0;
+}
+
 body:not(:has(.landing-page)) .profile-page .referral-card p,
 body:not(:has(.landing-page)) .profile-page .referral-card input,
 body:not(:has(.landing-page)) .profile-page input[type="file"] {
@@ -12955,9 +13104,24 @@ body:not(:has(.landing-page)) .profile-page input[type="file"] {
   color: rgba(255, 255, 255, 0.82);
 }
 
+body:not(:has(.landing-page)) .profile-page .referral-card .referral-copy-message {
+  background: transparent;
+  border: 0;
+  color: rgba(216, 236, 255, 0.68);
+}
+
 body:not(:has(.landing-page)) .profile-page .referral-card p::selection,
 body:not(:has(.landing-page)) .profile-page .status-row strong::selection {
   background: rgba(76, 141, 255, 0.45);
+}
+
+body:not(:has(.landing-page)) .profile-page .profile-avatar-preview {
+  background: rgba(2, 7, 19, 0.62);
+  border-color: rgba(125, 183, 255, 0.22);
+}
+
+body:not(:has(.landing-page)) .profile-page .profile-avatar-default-icon {
+  stroke: rgba(216, 236, 255, 0.9);
 }
 
 body:not(:has(.landing-page)) .profile-page .referral-card small,
@@ -12977,12 +13141,15 @@ body:not(:has(.landing-page)) .profile-page .referral-icon-button {
 
 body:not(:has(.landing-page)) .profile-page .copy-icon-button:hover,
 body:not(:has(.landing-page)) .profile-page .copy-icon-button:focus-visible,
+body:not(:has(.landing-page)) .profile-page .copy-icon-button:active,
 body:not(:has(.landing-page)) .profile-page .referral-icon-button:hover,
-body:not(:has(.landing-page)) .profile-page .referral-icon-button:focus-visible {
+body:not(:has(.landing-page)) .profile-page .referral-icon-button:focus-visible,
+body:not(:has(.landing-page)) .profile-page .referral-icon-button:active {
   background: transparent;
   border-color: transparent;
+  box-shadow: none;
   color: #ffffff;
-  outline-color: rgba(255, 255, 255, 0.18);
+  outline: 0;
 }
 
 body:not(:has(.landing-page)) .profile-page .profile-settings-form {

@@ -29,6 +29,7 @@ test('auth me API returns a user summary for the session navigation', async () =
   assert.equal(payload.actor.id, 'user_member');
   assert.equal(payload.user.email, 'member@example.com');
   assert.equal(payload.user.name, 'Member');
+  assert.equal(payload.user.profileImageDataUrl, null);
   assert.equal(payload.user.role, 'member');
 });
 
