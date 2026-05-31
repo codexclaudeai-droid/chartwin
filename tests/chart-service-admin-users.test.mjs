@@ -5,6 +5,8 @@ import {
   createAsyncChartServiceRepository,
   createMockChartServiceRepository,
   createSessionForUser,
+  deleteAdminUserAccount,
+  deleteAsyncAdminUserAccount,
   getAsyncAdminUserDirectory,
   getAdminUserDirectory,
   getChartServiceRepository,
@@ -132,6 +134,46 @@ test('only super admins can change a user login email and the change is audited'
     previousEmail: 'member@example.com',
     nextEmail: 'new-member@example.com',
   });
+});
+
+test('only super admins can delete member accounts by disabling login and clearing sessions', async () => {
+  const repository = createMockChartServiceRepository();
+  const session = createSessionForUser(repository, {
+    userId: 'user_member',
+    createdAt: '2026-05-31T00:00:00.000Z',
+    ttlSeconds: 60 * 60,
+  }).session;
+
+  assert.throws(() => deleteAdminUserAccount(repository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    userId: 'user_member',
+    deletedAt: '2026-05-31T01:00:00.000Z',
+  }), /Super admin role required/);
+
+  const result = deleteAdminUserAccount(repository, {
+    admin: { id: 'super_1', role: 'super_admin' },
+    userId: 'user_member',
+    deletedAt: '2026-05-31T01:00:00.000Z',
+  });
+  const deletedUser = repository.getUserById('user_member');
+  const auditLog = repository.listAuditLogs().at(-1);
+
+  assert.equal(result.deletedSessionCount, 1);
+  assert.equal(repository.getSessionById(session.id), null);
+  assert.equal(deletedUser?.accountStatus, 'suspended');
+  assert.equal(deletedUser?.phoneNumber, null);
+  assert.equal(deletedUser?.passwordHash, null);
+  assert.equal(auditLog?.action, 'admin.user.delete');
+  assert.equal(auditLog?.actorAdminId, 'super_1');
+  assert.equal(auditLog?.targetId, 'user_member');
+
+  const asyncResult = await deleteAsyncAdminUserAccount(repository, {
+    admin: { id: 'super_1', role: 'super_admin' },
+    userId: 'user_trial',
+    deletedAt: '2026-05-31T01:10:00.000Z',
+  });
+  assert.equal(asyncResult.user.id, 'user_trial');
+  assert.equal(repository.getUserById('user_trial')?.passwordHash, null);
 });
 
 test('admin user email changes reject invalid or duplicate addresses', () => {
@@ -400,6 +442,7 @@ test('admin user panel confirms role and account status changes before patching'
   assert.match(source, /admin\.user\.role\.update/);
   assert.match(source, /admin\.user\.account\.suspend/);
   assert.match(source, /admin\.user\.account\.activate/);
+  assert.match(source, /admin\.user\.delete/);
   assert.doesNotMatch(source, /shouldRunAdminAction/);
 });
 
@@ -413,6 +456,17 @@ test('admin user panel exposes super-admin-only login email change controls', ()
   assert.match(source, /슈퍼관리자 전용/);
   assert.match(source, /admin\.user\.email\.update/);
   assert.match(source, /body: JSON\.stringify\(\{ email: newEmail \}\)/);
+});
+
+test('admin user panel exposes super-admin-only member delete controls', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /deleteUserAccount/);
+  assert.match(source, /canDeleteAdminUser/);
+  assert.match(source, /getAdminUserDeletePermissionNotice/);
+  assert.match(source, /method: 'DELETE'/);
+  assert.match(source, /회원 삭제/);
+  assert.match(source, /결제, 구독, 문의, 감사로그 기록은 보존됩니다/);
 });
 
 test('admin user directory has polished operator dashboard styling', () => {
@@ -514,6 +568,10 @@ test('admin user search filters keep query role status and submit on one row bef
   assert.ok(filterRule?.groups?.rule);
   assert.ok(tabletRule?.groups?.rule);
   assert.match(filterRule.groups.rule, /grid-template-columns: minmax\(260px, 1\.6fr\) minmax\(150px, 0\.7fr\) minmax\(150px, 0\.7fr\) auto/);
+  assert.match(filterRule.groups.rule, /padding:\s*0/);
+  assert.match(filterRule.groups.rule, /border:\s*0/);
+  assert.match(filterRule.groups.rule, /background:\s*transparent/);
+  assert.match(filterRule.groups.rule, /box-shadow:\s*none/);
   assert.match(tabletRule.groups.rule, /grid-template-columns: minmax\(220px, 1fr\) minmax\(132px, 0\.48fr\) minmax\(132px, 0\.48fr\) auto/);
   assert.match(cssSource, /@media \(max-width: 680px\)[\s\S]*?#admin-users > \.admin-filter-row\s*\{[\s\S]*?grid-template-columns: 1fr/);
 });

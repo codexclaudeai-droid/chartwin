@@ -8,6 +8,7 @@ import {
   getAsyncChartServicePersistence,
   getAdminMutationErrorStatus,
   guardMutationRequest,
+  deleteAsyncAdminUserAccount,
   updateAsyncAdminUserAccountStatus,
   updateAsyncAdminUserEmail,
   updateAsyncAdminUserRole,
@@ -106,6 +107,44 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'user update failed';
+    return NextResponse.json({
+      ok: false,
+      message,
+    }, { status: getAdminMutationErrorStatus(error) });
+  }
+}
+
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  const mutationGuard = guardMutationRequest(request);
+  if (mutationGuard) return mutationGuard;
+
+  try {
+    assertSameOriginMutationRequest(request);
+  } catch (error) {
+    return NextResponse.json({
+      ok: false,
+      message: error instanceof Error ? error.message : 'cross-site request blocked',
+    }, { status: 403 });
+  }
+
+  const persistence = getAsyncChartServicePersistence();
+  try {
+    const { id } = await context.params;
+    const result = await persistence.runMutation(async (repository) => {
+      const admin = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
+      return deleteAsyncAdminUserAccount(repository, {
+        admin,
+        userId: id,
+        deletedAt: new Date().toISOString(),
+      });
+    });
+    return NextResponse.json({
+      ok: true,
+      deletedUserId: result.user.id,
+      deletedSessionCount: result.deletedSessionCount,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'user delete failed';
     return NextResponse.json({
       ok: false,
       message,

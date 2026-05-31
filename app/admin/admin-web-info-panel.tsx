@@ -73,12 +73,34 @@ export function AdminWebInfoPanel({ mode }: Readonly<{ mode: 'terms' | 'privacy'
     setSettings((current) => ({ ...current, [field]: value }));
   }
 
-  function updatePlanServices(planId: string, value: string) {
+  function updatePlanServiceItem(planId: string, index: number, value: string) {
     setSettings((current) => ({
       ...current,
       planServices: {
         ...current.planServices,
-        [planId]: parsePlanServiceLines(value),
+        [planId]: (current.planServices[planId] ?? []).map((service, serviceIndex) => (
+          serviceIndex === index ? value : service
+        )),
+      },
+    }));
+  }
+
+  function addPlanServiceItem(planId: string) {
+    setSettings((current) => ({
+      ...current,
+      planServices: {
+        ...current.planServices,
+        [planId]: [...(current.planServices[planId] ?? []), ''],
+      },
+    }));
+  }
+
+  function removePlanServiceItem(planId: string, index: number) {
+    setSettings((current) => ({
+      ...current,
+      planServices: {
+        ...current.planServices,
+        [planId]: (current.planServices[planId] ?? []).filter((_, serviceIndex) => serviceIndex !== index),
       },
     }));
   }
@@ -101,22 +123,49 @@ export function AdminWebInfoPanel({ mode }: Readonly<{ mode: 'terms' | 'privacy'
           <>
             <div className="plan-services-help">
               <strong>입력 안내</strong>
-              <span>한 줄에 하나씩 서비스 항목을 입력하면 가격 페이지와 구독 선택 카드에 같은 순서로 표시됩니다.</span>
+              <span>서비스마다 한 행으로 구분해 입력하면 가격 페이지와 구독 선택 카드에 같은 순서로 표시됩니다.</span>
             </div>
             <div className="plan-services-grid">
-              {PLAN_SERVICE_EDITORS.map((plan) => (
-                <label htmlFor={`${plan.id}-services`} key={plan.id}>
-                  {plan.label} 제공서비스
-                  <textarea
-                    id={`${plan.id}-services`}
-                    rows={8}
-                    value={(settings.planServices[plan.id] ?? []).join('\n')}
-                    onChange={(event) => updatePlanServices(plan.id, event.target.value)}
-                    placeholder="한 줄에 하나씩 제공서비스를 입력하세요"
-                    required
-                  />
-                </label>
-              ))}
+              {PLAN_SERVICE_EDITORS.map((plan) => {
+                const services = settings.planServices[plan.id] ?? [];
+
+                return (
+                  <section className="plan-services-editor-card" key={plan.id}>
+                    <div className="plan-services-editor-header">
+                      <strong>{plan.label} 제공서비스</strong>
+                      <button
+                        className="button secondary compact"
+                        onClick={() => addPlanServiceItem(plan.id)}
+                        type="button"
+                      >
+                        행 추가
+                      </button>
+                    </div>
+                    <div className="plan-services-row-list">
+                      {services.map((service, index) => (
+                        <div className="plan-services-row" key={`${plan.id}-${index}`}>
+                          <input
+                            aria-label={`${plan.label} 제공서비스 ${index + 1}`}
+                            value={service}
+                            onChange={(event) => updatePlanServiceItem(plan.id, index, event.target.value)}
+                            placeholder="제공서비스 입력"
+                            required
+                          />
+                          <button
+                            aria-label={`${plan.label} 제공서비스 ${index + 1} 삭제`}
+                            className="button danger compact"
+                            disabled={services.length <= 1}
+                            onClick={() => removePlanServiceItem(plan.id, index)}
+                            type="button"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
             <div className="plan-services-preview" aria-label="제공서비스 미리보기">
               {PLAN_SERVICE_EDITORS.map((plan) => {
@@ -126,8 +175,8 @@ export function AdminWebInfoPanel({ mode }: Readonly<{ mode: 'terms' | 'privacy'
                     <span>{plan.label}</span>
                     <strong>{services.length}개 서비스 항목</strong>
                     <ul>
-                      {services.map((service) => (
-                        <li key={service}>{service}</li>
+                      {services.map((service, index) => (
+                        <li key={`${plan.id}-preview-${index}`}>{service}</li>
                       ))}
                     </ul>
                   </article>
@@ -136,13 +185,15 @@ export function AdminWebInfoPanel({ mode }: Readonly<{ mode: 'terms' | 'privacy'
             </div>
           </>
         ) : (
-          <label htmlFor={`${mode}-content`}>
+          <label className="web-info-policy-editor" htmlFor={`${mode}-content`}>
             {title}
+            <span className="web-info-html-option">HTML 입력 가능</span>
             <textarea
               id={`${mode}-content`}
               rows={14}
               value={settings[fieldName]}
               onChange={(event) => updateField(fieldName, event.target.value)}
+              placeholder="<h3>제목</h3><p>내용</p> 형식의 HTML도 입력할 수 있습니다."
               required
             />
           </label>
@@ -157,10 +208,6 @@ export function AdminWebInfoPanel({ mode }: Readonly<{ mode: 'terms' | 'privacy'
       )}
     </section>
   );
-}
-
-function parsePlanServiceLines(value: string): string[] {
-  return value.split('\n').map((line) => line.trim()).filter(Boolean);
 }
 
 function normalizeLoadedSettings(settings: Partial<WebInfoSettings>): WebInfoSettings {

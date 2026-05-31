@@ -78,6 +78,10 @@ import {
   setFinnhubApiKey,
 } from '../data/market-data-sources';
 import { type PatternAnalysisScope } from '../patterns/pattern-detector';
+import {
+  formatSignalVoiceMessage,
+  speakNotificationVoice,
+} from '../domain/chart-service/notification-voice';
 import type { CandleData } from '../types';
 import type { DisplayCurrency } from '../types/market';
 import { SimpleChart, X_AXIS_HEIGHT, MOBILE_BOTTOM_BAR_HEIGHT, MOBILE_JUMP_LATEST_SVG } from '../chart/SimpleChart';
@@ -2639,20 +2643,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     };
     ensureSignalNoticeStyle();
     const speakSignalNotice = (side: 'LONG' | 'SHORT') => {
-      const message = side === 'LONG' ? '매수신호발생' : '매도신호발생';
-      const ss = window.speechSynthesis;
-      if (!ss) return;
-      try {
-        ss.cancel();
-        const utter = new SpeechSynthesisUtterance(message);
-        utter.lang = 'ko-KR';
-        utter.rate = 1;
-        utter.pitch = 1;
-        utter.volume = 1;
-        ss.speak(utter);
-      } catch {
-        // ignore speech errors
-      }
+      speakNotificationVoice(formatSignalVoiceMessage(side));
     };
     const formatSignalNoticePrice = (symbol: string, value: number): string => {
       if (!Number.isFinite(value)) return '-';

@@ -147,6 +147,14 @@ test('admin dashboard uses polished console design tokens and surfaces', () => {
     cssSource,
     /body:not\(:has\(\.landing-page\)\) \.admin-page \.admin-dashboard-section > \.card,\s*body:not\(:has\(\.landing-page\)\) \.admin-page \.admin-dashboard-section > div > \.card\s*\{[\s\S]*?padding:\s*0\s*!important[\s\S]*?border:\s*0\s*!important[\s\S]*?background:\s*transparent\s*!important[\s\S]*?box-shadow:\s*none\s*!important/,
   );
+  assert.match(
+    cssSource,
+    /body:not\(:has\(\.landing-page\)\) \.admin-page \.admin-dashboard-section > \.card > \.toolbar,\s*body:not\(:has\(\.landing-page\)\) \.admin-page \.admin-dashboard-section > div > \.card > \.toolbar\s*\{[\s\S]*?padding-top:\s*4px/,
+  );
+  assert.match(
+    cssSource,
+    /body:not\(:has\(\.landing-page\)\) \.admin-page \.admin-dashboard-section > \.card > \.toolbar h2,\s*body:not\(:has\(\.landing-page\)\) \.admin-page \.admin-dashboard-section > div > \.card > \.toolbar h2\s*\{[\s\S]*?line-height:\s*1\.28[\s\S]*?overflow:\s*visible/,
+  );
   assert.match(cssSource, /\.admin-page \.table/);
   assert.match(cssSource, /\.admin-page \.form input:focus/);
   assert.match(cssSource, /\.admin-page \.button:hover:not\(:disabled\)/);

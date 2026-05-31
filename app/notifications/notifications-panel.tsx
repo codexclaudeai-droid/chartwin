@@ -2,8 +2,15 @@
 
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { dispatchNotificationsRefreshEvent } from '../notification-events';
+import {
+  dispatchNotificationsRefreshEvent,
+  subscribeNotificationsRefreshEvent,
+} from '../notification-events';
 import { RefreshIconButton } from '../shared/refresh-icon-button';
+import {
+  formatNotificationVoiceMessage,
+  speakNotificationVoice,
+} from '../../src/domain/chart-service/notification-voice.ts';
 import {
   NOTIFICATION_FILTER_TABS,
   type NotificationFilterKey,
@@ -47,6 +54,7 @@ type MarkNotificationReadOptions = {
 export function NotificationsPanel() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const notificationsRef = useRef<NotificationRecord[]>([]);
+  const hasLoadedNotificationsRef = useRef(false);
   const [summary, setSummary] = useState<NotificationSummary>({ totalCount: 0, unreadCount: 0 });
   const [activeFilterKey, setActiveFilterKey] = useState<NotificationFilterKey>(() => getCurrentNotificationFilterKey());
   const [message, setMessage] = useState('로그인하면 결제 승인, 구독 상태, 고객센터 답변 알림을 확인할 수 있습니다.');
@@ -60,6 +68,12 @@ export function NotificationsPanel() {
 
   useEffect(() => {
     void refresh();
+  }, []);
+
+  useEffect(() => {
+    return subscribeNotificationsRefreshEvent(() => {
+      void refresh();
+    });
   }, []);
 
   useEffect(() => {
@@ -115,9 +129,34 @@ export function NotificationsPanel() {
       setMessage(payload.message || '알림을 보려면 로그인이 필요합니다.');
       return;
     }
-    setNotificationRecords(payload.notifications || []);
+    const nextNotifications = payload.notifications || [];
+    speakNewUnreadNotifications(notificationsRef.current, nextNotifications);
+    setNotificationRecords(nextNotifications);
     setSummary(payload.summary || { totalCount: 0, unreadCount: 0 });
     setMessage(formatNotificationSummaryMessage(payload.summary || { totalCount: 0, unreadCount: 0 }));
+  }
+
+  function speakNewUnreadNotifications(
+    previousNotifications: NotificationRecord[],
+    nextNotifications: NotificationRecord[],
+  ) {
+    if (!hasLoadedNotificationsRef.current) {
+      hasLoadedNotificationsRef.current = true;
+      return;
+    }
+
+    const previousIds = new Set(previousNotifications.map((notification) => notification.id));
+    const newUnreadNotifications = nextNotifications
+      .filter((notification) => !notification.readAt && !previousIds.has(notification.id))
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const latestNotification = newUnreadNotifications.at(-1);
+    if (!latestNotification) return;
+
+    speakNotificationVoice(formatNotificationVoiceMessage({
+      category: latestNotification.category,
+      title: normalizeNotificationTitle(latestNotification.title),
+      body: latestNotification.body,
+    }));
   }
 
   async function markNotificationRead(

@@ -18,6 +18,12 @@ type AccountStatusPermissionInput = ActorPermissionInput & {
   nextAccountStatus: UserAccountStatus;
 };
 
+type DeletePermissionInput = ActorPermissionInput & {
+  actorId: string | null | undefined;
+  targetUserId: string | null | undefined;
+  targetRole: string | null | undefined;
+};
+
 export function canChangeAdminUserRole(input: RolePermissionInput): boolean {
   if (!isAdminActor(input.actorRole)) return false;
   if (input.actorRole === 'super_admin') return true;
@@ -29,6 +35,12 @@ export function canChangeAdminUserAccountStatus(input: AccountStatusPermissionIn
   if (input.actorId === input.targetUserId && input.nextAccountStatus === 'suspended') return false;
   if (input.actorRole === 'super_admin') return true;
   return !requiresSuperAdmin(input.targetRole);
+}
+
+export function canDeleteAdminUser(input: DeletePermissionInput): boolean {
+  return input.actorRole === 'super_admin' &&
+    input.actorId !== input.targetUserId &&
+    input.targetRole !== 'super_admin';
 }
 
 export function getAdminUserPermissionNotice(input: RolePermissionInput & {
@@ -56,6 +68,19 @@ export function getAdminUserAccountStatusPermissionNotice(input: AccountStatusPe
   }
   if (input.actorRole !== 'super_admin' && requiresSuperAdmin(input.targetRole)) {
     return '관리자 계정 상태 변경은 슈퍼 관리자만 가능합니다.';
+  }
+  return null;
+}
+
+export function getAdminUserDeletePermissionNotice(input: DeletePermissionInput): string | null {
+  if (input.actorRole !== 'super_admin') {
+    return '회원 삭제는 슈퍼관리자만 가능합니다.';
+  }
+  if (input.actorId === input.targetUserId) {
+    return '자기 자신의 계정은 삭제할 수 없습니다.';
+  }
+  if (input.targetRole === 'super_admin') {
+    return '슈퍼관리자 계정은 삭제할 수 없습니다.';
   }
   return null;
 }

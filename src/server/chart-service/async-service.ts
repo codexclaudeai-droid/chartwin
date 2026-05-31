@@ -1155,6 +1155,45 @@ export async function updateAsyncAdminUserEmail(
   return getAsyncAdminUserDetail(repository, user.id);
 }
 
+export async function deleteAsyncAdminUserAccount(
+  repository: AsyncChartServiceRepository,
+  input: { admin: Actor; userId: string; deletedAt: string },
+): Promise<{ user: ServiceUserRecord; deletedSessionCount: number }> {
+  assertSuperAdminActor(input.admin);
+  const user = await requireAsyncUser(repository, input.userId);
+  if (user.id === input.admin.id) {
+    throw new Error('Cannot delete your own account');
+  }
+  if (user.role === USER_ROLES.superAdmin) {
+    throw new Error('Cannot delete a super admin account');
+  }
+
+  const sessions = await repository.listSessionsByUserId(user.id);
+  const deletedUser: ServiceUserRecord = {
+    ...user,
+    accountStatus: USER_ACCOUNT_STATUSES.suspended,
+    phoneNumber: null,
+    passwordHash: null,
+  };
+
+  await repository.saveUser(deletedUser);
+  await Promise.all(sessions.map((session) => repository.deleteSession(session.id)));
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.user.delete',
+    targetType: 'user',
+    targetId: user.id,
+    beforeJson: { user },
+    afterJson: {
+      user: deletedUser,
+      deletedAt: input.deletedAt,
+      deletedSessionCount: sessions.length,
+    },
+  }));
+
+  return { user: deletedUser, deletedSessionCount: sessions.length };
+}
+
 export async function confirmAsyncManualPaymentRequest(
   repository: AsyncChartServiceRepository,
   input: { paymentId: string; admin: Actor; confirmedAt: string; adminNote?: string },

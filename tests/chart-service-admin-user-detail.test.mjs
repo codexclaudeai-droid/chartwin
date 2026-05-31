@@ -164,3 +164,28 @@ test('super admin can grant admin role through the admin user detail API', async
   assert.equal(payload.ok, true);
   assert.equal(payload.detail.user.role, 'admin');
 });
+
+test('super admin can delete a member through the admin user detail API', async () => {
+  const repository = getChartServiceRepository();
+  const superSession = createSessionForUser(repository, {
+    userId: 'super_1',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  }).session;
+  const { DELETE } = await import('../app/api/admin/users/[id]/route.ts');
+
+  const response = await DELETE(new Request('http://localhost/api/admin/users/user_subscriber', {
+    method: 'DELETE',
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${superSession.id}`,
+    },
+  }), {
+    params: Promise.resolve({ id: 'user_subscriber' }),
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.deletedUserId, 'user_subscriber');
+  assert.equal(repository.getUserById('user_subscriber')?.passwordHash, null);
+});

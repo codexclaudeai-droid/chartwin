@@ -3381,6 +3381,37 @@ a {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.plan-services-editor-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.plan-services-editor-header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.plan-services-row-list {
+  display: grid;
+  gap: 8px;
+}
+
+.plan-services-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.plan-services-row .button {
+  min-width: 58px;
+}
+
 .plan-services-help {
   align-items: flex-start;
   background: rgba(12, 102, 90, 0.08);
@@ -3589,6 +3620,23 @@ a {
   resize: vertical;
 }
 
+.admin-web-info-form .web-info-policy-editor {
+  margin-inline: auto;
+  width: 90%;
+}
+
+.admin-web-info-form .web-info-policy-editor textarea {
+  width: 100%;
+}
+
+.web-info-html-option {
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 800;
+  margin-left: 8px;
+}
+
 .signup-form-card {
   margin-inline: auto;
   max-width: 860px;
@@ -3655,7 +3703,7 @@ a {
   line-height: 1.4;
 }
 
-.signup-policy-box pre {
+.signup-policy-content {
   color: var(--muted);
   font-family: inherit;
   line-height: 1.6;
@@ -3663,6 +3711,10 @@ a {
   max-height: 180px;
   overflow: auto;
   white-space: pre-wrap;
+}
+
+.signup-policy-content.html {
+  white-space: normal;
 }
 
 .checkbox-row {
@@ -5660,12 +5712,12 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 
 #admin-users .admin-filter-row {
   align-items: end;
-  background: rgba(255, 253, 247, 0.72);
-  border: 1px solid rgba(214, 208, 194, 0.8);
-  border-radius: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   grid-template-columns: minmax(260px, 1fr) minmax(150px, 190px) minmax(140px, 180px) auto;
-  padding: 14px;
+  padding: 0;
 }
 
 #admin-users .table {
@@ -9351,6 +9403,18 @@ body:not(:has(.landing-page)) .admin-page .admin-dashboard-section > div > .card
   box-shadow: none !important;
 }
 
+body:not(:has(.landing-page)) .admin-page .admin-dashboard-section > .card > .toolbar,
+body:not(:has(.landing-page)) .admin-page .admin-dashboard-section > div > .card > .toolbar {
+  padding-top: 4px;
+}
+
+body:not(:has(.landing-page)) .admin-page .admin-dashboard-section > .card > .toolbar h2,
+body:not(:has(.landing-page)) .admin-page .admin-dashboard-section > div > .card > .toolbar h2 {
+  line-height: 1.28;
+  margin: 0;
+  overflow: visible;
+}
+
 body:not(:has(.landing-page)) .pricing-page {
   background:
     radial-gradient(circle at 82% 10%, rgba(55, 125, 255, 0.24), transparent 32vw),
@@ -9666,6 +9730,10 @@ body:not(:has(.landing-page)) .support-compose-card .actions.compact {
   justify-content: flex-end;
 }
 
+body:not(:has(.landing-page)) .auth-card .login-actions {
+  justify-content: flex-end;
+}
+
 body:not(:has(.landing-page)) .email-check-row input,
 body:not(:has(.landing-page)) .referral-code-row input {
   flex: 1 1 260px;
@@ -9719,12 +9787,16 @@ body:not(:has(.landing-page)) .signup-policy-box summary {
   font-weight: 800;
 }
 
-body:not(:has(.landing-page)) .signup-policy-box pre {
+body:not(:has(.landing-page)) .signup-policy-content {
   color: rgba(216, 236, 255, 0.72);
   font-family: inherit;
   line-height: 1.7;
   margin: 12px 0 0;
   white-space: pre-wrap;
+}
+
+body:not(:has(.landing-page)) .signup-policy-content.html {
+  white-space: normal;
 }
 
 body:not(:has(.landing-page)) .checkbox-row {
@@ -10888,13 +10960,11 @@ body:not(:has(.landing-page)) #admin-users > .admin-filter-row {
   grid-template-columns: minmax(260px, 1.6fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) auto;
   gap: 12px;
   margin-top: 20px;
-  padding: 16px;
-  border: 1px solid rgba(125, 183, 255, 0.15);
-  border-radius: 22px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(76, 141, 255, 0.025)),
-    rgba(7, 16, 31, 0.74);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 body:not(:has(.landing-page)) #admin-users > .admin-filter-row input,

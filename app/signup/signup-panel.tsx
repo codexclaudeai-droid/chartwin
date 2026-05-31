@@ -17,10 +17,30 @@ type ReferrerPreview = {
   ok: boolean;
 };
 
+type SignupValidationResult =
+  | { ok: true }
+  | { ok: false; message: string; fieldId?: string };
+
 const defaultWebInfoSettings: WebInfoSettings = {
   termsContent: '가입약관을 불러오는 중입니다.',
   privacyContent: '개인정보보호정책을 불러오는 중입니다.',
 };
+
+const passwordPolicyMessage = '비밀번호는 8자리 이상, 영문 대문자, 영문 소문자, 숫자, 특수문자를 포함해야 합니다.';
+
+function isValidSignupEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function satisfiesPasswordPolicy(value: string): boolean {
+  return (
+    value.length >= 8 &&
+    /[A-Z]/.test(value) &&
+    /[a-z]/.test(value) &&
+    /[0-9]/.test(value) &&
+    /[^A-Za-z0-9]/.test(value)
+  );
+}
 
 export function SignupPanel() {
   const [email, setEmail] = useState('');
@@ -73,6 +93,15 @@ export function SignupPanel() {
 
   async function signup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const validation = validateSignupForm();
+    if (validation.ok === false) {
+      setMessage(validation.message);
+      if (validation.fieldId) {
+        document.getElementById(validation.fieldId)?.focus();
+      }
+      return;
+    }
+
     if (!isEmailConfirmed) {
       setMessage('이메일 중복 확인을 먼저 완료해 주세요.');
       return;
@@ -114,6 +143,41 @@ export function SignupPanel() {
       return;
     }
     setMessage(payload.message || '회원가입에 실패했습니다.');
+  }
+
+  function validateSignupForm(): SignupValidationResult {
+    if (!normalizedEmail) {
+      return { ok: false, message: '이메일을 입력해 주세요.', fieldId: 'signupEmail' };
+    }
+    if (!isValidSignupEmail(normalizedEmail)) {
+      return { ok: false, message: '올바른 이메일을 입력해 주세요.', fieldId: 'signupEmail' };
+    }
+    if (!isEmailConfirmed) {
+      return { ok: false, message: '이메일 중복확인을 먼저 완료해 주세요.', fieldId: 'signupEmail' };
+    }
+    if (!name.trim()) {
+      return { ok: false, message: '이름을 입력해 주세요.', fieldId: 'signupName' };
+    }
+    if (!phoneNumber.trim()) {
+      return { ok: false, message: '연락번호를 입력해 주세요.', fieldId: 'signupPhoneNumber' };
+    }
+    if (!password) {
+      return { ok: false, message: '비밀번호를 입력해 주세요.', fieldId: 'signupPassword' };
+    }
+    if (!satisfiesPasswordPolicy(password)) {
+      return { ok: false, message: passwordPolicyMessage, fieldId: 'signupPassword' };
+    }
+    if (!passwordConfirm) {
+      return { ok: false, message: '비밀번호 확인을 입력해 주세요.', fieldId: 'signupPasswordConfirm' };
+    }
+    if (password !== passwordConfirm) {
+      return { ok: false, message: '비밀번호 확인이 일치하지 않습니다.', fieldId: 'signupPasswordConfirm' };
+    }
+    if (!acceptedTerms || !acceptedPrivacy) {
+      return { ok: false, message: '가입약관과 개인정보보호정책에 모두 동의해야 회원가입이 가능합니다.' };
+    }
+
+    return { ok: true };
   }
 
   function handlePhoneNumberChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -179,7 +243,7 @@ export function SignupPanel() {
 
   return (
     <section className="card signup-form-card auth-card">
-      <form className="form" onSubmit={signup}>
+      <form className="form" onSubmit={signup} noValidate>
         <label htmlFor="signupEmail"><span className="required-mark" aria-hidden="true">*</span>이메일</label>
         <div className="email-check-row">
           <input
@@ -280,7 +344,7 @@ export function SignupPanel() {
           <div className="signup-policy-row">
             <details id="signupTermsAgreement">
               <summary>가입약관 내용 확인</summary>
-              <pre>{webInfoSettings.termsContent}</pre>
+              {renderPolicyContent(webInfoSettings.termsContent)}
             </details>
             <label className="checkbox-row" htmlFor="signupAcceptedTerms">
               <input
@@ -297,7 +361,7 @@ export function SignupPanel() {
           <div className="signup-policy-row">
             <details id="signupPrivacyAgreement">
               <summary>개인정보보호정책 내용 확인</summary>
-              <pre>{webInfoSettings.privacyContent}</pre>
+              {renderPolicyContent(webInfoSettings.privacyContent)}
             </details>
             <label className="checkbox-row" htmlFor="signupAcceptedPrivacy">
               <input
@@ -319,4 +383,21 @@ export function SignupPanel() {
       <p className="notice">{message}</p>
     </section>
   );
+}
+
+function renderPolicyContent(content: string) {
+  if (containsHtmlMarkup(content)) {
+    return (
+      <div
+        className="signup-policy-content html"
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    );
+  }
+
+  return <pre className="signup-policy-content">{content}</pre>;
+}
+
+function containsHtmlMarkup(content: string): boolean {
+  return /<\/?[a-z][\s\S]*>/i.test(content);
 }

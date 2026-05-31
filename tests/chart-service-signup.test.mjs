@@ -428,6 +428,11 @@ test('signup panel requires phone password confirmation and policy agreement dro
   assert.match(source, /acceptedPrivacy/);
   assert.match(source, /signupTermsAgreement/);
   assert.match(source, /signupPrivacyAgreement/);
+  assert.match(source, /renderPolicyContent\(webInfoSettings\.termsContent\)/);
+  assert.match(source, /renderPolicyContent\(webInfoSettings\.privacyContent\)/);
+  assert.match(source, /dangerouslySetInnerHTML/);
+  assert.match(source, /containsHtmlMarkup/);
+  assert.match(cssSource, /\.signup-policy-content\.html/);
   assert.match(source, /<details/);
   assert.match(source, /\/api\/web-info/);
   assert.match(cssSource, /\.field-help/);
@@ -476,6 +481,23 @@ test('signup panel keeps email duplicate check compact and marks password confir
   assert.match(cssSource, /\.email-check-row \.button\s*\{[\s\S]*?white-space:\s*nowrap/);
   assert.match(cssSource, /\.signup-policy-row\s*\{[\s\S]*?align-items:\s*center/);
   assert.match(cssSource, /\.signup-policy-box summary\s*\{[\s\S]*?line-height:\s*1\.4/);
+});
+
+test('signup panel validates required fields duplicate check and password policy on submit', () => {
+  const source = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /noValidate/);
+  assert.match(source, /validateSignupForm/);
+  assert.match(source, /document\.getElementById\(validation\.fieldId\)\?\.focus\(\)/);
+  assert.match(source, /이메일을 입력해 주세요\./);
+  assert.match(source, /올바른 이메일을 입력해 주세요\./);
+  assert.match(source, /이메일 중복확인을 먼저 완료해 주세요\./);
+  assert.match(source, /이름을 입력해 주세요\./);
+  assert.match(source, /연락번호를 입력해 주세요\./);
+  assert.match(source, /비밀번호를 입력해 주세요\./);
+  assert.match(source, /비밀번호는 8자리 이상, 영문 대문자, 영문 소문자, 숫자, 특수문자를 포함해야 합니다\./);
+  assert.match(source, /비밀번호 확인을 입력해 주세요\./);
+  assert.match(source, /비밀번호 확인이 일치하지 않습니다\./);
 });
 
 test('signup phone number formatter inserts hyphens while typing digits', async () => {

@@ -123,10 +123,21 @@ test('admin web info panel and routes are wired into operations UI', () => {
   assert.match(panelSource, /plan-services-grid/);
   assert.match(panelSource, /plan-services-help/);
   assert.match(panelSource, /plan-services-preview/);
+  assert.match(panelSource, /plan-services-editor-card/);
+  assert.match(panelSource, /plan-services-row-list/);
+  assert.match(panelSource, /plan-services-row/);
+  assert.match(panelSource, /updatePlanServiceItem/);
+  assert.match(panelSource, /addPlanServiceItem/);
+  assert.match(panelSource, /removePlanServiceItem/);
+  assert.match(panelSource, /행 추가/);
+  assert.match(panelSource, /web-info-policy-editor/);
+  assert.match(panelSource, /web-info-html-option/);
+  assert.match(panelSource, /HTML 입력 가능/);
+  assert.match(panelSource, /<h3>제목<\/h3><p>내용<\/p>/);
   assert.match(panelSource, /제공서비스 미리보기/);
   assert.match(panelSource, /서비스 항목/);
   assert.match(panelSource, /플랜 제공서비스/);
-  assert.match(panelSource, /parsePlanServiceLines/);
+  assert.doesNotMatch(panelSource, /parsePlanServiceLines/);
   assert.match(panelSource, /\/api\/admin\/web-info/);
   assert.match(panelSource, /dispatchAdminRefreshEvent/);
   assert.match(panelSource, /source: 'webInfo'/);
@@ -167,6 +178,29 @@ test('admin web info save button centers its label', () => {
   assert.match(saveButtonRule, /justify-content:\s*center/);
   assert.match(saveButtonRule, /text-align:\s*center/);
   assert.match(saveButtonRule, /width:\s*100%/);
+});
+
+test('admin web info policy editor supports HTML input and uses 90 percent card width', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const editorRule = cssSource.match(
+    /\.admin-web-info-form \.web-info-policy-editor\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const textareaRule = cssSource.match(
+    /\.admin-web-info-form \.web-info-policy-editor textarea\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(editorRule, /width:\s*90%/);
+  assert.match(editorRule, /margin-inline:\s*auto/);
+  assert.match(textareaRule, /width:\s*100%/);
+});
+
+test('admin plan service editor separates each service into editable rows', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const cardRule = cssSource.match(/\.plan-services-editor-card\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? '';
+  const rowRule = cssSource.match(/\.plan-services-row\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? '';
+
+  assert.match(cardRule, /display:\s*grid/);
+  assert.match(rowRule, /grid-template-columns:\s*minmax\(0, 1fr\) auto/);
 });
 
 test('admin payment settings save button centers its label', () => {

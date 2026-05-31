@@ -898,6 +898,14 @@ test('login page uses production account copy without mock wording', () => {
   assert.doesNotMatch(loginSource, /mock|목업|임시/i);
 });
 
+test('login page aligns login and logout actions to the right', () => {
+  const panelSource = fs.readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /actions compact login-actions/);
+  assert.match(cssSource, /\.auth-card \.login-actions\s*\{[\s\S]*?justify-content:\s*flex-end/);
+});
+
 test('landing page presents TC Chart feature capabilities under the TradingCore website brand', () => {
   const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');

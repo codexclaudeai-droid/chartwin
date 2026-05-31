@@ -265,6 +265,46 @@ export function updateAdminUserEmail(
   return getAdminUserDetail(repository, user.id);
 }
 
+export function deleteAdminUserAccount(
+  repository: ChartServiceRepository,
+  input: { admin: Actor; userId: string; deletedAt: string },
+): { user: ServiceUserRecord; deletedSessionCount: number } {
+  assertSuperAdminActor(input.admin);
+  const user = repository.getUserById(input.userId);
+  if (!user) throw new Error(`User not found: ${input.userId}`);
+  if (user.id === input.admin.id) {
+    throw new Error('Cannot delete your own account');
+  }
+  if (user.role === 'super_admin') {
+    throw new Error('Cannot delete a super admin account');
+  }
+
+  const sessions = repository.listSessionsByUserId(user.id);
+  const deletedUser: ServiceUserRecord = {
+    ...user,
+    accountStatus: USER_ACCOUNT_STATUSES.suspended,
+    phoneNumber: null,
+    passwordHash: null,
+  };
+
+  repository.saveUser(deletedUser);
+  sessions.forEach((session) => repository.deleteSession(session.id));
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.user.delete',
+    targetType: 'user',
+    targetId: user.id,
+    beforeJson: { user },
+    afterJson: {
+      user: deletedUser,
+      deletedAt: input.deletedAt,
+      deletedSessionCount: sessions.length,
+    },
+  }));
+
+  return { user: deletedUser, deletedSessionCount: sessions.length };
+}
+
 function requiresSuperAdmin(role: UserRole): boolean {
   return ADMIN_ROLES.includes(role);
 }

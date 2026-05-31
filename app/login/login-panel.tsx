@@ -68,7 +68,7 @@ export function LoginPanel() {
           autoComplete="current-password"
           required
         />
-        <div className="actions compact">
+        <div className="actions compact login-actions">
           <button className="button" type="submit" disabled={isSubmitting}>
             {isSubmitting ? '처리 중' : '로그인'}
           </button>

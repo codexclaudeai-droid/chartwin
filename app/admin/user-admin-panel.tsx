@@ -26,7 +26,9 @@ import { useAdminActionConfirmation } from './admin-action-confirmation-dialog';
 import {
   canChangeAdminUserAccountStatus,
   canChangeAdminUserRole,
+  canDeleteAdminUser,
   getAdminUserAccountStatusPermissionNotice,
+  getAdminUserDeletePermissionNotice,
   getAdminUserPermissionNotice,
   getAssignableUserRoles,
 } from './admin-user-permissions';
@@ -446,6 +448,47 @@ export function UserAdminPanel() {
     dispatchAdminRefreshEvent({ source: 'users' });
   }
 
+  async function deleteUserAccount() {
+    if (!detail) return;
+    if (!canDeleteAdminUser({
+      actorId: currentAdmin?.id,
+      actorRole: currentAdmin?.role,
+      targetUserId: detail.user.id,
+      targetRole: detail.user.role,
+    })) {
+      setDetailMessage(getAdminUserDeletePermissionNotice({
+        actorId: currentAdmin?.id,
+        actorRole: currentAdmin?.role,
+        targetUserId: detail.user.id,
+        targetRole: detail.user.role,
+      }) || '현재 관리자 권한으로는 회원을 삭제할 수 없습니다.');
+      return;
+    }
+    if (!await confirmAdminAction(
+      'admin.user.delete',
+      `${detail.user.email} 회원 삭제`,
+    )) {
+      return;
+    }
+
+    setIsBusy(true);
+    const response = await fetch(`/api/admin/users/${encodeURIComponent(detail.user.id)}`, {
+      method: 'DELETE',
+    });
+    const payload = await response.json();
+    setIsBusy(false);
+
+    if (!response.ok) {
+      setDetailMessage(payload.message || '회원 삭제에 실패했습니다.');
+      return;
+    }
+
+    setDetail(null);
+    setDetailMessage('회원이 삭제되었습니다.');
+    void refresh({ nextMessage: `${detail.user.email} 회원을 삭제했습니다.` });
+    dispatchAdminRefreshEvent({ source: 'users' });
+  }
+
   function clearDashboardFilterNotice() {
     setDashboardFilterNotice(null);
     setRole('all');
@@ -490,6 +533,14 @@ export function UserAdminPanel() {
       nextAccountStatus: 'active',
     })
     : false;
+  const canDeleteUser = detail
+    ? canDeleteAdminUser({
+      actorId: currentAdmin?.id,
+      actorRole: currentAdmin?.role,
+      targetUserId: detail.user.id,
+      targetRole: detail.user.role,
+    })
+    : false;
   const canChangeEmail = currentAdmin?.role === 'super_admin';
   const rolePermissionNotice = detail && !canSubmitRole
     ? getAdminUserPermissionNotice({
@@ -506,6 +557,14 @@ export function UserAdminPanel() {
       targetUserId: detail.user.id,
       targetRole: detail.user.role,
       nextAccountStatus: canSuspendAccount ? 'active' : 'suspended',
+    })
+    : null;
+  const deletePermissionNotice = detail && !canDeleteUser
+    ? getAdminUserDeletePermissionNotice({
+      actorId: currentAdmin?.id,
+      actorRole: currentAdmin?.role,
+      targetUserId: detail.user.id,
+      targetRole: detail.user.role,
     })
     : null;
   const userDirectorySummary = getUserDirectorySummary(users);
@@ -852,6 +911,15 @@ export function UserAdminPanel() {
               </button>
             </div>
             {accountPermissionNotice && <p className="notice">{accountPermissionNotice}</p>}
+            {currentAdmin?.role === 'super_admin' && (
+              <div className="admin-filter-row admin-user-detail-control-grid danger-zone">
+                <p className="notice compact">회원 삭제 시 세션이 종료되고 로그인이 차단됩니다. 결제, 구독, 문의, 감사로그 기록은 보존됩니다.</p>
+                <button className="button danger" type="button" onClick={deleteUserAccount} disabled={isBusy || !canDeleteUser}>
+                  회원 삭제
+                </button>
+              </div>
+            )}
+            {deletePermissionNotice && <p className="notice">{deletePermissionNotice}</p>}
             <div className="summary-grid admin-user-detail-summary-grid">
               <article className="mini-card">
                 <span>회원 정보</span>
