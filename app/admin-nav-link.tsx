@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { subscribeAuthSessionChangedEvent } from './auth-events';
+import { getAuthSession } from './auth-session-client';
 import { canShowAdminNavigation } from './admin-nav-model';
 
 type AdminNavSessionPayload = {
@@ -16,13 +17,7 @@ export function AdminNavLink() {
   const [canShow, setCanShow] = useState(false);
 
   async function refreshAccess() {
-    const response = await fetch('/api/auth/me', { cache: 'no-store' });
-    if (!response.ok) {
-      setCanShow(false);
-      return;
-    }
-
-    const payload = await response.json() as AdminNavSessionPayload;
+    const payload = await getAuthSession() as AdminNavSessionPayload;
     setCanShow(Boolean(payload.authenticated) && canShowAdminNavigation(payload.user?.role));
   }
 

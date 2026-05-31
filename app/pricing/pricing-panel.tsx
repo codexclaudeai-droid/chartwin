@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { getAuthSession } from '../auth-session-client';
 import { dispatchNotificationsRefreshEvent } from '../notification-events';
 import { AuthPromptModal } from '../shared/auth-prompt-modal';
 import { formatPlanPriceParts } from '../shared/plan-price-format.ts';
@@ -194,14 +195,7 @@ export function PricingPanel({
 
     async function loadAuthState() {
       try {
-        const response = await fetch('/api/auth/me', { cache: 'no-store' });
-        if (!isMounted) return;
-        if (!response.ok) {
-          setIsAuthenticated(false);
-          return;
-        }
-
-        const payload = await response.json() as { authenticated?: boolean };
+        const payload = await getAuthSession();
         if (!isMounted) return;
         setIsAuthenticated(Boolean(payload.authenticated));
       } catch {

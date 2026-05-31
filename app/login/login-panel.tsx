@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { dispatchAuthSessionChangedEvent } from '../auth-events';
+import { clearAuthSessionCache, primeAuthSession } from '../auth-session-client';
 import { navigateToSafeRedirect } from '../auth-redirect';
 
 export function LoginPanel() {
@@ -25,6 +26,11 @@ export function LoginPanel() {
     const payload = await response.json();
     setIsSubmitting(false);
     if (response.ok) {
+      primeAuthSession({
+        authenticated: true,
+        actor: payload.user ? { id: payload.user.id, role: payload.user.role } : null,
+        user: payload.user ?? null,
+      });
       dispatchAuthSessionChangedEvent();
       if (isAdminRole(payload.user?.role)) {
         window.location.assign('/admin');
@@ -41,6 +47,7 @@ export function LoginPanel() {
     setIsSubmitting(true);
     await fetch('/api/auth/logout', { method: 'POST' });
     setIsSubmitting(false);
+    clearAuthSessionCache();
     dispatchAuthSessionChangedEvent();
     setMessage('로그아웃되었습니다.');
   }

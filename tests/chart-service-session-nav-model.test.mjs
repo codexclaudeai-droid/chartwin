@@ -31,6 +31,9 @@ test('session navigation source renders avatar name and role badge together', ()
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(source, /className="session-avatar"/);
+  assert.match(source, /getAuthSession/);
+  assert.match(source, /clearAuthSessionCache/);
+  assert.doesNotMatch(source, /fetch\('\/api\/auth\/me'/);
   assert.match(source, /user\.profileImageDataUrl/);
   assert.match(source, /DefaultSessionAvatarIcon/);
   assert.match(source, /LogoutIcon/);

@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server.js';
 import {
   getActorFromAsyncRequest,
-  getAsyncChartAccessSnapshot,
   getAsyncChartServicePersistence,
   parseSessionCookie,
 } from '../../../../src/server/chart-service/index.ts';
@@ -20,7 +19,6 @@ export async function GET(request: NextRequest) {
       return {
         actor,
         user,
-        access: await getAsyncChartAccessSnapshot(repository, actor.id),
       };
     });
     return NextResponse.json({
@@ -34,7 +32,6 @@ export async function GET(request: NextRequest) {
         role: result.user.role,
         accountStatus: result.user.accountStatus,
       } : null,
-      access: result.access,
     });
   } catch (error) {
     return NextResponse.json({

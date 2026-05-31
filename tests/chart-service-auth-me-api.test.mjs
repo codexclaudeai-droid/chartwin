@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import test from 'node:test';
 import {
   createSessionForUser,
@@ -50,4 +51,11 @@ test('auth me API accepts signed session cookies when route memory is isolated',
   assert.equal(payload.authenticated, true);
   assert.equal(payload.actor.id, 'admin_1');
   assert.equal(payload.user.email, 'admin@example.com');
+});
+
+test('auth me API stays lightweight for header session checks', () => {
+  const source = fs.readFileSync(new URL('../app/api/auth/me/route.ts', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(source, /getAsyncChartAccessSnapshot/);
+  assert.doesNotMatch(source, /access:/);
 });

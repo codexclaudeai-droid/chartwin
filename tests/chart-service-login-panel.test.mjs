@@ -40,6 +40,7 @@ test('login panel returns users to a safe redirect after authentication', () => 
 test('login panel sends admin operators to the admin dashboard after authentication', () => {
   const source = readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
 
+  assert.match(source, /primeAuthSession/);
   assert.match(source, /isAdminRole/);
   assert.match(source, /payload\.user\?\.role/);
   assert.match(source, /window\.location\.assign\('\/admin'\)/);

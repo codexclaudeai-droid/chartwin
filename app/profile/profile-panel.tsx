@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { dispatchAuthSessionChangedEvent, subscribeAuthSessionChangedEvent } from '../auth-events';
+import { clearAuthSessionCache, primeAuthSession } from '../auth-session-client';
 import { getNotificationCenterHref } from '../notifications/notification-display';
 import { RefreshIconButton } from '../shared/refresh-icon-button';
 import { formatSignupPhoneNumber } from '../signup/phone-format';
@@ -324,6 +325,10 @@ export function ProfilePanel() {
     setSelectedImageFile(null);
     setSelectedAvatarPath(resolveDefaultProfileAvatarPath(payload.dashboard.user.profileImageDataUrl));
     if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
+    primeAuthSession({
+      authenticated: true,
+      user: payload.dashboard.user,
+    });
     setSettingsMessage('프로필 이미지가 저장되었습니다.');
     dispatchAuthSessionChangedEvent();
   }
@@ -368,6 +373,7 @@ export function ProfilePanel() {
     }
 
     setDashboard(null);
+    clearAuthSessionCache();
     setMessage('회원탈퇴가 완료되었습니다. 홈으로 이동합니다.');
     setSettingsMessage('회원탈퇴가 완료되었습니다.');
     dispatchAuthSessionChangedEvent();

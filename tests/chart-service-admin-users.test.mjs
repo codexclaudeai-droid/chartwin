@@ -748,3 +748,11 @@ test('admin user panel refreshes its filtered directory after local user operati
   assert.match(source, /void refresh\(\{ nextMessage: '회원 목록을 갱신했습니다\.' \}\)/);
   assert.match(source, /dispatchAdminRefreshEvent\(\{ source: 'users' \}\)/);
 });
+
+test('admin user panel reuses the shared auth session cache for current admin checks', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /getAuthSession/);
+  assert.doesNotMatch(source, /fetch\(['"]\/api\/auth\/me['"]/);
+  assert.match(source, /readCurrentAdmin/);
+});

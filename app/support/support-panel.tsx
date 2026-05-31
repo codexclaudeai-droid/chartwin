@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { getAuthSession } from '../auth-session-client';
 import { RefreshIconButton } from '../shared/refresh-icon-button';
 import { AuthPromptModal } from '../shared/auth-prompt-modal';
 import {
@@ -121,10 +122,9 @@ export function SupportPanel() {
 
   async function refreshAuthSession() {
     try {
-      const response = await fetch('/api/auth/me', { cache: 'no-store' });
-      const payload = await response.json();
+      const payload = await getAuthSession();
       setAuthSession({
-        authenticated: Boolean(response.ok && payload.authenticated),
+        authenticated: Boolean(payload.authenticated),
         user: payload.user ?? null,
       });
     } catch {

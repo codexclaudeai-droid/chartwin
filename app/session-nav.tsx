@@ -6,15 +6,12 @@ import {
   dispatchAuthSessionChangedEvent,
   subscribeAuthSessionChangedEvent,
 } from './auth-events';
+import { clearAuthSessionCache, getAuthSession, type AuthSessionUser } from './auth-session-client';
 import { formatSessionRoleLabel, formatSessionUserLabel, type SessionNavUser } from './session-nav-model';
 
 type SessionPayload = {
   authenticated?: boolean;
-  user?: (SessionNavUser & {
-    id: string;
-    role: string;
-    accountStatus: string;
-  }) | null;
+  user?: (SessionNavUser & AuthSessionUser) | null;
 };
 
 export function SessionNav() {
@@ -23,14 +20,7 @@ export function SessionNav() {
   const [isBusy, setIsBusy] = useState(false);
 
   async function refreshSession() {
-    const response = await fetch('/api/auth/me', { cache: 'no-store' });
-    if (!response.ok) {
-      setUser(null);
-      setIsLoading(false);
-      return;
-    }
-
-    const payload = await response.json() as SessionPayload;
+    const payload = await getAuthSession() as SessionPayload;
     setUser(payload.authenticated ? payload.user ?? null : null);
     setIsLoading(false);
   }
@@ -56,6 +46,7 @@ export function SessionNav() {
     setIsBusy(true);
     await fetch('/api/auth/logout', { method: 'POST' });
     setIsBusy(false);
+    clearAuthSessionCache();
     dispatchAuthSessionChangedEvent();
     await refreshSession();
   }

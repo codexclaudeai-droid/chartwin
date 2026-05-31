@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { subscribeAuthSessionChangedEvent } from '../auth-events';
+import { getAuthSession } from '../auth-session-client';
 import { getAdminAccessState, type AdminAccessState } from './admin-access-model';
 
 type AdminAccessPayload = {
@@ -25,15 +26,14 @@ export function AdminAccessGate({ children }: Readonly<{ children: ReactNode }>)
 
   const refreshAccess = useCallback(async () => {
     setState('checking');
-    const response = await fetch('/api/auth/me', { cache: 'no-store' });
-    if (!response.ok) {
+    const payload = await getAuthSession() as AdminAccessPayload;
+    if (!payload.authenticated) {
       setState('login_required');
       setMessage('관리자 페이지는 로그인 후 접속할 수 있습니다. 로그인 페이지로 이동합니다.');
       redirectToLogin();
       return;
     }
 
-    const payload = await response.json() as AdminAccessPayload;
     const nextState = getAdminAccessState({
       authenticated: Boolean(payload.authenticated),
       role: payload.user?.role,

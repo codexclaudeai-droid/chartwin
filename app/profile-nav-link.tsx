@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { subscribeAuthSessionChangedEvent } from './auth-events';
+import { getAuthSession } from './auth-session-client';
 import { shouldShowProfileNavigation } from './session-nav-model';
 
 type ProfileNavSessionPayload = {
@@ -13,13 +14,7 @@ export function ProfileNavLink() {
   const [canShow, setCanShow] = useState(false);
 
   async function refreshAccess() {
-    const response = await fetch('/api/auth/me', { cache: 'no-store' });
-    if (!response.ok) {
-      setCanShow(false);
-      return;
-    }
-
-    const payload = await response.json() as ProfileNavSessionPayload;
+    const payload = await getAuthSession() as ProfileNavSessionPayload;
     setCanShow(shouldShowProfileNavigation(payload));
   }
 

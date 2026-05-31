@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { dispatchAuthSessionChangedEvent } from '../auth-events';
+import { primeAuthSession } from '../auth-session-client';
 import { getSafeRedirectPath } from '../auth-redirect';
 import { formatSignupPhoneNumber } from './phone-format';
 
@@ -133,6 +134,11 @@ export function SignupPanel() {
     const payload = await response.json();
     setIsSubmitting(false);
     if (response.ok) {
+      primeAuthSession({
+        authenticated: true,
+        actor: payload.user ? { id: payload.user.id, role: payload.user.role } : null,
+        user: payload.user ?? null,
+      });
       dispatchAuthSessionChangedEvent();
       const searchParams = new URLSearchParams(window.location.search);
       const nextPath = getSafeRedirectPath(searchParams) ?? '/';

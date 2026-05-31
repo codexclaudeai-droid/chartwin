@@ -45,6 +45,7 @@ import {
   getNotificationCategoryLabel,
   getNotificationLinkLabel,
 } from '../notifications/notification-display';
+import { getAuthSession } from '../auth-session-client';
 
 const ROLE_OPTIONS: Array<{ value: UserRole; label: string }> = [
   { value: 'member', label: formatUserRoleLabel('member') },
@@ -187,9 +188,16 @@ type CurrentAdmin = {
 
 type AuthMeResponse = {
   authenticated?: boolean;
-  actor?: CurrentAdmin;
-  user?: CurrentAdmin | null;
+  actor?: unknown;
+  user?: unknown;
 };
+
+function readCurrentAdmin(value: unknown): CurrentAdmin | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const candidate = value as Record<string, unknown>;
+  if (typeof candidate.id !== 'string' || typeof candidate.role !== 'string') return null;
+  return { id: candidate.id, role: candidate.role };
+}
 
 type UserDirectoryFilterOverride = {
   query?: string;
@@ -264,14 +272,8 @@ export function UserAdminPanel() {
   }, []);
 
   async function refreshCurrentAdmin() {
-    const response = await fetch('/api/auth/me', { cache: 'no-store' });
-    if (!response.ok) {
-      setCurrentAdmin(null);
-      return;
-    }
-
-    const payload = await response.json() as AuthMeResponse;
-    const actor = payload.actor ?? payload.user ?? null;
+    const payload = await getAuthSession() as AuthMeResponse;
+    const actor = readCurrentAdmin(payload.actor) ?? readCurrentAdmin(payload.user);
     setCurrentAdmin(payload.authenticated && actor ? actor : null);
   }
 
