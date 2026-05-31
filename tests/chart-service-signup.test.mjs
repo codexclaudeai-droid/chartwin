@@ -459,6 +459,9 @@ test('signup panel uses compact agreement rows and required field marks', () => 
   assert.match(cssSource, /\.signup-policy-box\s*\{[\s\S]*?background:\s*transparent/);
   assert.match(cssSource, /\.signup-policy-box details\s*\{[\s\S]*?border:\s*0/);
   assert.match(cssSource, /\.checkbox-row\s*\{[\s\S]*?background:\s*transparent/);
+  assert.match(cssSource, /\.checkbox-row:is\(:hover, :focus, :focus-visible, :active\)/);
+  assert.match(cssSource, /\.checkbox-row:has\(input:focus-visible\)/);
+  assert.match(cssSource, /\.checkbox-row input:is\(:hover, :focus, :focus-visible, :active\)\s*\{[\s\S]*?outline:\s*0/);
   assert.match(checkboxRowBlock, /color:\s*#ffffff/);
 });
 

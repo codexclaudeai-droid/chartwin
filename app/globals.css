@@ -3638,10 +3638,12 @@ a {
 }
 
 .checkbox-row {
+  -webkit-tap-highlight-color: transparent;
   align-items: center;
   background: transparent;
   border: 0;
   border-radius: 0;
+  box-shadow: none;
   color: #ffffff;
   display: flex;
   gap: 10px;
@@ -3651,8 +3653,26 @@ a {
   white-space: nowrap;
 }
 
+.checkbox-row:is(:hover, :focus, :focus-visible, :active),
+.checkbox-row:has(input:focus),
+.checkbox-row:has(input:focus-visible),
+.checkbox-row:has(input:active) {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  outline: 0;
+}
+
 .checkbox-row input {
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: none;
+  outline: 0;
   width: auto;
+}
+
+.checkbox-row input:is(:hover, :focus, :focus-visible, :active) {
+  box-shadow: none;
+  outline: 0;
 }
 
 .required-mark {
@@ -9657,13 +9677,26 @@ body:not(:has(.landing-page)) .signup-policy-box pre {
 }
 
 body:not(:has(.landing-page)) .checkbox-row {
+  -webkit-tap-highlight-color: transparent;
   align-items: center;
   background: transparent;
   border: 0;
+  box-shadow: none;
   color: #ffffff;
   display: flex;
   gap: 10px;
   padding: 0;
+}
+
+body:not(:has(.landing-page)) .checkbox-row:is(:hover, :focus, :focus-visible, :active),
+body:not(:has(.landing-page)) .checkbox-row:has(input:focus),
+body:not(:has(.landing-page)) .checkbox-row:has(input:focus-visible),
+body:not(:has(.landing-page)) .checkbox-row:has(input:active),
+body:not(:has(.landing-page)) .checkbox-row input:is(:hover, :focus, :focus-visible, :active) {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  outline: 0;
 }
 
 body:not(:has(.landing-page)) .support-workspace {
