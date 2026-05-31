@@ -433,6 +433,8 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(panelSource, /ProfileAvatarOptionGroup/);
   assert.match(panelSource, /selectedAvatarPath/);
   assert.match(panelSource, /avatarPath: selectedAvatarPath/);
+  assert.match(panelSource, /name="profileAvatarPath"/);
+  assert.match(panelSource, /type="radio"/);
   assert.match(panelSource, /기본 아바타 선택/);
   assert.match(panelSource, /남성/);
   assert.match(panelSource, /여성/);
@@ -445,6 +447,11 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(styleSource, /\.profile-avatar-option-groups/);
   assert.match(styleSource, /\.profile-avatar-option-list/);
   assert.match(styleSource, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
+  assert.match(styleSource, /\.profile-avatar-option input\[type="radio"\]/);
+  assert.match(styleSource, /accent-color: var\(--accent\)/);
+  assert.match(styleSource, /\.profile-avatar-option-group legend\s*\{[\s\S]*?color: var\(--muted\)/);
+  assert.match(styleSource, /\.profile-avatar-option\s*\{[\s\S]*?color: var\(--muted\)/);
+  assert.match(styleSource, /body:not\(:has\(\.landing-page\)\) \.profile-page \.profile-avatar-option-group legend,\s*body:not\(:has\(\.landing-page\)\) \.profile-page \.profile-avatar-option span\s*\{[\s\S]*?color: rgba\(216, 236, 255, 0\.68\)/);
   assert.match(styleSource, /\.profile-avatar-option\.selected img/);
   assert.match(styleSource, /\.profile-card-header/);
   assert.match(styleSource, /\.profile-card-header \.toolbar-actions/);

@@ -870,16 +870,20 @@ function ProfileAvatarOptionGroup({
         {avatars.map((avatar) => {
           const isSelected = selectedAvatarPath === avatar.path;
           return (
-            <button
-              aria-pressed={isSelected}
+            <label
               className={`profile-avatar-option${isSelected ? ' selected' : ''}`}
               key={avatar.id}
-              onClick={() => onSelect(avatar.path)}
-              type="button"
             >
+              <input
+                checked={isSelected}
+                name="profileAvatarPath"
+                onChange={() => onSelect(avatar.path)}
+                type="radio"
+                value={avatar.path}
+              />
               <img alt="" src={avatar.path} />
               <span>{avatar.label}</span>
-            </button>
+            </label>
           );
         })}
       </div>
