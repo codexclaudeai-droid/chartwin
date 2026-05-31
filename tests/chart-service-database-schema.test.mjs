@@ -17,6 +17,7 @@ test('chart service database schema covers repository-backed core tables', () =>
     'subscription_plans',
     'subscriptions',
     'public_board_posts',
+    'notice_popups',
     'support_threads',
     'support_messages',
     'payment_requests',
@@ -79,6 +80,8 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'notifications')?.columns.archived_at.nullable, true);
   assert.equal(tables.find((table) => table.name === 'email_outbox')?.columns.recipient_email.type, 'text');
   assert.equal(tables.find((table) => table.name === 'audit_logs')?.columns.actor_admin_id.references, 'users.id');
+  assert.equal(tables.find((table) => table.name === 'audit_logs')?.columns.before_json.nullable, true);
+  assert.equal(tables.find((table) => table.name === 'audit_logs')?.columns.after_json.nullable, true);
 });
 
 test('postgres schema renderer emits tables, checks, foreign keys, and indexes', () => {
@@ -158,6 +161,12 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /alter table if exists users add column if not exists created_at timestamptz/i);
   assert.match(sql, /create table if not exists email_outbox/i);
   assert.match(sql, /create index if not exists idx_email_outbox_status_created_at/i);
+  assert.match(sql, /before_json jsonb/i);
+  assert.match(sql, /after_json jsonb/i);
+  assert.doesNotMatch(sql, /before_json jsonb not null/i);
+  assert.doesNotMatch(sql, /after_json jsonb not null/i);
+  assert.match(sql, /alter table if exists audit_logs alter column before_json drop not null/i);
+  assert.match(sql, /alter table if exists audit_logs alter column after_json drop not null/i);
 });
 
 test('database schema export harness is available for production migration prep', () => {

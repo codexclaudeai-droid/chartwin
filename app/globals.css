@@ -14398,22 +14398,6 @@ input[type="checkbox"] {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
 }
 
-.admin-notice-popup-calendar-toolbar {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) 36px;
-  align-items: center;
-  gap: 8px;
-}
-
-.admin-notice-popup-calendar-toolbar span {
-  overflow: hidden;
-  color: #ffffff;
-  font-weight: 700;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .admin-notice-popup-calendar-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -14426,9 +14410,20 @@ input[type="checkbox"] {
   min-width: 0;
 }
 
-.notice-popup-calendar-month > strong {
+.notice-popup-calendar-month-header {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 8px;
+}
+
+.notice-popup-calendar-month-header strong {
+  overflow: hidden;
   color: rgba(238, 247, 255, 0.9);
   font-size: 0.92rem;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .notice-popup-calendar-weekdays,
@@ -14468,8 +14463,9 @@ input[type="checkbox"] {
   color: #ffffff;
 }
 
-.notice-popup-calendar-day.outside {
-  color: rgba(216, 236, 255, 0.28);
+.notice-popup-calendar-blank {
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .notice-popup-calendar-day.in-range {

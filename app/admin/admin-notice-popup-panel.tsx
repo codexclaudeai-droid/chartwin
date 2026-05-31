@@ -278,14 +278,19 @@ function NoticePopupSchedulePicker({
   startAt: string | null;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [viewMonth, setViewMonth] = useState(() => getCalendarBaseMonth(startAt));
+  const [leftMonth, setLeftMonth] = useState(() => getCalendarBaseMonth(startAt));
+  const [rightMonth, setRightMonth] = useState(() => addMonths(getCalendarBaseMonth(startAt), 1));
   const startDateValue = getLocalDateInputValue(startAt);
   const endDateValue = getLocalDateInputValue(endAt);
   const startTimeValue = getLocalTimeInputValue(startAt, DEFAULT_START_TIME);
   const endTimeValue = getLocalTimeInputValue(endAt, DEFAULT_END_TIME);
 
   useEffect(() => {
-    if (!isOpen) setViewMonth(getCalendarBaseMonth(startAt));
+    if (!isOpen) {
+      const baseMonth = getCalendarBaseMonth(startAt);
+      setLeftMonth(baseMonth);
+      setRightMonth(addMonths(baseMonth, 1));
+    }
   }, [isOpen, startAt]);
 
   function emitSchedule(nextStartAt: string | null, nextEndAt: string | null) {
@@ -338,26 +343,25 @@ function NoticePopupSchedulePicker({
 
       {isOpen ? (
         <div className="admin-notice-popup-calendar-popover">
-          <div className="admin-notice-popup-calendar-toolbar">
-            <IconButton label="이전 달" onClick={() => setViewMonth((current) => addMonths(current, -1))} disabled={disabled}>
-              <ChevronLeft />
-            </IconButton>
-            <span>{formatNoticePopupMonthRange(viewMonth)}</span>
-            <IconButton label="다음 달" onClick={() => setViewMonth((current) => addMonths(current, 1))} disabled={disabled}>
-              <ChevronRight />
-            </IconButton>
-          </div>
           <div className="admin-notice-popup-calendar-grid">
-            {[viewMonth, addMonths(viewMonth, 1)].map((month) => (
-              <NoticePopupCalendarMonth
-                key={getLocalMonthKey(month)}
-                disabled={disabled}
-                endDateValue={endDateValue}
-                month={month}
-                onPickDate={pickDate}
-                startDateValue={startDateValue}
-              />
-            ))}
+            <NoticePopupCalendarMonth
+              disabled={disabled}
+              endDateValue={endDateValue}
+              month={leftMonth}
+              onNextMonth={() => setLeftMonth((current) => addMonths(current, 1))}
+              onPickDate={pickDate}
+              onPreviousMonth={() => setLeftMonth((current) => addMonths(current, -1))}
+              startDateValue={startDateValue}
+            />
+            <NoticePopupCalendarMonth
+              disabled={disabled}
+              endDateValue={endDateValue}
+              month={rightMonth}
+              onNextMonth={() => setRightMonth((current) => addMonths(current, 1))}
+              onPickDate={pickDate}
+              onPreviousMonth={() => setRightMonth((current) => addMonths(current, -1))}
+              startDateValue={startDateValue}
+            />
           </div>
           <div className="admin-notice-popup-time-grid">
             <label htmlFor="notice-popup-start-time">
@@ -394,32 +398,46 @@ function NoticePopupCalendarMonth({
   disabled,
   endDateValue,
   month,
+  onNextMonth,
   onPickDate,
+  onPreviousMonth,
   startDateValue,
 }: {
   disabled: boolean;
   endDateValue: string;
   month: Date;
+  onNextMonth: () => void;
   onPickDate: (dateKey: string) => void;
+  onPreviousMonth: () => void;
   startDateValue: string;
 }) {
   const days = buildCalendarDays(month);
 
   return (
     <div className="notice-popup-calendar-month">
-      <strong>{formatNoticePopupMonth(month)}</strong>
+      <div className="notice-popup-calendar-month-header">
+        <IconButton label={`${formatNoticePopupMonth(month)} 이전 달`} onClick={onPreviousMonth} disabled={disabled}>
+          <ChevronLeft />
+        </IconButton>
+        <strong>{formatNoticePopupMonth(month)}</strong>
+        <IconButton label={`${formatNoticePopupMonth(month)} 다음 달`} onClick={onNextMonth} disabled={disabled}>
+          <ChevronRight />
+        </IconButton>
+      </div>
       <div className="notice-popup-calendar-weekdays">
         {WEEKDAY_LABELS.map((label) => <span key={label}>{label}</span>)}
       </div>
       <div className="notice-popup-calendar-days">
-        {days.map(({ date, isOutside }) => {
+        {days.map(({ date }, index) => {
+          if (!date) {
+            return <span aria-hidden="true" className="notice-popup-calendar-day notice-popup-calendar-blank" key={`blank-${getLocalMonthKey(month)}-${index}`} />;
+          }
           const dateKey = getLocalDateKey(date);
           const isRangeStart = dateKey === startDateValue;
           const isRangeEnd = dateKey === endDateValue;
           const isInRange = Boolean(startDateValue && endDateValue && dateKey > startDateValue && dateKey < endDateValue);
           const dayClasses = [
             'notice-popup-calendar-day',
-            isOutside ? 'outside' : '',
             isInRange ? 'in-range' : '',
             isRangeStart ? 'selected range-start' : '',
             isRangeEnd ? 'selected range-end' : '',
@@ -495,10 +513,6 @@ function formatNoticePopupMonth(date: Date): string {
   return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
 }
 
-function formatNoticePopupMonthRange(date: Date): string {
-  return `${formatNoticePopupMonth(date)} - ${formatNoticePopupMonth(addMonths(date, 1))}`;
-}
-
 function getCalendarBaseMonth(value: string | null): Date {
   const date = value ? new Date(value) : new Date();
   if (Number.isNaN(date.getTime())) return getMonthStart(new Date());
@@ -513,20 +527,28 @@ function addMonths(date: Date, amount: number): Date {
   return new Date(date.getFullYear(), date.getMonth() + amount, 1);
 }
 
-function addDays(date: Date, amount: number): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + amount);
-}
-
-function buildCalendarDays(month: Date): Array<{ date: Date; isOutside: boolean }> {
+function buildCalendarDays(month: Date): Array<{ date: Date | null }> {
   const firstDay = getMonthStart(month);
-  const gridStart = addDays(firstDay, -firstDay.getDay());
-  return Array.from({ length: 42 }, (_, index) => {
-    const date = addDays(gridStart, index);
+  const leadingBlankCount = firstDay.getDay();
+  const weekCount = getCalendarWeekCount(month);
+  return Array.from({ length: weekCount * 7 }, (_, index) => {
+    const dayOfMonth = index - leadingBlankCount + 1;
+    const daysInMonth = getDaysInMonth(month);
     return {
-      date,
-      isOutside: date.getMonth() !== month.getMonth(),
+      date: dayOfMonth >= 1 && dayOfMonth <= daysInMonth
+        ? new Date(month.getFullYear(), month.getMonth(), dayOfMonth)
+        : null,
     };
   });
+}
+
+function getCalendarWeekCount(month: Date): number {
+  const firstDay = getMonthStart(month);
+  return Math.ceil((firstDay.getDay() + getDaysInMonth(month)) / 7);
+}
+
+function getDaysInMonth(month: Date): number {
+  return new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
 }
 
 function getLocalDateKey(date: Date): string {

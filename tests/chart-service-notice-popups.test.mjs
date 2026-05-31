@@ -175,6 +175,12 @@ test('notice popup admin screen uses Tiptap and icon actions', () => {
   assert.match(panelSource, /notice-popup-calendar-day/);
   assert.match(panelSource, /range-start/);
   assert.match(panelSource, /in-range/);
+  assert.match(panelSource, /getCalendarWeekCount/);
+  assert.match(panelSource, /weekCount \* 7/);
+  assert.match(panelSource, /notice-popup-calendar-blank/);
+  assert.match(panelSource, /leftMonth/);
+  assert.match(panelSource, /rightMonth/);
+  assert.doesNotMatch(panelSource, /length: 42/);
   assert.match(panelSource, /IconButton/);
   assert.match(panelSource, /admin-notice-popup-table/);
   assert.match(panelSource, /공지글 작성/);
