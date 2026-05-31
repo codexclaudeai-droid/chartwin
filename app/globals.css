@@ -9928,9 +9928,9 @@ body:not(:has(.landing-page)) .chart-preview-page {
 
 body:not(:has(.landing-page)) .chart-preview-space {
   background:
-    linear-gradient(180deg, rgba(2, 7, 19, 0.74), rgba(2, 7, 19, 0.24) 48%, rgba(2, 7, 19, 0.86)),
-    linear-gradient(125deg, rgba(4, 11, 26, 0.98), rgba(3, 27, 37, 0.92) 54%, rgba(4, 44, 35, 0.9)),
-    repeating-radial-gradient(circle at 50% 50%, rgba(216, 236, 255, 0.16) 0 1px, transparent 1px 82px);
+    radial-gradient(circle at 50% 48%, rgba(76, 141, 255, 0.16), transparent 34vw),
+    radial-gradient(circle at 72% 30%, rgba(86, 240, 255, 0.08), transparent 32vw),
+    linear-gradient(125deg, rgba(2, 7, 19, 0.98), rgba(3, 16, 30, 0.96) 54%, rgba(2, 18, 17, 0.98));
   inset: 0;
   position: absolute;
   z-index: 0;
@@ -9938,14 +9938,14 @@ body:not(:has(.landing-page)) .chart-preview-space {
 
 body:not(:has(.landing-page)) .chart-preview-space::before {
   background:
-    linear-gradient(100deg, transparent 0 24%, rgba(45, 247, 200, 0.18) 39%, rgba(67, 167, 255, 0.16) 54%, transparent 72%),
-    linear-gradient(80deg, transparent 0 34%, rgba(154, 124, 255, 0.13) 48%, rgba(45, 247, 200, 0.1) 62%, transparent 80%);
+    radial-gradient(circle, rgba(216, 236, 255, 0.54) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(86, 240, 255, 0.28) 0 1px, transparent 1.7px);
+  background-position: 0 0, 42px 58px;
+  background-size: 116px 116px, 168px 168px;
   content: '';
-  filter: blur(28px);
-  inset: -18% -10%;
-  opacity: 0.8;
+  inset: 0;
+  opacity: 0.32;
   position: absolute;
-  transform: skewY(-7deg);
 }
 
 body:not(:has(.landing-page)) .chart-preview-canvas {

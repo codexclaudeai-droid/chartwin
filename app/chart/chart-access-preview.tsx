@@ -16,6 +16,8 @@ type ChartAccessPreviewProps = {
 };
 
 const THREE_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+const PARTICLE_TARGET_RADIUS = 204;
+const BASE_CAMERA_DISTANCE = 520;
 
 export function ChartAccessPreview({
   audience = 'guest',
@@ -107,14 +109,11 @@ function mountParticlePreview(
 ): () => void {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(72, 1, 0.1, 2200);
-  camera.position.z = 520;
+  camera.position.z = BASE_CAMERA_DISTANCE;
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   container.appendChild(renderer.domElement);
-
-  const aurora = createAurora(THREE);
-  scene.add(aurora);
 
   const stars = createStars(THREE);
   scene.add(stars);
@@ -131,7 +130,7 @@ function mountParticlePreview(
     positions[offset + 1] = (Math.random() - 0.5) * 1500;
     positions[offset + 2] = (Math.random() - 0.5) * 1500;
 
-    const radius = 150 + Math.random() * 54;
+    const radius = 150 + Math.random() * (PARTICLE_TARGET_RADIUS - 150);
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos((Math.random() * 2) - 1);
     targets[offset] = radius * Math.sin(phi) * Math.cos(theta);
@@ -163,6 +162,10 @@ function mountParticlePreview(
     const width = Math.max(1, container.clientWidth);
     const height = Math.max(1, container.clientHeight);
     camera.aspect = width / height;
+    const halfFovRadians = (camera.fov * Math.PI / 180) / 2;
+    const narrowAxis = Math.min(1, camera.aspect);
+    const fitDistance = (PARTICLE_TARGET_RADIUS * 1.24) / (Math.tan(halfFovRadians) * narrowAxis);
+    camera.position.z = Math.max(BASE_CAMERA_DISTANCE, fitDistance);
     camera.updateProjectionMatrix();
     renderer.setSize(width, height, false);
   }
@@ -183,16 +186,9 @@ function mountParticlePreview(
 
   function render(now: number) {
     frameId = window.requestAnimationFrame(render);
-    const time = now * 0.001;
     particles.rotation.y += 0.002;
     particles.rotation.x += 0.001;
     stars.rotation.y -= 0.00035;
-    aurora.children.forEach((ribbon: any, index: number) => {
-      ribbon.position.x = Math.sin(time * 0.35 + index) * 18;
-      ribbon.position.y = -120 + Math.sin(time * 0.42 + index * 0.7) * 20;
-      ribbon.rotation.z = Math.sin(time * 0.24 + index) * 0.035;
-      ribbon.material.opacity = 0.18 + Math.sin(time * 0.6 + index) * 0.045;
-    });
     camera.position.x += (mouseX - camera.position.x) * 0.04;
     camera.position.y += (-mouseY - camera.position.y) * 0.04;
     camera.lookAt(scene.position);
@@ -223,49 +219,9 @@ function mountParticlePreview(
     material.dispose();
     stars.geometry.dispose();
     stars.material.dispose();
-    aurora.children.forEach((ribbon: any) => {
-      ribbon.geometry.dispose();
-      ribbon.material.dispose();
-    });
     renderer.dispose();
     renderer.domElement.remove();
   };
-}
-
-function createAurora(THREE: any) {
-  const group = new THREE.Group();
-  const colors = [0x2df7c8, 0x43a7ff, 0x9a7cff];
-
-  colors.forEach((color, ribbonIndex) => {
-    const widthSegments = 96;
-    const heightSegments = 8;
-    const geometry = new THREE.PlaneGeometry(900, 180, widthSegments, heightSegments);
-    const positions = geometry.attributes.position;
-
-    for (let index = 0; index < positions.count; index += 1) {
-      const x = positions.getX(index);
-      const y = positions.getY(index);
-      const wave = Math.sin((x * 0.018) + ribbonIndex * 1.7) * 34;
-      const ripple = Math.sin((x * 0.045) + (y * 0.02)) * 10;
-      positions.setY(index, y + wave + ripple);
-    }
-
-    geometry.computeVertexNormals();
-    const material = new THREE.MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity: 0.16 + ribbonIndex * 0.035,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(0, -130 + ribbonIndex * 54, -260 - ribbonIndex * 35);
-    mesh.rotation.z = -0.08 + ribbonIndex * 0.055;
-    group.add(mesh);
-  });
-
-  return group;
 }
 
 function createStars(THREE: any) {
