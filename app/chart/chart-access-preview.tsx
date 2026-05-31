@@ -166,6 +166,7 @@ function mountParticlePreview(
     const narrowAxis = Math.min(1, camera.aspect);
     const fitDistance = (PARTICLE_TARGET_RADIUS * 1.24) / (Math.tan(halfFovRadians) * narrowAxis);
     camera.position.z = Math.max(BASE_CAMERA_DISTANCE, fitDistance);
+    particles.scale.set(1, 1, 1);
     camera.updateProjectionMatrix();
     renderer.setSize(width, height, false);
   }
