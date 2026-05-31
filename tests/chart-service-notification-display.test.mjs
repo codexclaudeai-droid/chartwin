@@ -141,6 +141,10 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /event\.preventDefault\(\)/);
   assert.match(panelSource, /markNotificationRead\(notification\.id, \{ refreshAfter: false \}\)/);
   assert.match(panelSource, /window\.location\.assign\(notification\.linkUrl\)/);
+  assert.match(panelSource, /NOTIFICATION_POLL_INTERVAL_MS/);
+  assert.match(panelSource, /window\.setInterval/);
+  assert.match(panelSource, /visibilitychange/);
+  assert.match(panelSource, /document\.visibilityState === 'visible'/);
   assert.match(panelSource, /event\.metaKey \|\| event\.ctrlKey \|\| event\.shiftKey \|\| event\.altKey/);
   assert.match(panelSource, /markFilteredRead/);
   assert.match(panelSource, /archiveNotification/);
@@ -170,5 +174,9 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.doesNotMatch(panelSource, /<span className="badge">\{notification\.category\}<\/span>/);
   assert.match(navSource, /getNotificationCenterHref/);
   assert.match(navSource, /href=\{notificationHref\}/);
+  assert.match(navSource, /NOTIFICATION_BADGE_POLL_INTERVAL_MS/);
+  assert.match(navSource, /window\.setInterval/);
+  assert.match(navSource, /visibilitychange/);
+  assert.match(navSource, /document\.visibilityState === 'visible'/);
   assert.match(profileSource, /getNotificationCenterHref\(dashboard\.notifications\.unreadCount\)/);
 });

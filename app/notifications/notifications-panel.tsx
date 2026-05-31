@@ -51,6 +51,8 @@ type MarkNotificationReadOptions = {
   refreshAfter?: boolean;
 };
 
+const NOTIFICATION_POLL_INTERVAL_MS = 60 * 1000;
+
 export function NotificationsPanel() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const notificationsRef = useRef<NotificationRecord[]>([]);
@@ -74,6 +76,24 @@ export function NotificationsPanel() {
     return subscribeNotificationsRefreshEvent(() => {
       void refresh();
     });
+  }, []);
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        void refresh();
+      }
+    }
+
+    const intervalId = window.setInterval(() => {
+      void refresh();
+    }, NOTIFICATION_POLL_INTERVAL_MS);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {

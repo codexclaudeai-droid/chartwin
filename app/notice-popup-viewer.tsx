@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { NoticePopupRecord } from '../src/server/chart-service/repository.ts';
 
 const NOTICE_POPUP_SNOOZE_MS = 24 * 60 * 60 * 1000;
+const NOTICE_POPUP_POLL_INTERVAL_MS = 60 * 1000;
 
 export function NoticePopupViewer() {
   const pathname = usePathname();
@@ -25,9 +26,22 @@ export function NoticePopupViewer() {
       setPopups(payload.popups);
     }
 
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        void loadPopups();
+      }
+    }
+
     void loadPopups();
+    const intervalId = window.setInterval(() => {
+      void loadPopups();
+    }, NOTICE_POPUP_POLL_INTERVAL_MS);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [canShowNoticePopup]);
 
@@ -67,8 +81,15 @@ export function NoticePopupViewer() {
       <section className="notice-popup-dialog" role="dialog" aria-modal="true" aria-labelledby="notice-popup-title">
         <div className="notice-popup-header">
           <h2 id="notice-popup-title">{activePopup.title}</h2>
-          <button type="button" aria-label="공지팝업 닫기" onClick={closePopup}>
-            <span aria-hidden="true">×</span>
+          <button
+            type="button"
+            className="mobile-nav-panel-close notice-popup-close-button"
+            aria-label="공지팝업 닫기"
+            onClick={closePopup}
+          >
+            <span aria-hidden="true" />
+            <span aria-hidden="true" />
+            <span aria-hidden="true" />
           </button>
         </div>
         <div

@@ -7,6 +7,8 @@ import { subscribeAuthSessionChangedEvent } from './auth-events';
 import { subscribeNotificationsRefreshEvent } from './notification-events';
 import { getNotificationCenterHref } from './notifications/notification-display';
 
+const NOTIFICATION_BADGE_POLL_INTERVAL_MS = 60 * 1000;
+
 export function NotificationNavLink() {
   const [badge, setBadge] = useState<string | null>(null);
   const [notificationHref, setNotificationHref] = useState('/notifications');
@@ -38,9 +40,21 @@ export function NotificationNavLink() {
     const unsubscribeAuth = subscribeAuthSessionChangedEvent(() => {
       void refreshBadge();
     });
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        void refreshBadge();
+      }
+    }
+
+    const intervalId = window.setInterval(() => {
+      void refreshBadge();
+    }, NOTIFICATION_BADGE_POLL_INTERVAL_MS);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       isMounted = false;
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       unsubscribe();
       unsubscribeAuth();
     };

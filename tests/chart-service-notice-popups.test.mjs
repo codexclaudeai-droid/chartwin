@@ -202,6 +202,10 @@ test('notice popup admin screen uses Tiptap and icon actions', () => {
   assert.match(viewerSource, /localStorage/);
   assert.match(viewerSource, /24시간 동안 닫기/);
   assert.match(viewerSource, /NOTICE_POPUP_SNOOZE_MS/);
+  assert.match(viewerSource, /NOTICE_POPUP_POLL_INTERVAL_MS/);
+  assert.match(viewerSource, /window\.setInterval/);
+  assert.match(viewerSource, /visibilitychange/);
+  assert.match(viewerSource, /document\.visibilityState === 'visible'/);
   assert.match(cssSource, /\.rich-text-editor/);
   assert.match(cssSource, /\.notice-body-style-info/);
   assert.match(cssSource, /\.notice-body-style-warning/);
@@ -231,6 +235,10 @@ test('notice popup admin screen uses Tiptap and icon actions', () => {
   assert.match(cssSource, /\.notice-popup-content iframe/);
   assert.match(cssSource, /\.number-stepper-controls/);
   assert.match(cssSource, /\.notice-popup-dialog/);
+  assert.match(cssSource, /\.notice-popup-header \.mobile-nav-panel-close/);
+  assert.match(cssSource, /\.notice-popup-footer \.button/);
+  assert.match(cssSource, /\.notice-popup-footer \.button\.secondary/);
+  assert.match(cssSource, /color: #eef7ff/);
 });
 
 test('notice popup sanitizer keeps safe text content', () => {
