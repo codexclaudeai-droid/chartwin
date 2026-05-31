@@ -201,6 +201,9 @@ test('profile service status card includes subscription request actions without 
   assert.match(panelSource, /\/api\/subscription\/refund-request/);
   assert.match(panelSource, /disabled=\{isBusy \|\| !subscriptionActionAvailability\.canCancel\}/);
   assert.match(panelSource, /disabled=\{isBusy \|\| !subscriptionActionAvailability\.canRefund\}/);
+  assert.match(panelSource, /dashboard\.subscription\?\.startsAt/);
+  assert.match(panelSource, /시작일/);
+  assert.match(panelSource, /만료일/);
 });
 
 test('profile subscription action policy enables buttons only for active subscriptions', () => {
@@ -232,10 +235,14 @@ test('profile edit controls move into a modal instead of inline summary edits', 
   assert.match(panelSource, /closeProfileEditModal/);
   assert.match(styleSource, /\.profile-edit-modal-backdrop/);
   assert.match(styleSource, /\.profile-edit-modal/);
+  assert.match(styleSource, /\.profile-edit-modal input/);
+  assert.match(styleSource, /min-height: 52px/);
+  assert.match(styleSource, /background: #07101f/);
 });
 
 test('profile edit modal closes from backdrop clicks and Escape key', () => {
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(panelSource, /handleProfileEditModalBackdropClick/);
   assert.match(panelSource, /handleProfileEditModalKeyDown/);
@@ -243,6 +250,8 @@ test('profile edit modal closes from backdrop clicks and Escape key', () => {
   assert.match(panelSource, /event\.key === 'Escape'/);
   assert.match(panelSource, /onClick=\{handleProfileEditModalBackdropClick\}/);
   assert.match(panelSource, /onKeyDown=\{handleProfileEditModalKeyDown\}/);
+  assert.match(panelSource, /className="mobile-nav-panel-close profile-edit-close"/);
+  assert.match(styleSource, /\.profile-edit-close span:nth-child\(1\)/);
 });
 
 test('profile referral card exposes copy icon buttons for code and link', () => {
@@ -255,9 +264,26 @@ test('profile referral card exposes copy icon buttons for code and link', () => 
   assert.match(panelSource, /document\.execCommand\('copy'\)/);
   assert.match(panelSource, /aria-label="추천코드 복사"/);
   assert.match(panelSource, /aria-label="추천링크 복사"/);
+  assert.match(panelSource, /aria-label="추천링크 공유"/);
+  assert.match(panelSource, /navigator\.share/);
+  assert.match(panelSource, /추천코드.*복사했습니다|추천코드.*복사/);
+  assert.match(panelSource, /CopyIcon/);
+  assert.match(panelSource, /ShareIcon/);
   assert.match(panelSource, /referral-copy-row/);
-  assert.match(styleSource, /\.copy-icon-button/);
+  assert.match(styleSource, /\.referral-icon-button/);
+  assert.match(styleSource, /background: transparent/);
+  assert.match(styleSource, /border: 0/);
   assert.match(styleSource, /\.screen-reader-only/);
+});
+
+test('profile edit modal reuses signup phone formatting and password guidance', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /formatSignupPhoneNumber/);
+  assert.match(panelSource, /handleProfilePhoneNumberChange/);
+  assert.match(panelSource, /inputMode="numeric"/);
+  assert.match(panelSource, /maxLength=\{13\}/);
+  assert.match(panelSource, /8자리 이상, 대문자, 숫자, 특수문자/);
 });
 
 test('profile panel exposes a member withdrawal danger action', () => {
@@ -267,6 +293,19 @@ test('profile panel exposes a member withdrawal danger action', () => {
   assert.match(panelSource, /method: 'DELETE'/);
   assert.match(panelSource, /회원탈퇴/);
   assert.match(panelSource, /canWithdrawAccount/);
+  assert.match(panelSource, /\{canWithdraw && \(/);
+  assert.doesNotMatch(panelSource, /관리자 계정은 회원관리/);
+});
+
+test('profile image file control keeps the picker and guide text vertically aligned', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /profile-image-file-row/);
+  assert.match(panelSource, /profile-image-file-help/);
+  assert.match(styleSource, /\.profile-image-file-row/);
+  assert.match(styleSource, /align-items: center/);
+  assert.match(styleSource, /grid-template-columns: max-content minmax\(0, 1fr\)/);
 });
 
 test('profile panel renders my referral list with individual and total points', () => {
@@ -303,7 +342,7 @@ test('profile payment flow localizes payment methods and exposes stage highlight
   assert.equal(getProfilePaymentFlowTone({ paymentStatus: 'refunded' }), 'refunded');
 });
 
-test('profile recent payment cards use localized methods and highlighted flow containers', () => {
+test('profile recent payment cards use localized methods and highlighted flow stages', () => {
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
   const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
@@ -315,6 +354,11 @@ test('profile recent payment cards use localized methods and highlighted flow co
   assert.match(styleSource, /\.payment-flow-steps\.approved/);
   assert.match(styleSource, /\.payment-flow-steps\.rejected/);
   assert.match(styleSource, /\.payment-flow-steps\.refunded/);
+  assert.match(styleSource, /\.payment-flow-steps\s*\{[\s\S]*?background: transparent/);
+  assert.match(styleSource, /\.payment-flow-steps\s*\{[\s\S]*?border-top: 1px solid var\(--line\)/);
+  assert.match(styleSource, /\.payment-flow-step\.current\s*\{[\s\S]*?background: var\(--payment-flow-current-bg\)/);
+  assert.match(styleSource, /\.payment-flow-step\.done\s*\{[\s\S]*?background: var\(--payment-flow-done-bg\)/);
+  assert.match(styleSource, /\.payment-flow-step\.blocked\s*\{[\s\S]*?background: var\(--payment-flow-blocked-bg\)/);
 });
 
 test('profile API mutation path is routed through the async persistence boundary', () => {

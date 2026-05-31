@@ -12,5 +12,5 @@ export function getAdminDisplaySequence<T>(
   predicate: (item: T) => boolean,
 ): number {
   const index = items.findIndex(predicate);
-  return index >= 0 ? index + 1 : 0;
+  return index >= 0 ? items.length - index : 0;
 }

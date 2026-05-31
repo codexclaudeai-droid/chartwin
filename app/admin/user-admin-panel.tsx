@@ -935,7 +935,7 @@ export function UserAdminPanel() {
                           <strong>{formatPaymentStatusLabel(payment.status)}</strong>
                           <span>${payment.amountUsd}</span>
                         </div>
-                        <p title={payment.id}>{formatAdminDisplayId('결제', paymentIndex + 1)}</p>
+                        <p title={payment.id}>{formatAdminDisplayId('결제', detail.payments.length - paymentIndex)}</p>
                         <a className="text-link compact" href={createAdminPaymentUrl(payment.id)}>
                           결제 큐에서 보기
                         </a>
@@ -957,7 +957,7 @@ export function UserAdminPanel() {
                           <strong>{thread.title}</strong>
                           <span>{formatSupportStatusLabel(thread.status)}</span>
                         </div>
-                        <p title={thread.id}>{formatAdminDisplayId('문의', threadIndex + 1)}</p>
+                        <p title={thread.id}>{formatAdminDisplayId('문의', detail.supportThreads.length - threadIndex)}</p>
                         <a className="text-link compact" href={createAdminSupportThreadUrl(thread.id)}>
                           문의 답변 화면
                         </a>

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { dispatchAuthSessionChangedEvent, subscribeAuthSessionChangedEvent } from '../auth-events';
 import { getNotificationCenterHref } from '../notifications/notification-display';
 import { RefreshIconButton } from '../shared/refresh-icon-button';
+import { formatSignupPhoneNumber } from '../signup/phone-format';
 import {
   formatChartAccessLabel,
   formatPaymentAmountUsd,
@@ -235,11 +236,38 @@ export function ProfilePanel() {
 
   async function copyReferralValue(label: string, value: string) {
     if (await copyTextToClipboard(value)) {
-      setSettingsMessage(`${label}를 클립보드에 복사했습니다.`);
+      setSettingsMessage(`${label}를 복사했습니다.`);
       return;
     }
 
     setSettingsMessage(`${label} 복사에 실패했습니다. 직접 선택해서 복사해주세요.`);
+  }
+
+  async function shareReferralLink() {
+    const sharePayload = {
+      title: '추천링크',
+      text: '추천링크를 공유합니다.',
+      url: referralLink,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(sharePayload);
+        setSettingsMessage('추천링크 공유창을 열었습니다.');
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+      }
+    }
+
+    await copyReferralValue('추천링크', referralLink);
+    setSettingsMessage('공유를 지원하지 않는 환경이라 추천링크를 복사했습니다.');
+  }
+
+  function handleProfilePhoneNumberChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setPhoneDraft(formatSignupPhoneNumber(event.currentTarget.value));
   }
 
   async function validateImagePolicy(event: React.FormEvent<HTMLFormElement>) {
@@ -285,7 +313,7 @@ export function ProfilePanel() {
 
   async function withdrawAccount() {
     if (!canWithdrawAccount(dashboard?.user.role)) {
-      setSettingsMessage('관리자 계정은 회원관리에서 계정 상태를 변경해주세요.');
+      setSettingsMessage('회원탈퇴를 사용할 수 없는 계정입니다.');
       return;
     }
     if (!window.confirm('회원탈퇴 후 현재 계정으로 로그인할 수 없습니다. 계속 진행할까요?')) {
@@ -381,7 +409,16 @@ export function ProfilePanel() {
                   <span>마이프로필</span>
                   <h3 id="profileEditTitle">프로필 수정</h3>
                 </div>
-                <button className="button secondary" type="button" onClick={closeProfileEditModal}>닫기</button>
+                <button
+                  aria-label="닫기"
+                  className="mobile-nav-panel-close profile-edit-close"
+                  type="button"
+                  onClick={closeProfileEditModal}
+                >
+                  <span />
+                  <span />
+                  <span />
+                </button>
               </div>
               <label htmlFor="profileName">이름</label>
               <input
@@ -395,8 +432,10 @@ export function ProfilePanel() {
               <input
                 id="profilePhoneNumber"
                 value={phoneDraft}
-                onChange={(event) => setPhoneDraft(event.target.value)}
+                onChange={handleProfilePhoneNumberChange}
                 placeholder="010-0000-0000"
+                inputMode="numeric"
+                maxLength={13}
               />
               <label htmlFor="profileCurrentPassword">현재 비밀번호</label>
               <input
@@ -416,6 +455,7 @@ export function ProfilePanel() {
                 type="password"
                 value={newPassword}
               />
+              <p className="profile-password-rule">8자리 이상, 대문자, 숫자, 특수문자를 포함해 주세요.</p>
               <label htmlFor="profileNewPasswordConfirm">새 비밀번호 확인</label>
               <input
                 autoComplete="new-password"
@@ -438,27 +478,39 @@ export function ProfilePanel() {
             <strong>{dashboard.user.referralCode}</strong>
             <button
               aria-label="추천코드 복사"
-              className="copy-icon-button"
+              className="referral-icon-button"
               onClick={() => void copyReferralValue('추천코드', dashboard.user.referralCode)}
               title="추천코드 복사"
               type="button"
             >
-              <span aria-hidden="true">⧉</span>
+              <CopyIcon />
               <span className="screen-reader-only">추천코드 복사</span>
             </button>
           </div>
           <div className="referral-copy-row referral-link-row">
             <p>{referralLink}</p>
-            <button
-              aria-label="추천링크 복사"
-              className="copy-icon-button"
-              onClick={() => void copyReferralValue('추천링크', referralLink)}
-              title="추천링크 복사"
-              type="button"
-            >
-              <span aria-hidden="true">⧉</span>
-              <span className="screen-reader-only">추천링크 복사</span>
-            </button>
+            <div className="referral-icon-actions">
+              <button
+                aria-label="추천링크 복사"
+                className="referral-icon-button"
+                onClick={() => void copyReferralValue('추천링크', referralLink)}
+                title="추천링크 복사"
+                type="button"
+              >
+                <CopyIcon />
+                <span className="screen-reader-only">추천링크 복사</span>
+              </button>
+              <button
+                aria-label="추천링크 공유"
+                className="referral-icon-button"
+                onClick={() => void shareReferralLink()}
+                title="추천링크 공유"
+                type="button"
+              >
+                <ShareIcon />
+                <span className="screen-reader-only">추천링크 공유</span>
+              </button>
+            </div>
           </div>
           <small>회원 초대 시 이 링크를 전달하면 추천인 정보를 추적할 수 있습니다.</small>
         </div>
@@ -501,33 +553,38 @@ export function ProfilePanel() {
         </div>
         <form className="form profile-settings-form" onSubmit={validateImagePolicy}>
           <label htmlFor="profileImageFile">프로필 이미지 파일</label>
-          <input
-            accept="image/png,image/jpeg,image/webp"
-            id="profileImageFile"
-            onChange={(event) => setSelectedImageFile(event.target.files?.[0] ?? null)}
-            type="file"
-          />
+          <div className="profile-image-file-row">
+            <input
+              accept="image/png,image/jpeg,image/webp"
+              id="profileImageFile"
+              onChange={(event) => setSelectedImageFile(event.target.files?.[0] ?? null)}
+              type="file"
+            />
+            <p className="profile-image-file-help">PNG, JPG, WEBP 파일만 등록할 수 있습니다.</p>
+          </div>
           {selectedImageFile && (
-            <p className="notice">
+            <p className="notice profile-image-file-selection">
               선택 파일: {selectedImageFile.name} / {selectedImageFile.type || 'unknown'} / {selectedImageFile.size} bytes
             </p>
           )}
           <button className="button secondary" type="submit" disabled={isBusy}>이미지 정책 확인</button>
         </form>
-        <div className="profile-danger-zone">
-          <div>
-            <strong>회원탈퇴</strong>
-            <p>{canWithdraw ? '탈퇴하면 현재 세션이 종료되고 계정 로그인이 차단됩니다.' : '관리자 계정은 회원관리에서 상태를 변경해주세요.'}</p>
+        {canWithdraw && (
+          <div className="profile-danger-zone">
+            <div>
+              <strong>회원탈퇴</strong>
+              <p>탈퇴하면 현재 세션이 종료되고 계정 로그인이 차단됩니다.</p>
+            </div>
+            <button
+              className="button danger"
+              disabled={isBusy}
+              onClick={() => void withdrawAccount()}
+              type="button"
+            >
+              회원탈퇴
+            </button>
           </div>
-          <button
-            className="button danger"
-            disabled={isBusy || !canWithdraw}
-            onClick={() => void withdrawAccount()}
-            type="button"
-          >
-            회원탈퇴
-          </button>
-        </div>
+        )}
       </div>
 
       <div className="profile-service-column">
@@ -537,6 +594,9 @@ export function ProfilePanel() {
             <article className="mini-card">
               <span>구독</span>
               <strong>{formatSubscriptionStatusLabel(subscriptionStatus)}</strong>
+              {dashboard.subscription?.startsAt && (
+                <p>시작일 {formatDateTime(dashboard.subscription.startsAt)}</p>
+              )}
               <p>{dashboard.subscription?.endsAt ? `만료일 ${formatDateTime(dashboard.subscription.endsAt)}` : '승인 전 구독은 관리자 확인 후 활성화됩니다.'}</p>
             </article>
             <article className="mini-card">
@@ -653,6 +713,25 @@ function getReferralLink(referralCode: string): string {
   if (typeof window === 'undefined') return path;
 
   return `${window.location.origin}${path}`;
+}
+
+function CopyIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <rect x="8" y="7" width="11" height="11" rx="2.2" />
+      <rect x="5" y="4" width="11" height="11" rx="2.2" />
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M12 16V5" />
+      <path d="M8 9l4-4 4 4" />
+      <path d="M6 13v4.5A1.5 1.5 0 0 0 7.5 19h9a1.5 1.5 0 0 0 1.5-1.5V13" />
+    </svg>
+  );
 }
 
 async function copyTextToClipboard(value: string): Promise<boolean> {

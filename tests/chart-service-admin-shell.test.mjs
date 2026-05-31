@@ -175,6 +175,9 @@ test('admin refresh controls use the shared icon button', () => {
   assert.match(notificationsSource, /RefreshIconButton/);
   assert.match(cssSource, /\.refresh-icon-button\s*\{[\s\S]*?background:\s*transparent/);
   assert.match(cssSource, /\.refresh-icon-button svg\s*\{[\s\S]*?height:\s*20px/);
+  assert.match(cssSource, /\.toolbar > \.refresh-icon-button\s*\{[\s\S]*?margin-left:\s*auto/);
+  assert.match(cssSource, /\.toolbar-actions:has\(\.refresh-icon-button\),[\s\S]*?\.toolbar \.actions\.compact:has\(\.refresh-icon-button\)\s*\{[\s\S]*?margin-left:\s*auto/);
+  assert.match(cssSource, /\.toolbar-actions > \.refresh-icon-button,[\s\S]*?\.toolbar \.actions\.compact > \.refresh-icon-button\s*\{[\s\S]*?order:\s*99/);
 });
 
 test('admin display ids use Korean labels with four digit minimum padding', () => {
@@ -183,5 +186,6 @@ test('admin display ids use Korean labels with four digit minimum padding', () =
   assert.equal(formatAdminDisplayId('문의', 9999), '문의-9999');
   assert.equal(formatAdminDisplayId('회원', 10000), '회원-10000');
   assert.equal(formatAdminDisplayId('작업', 10001), '작업-10001');
-  assert.equal(getAdminDisplaySequence([{ id: 'a' }, { id: 'b' }], (item) => item.id === 'b'), 2);
+  assert.equal(getAdminDisplaySequence([{ id: 'latest' }, { id: 'older' }], (item) => item.id === 'latest'), 2);
+  assert.equal(getAdminDisplaySequence([{ id: 'latest' }, { id: 'older' }], (item) => item.id === 'older'), 1);
 });
