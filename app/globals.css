@@ -3651,6 +3651,48 @@ a {
   white-space: nowrap;
 }
 
+.password-input-shell {
+  display: grid;
+  position: relative;
+}
+
+.password-input-shell input {
+  padding-right: 46px;
+  width: 100%;
+}
+
+.password-visibility-toggle {
+  -webkit-tap-highlight-color: transparent;
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+}
+
+.password-visibility-toggle:is(:hover, :focus-visible, :active) {
+  background: rgba(125, 183, 255, 0.12);
+  box-shadow: none;
+  outline: 0;
+}
+
+.password-visibility-toggle svg {
+  height: 18px;
+  stroke: currentColor;
+  width: 18px;
+}
+
 .settings-grid {
   display: grid;
   gap: 12px;
@@ -9999,6 +10041,15 @@ body:not(:has(.landing-page)) .email-check-row input {
 body:not(:has(.landing-page)) .email-check-row .button {
   flex: 0 0 auto;
   white-space: nowrap;
+}
+
+body:not(:has(.landing-page)) .password-visibility-toggle {
+  color: rgba(216, 236, 255, 0.72);
+}
+
+body:not(:has(.landing-page)) .password-visibility-toggle:is(:hover, :focus-visible, :active) {
+  background: rgba(125, 183, 255, 0.14);
+  color: #ffffff;
 }
 
 body:not(:has(.landing-page)) .field-help {

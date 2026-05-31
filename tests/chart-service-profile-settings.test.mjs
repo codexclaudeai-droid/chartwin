@@ -421,11 +421,26 @@ test('profile referral card exposes copy icon buttons for code and link', () => 
 
 test('profile edit modal reuses signup phone formatting and password guidance', () => {
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
+  assert.match(panelSource, /import \{ Eye, EyeOff \} from 'lucide-react'/);
   assert.match(panelSource, /formatSignupPhoneNumber/);
   assert.match(panelSource, /handleProfilePhoneNumberChange/);
   assert.match(panelSource, /inputMode="numeric"/);
   assert.match(panelSource, /maxLength=\{13\}/);
+  assert.match(panelSource, /isCurrentPasswordVisible/);
+  assert.match(panelSource, /isNewPasswordVisible/);
+  assert.match(panelSource, /isNewPasswordConfirmVisible/);
+  assert.match(panelSource, /type=\{isCurrentPasswordVisible \? 'text' : 'password'\}/);
+  assert.match(panelSource, /type=\{isNewPasswordVisible \? 'text' : 'password'\}/);
+  assert.match(panelSource, /type=\{isNewPasswordConfirmVisible \? 'text' : 'password'\}/);
+  assert.match(panelSource, /aria-label=\{isCurrentPasswordVisible \? '현재 비밀번호 숨기기' : '현재 비밀번호 보기'\}/);
+  assert.match(panelSource, /aria-label=\{isNewPasswordVisible \? '새 비밀번호 숨기기' : '새 비밀번호 보기'\}/);
+  assert.match(panelSource, /aria-label=\{isNewPasswordConfirmVisible \? '새 비밀번호 확인 숨기기' : '새 비밀번호 확인 보기'\}/);
+  assert.match(panelSource, /className="password-input-shell"/);
+  assert.match(panelSource, /className="password-visibility-toggle"/);
+  assert.match(styleSource, /\.password-input-shell/);
+  assert.match(styleSource, /\.password-visibility-toggle/);
   assert.match(panelSource, /8자리 이상, 대문자, 숫자, 특수문자/);
 });
 

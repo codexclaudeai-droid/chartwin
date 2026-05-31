@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { dispatchAuthSessionChangedEvent, subscribeAuthSessionChangedEvent } from '../auth-events';
 import { clearAuthSessionCache, primeAuthSession } from '../auth-session-client';
@@ -135,6 +136,9 @@ export function ProfilePanel() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [isCurrentPasswordVisible, setIsCurrentPasswordVisible] = useState(false);
+  const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
+  const [isNewPasswordConfirmVisible, setIsNewPasswordConfirmVisible] = useState(false);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedAvatarPath, setSelectedAvatarPath] = useState('');
   const [profileImageMode, setProfileImageMode] = useState<ProfileImageMode>('avatar');
@@ -312,6 +316,9 @@ export function ProfilePanel() {
     setCurrentPassword('');
     setNewPassword('');
     setNewPasswordConfirm('');
+    setIsCurrentPasswordVisible(false);
+    setIsNewPasswordVisible(false);
+    setIsNewPasswordConfirmVisible(false);
     setIsProfileEditOpen(true);
     setSettingsMessage('프로필 팝업에서 이름, 연락번호, 비밀번호를 수정할 수 있습니다.');
     window.requestAnimationFrame(() => {
@@ -333,6 +340,9 @@ export function ProfilePanel() {
     setCurrentPassword('');
     setNewPassword('');
     setNewPasswordConfirm('');
+    setIsCurrentPasswordVisible(false);
+    setIsNewPasswordVisible(false);
+    setIsNewPasswordConfirmVisible(false);
     setIsProfileEditOpen(false);
   }
 
@@ -637,33 +647,66 @@ export function ProfilePanel() {
                   maxLength={13}
                 />
                 <label htmlFor="profileCurrentPassword">현재 비밀번호</label>
-                <input
-                  autoComplete="current-password"
-                  id="profileCurrentPassword"
-                  onChange={(event) => setCurrentPassword(event.target.value)}
-                  placeholder="비밀번호 변경 시 입력"
-                  type="password"
-                  value={currentPassword}
-                />
+                <div className="password-input-shell">
+                  <input
+                    autoComplete="current-password"
+                    id="profileCurrentPassword"
+                    onChange={(event) => setCurrentPassword(event.target.value)}
+                    placeholder="비밀번호 변경 시 입력"
+                    type={isCurrentPasswordVisible ? 'text' : 'password'}
+                    value={currentPassword}
+                  />
+                  <button
+                    aria-label={isCurrentPasswordVisible ? '현재 비밀번호 숨기기' : '현재 비밀번호 보기'}
+                    aria-pressed={isCurrentPasswordVisible}
+                    className="password-visibility-toggle"
+                    onClick={() => setIsCurrentPasswordVisible((isVisible) => !isVisible)}
+                    type="button"
+                  >
+                    {isCurrentPasswordVisible ? <EyeOff aria-hidden="true" size={18} /> : <Eye aria-hidden="true" size={18} />}
+                  </button>
+                </div>
                 <label htmlFor="profileNewPassword">새 비밀번호</label>
-                <input
-                  autoComplete="new-password"
-                  id="profileNewPassword"
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  placeholder="새 비밀번호"
-                  type="password"
-                  value={newPassword}
-                />
+                <div className="password-input-shell">
+                  <input
+                    autoComplete="new-password"
+                    id="profileNewPassword"
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    placeholder="새 비밀번호"
+                    type={isNewPasswordVisible ? 'text' : 'password'}
+                    value={newPassword}
+                  />
+                  <button
+                    aria-label={isNewPasswordVisible ? '새 비밀번호 숨기기' : '새 비밀번호 보기'}
+                    aria-pressed={isNewPasswordVisible}
+                    className="password-visibility-toggle"
+                    onClick={() => setIsNewPasswordVisible((isVisible) => !isVisible)}
+                    type="button"
+                  >
+                    {isNewPasswordVisible ? <EyeOff aria-hidden="true" size={18} /> : <Eye aria-hidden="true" size={18} />}
+                  </button>
+                </div>
                 <p className="profile-password-rule">8자리 이상, 대문자, 숫자, 특수문자를 포함해 주세요.</p>
                 <label htmlFor="profileNewPasswordConfirm">새 비밀번호 확인</label>
-                <input
-                  autoComplete="new-password"
-                  id="profileNewPasswordConfirm"
-                  onChange={(event) => setNewPasswordConfirm(event.target.value)}
-                  placeholder="새 비밀번호 확인"
-                  type="password"
-                  value={newPasswordConfirm}
-                />
+                <div className="password-input-shell">
+                  <input
+                    autoComplete="new-password"
+                    id="profileNewPasswordConfirm"
+                    onChange={(event) => setNewPasswordConfirm(event.target.value)}
+                    placeholder="새 비밀번호 확인"
+                    type={isNewPasswordConfirmVisible ? 'text' : 'password'}
+                    value={newPasswordConfirm}
+                  />
+                  <button
+                    aria-label={isNewPasswordConfirmVisible ? '새 비밀번호 확인 숨기기' : '새 비밀번호 확인 보기'}
+                    aria-pressed={isNewPasswordConfirmVisible}
+                    className="password-visibility-toggle"
+                    onClick={() => setIsNewPasswordConfirmVisible((isVisible) => !isVisible)}
+                    type="button"
+                  >
+                    {isNewPasswordConfirmVisible ? <EyeOff aria-hidden="true" size={18} /> : <Eye aria-hidden="true" size={18} />}
+                  </button>
+                </div>
                 <div className="actions compact">
                   <button className="button" type="submit" disabled={isBusy}>프로필 저장</button>
                   <button className="button secondary" type="button" onClick={closeProfileEditModal}>취소</button>

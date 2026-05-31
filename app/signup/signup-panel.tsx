@@ -1,5 +1,6 @@
 'use client';
 
+import { Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { dispatchAuthSessionChangedEvent } from '../auth-events';
 import { primeAuthSession } from '../auth-session-client';
@@ -49,6 +50,8 @@ export function SignupPanel() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isPasswordConfirmVisible, setIsPasswordConfirmVisible] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [lockedReferralCode, setLockedReferralCode] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -291,24 +294,46 @@ export function SignupPanel() {
         />
 
         <label htmlFor="signupPassword"><span className="required-mark" aria-hidden="true">*</span>비밀번호</label>
-        <input
-          id="signupPassword"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="8자리 이상, 대문자, 숫자, 특수문자 포함"
-          required
-        />
+        <div className="password-input-shell">
+          <input
+            id="signupPassword"
+            type={isPasswordVisible ? 'text' : 'password'}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="8자리 이상, 대문자, 숫자, 특수문자 포함"
+            required
+          />
+          <button
+            aria-label={isPasswordVisible ? '비밀번호 숨기기' : '비밀번호 보기'}
+            aria-pressed={isPasswordVisible}
+            className="password-visibility-toggle"
+            onClick={() => setIsPasswordVisible((isVisible) => !isVisible)}
+            type="button"
+          >
+            {isPasswordVisible ? <EyeOff aria-hidden="true" size={18} /> : <Eye aria-hidden="true" size={18} />}
+          </button>
+        </div>
 
         <label htmlFor="signupPasswordConfirm"><span className="required-mark" aria-hidden="true">*</span>비밀번호 확인</label>
-        <input
-          id="signupPasswordConfirm"
-          type="password"
-          value={passwordConfirm}
-          onChange={(event) => setPasswordConfirm(event.target.value)}
-          placeholder="비밀번호 재입력"
-          required
-        />
+        <div className="password-input-shell">
+          <input
+            id="signupPasswordConfirm"
+            type={isPasswordConfirmVisible ? 'text' : 'password'}
+            value={passwordConfirm}
+            onChange={(event) => setPasswordConfirm(event.target.value)}
+            placeholder="비밀번호 재입력"
+            required
+          />
+          <button
+            aria-label={isPasswordConfirmVisible ? '비밀번호 확인 숨기기' : '비밀번호 확인 보기'}
+            aria-pressed={isPasswordConfirmVisible}
+            className="password-visibility-toggle"
+            onClick={() => setIsPasswordConfirmVisible((isVisible) => !isVisible)}
+            type="button"
+          >
+            {isPasswordConfirmVisible ? <EyeOff aria-hidden="true" size={18} /> : <Eye aria-hidden="true" size={18} />}
+          </button>
+        </div>
 
         <label htmlFor="signupReferralCode">추천코드 (선택)</label>
         <div className="referral-code-row">

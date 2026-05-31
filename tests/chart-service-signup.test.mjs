@@ -403,6 +403,19 @@ test('signup panel requires phone password confirmation and policy agreement dro
   const source = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
   const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
+  assert.match(source, /import \{ Eye, EyeOff \} from 'lucide-react'/);
+  assert.match(source, /isPasswordVisible/);
+  assert.match(source, /isPasswordConfirmVisible/);
+  assert.match(source, /type=\{isPasswordVisible \? 'text' : 'password'\}/);
+  assert.match(source, /type=\{isPasswordConfirmVisible \? 'text' : 'password'\}/);
+  assert.match(source, /aria-label=\{isPasswordVisible \? '비밀번호 숨기기' : '비밀번호 보기'\}/);
+  assert.match(source, /aria-label=\{isPasswordConfirmVisible \? '비밀번호 확인 숨기기' : '비밀번호 확인 보기'\}/);
+  assert.match(source, /className="password-input-shell"/);
+  assert.match(source, /className="password-visibility-toggle"/);
+  assert.match(source, /isPasswordVisible \? <EyeOff/);
+  assert.match(source, /isPasswordConfirmVisible \? <EyeOff/);
+  assert.match(cssSource, /\.password-input-shell/);
+  assert.match(cssSource, /\.password-visibility-toggle/);
   assert.match(source, /email-check-row/);
   assert.match(source, /checkEmailAvailability/);
   assert.match(source, /\/api\/auth\/email-check\?email=/);
