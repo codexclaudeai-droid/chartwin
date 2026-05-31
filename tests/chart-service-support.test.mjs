@@ -494,7 +494,7 @@ test('admin support panel uses a dark operational queue finish', () => {
 
   assert.match(styleSource, /#admin-support\s*\{[\s\S]*?linear-gradient/);
   assert.match(styleSource, /#admin-support \.quick-filter-row\s*\{[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(154px, 1fr\)\)/);
-  assert.match(styleSource, /#admin-support \.admin-support-thread-card\s*\{[\s\S]*?border:/);
+  assert.match(styleSource, /#admin-support \.admin-support-thread-card\s*\{[\s\S]*?background: transparent/);
   assert.match(styleSource, /#admin-support \.admin-support-message-list\s*\{[\s\S]*?display: grid/);
   assert.match(styleSource, /#admin-support \.reply-row\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto/);
   assert.match(styleSource, /#admin-support \.admin-support-reply-actions\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
@@ -523,8 +523,28 @@ test('admin support panel final pass styles status filter and reply controls', (
   assert.match(styleSource, /#admin-support \.admin-support-status-notice\s*\{[\s\S]*?border-color: transparent/);
   assert.match(styleSource, /#admin-support \.admin-support-filter-summary\s*\{[\s\S]*?background: transparent/);
   assert.match(styleSource, /#admin-support \.admin-support-meta-chip\s*\{[\s\S]*?border: 1px solid rgba\(125, 183, 255, 0\.14\)/);
-  assert.match(styleSource, /#admin-support \.admin-support-reply-row\s*\{[\s\S]*?background: rgba\(2, 7, 19, 0\.28\)/);
+  assert.match(styleSource, /#admin-support \.admin-support-reply-row\s*\{[\s\S]*?background: transparent/);
   assert.match(styleSource, /#admin-support \.admin-support-empty-state\s*\{[\s\S]*?text-align: center/);
+});
+
+test('admin support panel flattens table-like thread card shells', () => {
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const filterRule = styleSource.match(/#admin-support \.quick-filter-row\s*\{(?<rule>[^}]+)\}/);
+  const threadRule = styleSource.match(/#admin-support \.admin-support-thread-card\s*\{(?<rule>[^}]+)\}/);
+  const authorRule = styleSource.match(/#admin-support \.admin-support-author-cell\s*\{(?<rule>[^}]+)\}/);
+  const messageRule = styleSource.match(/#admin-support \.admin-support-message\s*\{(?<rule>[^}]+)\}/);
+  const replyRule = styleSource.match(/#admin-support \.admin-support-reply-row\s*\{(?<rule>[^}]+)\}/);
+
+  assert.match(filterRule?.groups?.rule ?? '', /padding:\s*0/);
+  assert.match(filterRule?.groups?.rule ?? '', /border:\s*0/);
+  assert.match(threadRule?.groups?.rule ?? '', /border:\s*0/);
+  assert.match(threadRule?.groups?.rule ?? '', /background:\s*transparent/);
+  assert.match(authorRule?.groups?.rule ?? '', /border:\s*0/);
+  assert.match(authorRule?.groups?.rule ?? '', /padding:\s*0/);
+  assert.match(messageRule?.groups?.rule ?? '', /border:\s*0/);
+  assert.match(messageRule?.groups?.rule ?? '', /background:\s*transparent/);
+  assert.match(replyRule?.groups?.rule ?? '', /border:\s*0/);
+  assert.match(replyRule?.groups?.rule ?? '', /background:\s*transparent/);
 });
 
 test('support panels expose edit and delete controls for threads and admin replies', () => {
