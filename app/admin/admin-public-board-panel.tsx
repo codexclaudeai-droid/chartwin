@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { PublicBoardPostRecord } from '../../src/server/chart-service/repository.ts';
+import { AdminRefreshButton } from './admin-refresh-button';
 import { dispatchAdminRefreshEvent } from './admin-refresh-events';
 
 type PublicBoardPostEditor = Pick<
@@ -75,9 +76,7 @@ export function AdminPublicBoardPanel() {
           <h2>공개 게시판</h2>
           <p className="notice compact">고객센터 상단에 표시되는 공지사항, 질문답변, FAQ 카드 내용을 수정합니다.</p>
         </div>
-        <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>
-          새로고침
-        </button>
+        <AdminRefreshButton onClick={() => void refresh()} disabled={isBusy} />
       </div>
       <form className="form admin-web-info-form" onSubmit={savePosts}>
         <div className="plan-services-grid">

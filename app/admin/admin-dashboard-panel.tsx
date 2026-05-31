@@ -7,6 +7,7 @@ import {
 } from './admin-dashboard-priority';
 import { dispatchAdminAuditLogPresetEvent } from './admin-audit-log-preset-events';
 import { dispatchAdminQueuePresetEvent } from './admin-queue-preset-events';
+import { AdminRefreshButton } from './admin-refresh-button';
 import { subscribeAdminRefreshEvent } from './admin-refresh-events';
 
 type AdminDashboardSummary = {
@@ -97,9 +98,7 @@ export function AdminDashboardPanel() {
           <span className="eyebrow">Operations</span>
           <h2>운영 대시보드</h2>
         </div>
-        <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>
-          새로고침
-        </button>
+        <AdminRefreshButton onClick={refresh} disabled={isBusy} />
       </div>
       <p className="notice">{message}</p>
       {summary && (

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { subscribeAdminAuditLogPresetEvent } from './admin-audit-log-preset-events';
+import { formatAdminDisplayId } from './admin-display-id';
+import { AdminRefreshButton } from './admin-refresh-button';
 import { subscribeAdminRefreshEvent, type AdminRefreshSource } from './admin-refresh-events';
 import {
   AUDIT_LOG_FILTER_PRESETS,
@@ -116,7 +118,7 @@ export function AuditLogPanel() {
     <section className="card wide" id="admin-audit-logs">
       <div className="toolbar">
         <h2>감사 로그</h2>
-        <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>새로고침</button>
+        <AdminRefreshButton onClick={() => void refresh()} disabled={isBusy} />
       </div>
       <div className="quick-filter-row" aria-label="감사 로그 빠른 필터">
         {AUDIT_LOG_FILTER_PRESETS.map((preset) => {
@@ -168,7 +170,9 @@ export function AuditLogPanel() {
             <article className="thread-card audit-log-card" key={entry.sequence}>
               <header className="audit-log-header">
                 <div>
-                  <span className="badge audit-log-sequence-badge">#{entry.sequence}</span>
+                  <span className="badge audit-log-sequence-badge">
+                    {formatAdminDisplayId('작업', entry.sequence)}
+                  </span>
                   <h3>{entry.log.action}</h3>
                 </div>
                 {auditTargetLink && (

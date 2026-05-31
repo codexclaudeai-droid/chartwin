@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { RefreshIconButton } from '../shared/refresh-icon-button';
 
 type SubscriptionSnapshot = {
   id: string;
@@ -57,7 +58,7 @@ export function SubscriptionActionsPanel() {
     <section className="card">
       <div className="toolbar">
         <h2>내 구독 상태</h2>
-        <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
+        <RefreshIconButton onClick={refresh} disabled={isBusy} />
       </div>
       <div className="status-list">
         <div className="status-row">

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { dispatchAuthSessionChangedEvent, subscribeAuthSessionChangedEvent } from '../auth-events';
 import { getNotificationCenterHref } from '../notifications/notification-display';
+import { RefreshIconButton } from '../shared/refresh-icon-button';
 import {
   formatChartAccessLabel,
   formatPaymentAmountUsd,
@@ -315,7 +316,7 @@ export function ProfilePanel() {
       <section className="card wide">
         <div className="toolbar">
           <h2>계정 확인 필요</h2>
-          <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
+          <RefreshIconButton onClick={refresh} disabled={isBusy} />
         </div>
         <p className="notice">{message}</p>
         <div className="actions">
@@ -339,7 +340,7 @@ export function ProfilePanel() {
         <div className="toolbar">
           <h2>마이프로필</h2>
           <div className="toolbar-actions">
-            <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
+            <RefreshIconButton onClick={refresh} disabled={isBusy} />
             <button className="button" type="button" onClick={openProfileEditModal}>프로필수정</button>
           </div>
         </div>

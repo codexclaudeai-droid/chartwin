@@ -11,7 +11,9 @@ import {
 } from '../../src/domain/chart-service/index.ts';
 import { subscribeAuthSessionChangedEvent } from '../auth-events';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
+import { formatAdminDisplayId, getAdminDisplaySequence } from './admin-display-id';
 import { subscribeAdminQueuePresetEvent } from './admin-queue-preset-events';
+import { AdminRefreshButton } from './admin-refresh-button';
 import { dispatchAdminRefreshEvent, subscribeAdminRefreshEvent } from './admin-refresh-events';
 import {
   formatPaymentStatusLabel,
@@ -508,6 +510,12 @@ export function UserAdminPanel() {
     : null;
   const userDirectorySummary = getUserDirectorySummary(users);
   const isDetailMode = detail !== null;
+  const detailUserSequence = detail
+    ? getAdminDisplaySequence(users, (item) => item.user.id === detail.user.id)
+    : 0;
+  const detailUserDisplayId = detail && detailUserSequence > 0
+    ? formatAdminDisplayId('회원', detailUserSequence)
+    : detail?.user.id;
 
   function closeDetail() {
     setDetail(null);
@@ -522,7 +530,7 @@ export function UserAdminPanel() {
       <>
       <div className="toolbar">
         <h2>회원 검색</h2>
-        <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>새로고침</button>
+        <AdminRefreshButton onClick={() => void refresh()} disabled={isBusy} />
       </div>
       <div className="admin-filter-row">
         <input
@@ -611,7 +619,13 @@ export function UserAdminPanel() {
             </tr>
           </thead>
           <tbody>
-            {users.map((item) => (
+            {users.map((item) => {
+              const userDisplayId = formatAdminDisplayId(
+                '회원',
+                getAdminDisplaySequence(users, (userItem) => userItem.user.id === item.user.id),
+              );
+
+              return (
               <tr className="admin-user-row" key={item.user.id}>
                 <td className="member-directory-cell">
                   <div className="member-directory-title-row">
@@ -622,6 +636,7 @@ export function UserAdminPanel() {
                       </button>
                     </div>
                   </div>
+                  <small title={item.user.id}>{userDisplayId}</small>
                   <small>{item.user.email}</small>
                   <div className="member-directory-meta-grid">
                     <span>연락번호 {item.user.phoneNumber || '미등록'}</span>
@@ -669,7 +684,8 @@ export function UserAdminPanel() {
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {users.length === 0 && (
               <tr>
                 <td colSpan={6}>표시할 회원이 없습니다.</td>
@@ -679,11 +695,18 @@ export function UserAdminPanel() {
         </table>
       </div>
       <div className="admin-user-mobile-list" aria-label="모바일 회원 카드 목록">
-        {users.map((item) => (
+        {users.map((item) => {
+          const userDisplayId = formatAdminDisplayId(
+            '회원',
+            getAdminDisplaySequence(users, (userItem) => userItem.user.id === item.user.id),
+          );
+
+          return (
           <article className="admin-user-mobile-card" key={`mobile-${item.user.id}`}>
             <div className="admin-user-mobile-card-title-row">
               <div>
                 <strong>{item.user.name}</strong>
+                <small title={item.user.id}>{userDisplayId}</small>
                 <small>{item.user.email}</small>
               </div>
               <button className="button secondary" type="button" onClick={() => openDetail(item.user.id)} disabled={isBusy}>
@@ -732,7 +755,8 @@ export function UserAdminPanel() {
               <span>알림 <strong>{item.unreadNotificationCount}</strong></span>
             </div>
           </article>
-        ))}
+          );
+        })}
         {users.length === 0 && (
           <p className="admin-user-mobile-empty">표시할 회원이 없습니다.</p>
         )}
@@ -758,7 +782,7 @@ export function UserAdminPanel() {
                   <span className="badge">{formatUserRoleLabel(detail.user.role)}</span>
                   <span>{detail.user.email}</span>
                   <span>{detail.user.phoneNumber || '연락번호 미등록'}</span>
-                  <span>{detail.user.id}</span>
+                  <span title={detail.user.id}>{detailUserDisplayId}</span>
                 </div>
                 <h3 className="admin-user-detail-title">{detail.user.name}</h3>
               </div>
@@ -905,13 +929,13 @@ export function UserAdminPanel() {
                 <h4>최근 결제 내역</h4>
                 {detail.payments.length > 0 ? (
                   <ul className="admin-history-list admin-user-history-list">
-                    {detail.payments.map((payment) => (
+                    {detail.payments.map((payment, paymentIndex) => (
                       <li key={payment.id}>
                         <div className="admin-history-row">
                           <strong>{formatPaymentStatusLabel(payment.status)}</strong>
                           <span>${payment.amountUsd}</span>
                         </div>
-                        <p>{payment.id}</p>
+                        <p title={payment.id}>{formatAdminDisplayId('결제', paymentIndex + 1)}</p>
                         <a className="text-link compact" href={createAdminPaymentUrl(payment.id)}>
                           결제 큐에서 보기
                         </a>
@@ -927,13 +951,13 @@ export function UserAdminPanel() {
                 <h4>최근 문의 내역</h4>
                 {detail.supportThreads.length > 0 ? (
                   <ul className="admin-history-list admin-user-history-list">
-                    {detail.supportThreads.map((thread) => (
+                    {detail.supportThreads.map((thread, threadIndex) => (
                       <li key={thread.id}>
                         <div className="admin-history-row">
                           <strong>{thread.title}</strong>
                           <span>{formatSupportStatusLabel(thread.status)}</span>
                         </div>
-                        <p>{thread.id}</p>
+                        <p title={thread.id}>{formatAdminDisplayId('문의', threadIndex + 1)}</p>
                         <a className="text-link compact" href={createAdminSupportThreadUrl(thread.id)}>
                           문의 답변 화면
                         </a>
@@ -983,7 +1007,9 @@ export function UserAdminPanel() {
                             <strong>{entry.log.action}</strong>
                             <span>{entry.actor?.email ?? entry.log.actorAdminId}</span>
                           </div>
-                          <p>{entry.log.targetType} / {entry.log.targetId}</p>
+                          <p title={entry.log.targetId}>
+                            {formatAdminDisplayId('작업', entry.sequence)} / {entry.log.targetType}
+                          </p>
                           {auditTargetLink && (
                             <a className="text-link compact" href={auditTargetLink.href}>
                               {auditTargetLink.label}

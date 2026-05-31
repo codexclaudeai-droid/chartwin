@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AdminRefreshButton } from './admin-refresh-button';
 
 type PaymentTransferSettings = {
   bankName: string;
@@ -94,9 +95,7 @@ export function AdminPaymentSettingsPanel() {
           <h2>결제정보 입력</h2>
           <p className="notice compact">회원 구독 결제 화면에 표시할 은행 계좌와 USDT 이체 정보를 입력합니다.</p>
         </div>
-        <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>
-          새로고침
-        </button>
+        <AdminRefreshButton onClick={() => void refresh()} disabled={isBusy} />
       </div>
       <form className="form admin-payment-settings-form" onSubmit={saveSettings}>
         <div className="settings-grid">

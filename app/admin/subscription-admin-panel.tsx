@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import { formatPaymentAmountUsd } from '../../src/domain/chart-service/index.ts';
 import { useAdminActionConfirmation } from './admin-action-confirmation-dialog';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
+import { formatAdminDisplayId, getAdminDisplaySequence } from './admin-display-id';
 import { canSubmitAdminOperationNote, normalizeAdminOperationNote } from './admin-operation-note';
 import { formatAdminPlanPeriodLabel } from './admin-plan-labels';
 import { subscribeAdminQueuePresetEvent } from './admin-queue-preset-events';
+import { AdminRefreshButton } from './admin-refresh-button';
 import { dispatchAdminRefreshEvent, subscribeAdminRefreshEvent } from './admin-refresh-events';
 import {
   formatPaymentStatusLabel,
@@ -198,10 +200,10 @@ export function SubscriptionAdminPanel() {
     );
   }
 
-  function renderSubscriptionPaymentCell(item: AdminSubscriptionQueueItem) {
+  function renderSubscriptionPaymentCell(item: AdminSubscriptionQueueItem, paymentDisplayId?: string) {
     return item.payment ? (
       <>
-        <strong>{item.payment.id}</strong>
+        <strong title={item.payment.id}>{paymentDisplayId ?? item.payment.id}</strong>
         <span>
           {formatPaymentStatusLabel(item.payment.status)} / {formatPaymentAmountUsd(item.payment.amountUsd)}
         </span>
@@ -302,14 +304,7 @@ export function SubscriptionAdminPanel() {
       <section className="card wide" id="admin-subscriptions">
         <div className="toolbar">
           <h2>구독관리</h2>
-          <button
-            className="button secondary"
-            type="button"
-            onClick={() => void refresh()}
-            disabled={isBusy}
-          >
-            새로고침
-          </button>
+          <AdminRefreshButton onClick={() => void refresh()} disabled={isBusy} />
         </div>
         <p className="notice">{message}</p>
         <div className="quick-filter-row" aria-label="구독 요청 빠른 필터">
@@ -354,6 +349,19 @@ export function SubscriptionAdminPanel() {
               const currentNote = subscriptionOperationNotes[item.subscription.id] || '';
               const canSubmitNote = canSubmitAdminOperationNote(currentNote);
               const quickMemos = SUBSCRIPTION_QUICK_MEMOS.filter((memo) => memo.supports(item));
+              const subscriptionDisplayId = formatAdminDisplayId(
+                '구독',
+                getAdminDisplaySequence(items, (queueItem) => queueItem.subscription.id === item.subscription.id),
+              );
+              const paymentDisplayId = item.payment
+                ? formatAdminDisplayId(
+                  '결제',
+                  getAdminDisplaySequence(
+                    items.filter((queueItem) => queueItem.payment),
+                    (queueItem) => queueItem.payment?.id === item.payment?.id,
+                  ),
+                )
+                : undefined;
 
               return (
                 <tr
@@ -362,7 +370,7 @@ export function SubscriptionAdminPanel() {
                   key={item.subscription.id}
                 >
                   <td className="admin-subscription-id-cell">
-                    <strong>{item.subscription.id}</strong>
+                    <strong title={item.subscription.id}>{subscriptionDisplayId}</strong>
                     <span>갱신 {formatSubscriptionDateTime(item.subscription.updatedAt)}</span>
                   </td>
                   <td className="admin-subscription-member-cell">
@@ -380,7 +388,7 @@ export function SubscriptionAdminPanel() {
                   </td>
                   <td className="admin-subscription-status-cell">{renderSubscriptionFlowStatus(item)}</td>
                   <td className="admin-subscription-payment-cell">
-                    {renderSubscriptionPaymentCell(item)}
+                    {renderSubscriptionPaymentCell(item, paymentDisplayId)}
                   </td>
                   <td className="admin-subscription-action-cell">
                     {renderSubscriptionActionControls(item, currentNote, canSubmitNote, quickMemos)}
@@ -400,12 +408,25 @@ export function SubscriptionAdminPanel() {
             const currentNote = subscriptionOperationNotes[item.subscription.id] || '';
             const canSubmitNote = canSubmitAdminOperationNote(currentNote);
             const quickMemos = SUBSCRIPTION_QUICK_MEMOS.filter((memo) => memo.supports(item));
+            const subscriptionDisplayId = formatAdminDisplayId(
+              '구독',
+              getAdminDisplaySequence(items, (queueItem) => queueItem.subscription.id === item.subscription.id),
+            );
+            const paymentDisplayId = item.payment
+              ? formatAdminDisplayId(
+                '결제',
+                getAdminDisplaySequence(
+                  items.filter((queueItem) => queueItem.payment),
+                  (queueItem) => queueItem.payment?.id === item.payment?.id,
+                ),
+              )
+              : undefined;
 
             return (
               <article className="admin-subscription-mobile-card" key={`mobile-${item.subscription.id}`}>
                 <div className="admin-subscription-mobile-card-title-row">
                   <div>
-                    <strong>{item.subscription.id}</strong>
+                    <strong title={item.subscription.id}>{subscriptionDisplayId}</strong>
                     <small>갱신 {formatSubscriptionDateTime(item.subscription.updatedAt)}</small>
                   </div>
                   <span className="badge manual-flow-badge">{formatSubscriptionStatusLabel(item.subscription.status)}</span>
@@ -430,7 +451,7 @@ export function SubscriptionAdminPanel() {
                     <dt>결제</dt>
                     <dd>
                       {item.payment
-                        ? `${item.payment.id} · ${formatPaymentAmountUsd(item.payment.amountUsd)}`
+                        ? `${paymentDisplayId} · ${formatPaymentAmountUsd(item.payment.amountUsd)}`
                         : '결제 없음'}
                     </dd>
                   </div>
@@ -448,7 +469,7 @@ export function SubscriptionAdminPanel() {
                   )}
                 </dl>
                 <div className="admin-subscription-mobile-card-payment">
-                  {renderSubscriptionPaymentCell(item)}
+                  {renderSubscriptionPaymentCell(item, paymentDisplayId)}
                 </div>
                 <div className="admin-subscription-mobile-card-actions">
                   {renderSubscriptionActionControls(item, currentNote, canSubmitNote, quickMemos)}

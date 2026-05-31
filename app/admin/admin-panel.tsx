@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useAdminActionConfirmation } from './admin-action-confirmation-dialog';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
+import { formatAdminDisplayId, getAdminDisplaySequence } from './admin-display-id';
 import { canSubmitAdminOperationNote, normalizeAdminOperationNote } from './admin-operation-note';
 import { formatAdminPlanPeriodLabel } from './admin-plan-labels';
 import { subscribeAdminQueuePresetEvent } from './admin-queue-preset-events';
+import { AdminRefreshButton } from './admin-refresh-button';
 import { dispatchAdminRefreshEvent, subscribeAdminRefreshEvent } from './admin-refresh-events';
 import {
   formatPaymentStatusLabel,
@@ -341,9 +343,7 @@ export function AdminPanel() {
     <section className="card wide" id="admin-payments">
       <div className="toolbar">
         <h2>결제 요청 관리</h2>
-        <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>
-          새로고침
-        </button>
+        <AdminRefreshButton onClick={() => void refresh()} disabled={isBusy} />
       </div>
       <p className="notice">{message}</p>
       <div className="quick-filter-row" aria-label="결제 요청 빠른 필터">
@@ -380,10 +380,16 @@ export function AdminPanel() {
           </tr>
         </thead>
         <tbody>
-          {filteredPayments.map((item) => (
+          {filteredPayments.map((item) => {
+            const paymentDisplayId = formatAdminDisplayId(
+              '결제',
+              getAdminDisplaySequence(payments, (paymentItem) => paymentItem.payment.id === item.payment.id),
+            );
+
+            return (
             <tr className="admin-payment-row" id={getAdminPaymentDomId(item.payment.id)} key={item.payment.id}>
               <td className="admin-payment-id-cell">
-                <strong>{item.payment.id}</strong>
+                <strong title={item.payment.id}>{paymentDisplayId}</strong>
                 <span>
                   {formatAdminPaymentMethodLabel(item.payment.method)} · {formatAdminPaymentDateTime(item.payment.createdAt)}
                 </span>
@@ -405,7 +411,8 @@ export function AdminPanel() {
                 {renderPaymentActionControls(item)}
               </td>
             </tr>
-          ))}
+            );
+          })}
           {filteredPayments.length === 0 && (
             <tr>
               <td colSpan={6}>표시할 결제 요청이 없습니다.</td>
@@ -414,11 +421,17 @@ export function AdminPanel() {
         </tbody>
       </table>
       <div className="admin-payment-mobile-list" aria-label="모바일 입금관리 카드 목록">
-        {filteredPayments.map((item) => (
+        {filteredPayments.map((item) => {
+          const paymentDisplayId = formatAdminDisplayId(
+            '결제',
+            getAdminDisplaySequence(payments, (paymentItem) => paymentItem.payment.id === item.payment.id),
+          );
+
+          return (
           <article className="admin-payment-mobile-card" key={`mobile-${item.payment.id}`}>
             <div className="admin-payment-mobile-card-title-row">
               <div>
-                <strong>{item.payment.id}</strong>
+                <strong title={item.payment.id}>{paymentDisplayId}</strong>
                 <small>{formatAdminPaymentMethodLabel(item.payment.method)} · {formatAdminPaymentDateTime(item.payment.createdAt)}</small>
               </div>
               <span className="admin-payment-amount-cell">${item.payment.amountUsd}</span>
@@ -454,7 +467,8 @@ export function AdminPanel() {
               {renderPaymentActionControls(item)}
             </div>
           </article>
-        ))}
+          );
+        })}
         {filteredPayments.length === 0 && (
           <p className="admin-payment-mobile-empty">표시할 결제 요청이 없습니다.</p>
         )}

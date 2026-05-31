@@ -345,7 +345,7 @@ test('admin subscription panel renders a mobile card list instead of the table',
 test('admin subscription panel removes the outer card shell spacing across viewports', () => {
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const panelRule = cssSource.match(
-    /body:not\(:has\(\.landing-page\)\) \.admin-page section\.card\.wide\[id\^="admin-"\]\s*\{(?<body>[^}]*)\}/,
+    /body:not\(:has\(\.landing-page\)\) \.admin-page \.admin-dashboard-section > \.card,\s*body:not\(:has\(\.landing-page\)\) \.admin-page \.admin-dashboard-section > div > \.card\s*\{(?<body>[^}]*)\}/,
   )?.groups?.body ?? '';
 
   assert.match(panelRule, /padding:\s*0\s*!important/);

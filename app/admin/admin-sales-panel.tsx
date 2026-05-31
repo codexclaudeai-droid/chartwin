@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { formatAdminPlanPeriodLabel } from './admin-plan-labels';
 import { dispatchAdminQueuePresetEvent } from './admin-queue-preset-events';
+import { AdminRefreshButton } from './admin-refresh-button';
 
 type SalespersonItem = {
   id: string;
@@ -481,9 +482,7 @@ export function AdminSalesPanel() {
           <h2>{activePageMeta.label}</h2>
           <p className="compact-copy">{activePageMeta.description}을 관리합니다.</p>
         </div>
-        <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>
-          새로고침
-        </button>
+        <AdminRefreshButton onClick={() => void refresh()} disabled={isBusy} />
       </div>
       <p className="notice">{message}</p>
       <nav className="admin-web-info-tabs sales-submenu-tabs" aria-label="영업관리 세부 메뉴">

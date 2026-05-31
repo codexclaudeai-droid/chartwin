@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AdminRefreshButton } from './admin-refresh-button';
 
 type StatisticsPeriodKey = 'daily' | 'monthly' | 'yearly';
 type StatisticsMetricKey = 'sales' | 'signups' | 'visitors';
@@ -99,9 +100,7 @@ export function AdminStatisticsPanel() {
           <h2>{activeMetricMeta.label}</h2>
           <p className="compact-copy">{activeMetricMeta.description}을 일별, 월별, 년도별로 확인합니다.</p>
         </div>
-        <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>
-          새로고침
-        </button>
+        <AdminRefreshButton onClick={refresh} disabled={isBusy} />
       </div>
       <p className="notice">{message}</p>
       <nav className="admin-web-info-tabs statistics-submenu-tabs" aria-label="통계 세부 메뉴">

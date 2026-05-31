@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { RefreshIconButton } from '../shared/refresh-icon-button';
 import { AuthPromptModal } from '../shared/auth-prompt-modal';
 import {
   formatSupportCategoryLabel,
@@ -336,7 +337,7 @@ export function SupportPanel() {
       <section className="support-panel-frame support-thread-card">
         <div className="toolbar support-thread-toolbar">
           <h2>문의 목록</h2>
-          <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
+          <RefreshIconButton onClick={refresh} disabled={isBusy} />
         </div>
         {targetThreadId && (
           <div className="support-deep-link-notice" role="status">

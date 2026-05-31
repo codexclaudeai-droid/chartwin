@@ -9,6 +9,7 @@ import {
   persistSymbolRegistry,
   setSymbolChartApplied,
 } from '../../src/catalog/symbols.ts';
+import { AdminRefreshButton } from './admin-refresh-button';
 
 type ManagedSymbolSource = 'builtin' | 'custom';
 
@@ -179,9 +180,7 @@ export function AdminSymbolsPanel() {
           <h2>종목관리</h2>
           <p>TC Chart에서 선택할 종목, 티커, 카테고리, 아이콘 URL을 관리자 화면에서 관리합니다.</p>
         </div>
-        <button className="button secondary" type="button" onClick={() => setVersion((current) => current + 1)}>
-          새로고침
-        </button>
+        <AdminRefreshButton onClick={() => setVersion((current) => current + 1)} />
       </div>
 
       <p className="notice compact">{message}</p>

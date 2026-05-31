@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { dispatchAdminAuditLogPresetEvent } from './admin-audit-log-preset-events';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
+import { formatAdminDisplayId, getAdminDisplaySequence } from './admin-display-id';
 import { subscribeAdminQueuePresetEvent } from './admin-queue-preset-events';
+import { AdminRefreshButton } from './admin-refresh-button';
 import { dispatchAdminRefreshEvent, subscribeAdminRefreshEvent } from './admin-refresh-events';
 import {
   formatSupportStatusLabel,
@@ -276,12 +278,18 @@ export function SupportAdminPanel() {
   const deepLinkedThread = deepLinkedThreadId
     ? threads.find((item) => item.thread.id === deepLinkedThreadId) ?? null
     : null;
+  const deepLinkedThreadDisplayId = deepLinkedThread
+    ? formatAdminDisplayId(
+      '문의',
+      getAdminDisplaySequence(orderedThreads, (item) => item.thread.id === deepLinkedThread.thread.id),
+    )
+    : null;
 
   return (
     <section className="card wide admin-support-panel" id="admin-support">
       <div className="toolbar admin-support-toolbar">
         <h2>고객센터 관리</h2>
-        <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>새로고침</button>
+        <AdminRefreshButton onClick={() => void refresh()} disabled={isBusy} />
       </div>
       <p className="notice admin-support-status-notice">{message}</p>
       {deepLinkedThreadId && (
@@ -300,7 +308,9 @@ export function SupportAdminPanel() {
           {deepLinkedThread ? (
             <>
               <div className="admin-deep-link-meta" aria-label="답변 대상 문의 정보">
-                <span className="admin-deep-link-target-id">{deepLinkedThread.thread.id}</span>
+                <span className="admin-deep-link-target-id" title={deepLinkedThread.thread.id}>
+                  {deepLinkedThreadDisplayId}
+                </span>
                 <span>{deepLinkedThread.author?.email ?? 'system'}</span>
                 <span>{formatSupportVisibilityLabel(deepLinkedThread.thread.visibility)}</span>
               </div>
@@ -364,6 +374,10 @@ export function SupportAdminPanel() {
       <div className="thread-list admin-support-thread-list">
         {filteredThreads.map((item) => {
           const isEditingThread = editingThreadId === item.thread.id;
+          const threadDisplayId = formatAdminDisplayId(
+            '문의',
+            getAdminDisplaySequence(orderedThreads, (threadItem) => threadItem.thread.id === item.thread.id),
+          );
           const threadEditDraft = threadEditById[item.thread.id] ?? {
             title: item.thread.title,
             body: getThreadEditMessage(item)?.body ?? '',
@@ -381,7 +395,7 @@ export function SupportAdminPanel() {
           >
             <header className="admin-support-thread-header">
               <div>
-                <span className="admin-support-thread-id">{item.thread.id}</span>
+                <span className="admin-support-thread-id" title={item.thread.id}>{threadDisplayId}</span>
                 <h3 className="admin-support-thread-title">
                   <span
                     className={

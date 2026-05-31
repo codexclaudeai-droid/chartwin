@@ -3,6 +3,7 @@
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { dispatchNotificationsRefreshEvent } from '../notification-events';
+import { RefreshIconButton } from '../shared/refresh-icon-button';
 import {
   NOTIFICATION_FILTER_TABS,
   type NotificationFilterKey,
@@ -218,7 +219,7 @@ export function NotificationsPanel() {
       <div className="toolbar">
         <h2>알림센터</h2>
         <div className="actions compact">
-          <button className="button secondary" type="button" onClick={refresh} disabled={isBusy}>새로고침</button>
+          <RefreshIconButton onClick={refresh} disabled={isBusy} />
           <button
             aria-describedby={summary.unreadCount === 0 ? bulkActionHintId : undefined}
             className="button"

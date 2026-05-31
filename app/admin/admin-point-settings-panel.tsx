@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AdminRefreshButton } from './admin-refresh-button';
 
 type PointProgramSettings = {
   subscriberCashbackPercent: number;
@@ -74,9 +75,7 @@ export function AdminPointSettingsPanel() {
           <h2>포인트관리</h2>
           <p className="notice compact">슈퍼관리자가 서비스 포인트 기본 적립률을 한 곳에서 설정합니다.</p>
         </div>
-        <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>
-          새로고침
-        </button>
+        <AdminRefreshButton onClick={() => void refresh()} disabled={isBusy} />
       </div>
       <form className="form admin-point-settings-form" onSubmit={saveSettings}>
         <div className="settings-grid">

@@ -6,6 +6,10 @@ import {
   ADMIN_DASHBOARD_SECTIONS,
   getAdminDashboardSectionFromLocation,
 } from '../app/admin/admin-dashboard-sections.ts';
+import {
+  formatAdminDisplayId,
+  getAdminDisplaySequence,
+} from '../app/admin/admin-display-id.ts';
 
 test('admin dashboard sections define the professional sidebar order', () => {
   assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.map((section) => section.key), [
@@ -139,7 +143,45 @@ test('admin dashboard uses polished console design tokens and surfaces', () => {
   assert.match(cssSource, /animation: admin-section-rise/);
   assert.match(cssSource, /@keyframes admin-section-rise/);
   assert.match(cssSource, /\.admin-page \.card/);
+  assert.match(
+    cssSource,
+    /body:not\(:has\(\.landing-page\)\) \.admin-page \.admin-dashboard-section > \.card,\s*body:not\(:has\(\.landing-page\)\) \.admin-page \.admin-dashboard-section > div > \.card\s*\{[\s\S]*?padding:\s*0\s*!important[\s\S]*?border:\s*0\s*!important[\s\S]*?background:\s*transparent\s*!important[\s\S]*?box-shadow:\s*none\s*!important/,
+  );
   assert.match(cssSource, /\.admin-page \.table/);
   assert.match(cssSource, /\.admin-page \.form input:focus/);
   assert.match(cssSource, /\.admin-page \.button:hover:not\(:disabled\)/);
+});
+
+test('admin refresh controls use the shared icon button', () => {
+  const buttonSource = fs.readFileSync(new URL('../app/admin/admin-refresh-button.tsx', import.meta.url), 'utf8');
+  const sharedButtonSource = fs.readFileSync(new URL('../app/shared/refresh-icon-button.tsx', import.meta.url), 'utf8');
+  const dashboardSource = fs.readFileSync(new URL('../app/admin/admin-dashboard-panel.tsx', import.meta.url), 'utf8');
+  const symbolsSource = fs.readFileSync(new URL('../app/admin/admin-symbols-panel.tsx', import.meta.url), 'utf8');
+  const supportSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const profileSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const notificationsSource = fs.readFileSync(new URL('../app/notifications/notifications-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(buttonSource, /RefreshIconButton/);
+  assert.match(buttonSource, /admin-refresh-icon-button refresh-icon-button/);
+  assert.match(sharedButtonSource, /className=\{className\}/);
+  assert.match(sharedButtonSource, /aria-label="새로고침"/);
+  assert.match(sharedButtonSource, /M18\.2 8\.1A7 7 0 1 0 19 15/);
+  assert.match(sharedButtonSource, /M18\.4 3\.8v4\.8h-4\.8/);
+  assert.match(dashboardSource, /AdminRefreshButton/);
+  assert.match(symbolsSource, /AdminRefreshButton/);
+  assert.match(supportSource, /RefreshIconButton/);
+  assert.match(profileSource, /RefreshIconButton/);
+  assert.match(notificationsSource, /RefreshIconButton/);
+  assert.match(cssSource, /\.refresh-icon-button\s*\{[\s\S]*?background:\s*transparent/);
+  assert.match(cssSource, /\.refresh-icon-button svg\s*\{[\s\S]*?height:\s*20px/);
+});
+
+test('admin display ids use Korean labels with four digit minimum padding', () => {
+  assert.equal(formatAdminDisplayId('결제', 1), '결제-0001');
+  assert.equal(formatAdminDisplayId('구독', 2048), '구독-2048');
+  assert.equal(formatAdminDisplayId('문의', 9999), '문의-9999');
+  assert.equal(formatAdminDisplayId('회원', 10000), '회원-10000');
+  assert.equal(formatAdminDisplayId('작업', 10001), '작업-10001');
+  assert.equal(getAdminDisplaySequence([{ id: 'a' }, { id: 'b' }], (item) => item.id === 'b'), 2);
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AdminRefreshButton } from './admin-refresh-button';
 import { dispatchAdminRefreshEvent } from './admin-refresh-events';
 
 type WebInfoSettings = {
@@ -93,9 +94,7 @@ export function AdminWebInfoPanel({ mode }: Readonly<{ mode: 'terms' | 'privacy'
           <h2>{title}</h2>
           <p className="notice compact">{description}</p>
         </div>
-        <button className="button secondary" type="button" onClick={() => void refresh()} disabled={isBusy}>
-          새로고침
-        </button>
+        <AdminRefreshButton onClick={() => void refresh()} disabled={isBusy} />
       </div>
       <form className="form admin-web-info-form" onSubmit={saveSettings}>
         {mode === 'planServices' ? (
