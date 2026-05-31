@@ -219,7 +219,10 @@ export function ProfilePanel() {
     if (dashboard) {
       setNameDraft(dashboard.user.name);
       setPhoneDraft(dashboard.user.phoneNumber ?? '');
+      setSelectedAvatarPath(resolveDefaultProfileAvatarPath(dashboard.user.profileImageDataUrl));
     }
+    setSelectedImageFile(null);
+    if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
     setCurrentPassword('');
     setNewPassword('');
     setNewPasswordConfirm('');
@@ -234,7 +237,10 @@ export function ProfilePanel() {
     if (dashboard) {
       setNameDraft(dashboard.user.name);
       setPhoneDraft(dashboard.user.phoneNumber ?? '');
+      setSelectedAvatarPath(resolveDefaultProfileAvatarPath(dashboard.user.profileImageDataUrl));
     }
+    setSelectedImageFile(null);
+    if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
     setCurrentPassword('');
     setNewPassword('');
     setNewPasswordConfirm('');
@@ -247,7 +253,7 @@ export function ProfilePanel() {
     }
   }
 
-  function handleProfileEditModalKeyDown(event: React.KeyboardEvent<HTMLFormElement>) {
+  function handleProfileEditModalKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Escape') {
       closeProfileEditModal();
     }
@@ -445,12 +451,11 @@ export function ProfilePanel() {
             onClick={handleProfileEditModalBackdropClick}
             role="presentation"
           >
-            <form
+            <div
               aria-labelledby="profileEditTitle"
               aria-modal="true"
               className="profile-edit-modal"
               onKeyDown={handleProfileEditModalKeyDown}
-              onSubmit={submitProfile}
               role="dialog"
             >
               <div className="toolbar compact">
@@ -469,56 +474,89 @@ export function ProfilePanel() {
                   <span />
                 </button>
               </div>
-              <label htmlFor="profileName">이름</label>
-              <input
-                id="profileName"
-                ref={profileNameInputRef}
-                value={nameDraft}
-                onChange={(event) => setNameDraft(event.target.value)}
-                placeholder="이름"
-              />
-              <label htmlFor="profilePhoneNumber">연락번호</label>
-              <input
-                id="profilePhoneNumber"
-                value={phoneDraft}
-                onChange={handleProfilePhoneNumberChange}
-                placeholder="010-0000-0000"
-                inputMode="numeric"
-                maxLength={13}
-              />
-              <label htmlFor="profileCurrentPassword">현재 비밀번호</label>
-              <input
-                autoComplete="current-password"
-                id="profileCurrentPassword"
-                onChange={(event) => setCurrentPassword(event.target.value)}
-                placeholder="비밀번호 변경 시 입력"
-                type="password"
-                value={currentPassword}
-              />
-              <label htmlFor="profileNewPassword">새 비밀번호</label>
-              <input
-                autoComplete="new-password"
-                id="profileNewPassword"
-                onChange={(event) => setNewPassword(event.target.value)}
-                placeholder="새 비밀번호"
-                type="password"
-                value={newPassword}
-              />
-              <p className="profile-password-rule">8자리 이상, 대문자, 숫자, 특수문자를 포함해 주세요.</p>
-              <label htmlFor="profileNewPasswordConfirm">새 비밀번호 확인</label>
-              <input
-                autoComplete="new-password"
-                id="profileNewPasswordConfirm"
-                onChange={(event) => setNewPasswordConfirm(event.target.value)}
-                placeholder="새 비밀번호 확인"
-                type="password"
-                value={newPasswordConfirm}
-              />
-              <div className="actions compact">
-                <button className="button" type="submit" disabled={isBusy}>프로필 저장</button>
-                <button className="button secondary" type="button" onClick={closeProfileEditModal}>취소</button>
-              </div>
-            </form>
+              <form className="profile-edit-form" onSubmit={submitProfile}>
+                <label htmlFor="profileName">이름</label>
+                <input
+                  id="profileName"
+                  ref={profileNameInputRef}
+                  value={nameDraft}
+                  onChange={(event) => setNameDraft(event.target.value)}
+                  placeholder="이름"
+                />
+                <label htmlFor="profilePhoneNumber">연락번호</label>
+                <input
+                  id="profilePhoneNumber"
+                  value={phoneDraft}
+                  onChange={handleProfilePhoneNumberChange}
+                  placeholder="010-0000-0000"
+                  inputMode="numeric"
+                  maxLength={13}
+                />
+                <label htmlFor="profileCurrentPassword">현재 비밀번호</label>
+                <input
+                  autoComplete="current-password"
+                  id="profileCurrentPassword"
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  placeholder="비밀번호 변경 시 입력"
+                  type="password"
+                  value={currentPassword}
+                />
+                <label htmlFor="profileNewPassword">새 비밀번호</label>
+                <input
+                  autoComplete="new-password"
+                  id="profileNewPassword"
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  placeholder="새 비밀번호"
+                  type="password"
+                  value={newPassword}
+                />
+                <p className="profile-password-rule">8자리 이상, 대문자, 숫자, 특수문자를 포함해 주세요.</p>
+                <label htmlFor="profileNewPasswordConfirm">새 비밀번호 확인</label>
+                <input
+                  autoComplete="new-password"
+                  id="profileNewPasswordConfirm"
+                  onChange={(event) => setNewPasswordConfirm(event.target.value)}
+                  placeholder="새 비밀번호 확인"
+                  type="password"
+                  value={newPasswordConfirm}
+                />
+                <div className="actions compact">
+                  <button className="button" type="submit" disabled={isBusy}>프로필 저장</button>
+                  <button className="button secondary" type="button" onClick={closeProfileEditModal}>취소</button>
+                </div>
+              </form>
+              <form className="form profile-settings-form profile-edit-image-form" onSubmit={uploadProfileImage}>
+                <span className="form-section-label">기본 아바타 선택</span>
+                <ProfileAvatarPicker
+                  selectedAvatarPath={selectedAvatarPath}
+                  onSelect={(avatarPath) => {
+                    setSelectedAvatarPath(avatarPath);
+                    setSelectedImageFile(null);
+                    if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
+                  }}
+                />
+                <label htmlFor="profileImageFile">프로필 이미지 파일</label>
+                <div className="profile-image-file-row">
+                  <input
+                    accept="image/png,image/jpeg,image/webp"
+                    id="profileImageFile"
+                    ref={profileImageFileInputRef}
+                    onChange={(event) => {
+                      setSelectedImageFile(event.target.files?.[0] ?? null);
+                      setSelectedAvatarPath('');
+                    }}
+                    type="file"
+                  />
+                </div>
+                <p className="profile-image-file-help">PNG, JPG, WEBP 파일만 등록할 수 있습니다.</p>
+                {selectedImageFile && (
+                  <p className="notice profile-image-file-selection">
+                    선택 파일: {selectedImageFile.name} / {selectedImageFile.type || 'unknown'} / {selectedImageFile.size} bytes
+                  </p>
+                )}
+                <button className="button secondary profile-image-save-button" type="submit" disabled={isBusy}>프로필 이미지 적용</button>
+              </form>
+            </div>
           </div>
         )}
         <div className="referral-card">
@@ -602,51 +640,6 @@ export function ProfilePanel() {
             <small>아직 추천 가입 회원이 없습니다. 추천링크를 공유하면 이곳에 집계됩니다.</small>
           )}
         </div>
-        <form className="form profile-settings-form" onSubmit={uploadProfileImage}>
-          <span className="form-section-label">기본 아바타 선택</span>
-          <div className="profile-avatar-option-groups">
-            <ProfileAvatarOptionGroup
-              gender="male"
-              label="남성"
-              selectedAvatarPath={selectedAvatarPath}
-              onSelect={(avatarPath) => {
-                setSelectedAvatarPath(avatarPath);
-                setSelectedImageFile(null);
-                if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
-              }}
-            />
-            <ProfileAvatarOptionGroup
-              gender="female"
-              label="여성"
-              selectedAvatarPath={selectedAvatarPath}
-              onSelect={(avatarPath) => {
-                setSelectedAvatarPath(avatarPath);
-                setSelectedImageFile(null);
-                if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
-              }}
-            />
-          </div>
-          <label htmlFor="profileImageFile">프로필 이미지 파일</label>
-          <div className="profile-image-file-row">
-            <input
-              accept="image/png,image/jpeg,image/webp"
-              id="profileImageFile"
-              ref={profileImageFileInputRef}
-              onChange={(event) => {
-                setSelectedImageFile(event.target.files?.[0] ?? null);
-                setSelectedAvatarPath('');
-              }}
-              type="file"
-            />
-          </div>
-          <p className="profile-image-file-help">PNG, JPG, WEBP 파일만 등록할 수 있습니다.</p>
-          {selectedImageFile && (
-            <p className="notice profile-image-file-selection">
-              선택 파일: {selectedImageFile.name} / {selectedImageFile.type || 'unknown'} / {selectedImageFile.size} bytes
-            </p>
-          )}
-          <button className="button secondary profile-image-save-button" type="submit" disabled={isBusy}>프로필 이미지 적용</button>
-        </form>
         {canWithdraw && (
           <div className="profile-danger-zone">
             <div>
@@ -856,44 +849,37 @@ function resolveDefaultProfileAvatarPath(value: string | null): string {
   return DEFAULT_PROFILE_AVATARS.some((avatar) => avatar.path === value) ? String(value) : '';
 }
 
-function ProfileAvatarOptionGroup({
-  gender,
-  label,
+function ProfileAvatarPicker({
   selectedAvatarPath,
   onSelect,
 }: {
-  gender: 'male' | 'female';
-  label: string;
   selectedAvatarPath: string;
   onSelect: (avatarPath: string) => void;
 }) {
-  const avatars = DEFAULT_PROFILE_AVATARS.filter((avatar) => avatar.gender === gender);
-
   return (
-    <fieldset className="profile-avatar-option-group">
-      <legend>{label}</legend>
-      <div className="profile-avatar-option-list">
-        {avatars.map((avatar) => {
-          const isSelected = selectedAvatarPath === avatar.path;
-          return (
-            <label
-              className={`profile-avatar-option${isSelected ? ' selected' : ''}`}
-              key={avatar.id}
-            >
-              <input
-                checked={isSelected}
-                name="profileAvatarPath"
-                onChange={() => onSelect(avatar.path)}
-                type="radio"
-                value={avatar.path}
-              />
-              <img alt="" src={avatar.path} />
-              <span>{avatar.label}</span>
-            </label>
-          );
-        })}
-      </div>
-    </fieldset>
+    <div className="profile-avatar-option-list" role="radiogroup" aria-label="기본 아바타 선택">
+      {DEFAULT_PROFILE_AVATARS.map((avatar, index) => {
+        const isSelected = selectedAvatarPath === avatar.path;
+        const avatarLabel = `아바타 ${index + 1}`;
+        return (
+          <label
+            className={`profile-avatar-option${isSelected ? ' selected' : ''}`}
+            key={avatar.id}
+            title={avatarLabel}
+          >
+            <img alt="" src={avatar.path} />
+            <input
+              aria-label={avatarLabel}
+              checked={isSelected}
+              name="profileAvatarPath"
+              onChange={() => onSelect(avatar.path)}
+              type="radio"
+              value={avatar.path}
+            />
+          </label>
+        );
+      })}
+    </div>
   );
 }
 

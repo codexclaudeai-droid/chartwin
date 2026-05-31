@@ -430,14 +430,13 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(panelSource, /readFileAsDataUrl/);
   assert.match(panelSource, /\/api\/profile\/avatar/);
   assert.match(panelSource, /DEFAULT_PROFILE_AVATARS/);
-  assert.match(panelSource, /ProfileAvatarOptionGroup/);
+  assert.match(panelSource, /ProfileAvatarPicker/);
   assert.match(panelSource, /selectedAvatarPath/);
   assert.match(panelSource, /avatarPath: selectedAvatarPath/);
   assert.match(panelSource, /name="profileAvatarPath"/);
   assert.match(panelSource, /type="radio"/);
   assert.match(panelSource, /기본 아바타 선택/);
-  assert.match(panelSource, /남성/);
-  assert.match(panelSource, /여성/);
+  assert.doesNotMatch(panelSource, /gender="male"|gender="female"/);
   assert.match(panelSource, /프로필 이미지 적용/);
   assert.match(panelSource, /profile-image-save-button/);
   assert.match(panelSource, /profile-image-file-row/);
@@ -465,6 +464,29 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(styleSource, /line-height: 44px/);
   assert.match(styleSource, /::file-selector-button/);
   assert.match(styleSource, /height: 30px/);
+});
+
+test('profile image editing lives inside the profile edit modal with neutral avatar choices', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const modalSource = panelSource.slice(
+    panelSource.indexOf('className="profile-edit-modal"'),
+    panelSource.indexOf('<div className="referral-card">'),
+  );
+
+  assert.match(modalSource, /profile-edit-image-form/);
+  assert.match(modalSource, /uploadProfileImage/);
+  assert.match(modalSource, /profileImageFile/);
+  assert.match(modalSource, /ProfileAvatarPicker/);
+  assert.doesNotMatch(modalSource, /gender="male"|gender="female"/);
+  assert.doesNotMatch(modalSource, /label="남성"|label="여성"|<legend>/);
+  assert.match(panelSource, /function ProfileAvatarPicker/);
+  assert.match(panelSource, /DEFAULT_PROFILE_AVATARS\.map/);
+  assert.match(panelSource, /<img alt="" src=\{avatar\.path\} \/>\s*<input/);
+  assert.doesNotMatch(panelSource, /<span>\{avatar\.label\}<\/span>/);
+  assert.match(styleSource, /\.profile-edit-image-form/);
+  assert.match(styleSource, /:focus:not\(:focus-visible\)/);
+  assert.match(styleSource, /-webkit-tap-highlight-color: transparent/);
 });
 
 test('profile panel renders my referral list with individual and total points', () => {

@@ -52,6 +52,15 @@
   box-sizing: border-box;
 }
 
+:where(a, button, label, input, select, textarea, [role="button"], [tabindex]) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(a, button, label, input, select, textarea, [role="button"], [tabindex]):focus:not(:focus-visible) {
+  box-shadow: none;
+  outline: 0;
+}
+
 html,
 body {
   margin: 0;
@@ -5449,6 +5458,16 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   padding-top: 16px;
 }
 
+.profile-edit-form,
+.profile-edit-image-form {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-edit-image-form {
+  margin-top: 6px;
+}
+
 .profile-avatar-option-groups {
   display: grid;
   gap: 12px;
@@ -5487,6 +5506,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   justify-items: center;
   min-width: 0;
   padding: 6px 4px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .profile-avatar-option input[type="radio"] {
@@ -5512,9 +5532,13 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .profile-avatar-option:hover,
-.profile-avatar-option:has(input:focus-visible),
 .profile-avatar-option.selected {
-  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  border-color: transparent;
+  outline: 0;
+}
+
+.profile-avatar-option:focus-within {
+  box-shadow: none;
   outline: 0;
 }
 
@@ -5644,10 +5668,10 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   display: grid;
   gap: 10px;
   max-height: calc(100vh - 48px);
-  max-width: 520px;
+  max-width: 640px;
   overflow-y: auto;
   padding: 24px;
-  width: min(100%, 520px);
+  width: min(100%, 640px);
 }
 
 .profile-edit-close {
@@ -5672,7 +5696,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   width: 22px;
 }
 
-.profile-edit-modal input {
+.profile-edit-modal input:not([type="radio"]):not([type="file"]) {
   border-radius: 10px;
   min-height: 52px;
   padding: 0 14px;
@@ -9119,13 +9143,13 @@ body:not(:has(.landing-page)) .profile-page .profile-edit-modal {
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
 }
 
-body:not(:has(.landing-page)) .profile-page .profile-edit-modal input {
+body:not(:has(.landing-page)) .profile-page .profile-edit-modal input:not([type="radio"]):not([type="file"]) {
   background: rgba(2, 7, 19, 0.82);
   border-color: rgba(255, 255, 255, 0.16);
   color: #ffffff;
 }
 
-body:not(:has(.landing-page)) .profile-page .profile-edit-modal input:focus-visible {
+body:not(:has(.landing-page)) .profile-page .profile-edit-modal input:not([type="radio"]):not([type="file"]):focus-visible {
   border-color: rgba(255, 255, 255, 0.42);
   outline: 2px solid rgba(255, 255, 255, 0.12);
   outline-offset: 2px;
