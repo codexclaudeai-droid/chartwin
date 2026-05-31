@@ -300,6 +300,35 @@ export function ProfilePanel() {
     setPhoneDraft(formatSignupPhoneNumber(event.currentTarget.value));
   }
 
+  async function selectProfileAvatar(avatarPath: string) {
+    setSelectedAvatarPath(avatarPath);
+    setSelectedImageFile(null);
+    if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
+
+    setIsBusy(true);
+    const response = await fetch('/api/profile/avatar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatarPath }),
+    });
+    const payload = await response.json() as ProfileResponse;
+    setIsBusy(false);
+
+    if (!response.ok || !payload.dashboard) {
+      setSettingsMessage(payload.message || '프로필 이미지 저장에 실패했습니다.');
+      return;
+    }
+
+    setDashboard(payload.dashboard);
+    setSelectedAvatarPath(resolveDefaultProfileAvatarPath(payload.dashboard.user.profileImageDataUrl));
+    primeAuthSession({
+      authenticated: true,
+      user: payload.dashboard.user,
+    });
+    setSettingsMessage('프로필 이미지가 저장되었습니다.');
+    dispatchAuthSessionChangedEvent();
+  }
+
   async function uploadProfileImage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedImageFile && !selectedAvatarPath) {
@@ -530,9 +559,7 @@ export function ProfilePanel() {
                 <ProfileAvatarPicker
                   selectedAvatarPath={selectedAvatarPath}
                   onSelect={(avatarPath) => {
-                    setSelectedAvatarPath(avatarPath);
-                    setSelectedImageFile(null);
-                    if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
+                    void selectProfileAvatar(avatarPath);
                   }}
                 />
                 <label htmlFor="profileImageFile">프로필 이미지 파일</label>

@@ -447,7 +447,7 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(styleSource, /\.profile-avatar-option-list/);
   assert.match(styleSource, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
   assert.match(styleSource, /\.profile-avatar-option input\[type="radio"\]/);
-  assert.match(styleSource, /accent-color: var\(--accent\)/);
+  assert.match(styleSource, /appearance: none/);
   assert.match(styleSource, /\.profile-avatar-option-group legend\s*\{[\s\S]*?color: var\(--muted\)/);
   assert.match(styleSource, /\.profile-avatar-option\s*\{[\s\S]*?color: var\(--muted\)/);
   assert.match(styleSource, /body:not\(:has\(\.landing-page\)\) \.profile-page \.profile-avatar-option-group legend,\s*body:not\(:has\(\.landing-page\)\) \.profile-page \.profile-avatar-option span\s*\{[\s\S]*?color: rgba\(216, 236, 255, 0\.68\)/);
@@ -487,6 +487,27 @@ test('profile image editing lives inside the profile edit modal with neutral ava
   assert.match(styleSource, /\.profile-edit-image-form/);
   assert.match(styleSource, /:focus:not\(:focus-visible\)/);
   assert.match(styleSource, /-webkit-tap-highlight-color: transparent/);
+});
+
+test('profile avatar radio selection saves the selected avatar immediately', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /async function selectProfileAvatar\(avatarPath: string\)/);
+  assert.match(panelSource, /body: JSON\.stringify\(\{ avatarPath \}\)/);
+  assert.match(panelSource, /void selectProfileAvatar\(avatarPath\)/);
+  assert.match(panelSource, /setSelectedAvatarPath\(avatarPath\)/);
+  assert.match(panelSource, /primeAuthSession/);
+  assert.match(panelSource, /dispatchAuthSessionChangedEvent/);
+});
+
+test('profile avatar radios suppress native click highlight boxes', () => {
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(styleSource, /\.profile-avatar-option input\[type="radio"\]\s*\{[\s\S]*?appearance: none/);
+  assert.match(styleSource, /\.profile-avatar-option input\[type="radio"\]:focus/);
+  assert.match(styleSource, /\.profile-avatar-option input\[type="radio"\]:focus-visible/);
+  assert.match(styleSource, /box-shadow: none/);
+  assert.match(styleSource, /outline: 0/);
 });
 
 test('profile panel renders my referral list with individual and total points', () => {
