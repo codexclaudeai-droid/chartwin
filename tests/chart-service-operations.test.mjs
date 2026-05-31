@@ -41,7 +41,7 @@ test('bank transfer payment requests require a depositor name', async () => {
   }), /Bank transfer depositor name required/);
 });
 
-test('manual payment request blocks duplicate pending requests for the same plan', async () => {
+test('manual payment request blocks duplicate pending subscription requests', async () => {
   const {
     createManualPaymentRequest,
     createMockChartServiceRepository,
@@ -56,10 +56,10 @@ test('manual payment request blocks duplicate pending requests for the same plan
     requestedAt: '2026-05-23T10:00:00.000Z',
     depositorName: 'Member',
     exchangeRate: 1360,
-  }), /이미 같은 구독 플랜 신청이 접수되어 처리 중입니다/);
+  }), /이미 구독 신청이 접수되어 처리 중입니다/);
 });
 
-test('manual payment request blocks duplicate active subscriptions for the same plan', async () => {
+test('manual payment request blocks duplicate active subscriptions', async () => {
   const {
     createManualPaymentRequest,
     createMockChartServiceRepository,
@@ -74,27 +74,24 @@ test('manual payment request blocks duplicate active subscriptions for the same 
     requestedAt: '2026-05-23T10:00:00.000Z',
     depositorName: 'Subscriber',
     exchangeRate: 1360,
-  }), /이미 같은 구독 플랜을 구독 중입니다/);
+  }), /이미 구독 중인 플랜이 있습니다/);
 });
 
-test('manual payment request allows a different plan while another plan is pending', async () => {
+test('manual payment request blocks a different plan while another plan is pending', async () => {
   const {
     createManualPaymentRequest,
     createMockChartServiceRepository,
   } = await import('../src/server/chart-service/index.ts');
 
   const repository = createMockChartServiceRepository();
-  const result = createManualPaymentRequest(repository, {
+  assert.throws(() => createManualPaymentRequest(repository, {
     userId: 'user_member',
     planId: 'plan_half_year',
     method: 'bank_transfer',
     requestedAt: '2026-05-23T10:00:00.000Z',
     depositorName: 'Member',
     exchangeRate: 1360,
-  });
-
-  assert.equal(result.subscription.planId, 'plan_half_year');
-  assert.equal(result.subscription.status, 'payment_pending');
+  }), /이미 구독 신청이 접수되어 처리 중입니다/);
 });
 
 test('USDT payment requests store the submitted transaction id for admin review', async () => {
@@ -277,8 +274,8 @@ test('admin can approve a confirmed payment subscription separately', async () =
 
   const repository = createMockChartServiceRepository();
   const requested = createManualPaymentRequest(repository, {
-    userId: 'user_member',
-    planId: 'plan_half_year',
+    userId: 'user_trial',
+    planId: 'plan_monthly',
     method: 'bank_transfer',
     requestedAt: '2026-05-23T10:00:00.000Z',
     depositorName: 'Member',
@@ -312,8 +309,8 @@ test('admin can refund a confirmed payment before subscription activation', asyn
 
   const repository = createMockChartServiceRepository();
   const requested = createManualPaymentRequest(repository, {
-    userId: 'user_member',
-    planId: 'plan_half_year',
+    userId: 'user_trial',
+    planId: 'plan_monthly',
     method: 'bank_transfer',
     requestedAt: '2026-05-23T10:00:00.000Z',
     depositorName: 'Member',
@@ -334,8 +331,8 @@ test('admin can refund a confirmed payment before subscription activation', asyn
   assert.equal(refunded.payment.status, 'refunded');
   assert.equal(refunded.subscription.status, 'refunded');
   assert.equal(refunded.subscription.startsAt, null);
-  assert.equal(refunded.reversedReferralCount, 1);
-  assert.equal(repository.listReferralLedgersByPaymentId(requested.payment.id)[0].status, 'reversed');
+  assert.equal(refunded.reversedReferralCount, 0);
+  assert.equal(repository.listReferralLedgersByPaymentId(requested.payment.id).length, 0);
 });
 
 test('refund operation reverses related referral ledgers', async () => {

@@ -1279,6 +1279,14 @@ test('pricing bank transfer blocks the next step until depositor name is entered
   assert.match(panelSource, /depositorName: paymentMethod === 'bank_transfer' \? depositorName\.trim\(\) : depositorName/);
 });
 
+test('pricing payment request errors are shown with an alert', () => {
+  const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /const errorMessage = payload\.message \|\| '결제 요청에 실패했습니다\. 먼저 로그인해 주세요\.'/);
+  assert.match(panelSource, /window\.alert\(errorMessage\)/);
+  assert.match(panelSource, /setMessage\(errorMessage\)/);
+});
+
 test('pricing USDT payment request captures and submits the TXID value', () => {
   const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
 

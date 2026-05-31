@@ -515,9 +515,8 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
   const amountUsd = Math.round(plan.basePriceUsd * (1 - plan.discountPercent / 100) * 100) / 100;
   const transactionId = normalizePaymentTransactionId(input.method, input.transactionId);
   const depositorName = normalizePaymentDepositorName(input.method, input.depositorName);
-  assertNoDuplicateAsyncSubscriptionPlanRequest(await repository.listSubscriptions(), {
+  assertNoDuplicateAsyncSubscriptionRequest(await repository.listSubscriptions(), {
     userId: input.actor.id,
-    planId: plan.id,
   });
 
   const subscriptionId = await repository.nextId('sub');
@@ -1937,12 +1936,12 @@ function normalizePaymentDepositorName(method: PaymentRequestRecord['method'], v
   return depositorName || null;
 }
 
-function assertNoDuplicateAsyncSubscriptionPlanRequest(
+function assertNoDuplicateAsyncSubscriptionRequest(
   subscriptions: SubscriptionRecord[],
-  input: { userId: string; planId: string },
+  input: { userId: string },
 ): void {
   const duplicatedSubscription = subscriptions
-    .filter((subscription) => subscription.userId === input.userId && subscription.planId === input.planId)
+    .filter((subscription) => subscription.userId === input.userId)
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .find((subscription) => (
       subscription.status === SUBSCRIPTION_STATUSES.paymentPending ||
@@ -1958,10 +1957,10 @@ function assertNoDuplicateAsyncSubscriptionPlanRequest(
     duplicatedSubscription.status === SUBSCRIPTION_STATUSES.paymentPending ||
     duplicatedSubscription.status === SUBSCRIPTION_STATUSES.paymentRequested
   ) {
-    throw new Error('이미 같은 구독 플랜 신청이 접수되어 처리 중입니다. 마이프로필에서 구독내역을 확인해 주세요.');
+    throw new Error('이미 구독 신청이 접수되어 처리 중입니다. 마이프로필에서 구독내역을 확인해 주세요.');
   }
 
-  throw new Error('이미 같은 구독 플랜을 구독 중입니다. 마이프로필에서 구독내역을 확인해 주세요.');
+  throw new Error('이미 구독 중인 플랜이 있습니다. 마이프로필에서 구독내역을 확인해 주세요.');
 }
 
 const ADMIN_ROLES: UserRole[] = ['admin', 'super_admin'];

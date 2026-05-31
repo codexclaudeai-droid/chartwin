@@ -152,5 +152,5 @@ test('payment request route blocks duplicate subscription plan requests', async 
 
   assert.equal(paymentResponse.status, 400);
   assert.equal(paymentPayload.ok, false);
-  assert.match(paymentPayload.message, /이미 같은 구독 플랜 신청이 접수되어 처리 중입니다/);
+  assert.match(paymentPayload.message, /이미 구독 신청이 접수되어 처리 중입니다/);
 });

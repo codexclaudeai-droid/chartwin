@@ -100,9 +100,8 @@ export function createManualPaymentRequest(
   const amountUsd = calculatePlanAmountUsd(plan.basePriceUsd, plan.discountPercent);
   const transactionId = normalizePaymentTransactionId(input.method, input.transactionId);
   const depositorName = normalizePaymentDepositorName(input.method, input.depositorName);
-  assertNoDuplicateSubscriptionPlanRequest(repository.listSubscriptions(), {
+  assertNoDuplicateSubscriptionRequest(repository.listSubscriptions(), {
     userId: input.userId,
-    planId: plan.id,
   });
 
   const subscriptionId = repository.nextId('sub');
@@ -186,12 +185,12 @@ export function createManualPaymentRequest(
   return { payment, subscription, supportThread, supportMessage };
 }
 
-function assertNoDuplicateSubscriptionPlanRequest(
+function assertNoDuplicateSubscriptionRequest(
   subscriptions: SubscriptionRecord[],
-  input: { userId: string; planId: string },
+  input: { userId: string },
 ): void {
   const duplicatedSubscription = subscriptions
-    .filter((subscription) => subscription.userId === input.userId && subscription.planId === input.planId)
+    .filter((subscription) => subscription.userId === input.userId)
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .find((subscription) => (
       subscription.status === SUBSCRIPTION_STATUSES.paymentPending ||
@@ -207,10 +206,10 @@ function assertNoDuplicateSubscriptionPlanRequest(
     duplicatedSubscription.status === SUBSCRIPTION_STATUSES.paymentPending ||
     duplicatedSubscription.status === SUBSCRIPTION_STATUSES.paymentRequested
   ) {
-    throw new Error('이미 같은 구독 플랜 신청이 접수되어 처리 중입니다. 마이프로필에서 구독내역을 확인해 주세요.');
+    throw new Error('이미 구독 신청이 접수되어 처리 중입니다. 마이프로필에서 구독내역을 확인해 주세요.');
   }
 
-  throw new Error('이미 같은 구독 플랜을 구독 중입니다. 마이프로필에서 구독내역을 확인해 주세요.');
+  throw new Error('이미 구독 중인 플랜이 있습니다. 마이프로필에서 구독내역을 확인해 주세요.');
 }
 
 export function createAuthenticatedManualPaymentRequest(

@@ -7,8 +7,8 @@ test('notification voice formats signal messages and speaks with softer Korean s
     speakNotificationVoice,
   } = await import('../src/domain/chart-service/notification-voice.ts');
 
-  assert.equal(formatSignalVoiceMessage('LONG'), '차트 알림이에요. 매수 신호가 들어왔어요.');
-  assert.equal(formatSignalVoiceMessage('SHORT'), '차트 알림이에요. 매도 신호가 들어왔어요.');
+  assert.equal(formatSignalVoiceMessage('LONG'), '매수신호발생');
+  assert.equal(formatSignalVoiceMessage('SHORT'), '매도신호발생');
 
   const calls = [];
   const spoken = [];

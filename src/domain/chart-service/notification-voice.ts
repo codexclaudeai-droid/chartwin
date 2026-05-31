@@ -47,9 +47,7 @@ const CATEGORY_VOICE_PREFIX: Record<string, string> = {
 };
 
 export function formatSignalVoiceMessage(side: SignalVoiceSide): string {
-  return side === 'LONG'
-    ? '차트 알림이에요. 매수 신호가 들어왔어요.'
-    : '차트 알림이에요. 매도 신호가 들어왔어요.';
+  return side === 'LONG' ? '매수신호발생' : '매도신호발생';
 }
 
 export function formatNotificationVoiceMessage(notification: VoiceNotificationInput): string {
