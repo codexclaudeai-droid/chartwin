@@ -23,6 +23,12 @@ import {
   mapChartUserSettingsToPostgresRow,
   mapEmailOutboxFromPostgresRow,
   mapEmailOutboxToPostgresRow,
+  mapFreeTrialPolicySettingsFromPostgresRow,
+  mapFreeTrialPolicySettingsToPostgresRow,
+  mapFreeTrialUsageRecordFromPostgresRow,
+  mapFreeTrialUsageRecordToPostgresRow,
+  mapFreeTrialUserAllowanceFromPostgresRow,
+  mapFreeTrialUserAllowanceToPostgresRow,
   mapNotificationFromPostgresRow,
   mapNotificationToPostgresRow,
   mapPasswordResetTokenFromPostgresRow,
@@ -65,6 +71,9 @@ import type {
   ChartUserSettingsRecord,
   EmailOutboxFilter,
   EmailOutboxRecord,
+  FreeTrialPolicySettingsRecord,
+  FreeTrialUsageRecord,
+  FreeTrialUserAllowanceRecord,
   PasswordResetTokenRecord,
   PaymentTransferSettingsRecord,
   NoticePopupRecord,
@@ -237,6 +246,39 @@ export function createPostgresAsyncChartServiceRepository(
     },
     async saveSalesTeam(team: SalesTeamRecord): Promise<void> {
       await execute(createPostgresUpsertStatement('sales_teams', mapSalesTeamToPostgresRow(team), ['id']));
+    },
+    async getFreeTrialPolicySettings(): Promise<FreeTrialPolicySettingsRecord | null> {
+      return selectOne('free_trial_policy_settings', mapFreeTrialPolicySettingsFromPostgresRow, { id: 'default' });
+    },
+    async saveFreeTrialPolicySettings(settings: FreeTrialPolicySettingsRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'free_trial_policy_settings',
+        mapFreeTrialPolicySettingsToPostgresRow(settings),
+        ['id'],
+      ));
+    },
+    async getFreeTrialUserAllowanceByUserId(userId: string): Promise<FreeTrialUserAllowanceRecord | null> {
+      return selectOne('free_trial_user_allowances', mapFreeTrialUserAllowanceFromPostgresRow, { user_id: userId });
+    },
+    async saveFreeTrialUserAllowance(allowance: FreeTrialUserAllowanceRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'free_trial_user_allowances',
+        mapFreeTrialUserAllowanceToPostgresRow(allowance),
+        ['user_id'],
+      ));
+    },
+    async listFreeTrialUsageRecordsByUserId(userId: string): Promise<FreeTrialUsageRecord[]> {
+      return selectMany('free_trial_usage_records', mapFreeTrialUsageRecordFromPostgresRow, { user_id: userId }, {
+        orderBy: ['created_at'],
+        direction: 'desc',
+      });
+    },
+    async saveFreeTrialUsageRecord(record: FreeTrialUsageRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'free_trial_usage_records',
+        mapFreeTrialUsageRecordToPostgresRow(record),
+        ['id'],
+      ));
     },
     async getPaymentTransferSettings(): Promise<PaymentTransferSettingsRecord | null> {
       return selectOne('payment_transfer_settings', mapPaymentTransferSettingsFromPostgresRow, { id: 'default' });

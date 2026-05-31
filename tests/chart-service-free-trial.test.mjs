@@ -23,6 +23,103 @@ test('free trial request activates chart access and records the trial end date',
   assert.equal(result.subscription?.status, SUBSCRIPTION_STATUSES.trialActive);
   assert.equal(result.supportThread?.category, 'trial');
   assert.equal(access.fullChart, true);
+
+  const usageRecords = await repository.listFreeTrialUsageRecordsByUserId('user_member');
+  assert.equal(usageRecords.length, 1);
+  assert.equal(usageRecords[0]?.source, 'standard');
+  assert.equal(usageRecords[0]?.durationDays, 7);
+});
+
+test('free trial request is limited to one lifetime trial per account', async () => {
+  const repository = createAsyncChartServiceRepository(createMockChartServiceRepository());
+  const previousTrial = await repository.getSubscriptionByUserId('user_trial');
+  assert.ok(previousTrial);
+  await repository.saveSubscription({
+    ...previousTrial,
+    status: SUBSCRIPTION_STATUSES.trialExpired,
+    endsAt: '2026-05-30T00:00:00.000Z',
+    updatedAt: '2026-05-30T00:00:00.000Z',
+  });
+
+  await assert.rejects(
+    () => requestAsyncFreeTrial(repository, {
+      actor: { id: 'user_trial', role: 'member' },
+      requestedAt: '2026-06-01T00:00:00.000Z',
+    }),
+    /무료체험은 계정당 1회만 신청할 수 있습니다/,
+  );
+
+  const subscription = await repository.getSubscriptionByUserId('user_trial');
+  assert.equal(subscription?.status, SUBSCRIPTION_STATUSES.trialExpired);
+  assert.equal(subscription?.endsAt, '2026-05-30T00:00:00.000Z');
+});
+
+test('free trial event policy can temporarily reopen expired trial accounts', async () => {
+  const repository = createAsyncChartServiceRepository(createMockChartServiceRepository());
+  const previousTrial = await repository.getSubscriptionByUserId('user_trial');
+  assert.ok(previousTrial);
+  await repository.saveSubscription({
+    ...previousTrial,
+    status: SUBSCRIPTION_STATUSES.trialExpired,
+    endsAt: '2026-05-30T00:00:00.000Z',
+    updatedAt: '2026-05-30T00:00:00.000Z',
+  });
+  await repository.saveFreeTrialPolicySettings({
+    id: 'default',
+    baseDurationDays: 7,
+    eventEnabled: true,
+    eventStartsAt: '2026-06-01T00:00:00.000Z',
+    eventEndsAt: '2026-06-10T00:00:00.000Z',
+    eventDurationDays: 14,
+    eventAllowReapply: true,
+    updatedByAdminId: 'admin_1',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+  });
+
+  const result = await requestAsyncFreeTrial(repository, {
+    actor: { id: 'user_trial', role: 'member' },
+    requestedAt: '2026-06-01T00:00:00.000Z',
+  });
+
+  assert.equal(result.status, 'started');
+  assert.equal(result.endsAt, '2026-06-15T00:00:00.000Z');
+  assert.notEqual(result.subscription?.id, previousTrial.id);
+  const usageRecords = await repository.listFreeTrialUsageRecordsByUserId('user_trial');
+  assert.equal(usageRecords.length, 1);
+  assert.equal(usageRecords[0]?.source, 'global_event');
+  assert.equal(usageRecords[0]?.durationDays, 14);
+});
+
+test('member-specific free trial allowance is adjustable and consumed on use', async () => {
+  const repository = createAsyncChartServiceRepository(createMockChartServiceRepository());
+  const previousTrial = await repository.getSubscriptionByUserId('user_trial');
+  assert.ok(previousTrial);
+  await repository.saveSubscription({
+    ...previousTrial,
+    status: SUBSCRIPTION_STATUSES.trialExpired,
+    endsAt: '2026-05-30T00:00:00.000Z',
+    updatedAt: '2026-05-30T00:00:00.000Z',
+  });
+  await repository.saveFreeTrialUserAllowance({
+    userId: 'user_trial',
+    remainingCount: 2,
+    note: 'manual reopen',
+    updatedByAdminId: 'admin_1',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+  });
+
+  const result = await requestAsyncFreeTrial(repository, {
+    actor: { id: 'user_trial', role: 'member' },
+    requestedAt: '2026-06-02T00:00:00.000Z',
+  });
+
+  const allowance = await repository.getFreeTrialUserAllowanceByUserId('user_trial');
+  const usageRecords = await repository.listFreeTrialUsageRecordsByUserId('user_trial');
+  assert.equal(result.status, 'started');
+  assert.equal(result.endsAt, '2026-06-09T00:00:00.000Z');
+  assert.equal(allowance?.remainingCount, 1);
+  assert.equal(usageRecords.length, 1);
+  assert.equal(usageRecords[0]?.source, 'user_allowance');
 });
 
 test('free trial request button posts to the trial request API and shows auth prompt for guests', () => {

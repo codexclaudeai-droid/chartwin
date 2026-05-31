@@ -36,6 +36,10 @@ test('admin dashboard sections define the professional sidebar order', () => {
     { label: '입금정보관리', href: '#admin-payment-settings' },
     { label: '포인트관리', href: '#admin-point-settings' },
   ]);
+  assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.find((section) => section.key === 'subscriptions')?.children, [
+    { label: '구독요청', href: '#admin-subscriptions' },
+    { label: '무료체험정책', href: '#admin-trial-policy' },
+  ]);
   assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.find((section) => section.key === 'sales')?.children, [
     { label: '영업팀', href: '#admin-sales-teams' },
     { label: '영업자', href: '#admin-sales-people' },
@@ -52,6 +56,7 @@ test('admin dashboard shell maps legacy anchors and deep links to sidebar sectio
   assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info-privacy'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-plan-services'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-notice-popup'), 'webInfo');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-trial-policy'), 'subscriptions');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-symbols'), 'symbols');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-statistics'), 'statistics');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-sales'), 'sales');
@@ -82,6 +87,7 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.match(pageSource, /sectionKey="overview"[\s\S]*sectionKey="webInfo"[\s\S]*sectionKey="symbols"[\s\S]*sectionKey="users"[\s\S]*sectionKey="support"[\s\S]*sectionKey="payments"[\s\S]*sectionKey="subscriptions"[\s\S]*sectionKey="sales"[\s\S]*sectionKey="statistics"[\s\S]*sectionKey="audit"/);
   assert.doesNotMatch(pageSource, /AdminDashboardShellSection sectionKey="paymentSettings"/);
   assert.match(pageSource, /sectionKey="webInfo"[\s\S]*AdminWebInfoSection/);
+  assert.match(pageSource, /sectionKey="subscriptions"[\s\S]*AdminSubscriptionSection/);
   assert.doesNotMatch(pageSource, /sectionKey="webInfo"[\s\S]*AdminWebInfoPanel[\s\S]*AdminPaymentSettingsPanel/);
   assert.match(shellSource, /admin-dashboard-sidebar/);
   assert.doesNotMatch(shellSource, /admin-dashboard-workspace-header/);

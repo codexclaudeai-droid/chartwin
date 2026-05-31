@@ -52,7 +52,7 @@ export function SessionNav() {
   }
 
   if (isLoading) {
-    return <div className="session session-muted">세션 확인</div>;
+    return <div className="session session-muted" aria-hidden="true" />;
   }
 
   if (user) {

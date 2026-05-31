@@ -14,7 +14,13 @@ import {
   USER_ACCOUNT_STATUSES,
 } from '../../domain/chart-service/index.ts';
 import type { Actor } from '../../domain/chart-service/index.ts';
-import type { ChartServiceRepository, PublicServiceUserRecord, ServiceUserRecord } from './repository.ts';
+import type {
+  ChartServiceRepository,
+  FreeTrialUsageRecord,
+  FreeTrialUserAllowanceRecord,
+  PublicServiceUserRecord,
+  ServiceUserRecord,
+} from './repository.ts';
 import { getAdminAuditLogEntries, type AdminAuditLogEntry } from './admin-audit.ts';
 import { getChartAccessSnapshot, type ChartAccessSnapshot } from './service.ts';
 import { getUserReferralSummary, type UserReferralSummary } from './referral-program.ts';
@@ -44,6 +50,10 @@ export type AdminUserDetail = AdminUserDirectoryItem & {
   notifications: NotificationRecord[];
   auditEntries: AdminAuditLogEntry[];
   referrals: UserReferralSummary;
+  freeTrial: {
+    allowance: FreeTrialUserAllowanceRecord | null;
+    usageRecords: FreeTrialUsageRecord[];
+  };
 };
 
 const ADMIN_ROLES: UserRole[] = ['admin', 'super_admin'];
@@ -143,6 +153,10 @@ export function getAdminUserDetail(
     notifications,
     auditEntries,
     referrals: getUserReferralSummary(repository, user.id),
+    freeTrial: {
+      allowance: repository.getFreeTrialUserAllowanceByUserId(user.id),
+      usageRecords: repository.listFreeTrialUsageRecordsByUserId(user.id),
+    },
   };
 }
 
@@ -265,6 +279,35 @@ export function updateAdminUserEmail(
   return getAdminUserDetail(repository, user.id);
 }
 
+export function updateAdminUserFreeTrialAllowance(
+  repository: ChartServiceRepository,
+  input: { admin: Actor; userId: string; remainingCount: number; note?: string; updatedAt: string },
+): AdminUserDetail {
+  assertAdminActor(input.admin);
+  const user = repository.getUserById(input.userId);
+  if (!user) throw new Error(`User not found: ${input.userId}`);
+
+  const before = repository.getFreeTrialUserAllowanceByUserId(user.id);
+  const allowance = {
+    userId: user.id,
+    remainingCount: normalizeFreeTrialAllowanceCount(input.remainingCount),
+    note: normalizeFreeTrialAllowanceNote(input.note),
+    updatedByAdminId: input.admin.id,
+    updatedAt: input.updatedAt,
+  };
+  repository.saveFreeTrialUserAllowance(allowance);
+  repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.user.free_trial_allowance.update',
+    targetType: 'user',
+    targetId: user.id,
+    beforeJson: { allowance: before },
+    afterJson: { allowance },
+  }));
+
+  return getAdminUserDetail(repository, user.id);
+}
+
 export function deleteAdminUserAccount(
   repository: ChartServiceRepository,
   input: { admin: Actor; userId: string; deletedAt: string },
@@ -315,6 +358,16 @@ function normalizeAdminUserEmail(value: string): string {
     throw new Error('Valid email required');
   }
   return email;
+}
+
+function normalizeFreeTrialAllowanceCount(value: number): number {
+  if (!Number.isFinite(value)) throw new Error('Free trial allowance count must be a number');
+  return Math.min(999, Math.max(0, Math.round(value)));
+}
+
+function normalizeFreeTrialAllowanceNote(value?: string): string | null {
+  const note = value?.trim() ?? '';
+  return note ? note.slice(0, 500) : null;
 }
 
 function isVisibleNotification(notification: NotificationRecord): boolean {

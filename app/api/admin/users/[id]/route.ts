@@ -11,6 +11,7 @@ import {
   deleteAsyncAdminUserAccount,
   updateAsyncAdminUserAccountStatus,
   updateAsyncAdminUserEmail,
+  updateAsyncAdminUserFreeTrialAllowance,
   updateAsyncAdminUserRole,
 } from '../../../../../src/server/chart-service/index.ts';
 
@@ -68,10 +69,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const role = normalizeRole(body.role);
   const accountStatus = normalizeAccountStatus(body.accountStatus);
   const email = normalizeEmailInput(body.email);
-  if (!role && !accountStatus && !email) {
+  const freeTrialAllowanceCount = normalizeFreeTrialAllowanceCount(body.freeTrialAllowanceCount);
+  if (!role && !accountStatus && !email && freeTrialAllowanceCount === null) {
     return NextResponse.json({
       ok: false,
-      message: 'Invalid role, account status, or email',
+      message: 'Invalid role, account status, email, or free trial allowance',
     }, { status: 400 });
   }
 
@@ -86,6 +88,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           admin,
           userId: id,
           email,
+        });
+      }
+      if (freeTrialAllowanceCount !== null) {
+        return updateAsyncAdminUserFreeTrialAllowance(repository, {
+          admin,
+          userId: id,
+          remainingCount: freeTrialAllowanceCount,
+          note: typeof body.freeTrialAllowanceNote === 'string' ? body.freeTrialAllowanceNote : '',
+          updatedAt: new Date().toISOString(),
         });
       }
       return accountStatus
@@ -162,4 +173,11 @@ function normalizeAccountStatus(value: unknown): UserAccountStatus | null {
 
 function normalizeEmailInput(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function normalizeFreeTrialAllowanceCount(value: unknown): number | null {
+  if (value === undefined || value === null || value === '') return null;
+  const count = Number(value);
+  if (!Number.isFinite(count)) return null;
+  return Math.min(999, Math.max(0, Math.round(count)));
 }

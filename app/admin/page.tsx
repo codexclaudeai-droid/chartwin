@@ -3,11 +3,11 @@ import { AdminDashboardShell, AdminDashboardShellSection } from './admin-dashboa
 import { AdminDashboardPanel } from './admin-dashboard-panel';
 import { AdminSalesPanel } from './admin-sales-panel';
 import { AdminStatisticsPanel } from './admin-statistics-panel';
+import { AdminSubscriptionSection } from './admin-subscription-section';
 import { AdminSymbolsPanel } from './admin-symbols-panel';
 import { AdminWebInfoSection } from './admin-web-info-section';
 import { AdminPanel } from './admin-panel';
 import { AuditLogPanel } from './audit-log-panel';
-import { SubscriptionAdminPanel } from './subscription-admin-panel';
 import { SupportAdminPanel } from './support-admin-panel';
 import { UserAdminPanel } from './user-admin-panel';
 
@@ -44,7 +44,7 @@ export default function AdminPage() {
             <AdminPanel />
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="subscriptions">
-            <SubscriptionAdminPanel />
+            <AdminSubscriptionSection />
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="sales">
             <AdminSalesPanel />

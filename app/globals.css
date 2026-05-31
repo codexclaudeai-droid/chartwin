@@ -287,7 +287,7 @@ a {
 }
 
 .session-button:disabled {
-  cursor: not-allowed;
+  cursor: default;
   opacity: 0.55;
 }
 
@@ -10481,7 +10481,8 @@ body:not(:has(.landing-page)) #admin-sales .sales-submenu-tabs a.active {
   box-shadow: 0 14px 34px rgba(55, 125, 255, 0.24);
 }
 
-body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs {
+body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs,
+body:not(:has(.landing-page)) #admin-section-subscriptions .subscription-submenu-tabs {
   background: rgba(2, 7, 19, 0.62);
   border: 0;
   border-radius: 999px;
@@ -10491,7 +10492,8 @@ body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs {
   padding: 8px;
 }
 
-body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a {
+body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a,
+body:not(:has(.landing-page)) #admin-section-subscriptions .subscription-submenu-tabs a {
   align-items: center;
   color: rgba(216, 236, 255, 0.78);
   display: inline-flex;
@@ -10504,7 +10506,11 @@ body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a {
 body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a:hover,
 body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a:focus-visible,
 body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a.active,
-body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a[aria-current="page"] {
+body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a[aria-current="page"],
+body:not(:has(.landing-page)) #admin-section-subscriptions .subscription-submenu-tabs a:hover,
+body:not(:has(.landing-page)) #admin-section-subscriptions .subscription-submenu-tabs a:focus-visible,
+body:not(:has(.landing-page)) #admin-section-subscriptions .subscription-submenu-tabs a.active,
+body:not(:has(.landing-page)) #admin-section-subscriptions .subscription-submenu-tabs a[aria-current="page"] {
   background: linear-gradient(135deg, rgba(55, 125, 255, 0.96), rgba(98, 166, 255, 0.86));
   color: #ffffff;
   box-shadow: none;
@@ -13177,10 +13183,11 @@ body:not(:has(.landing-page)) .admin-page select {
   padding-right: 42px;
 }
 
-body:not(:has(.landing-page)) .admin-page input[type="date"]::-webkit-calendar-picker-indicator {
+body:not(:has(.landing-page)) .admin-page input[type="date"]::-webkit-calendar-picker-indicator,
+body:not(:has(.landing-page)) .admin-page input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  filter: invert(1) brightness(1.8);
-  opacity: 0.9;
+  filter: brightness(0) saturate(100%) invert(94%) sepia(10%) saturate(427%) hue-rotate(178deg) brightness(104%) contrast(101%);
+  opacity: 1;
 }
 
 body:not(:has(.landing-page)) .admin-page .button.compact,

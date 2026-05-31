@@ -24,6 +24,9 @@ test('chart service database schema covers repository-backed core tables', () =>
     'referral_ledgers',
     'referral_program_settings',
     'sales_teams',
+    'free_trial_policy_settings',
+    'free_trial_user_allowances',
+    'free_trial_usage_records',
     'payment_transfer_settings',
     'web_info_settings',
     'chart_user_settings',
@@ -60,6 +63,12 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'sales_teams')?.columns.commission_percent.type, 'numeric(5,2)');
   assert.equal(tables.find((table) => table.name === 'sales_teams')?.columns.salesperson_ids.type, 'jsonb');
   assert.equal(tables.find((table) => table.name === 'sales_teams')?.columns.updated_by_admin_id.references, 'users.id');
+  assert.equal(tables.find((table) => table.name === 'free_trial_policy_settings')?.columns.base_duration_days.default, '7');
+  assert.equal(tables.find((table) => table.name === 'free_trial_policy_settings')?.columns.event_allow_reapply.default, 'false');
+  assert.equal(tables.find((table) => table.name === 'free_trial_user_allowances')?.columns.user_id.references, 'users.id');
+  assert.equal(tables.find((table) => table.name === 'free_trial_user_allowances')?.columns.remaining_count.default, '0');
+  assert.equal(tables.find((table) => table.name === 'free_trial_usage_records')?.columns.policy_snapshot_json.type, 'jsonb');
+  assert.equal(tables.find((table) => table.name === 'free_trial_usage_records')?.columns.subscription_id.references, 'subscriptions.id');
   assert.equal(tables.find((table) => table.name === 'payment_transfer_settings')?.columns.bank_account_number.type, 'text');
   assert.equal(tables.find((table) => table.name === 'payment_transfer_settings')?.columns.bank_account_holder.type, 'text');
   assert.equal(tables.find((table) => table.name === 'payment_transfer_settings')?.columns.bank_logo_url.type, 'text');
@@ -113,6 +122,14 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /commission_percent numeric\(5,2\) not null default 30/i);
   assert.match(sql, /salesperson_ids jsonb not null default '\[\]'::jsonb/i);
   assert.match(sql, /alter table if exists sales_teams add column if not exists salesperson_ids jsonb/i);
+  assert.match(sql, /create table if not exists free_trial_policy_settings/i);
+  assert.match(sql, /base_duration_days integer not null default 7/i);
+  assert.match(sql, /event_allow_reapply boolean not null default false/i);
+  assert.match(sql, /create table if not exists free_trial_user_allowances/i);
+  assert.match(sql, /remaining_count integer not null default 0/i);
+  assert.match(sql, /create table if not exists free_trial_usage_records/i);
+  assert.match(sql, /policy_snapshot_json jsonb not null default '\{\}'::jsonb/i);
+  assert.match(sql, /create index if not exists idx_free_trial_usage_records_user_id/i);
   assert.match(sql, /create table if not exists payment_transfer_settings/i);
   assert.match(sql, /bank_account_number text not null/i);
   assert.match(sql, /bank_account_holder text not null/i);

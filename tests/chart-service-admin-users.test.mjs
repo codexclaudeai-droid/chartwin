@@ -11,6 +11,7 @@ import {
   getAdminUserDirectory,
   getChartServiceRepository,
   SESSION_COOKIE_NAME,
+  updateAsyncAdminUserFreeTrialAllowance,
   updateAdminUserAccountStatus,
   updateAdminUserEmail,
 } from '../src/server/chart-service/index.ts';
@@ -40,6 +41,24 @@ test('admin user directory includes contact referral and signup metadata', () =>
   assert.equal(member?.user.phoneNumber, '010-1000-2000');
   assert.equal(member?.referrer?.email, 'subscriber@example.com');
   assert.equal(member?.user.createdAt, '2026-05-23T00:00:00.000Z');
+});
+
+test('admin user detail includes free trial allowance and usage history', async () => {
+  const repository = createAsyncChartServiceRepository(createMockChartServiceRepository());
+
+  const detail = await updateAsyncAdminUserFreeTrialAllowance(repository, {
+    admin: { id: 'admin_1', role: 'admin' },
+    userId: 'user_trial',
+    remainingCount: 3,
+    note: 'event exception',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+  });
+
+  assert.equal(detail.freeTrial.allowance?.remainingCount, 3);
+  assert.equal(detail.freeTrial.allowance?.note, 'event exception');
+  assert.deepEqual(detail.freeTrial.usageRecords, []);
+  const auditEntries = await repository.listAuditLogs();
+  assert.equal(auditEntries.at(-1)?.action, 'admin.user.free_trial_allowance.update');
 });
 
 test('admin user directory orders members by newest signup first', async () => {

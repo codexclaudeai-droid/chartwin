@@ -173,6 +173,25 @@ type AdminUserDetail = AdminUserDirectoryItem & {
     } | null;
   }>;
   referrals: ReferralSummary;
+  freeTrial: {
+    allowance: {
+      userId: string;
+      remainingCount: number;
+      note: string | null;
+      updatedByAdminId: string | null;
+      updatedAt: string;
+    } | null;
+    usageRecords: Array<{
+      id: string;
+      userId: string;
+      subscriptionId: string;
+      source: string;
+      startedAt: string;
+      endsAt: string;
+      durationDays: number;
+      createdAt: string;
+    }>;
+  };
 };
 
 type AdminUserDetailResponse = {
@@ -225,6 +244,8 @@ export function UserAdminPanel() {
   const [accountReason, setAccountReason] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState<UserRole>('member');
+  const [freeTrialAllowanceCount, setFreeTrialAllowanceCount] = useState('0');
+  const [freeTrialAllowanceNote, setFreeTrialAllowanceNote] = useState('');
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('all');
   const [accountStatus, setAccountStatus] = useState('all');
@@ -317,6 +338,8 @@ export function UserAdminPanel() {
     setDetail(payload.detail);
     setNewEmail(payload.detail.user.email);
     setSelectedRole(payload.detail.user.role as UserRole);
+    setFreeTrialAllowanceCount(String(payload.detail.freeTrial.allowance?.remainingCount ?? 0));
+    setFreeTrialAllowanceNote(payload.detail.freeTrial.allowance?.note ?? '');
     setDetailMessage(`${payload.detail.user.email} 상세 정보를 불러왔습니다.`);
   }
 
@@ -446,6 +469,45 @@ export function UserAdminPanel() {
     setDetail(payload.detail);
     setNewEmail(payload.detail.user.email);
     setDetailMessage(`로그인 이메일을 ${payload.detail.user.email}(으)로 변경했습니다.`);
+    void refresh({ nextMessage: '회원 목록을 갱신했습니다.' });
+    dispatchAdminRefreshEvent({ source: 'users' });
+  }
+
+  async function updateFreeTrialAllowance() {
+    if (!detail) return;
+    const count = Number(freeTrialAllowanceCount);
+    if (!Number.isFinite(count) || count < 0) {
+      setDetailMessage('무료체험 재신청 가능 횟수는 0 이상 숫자로 입력해 주세요.');
+      return;
+    }
+    if (!await confirmAdminAction(
+      'admin.user.free_trial_allowance.update',
+      `${detail.user.email} -> ${Math.round(count)}회`,
+    )) {
+      return;
+    }
+
+    setIsBusy(true);
+    const response = await fetch(`/api/admin/users/${encodeURIComponent(detail.user.id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        freeTrialAllowanceCount: Math.round(count),
+        freeTrialAllowanceNote,
+      }),
+    });
+    const payload = await response.json() as AdminUserDetailResponse;
+    setIsBusy(false);
+
+    if (!response.ok || !payload.detail) {
+      setDetailMessage(payload.message || '무료체험 재신청 횟수 조정에 실패했습니다.');
+      return;
+    }
+
+    setDetail(payload.detail);
+    setFreeTrialAllowanceCount(String(payload.detail.freeTrial.allowance?.remainingCount ?? 0));
+    setFreeTrialAllowanceNote(payload.detail.freeTrial.allowance?.note ?? '');
+    setDetailMessage(`${payload.detail.user.email} 무료체험 재신청 가능 횟수를 ${payload.detail.freeTrial.allowance?.remainingCount ?? 0}회로 조정했습니다.`);
     void refresh({ nextMessage: '회원 목록을 갱신했습니다.' });
     dispatchAdminRefreshEvent({ source: 'users' });
   }
@@ -756,18 +818,17 @@ export function UserAdminPanel() {
         </table>
       </div>
       <div className="admin-user-mobile-list" aria-label="모바일 회원 카드 목록">
-        {users.map((item) => {
-          const userDisplayId = formatAdminDisplayId(
-            '회원',
-            getAdminDisplaySequence(users, (userItem) => userItem.user.id === item.user.id),
-          );
-
-          return (
+        {users.map((item) => (
           <article className="admin-user-mobile-card" key={`mobile-${item.user.id}`}>
             <div className="admin-user-mobile-card-title-row">
               <div>
                 <strong>{item.user.name}</strong>
-                <small title={item.user.id}>{userDisplayId}</small>
+                <small title={item.user.id}>
+                  {formatAdminDisplayId(
+                    '회원',
+                    getAdminDisplaySequence(users, (userItem) => userItem.user.id === item.user.id),
+                  )}
+                </small>
                 <small>{item.user.email}</small>
               </div>
               <button className="button secondary" type="button" onClick={() => openDetail(item.user.id)} disabled={isBusy}>
@@ -816,8 +877,7 @@ export function UserAdminPanel() {
               <span>알림 <strong>{item.unreadNotificationCount}</strong></span>
             </div>
           </article>
-          );
-        })}
+        ))}
         {users.length === 0 && (
           <p className="admin-user-mobile-empty">표시할 회원이 없습니다.</p>
         )}
@@ -913,6 +973,29 @@ export function UserAdminPanel() {
               </button>
             </div>
             {accountPermissionNotice && <p className="notice">{accountPermissionNotice}</p>}
+            <div className="admin-filter-row admin-user-detail-control-grid free-trial-allowance">
+              <input
+                aria-label="무료체험 재신청 가능 횟수"
+                inputMode="numeric"
+                min="0"
+                type="number"
+                value={freeTrialAllowanceCount}
+                onChange={(event) => setFreeTrialAllowanceCount(event.target.value)}
+                placeholder="무료체험 재신청 가능 횟수"
+              />
+              <input
+                aria-label="무료체험 재신청 허용 메모"
+                value={freeTrialAllowanceNote}
+                onChange={(event) => setFreeTrialAllowanceNote(event.target.value)}
+                placeholder="허용 사유 메모"
+              />
+              <button className="button secondary" type="button" onClick={updateFreeTrialAllowance} disabled={isBusy}>
+                무료체험 횟수 저장
+              </button>
+            </div>
+            <p className="notice compact admin-user-detail-control-note">
+              남은 횟수 {detail.freeTrial.allowance?.remainingCount ?? 0}회 / 사용 이력 {detail.freeTrial.usageRecords.length}건
+            </p>
             {currentAdmin?.role === 'super_admin' && (
               <div className="admin-filter-row admin-user-detail-control-grid danger-zone">
                 <p className="notice compact">회원 삭제 시 세션이 종료되고 로그인이 차단됩니다. 결제, 구독, 문의, 감사로그 기록은 보존됩니다.</p>

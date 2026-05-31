@@ -80,6 +80,10 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
     label: '구독관리',
     description: '입금확인 이후 구독 승인, 환불, 취소를 처리합니다.',
     href: '#admin-subscriptions',
+    children: [
+      { label: '구독요청', href: '#admin-subscriptions' },
+      { label: '무료체험정책', href: '#admin-trial-policy' },
+    ],
   },
   sales: {
     key: 'sales',
@@ -196,7 +200,11 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
     return 'payments';
   }
 
-  if (targetId === 'admin-subscriptions' || targetId.startsWith('admin-subscription-')) {
+  if (
+    targetId === 'admin-subscriptions'
+    || targetId.startsWith('admin-subscription-')
+    || targetId === 'admin-trial-policy'
+  ) {
     return 'subscriptions';
   }
 

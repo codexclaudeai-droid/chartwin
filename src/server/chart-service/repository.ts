@@ -78,6 +78,40 @@ export type SalesTeamRecord = {
   updatedByAdminId: string | null;
 };
 
+export type FreeTrialPolicySettingsRecord = {
+  id: string;
+  baseDurationDays: number;
+  eventEnabled: boolean;
+  eventStartsAt: string | null;
+  eventEndsAt: string | null;
+  eventDurationDays: number | null;
+  eventAllowReapply: boolean;
+  updatedByAdminId: string | null;
+  updatedAt: string;
+};
+
+export type FreeTrialUserAllowanceRecord = {
+  userId: string;
+  remainingCount: number;
+  note: string | null;
+  updatedByAdminId: string | null;
+  updatedAt: string;
+};
+
+export type FreeTrialUsageSource = 'standard' | 'global_event' | 'user_allowance';
+
+export type FreeTrialUsageRecord = {
+  id: string;
+  userId: string;
+  subscriptionId: string;
+  source: FreeTrialUsageSource;
+  startedAt: string;
+  endsAt: string;
+  durationDays: number;
+  policySnapshot: Record<string, unknown>;
+  createdAt: string;
+};
+
 export type PaymentTransferSettingsRecord = {
   id: string;
   bankName: string;
@@ -188,6 +222,12 @@ export type ChartServiceRepository = {
   saveReferralProgramSettings(settings: ReferralProgramSettingsRecord): void;
   listSalesTeams(): SalesTeamRecord[];
   saveSalesTeam(team: SalesTeamRecord): void;
+  getFreeTrialPolicySettings(): FreeTrialPolicySettingsRecord | null;
+  saveFreeTrialPolicySettings(settings: FreeTrialPolicySettingsRecord): void;
+  getFreeTrialUserAllowanceByUserId(userId: string): FreeTrialUserAllowanceRecord | null;
+  saveFreeTrialUserAllowance(allowance: FreeTrialUserAllowanceRecord): void;
+  listFreeTrialUsageRecordsByUserId(userId: string): FreeTrialUsageRecord[];
+  saveFreeTrialUsageRecord(record: FreeTrialUsageRecord): void;
   getPaymentTransferSettings(): PaymentTransferSettingsRecord | null;
   savePaymentTransferSettings(settings: PaymentTransferSettingsRecord): void;
   getWebInfoSettings(): WebInfoSettingsRecord | null;

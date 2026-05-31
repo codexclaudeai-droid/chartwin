@@ -13,6 +13,9 @@ import {
 import type {
   ChartUserSettingsRecord,
   ChartServiceRepository,
+  FreeTrialPolicySettingsRecord,
+  FreeTrialUsageRecord,
+  FreeTrialUserAllowanceRecord,
   NoticePopupRecord,
   PaymentTransferSettingsRecord,
   PublicBoardPostRecord,
@@ -74,6 +77,12 @@ export function getAsyncChartServicePersistence(env?: ChartServiceRepositoryRunt
 function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistence): boolean {
   return typeof persistence.repository.listSalesTeams === 'function' &&
     typeof persistence.repository.saveSalesTeam === 'function' &&
+    typeof persistence.repository.getFreeTrialPolicySettings === 'function' &&
+    typeof persistence.repository.saveFreeTrialPolicySettings === 'function' &&
+    typeof persistence.repository.getFreeTrialUserAllowanceByUserId === 'function' &&
+    typeof persistence.repository.saveFreeTrialUserAllowance === 'function' &&
+    typeof persistence.repository.listFreeTrialUsageRecordsByUserId === 'function' &&
+    typeof persistence.repository.saveFreeTrialUsageRecord === 'function' &&
     typeof persistence.repository.getPaymentTransferSettings === 'function' &&
     typeof persistence.repository.savePaymentTransferSettings === 'function' &&
     typeof persistence.repository.listPublicBoardPosts === 'function' &&
@@ -98,6 +107,12 @@ function hasMemoryRepositoryCapabilities(repository: ChartServiceRepository): bo
     typeof repository.listNoticePopups === 'function' &&
     typeof repository.saveNoticePopup === 'function' &&
     typeof repository.deleteNoticePopup === 'function' &&
+    typeof repository.getFreeTrialPolicySettings === 'function' &&
+    typeof repository.saveFreeTrialPolicySettings === 'function' &&
+    typeof repository.getFreeTrialUserAllowanceByUserId === 'function' &&
+    typeof repository.saveFreeTrialUserAllowance === 'function' &&
+    typeof repository.listFreeTrialUsageRecordsByUserId === 'function' &&
+    typeof repository.saveFreeTrialUsageRecord === 'function' &&
     typeof repository.getChartUserSettings === 'function' &&
     typeof repository.saveChartUserSettings === 'function' &&
     typeof repository.getSignalAdminSettings === 'function' &&
@@ -127,6 +142,9 @@ function copyRecoverableMemoryRepositoryRecords(
     copyRecords(() => source.listSessionsByUserId?.(user.id) ?? [], target.saveSession);
     copyRecords(() => source.listNotificationsByUserId?.(user.id) ?? [], target.saveNotification);
     copyRecords(() => source.listSignupAgreementsByUserId?.(user.id) ?? [], target.saveSignupAgreement);
+    copyRecords(() => source.listFreeTrialUsageRecordsByUserId?.(user.id) ?? [], target.saveFreeTrialUsageRecord);
+    const freeTrialAllowance = readOptionalRecord(() => source.getFreeTrialUserAllowanceByUserId?.(user.id) ?? null);
+    if (freeTrialAllowance) target.saveFreeTrialUserAllowance(freeTrialAllowance);
     const chartSettings = readOptionalRecord(() => source.getChartUserSettings?.(user.id) ?? null);
     if (chartSettings) target.saveChartUserSettings(chartSettings);
   });
@@ -141,6 +159,8 @@ function copyRecoverableMemoryRepositoryRecords(
 
   const referralSettings = readOptionalRecord(source.getReferralProgramSettings);
   if (referralSettings) target.saveReferralProgramSettings(referralSettings);
+  const freeTrialPolicySettings = readOptionalRecord(source.getFreeTrialPolicySettings);
+  if (freeTrialPolicySettings) target.saveFreeTrialPolicySettings(freeTrialPolicySettings);
   const paymentSettings = readOptionalRecord(source.getPaymentTransferSettings);
   if (paymentSettings) target.savePaymentTransferSettings(paymentSettings);
   const webInfoSettings = readOptionalRecord(source.getWebInfoSettings);
@@ -178,6 +198,9 @@ function readOptionalRecord<RecordType>(read: (() => RecordType | null) | undefi
 function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository): void {
   const mutableRepository = repository as ChartServiceRepository & {
     __fallbackSalesTeams?: SalesTeamRecord[];
+    __fallbackFreeTrialPolicySettings?: FreeTrialPolicySettingsRecord | null;
+    __fallbackFreeTrialUserAllowances?: FreeTrialUserAllowanceRecord[];
+    __fallbackFreeTrialUsageRecords?: FreeTrialUsageRecord[];
     __fallbackChartUserSettings?: ChartUserSettingsRecord[];
     __fallbackSignalAdminSettings?: SignalAdminSettingsRecord[];
     __fallbackPaymentTransferSettings?: PaymentTransferSettingsRecord | null;
@@ -187,6 +210,9 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
   };
 
   mutableRepository.__fallbackSalesTeams ??= [];
+  mutableRepository.__fallbackFreeTrialPolicySettings ??= null;
+  mutableRepository.__fallbackFreeTrialUserAllowances ??= [];
+  mutableRepository.__fallbackFreeTrialUsageRecords ??= [];
   mutableRepository.__fallbackChartUserSettings ??= [];
   mutableRepository.__fallbackSignalAdminSettings ??= [];
   mutableRepository.__fallbackPaymentTransferSettings ??= null;
@@ -210,6 +236,63 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
         salesTeams.push(structuredClone(team));
       }
       mutableRepository.__fallbackSalesTeams = salesTeams;
+    };
+  }
+
+  if (typeof mutableRepository.getFreeTrialPolicySettings !== 'function') {
+    mutableRepository.getFreeTrialPolicySettings = () => (
+      mutableRepository.__fallbackFreeTrialPolicySettings
+        ? structuredClone(mutableRepository.__fallbackFreeTrialPolicySettings)
+        : null
+    );
+  }
+
+  if (typeof mutableRepository.saveFreeTrialPolicySettings !== 'function') {
+    mutableRepository.saveFreeTrialPolicySettings = (settings) => {
+      mutableRepository.__fallbackFreeTrialPolicySettings = structuredClone(settings);
+    };
+  }
+
+  if (typeof mutableRepository.getFreeTrialUserAllowanceByUserId !== 'function') {
+    mutableRepository.getFreeTrialUserAllowanceByUserId = (userId) => {
+      const allowance = (mutableRepository.__fallbackFreeTrialUserAllowances ?? [])
+        .find((item) => item.userId === userId);
+      return allowance ? structuredClone(allowance) : null;
+    };
+  }
+
+  if (typeof mutableRepository.saveFreeTrialUserAllowance !== 'function') {
+    mutableRepository.saveFreeTrialUserAllowance = (allowance) => {
+      const rows = mutableRepository.__fallbackFreeTrialUserAllowances ?? [];
+      const index = rows.findIndex((item) => item.userId === allowance.userId);
+      if (index >= 0) {
+        rows[index] = structuredClone(allowance);
+      } else {
+        rows.push(structuredClone(allowance));
+      }
+      mutableRepository.__fallbackFreeTrialUserAllowances = rows;
+    };
+  }
+
+  if (typeof mutableRepository.listFreeTrialUsageRecordsByUserId !== 'function') {
+    mutableRepository.listFreeTrialUsageRecordsByUserId = (userId) => (
+      mutableRepository.__fallbackFreeTrialUsageRecords ?? []
+    )
+      .filter((record) => record.userId === userId)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .map((record) => structuredClone(record));
+  }
+
+  if (typeof mutableRepository.saveFreeTrialUsageRecord !== 'function') {
+    mutableRepository.saveFreeTrialUsageRecord = (record) => {
+      const records = mutableRepository.__fallbackFreeTrialUsageRecords ?? [];
+      const index = records.findIndex((item) => item.id === record.id);
+      if (index >= 0) {
+        records[index] = structuredClone(record);
+      } else {
+        records.push(structuredClone(record));
+      }
+      mutableRepository.__fallbackFreeTrialUsageRecords = records;
     };
   }
 

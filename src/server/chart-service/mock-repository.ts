@@ -19,6 +19,9 @@ import type {
   ChartServiceRepository,
   EmailOutboxRecord,
   EmailOutboxFilter,
+  FreeTrialPolicySettingsRecord,
+  FreeTrialUsageRecord,
+  FreeTrialUserAllowanceRecord,
   PasswordResetTokenRecord,
   PaymentTransferSettingsRecord,
   NoticePopupRecord,
@@ -46,6 +49,9 @@ export type MockChartServiceState = {
   payments: PaymentRequestRecord[];
   referralProgramSettings: ReferralProgramSettingsRecord | null;
   salesTeams: SalesTeamRecord[];
+  freeTrialPolicySettings: FreeTrialPolicySettingsRecord | null;
+  freeTrialUserAllowances: FreeTrialUserAllowanceRecord[];
+  freeTrialUsageRecords: FreeTrialUsageRecord[];
   paymentTransferSettings: PaymentTransferSettingsRecord | null;
   webInfoSettings: WebInfoSettingsRecord | null;
   chartUserSettings: ChartUserSettingsRecord[];
@@ -125,6 +131,9 @@ export function createMockChartServiceState(): MockChartServiceState {
     ],
     referralProgramSettings: null,
     salesTeams: [],
+    freeTrialPolicySettings: null,
+    freeTrialUserAllowances: [],
+    freeTrialUsageRecords: [],
     paymentTransferSettings: null,
     webInfoSettings: null,
     chartUserSettings: [],
@@ -209,6 +218,9 @@ export function createMockChartServiceRepository(
   state.emailOutbox ??= [];
   state.referralProgramSettings ??= null;
   state.salesTeams ??= [];
+  state.freeTrialPolicySettings ??= null;
+  state.freeTrialUserAllowances ??= [];
+  state.freeTrialUsageRecords ??= [];
   state.paymentTransferSettings ??= null;
   state.webInfoSettings ??= null;
   state.chartUserSettings ??= [];
@@ -260,7 +272,9 @@ export function createMockChartServiceRepository(
       upsertById(state.emailOutbox, record);
     },
     getSubscriptionById: (id) => cloneOrNull(state.subscriptions.find((subscription) => subscription.id === id)),
-    getSubscriptionByUserId: (userId) => cloneOrNull(state.subscriptions.find((subscription) => subscription.userId === userId)),
+    getSubscriptionByUserId: (userId) => cloneOrNull(state.subscriptions
+      .filter((subscription) => subscription.userId === userId)
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0]),
     listSubscriptions: () => state.subscriptions.map((subscription) => ({ ...subscription })),
     saveSubscription(subscription) {
       upsertById(state.subscriptions, subscription);
@@ -281,6 +295,27 @@ export function createMockChartServiceRepository(
     },
     saveSalesTeam(team) {
       upsertById(state.salesTeams, team);
+    },
+    getFreeTrialPolicySettings() {
+      return cloneOrNull(state.freeTrialPolicySettings);
+    },
+    saveFreeTrialPolicySettings(settings) {
+      state.freeTrialPolicySettings = structuredClone(settings);
+    },
+    getFreeTrialUserAllowanceByUserId(userId) {
+      return cloneOrNull(state.freeTrialUserAllowances.find((allowance) => allowance.userId === userId));
+    },
+    saveFreeTrialUserAllowance(allowance) {
+      upsertByKey(state.freeTrialUserAllowances, allowance, 'userId');
+    },
+    listFreeTrialUsageRecordsByUserId(userId) {
+      return state.freeTrialUsageRecords
+        .filter((record) => record.userId === userId)
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+        .map((record) => structuredClone(record));
+    },
+    saveFreeTrialUsageRecord(record) {
+      upsertById(state.freeTrialUsageRecords, record);
     },
     getPaymentTransferSettings() {
       return cloneOrNull(state.paymentTransferSettings);
@@ -428,6 +463,15 @@ function cloneOrNull<T>(value: T | undefined): T | null {
 
 function upsertById<T extends { id: string }>(rows: T[], row: T): void {
   const index = rows.findIndex((item) => item.id === row.id);
+  if (index >= 0) {
+    rows[index] = structuredClone(row);
+  } else {
+    rows.push(structuredClone(row));
+  }
+}
+
+function upsertByKey<T extends Record<string, unknown>, K extends keyof T>(rows: T[], row: T, key: K): void {
+  const index = rows.findIndex((item) => item[key] === row[key]);
   if (index >= 0) {
     rows[index] = structuredClone(row);
   } else {

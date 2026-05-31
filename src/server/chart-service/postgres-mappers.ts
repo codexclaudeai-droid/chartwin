@@ -12,6 +12,9 @@ import type {
   AuthSessionRecord,
   ChartUserSettingsRecord,
   EmailOutboxRecord,
+  FreeTrialPolicySettingsRecord,
+  FreeTrialUsageRecord,
+  FreeTrialUserAllowanceRecord,
   PasswordResetTokenRecord,
   PaymentTransferSettingsRecord,
   NoticePopupRecord,
@@ -323,6 +326,82 @@ export function mapSalesTeamToPostgresRow(record: SalesTeamRecord): PostgresRow 
     created_at: record.createdAt,
     updated_at: record.updatedAt,
     updated_by_admin_id: record.updatedByAdminId,
+  };
+}
+
+export function mapFreeTrialPolicySettingsFromPostgresRow(row: PostgresRow): FreeTrialPolicySettingsRecord {
+  return {
+    id: readString(row.id),
+    baseDurationDays: readNullableNumber(row.base_duration_days) ?? 7,
+    eventEnabled: readNullableBoolean(row.event_enabled) ?? false,
+    eventStartsAt: readNullableIsoString(row.event_starts_at),
+    eventEndsAt: readNullableIsoString(row.event_ends_at),
+    eventDurationDays: readNullableNumber(row.event_duration_days),
+    eventAllowReapply: readNullableBoolean(row.event_allow_reapply) ?? false,
+    updatedByAdminId: readNullableString(row.updated_by_admin_id),
+    updatedAt: readIsoString(row.updated_at),
+  };
+}
+
+export function mapFreeTrialPolicySettingsToPostgresRow(record: FreeTrialPolicySettingsRecord): PostgresRow {
+  return {
+    id: record.id,
+    base_duration_days: record.baseDurationDays,
+    event_enabled: record.eventEnabled,
+    event_starts_at: record.eventStartsAt,
+    event_ends_at: record.eventEndsAt,
+    event_duration_days: record.eventDurationDays,
+    event_allow_reapply: record.eventAllowReapply,
+    updated_by_admin_id: record.updatedByAdminId,
+    updated_at: record.updatedAt,
+  };
+}
+
+export function mapFreeTrialUserAllowanceFromPostgresRow(row: PostgresRow): FreeTrialUserAllowanceRecord {
+  return {
+    userId: readString(row.user_id),
+    remainingCount: readNullableNumber(row.remaining_count) ?? 0,
+    note: readNullableString(row.note),
+    updatedByAdminId: readNullableString(row.updated_by_admin_id),
+    updatedAt: readIsoString(row.updated_at),
+  };
+}
+
+export function mapFreeTrialUserAllowanceToPostgresRow(record: FreeTrialUserAllowanceRecord): PostgresRow {
+  return {
+    user_id: record.userId,
+    remaining_count: record.remainingCount,
+    note: record.note,
+    updated_by_admin_id: record.updatedByAdminId,
+    updated_at: record.updatedAt,
+  };
+}
+
+export function mapFreeTrialUsageRecordFromPostgresRow(row: PostgresRow): FreeTrialUsageRecord {
+  return {
+    id: readString(row.id),
+    userId: readString(row.user_id),
+    subscriptionId: readString(row.subscription_id),
+    source: readString(row.source) as FreeTrialUsageRecord['source'],
+    startedAt: readIsoString(row.started_at),
+    endsAt: readIsoString(row.ends_at),
+    durationDays: readNumber(row.duration_days),
+    policySnapshot: readJsonRecord(row.policy_snapshot_json),
+    createdAt: readIsoString(row.created_at),
+  };
+}
+
+export function mapFreeTrialUsageRecordToPostgresRow(record: FreeTrialUsageRecord): PostgresRow {
+  return {
+    id: record.id,
+    user_id: record.userId,
+    subscription_id: record.subscriptionId,
+    source: record.source,
+    started_at: record.startedAt,
+    ends_at: record.endsAt,
+    duration_days: record.durationDays,
+    policy_snapshot_json: record.policySnapshot,
+    created_at: record.createdAt,
   };
 }
 
@@ -720,6 +799,10 @@ function readBoolean(value: unknown): boolean {
   if (value === 'true' || value === 't') return true;
   if (value === 'false' || value === 'f') return false;
   throw new Error('Expected boolean postgres value');
+}
+
+function readNullableBoolean(value: unknown): boolean | null {
+  return value == null ? null : readBoolean(value);
 }
 
 function readNullableNumber(value: unknown): number | null {

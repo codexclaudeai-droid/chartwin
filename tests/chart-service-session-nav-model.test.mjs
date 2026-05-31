@@ -34,6 +34,7 @@ test('session navigation source renders avatar name and role badge together', ()
   assert.match(source, /getAuthSession/);
   assert.match(source, /clearAuthSessionCache/);
   assert.doesNotMatch(source, /fetch\('\/api\/auth\/me'/);
+  assert.match(source, /session-muted" aria-hidden="true"/);
   assert.match(source, /user\.profileImageDataUrl/);
   assert.match(source, /DefaultSessionAvatarIcon/);
   assert.match(source, /LogoutIcon/);
@@ -48,5 +49,7 @@ test('session navigation source renders avatar name and role badge together', ()
   assert.match(cssSource, /\.session-user-name/);
   assert.match(cssSource, /\.session-logout-button/);
   assert.match(cssSource, /\.session-logout-button svg\s*\{[\s\S]*?stroke: currentColor/);
+  assert.match(cssSource, /\.session-button:disabled\s*\{[^}]*cursor: default/);
+  assert.doesNotMatch(cssSource, /\.session-button:disabled\s*\{[^}]*cursor: not-allowed/);
   assert.match(cssSource, /\.mobile-nav-panel \.session \.session-logout-button/);
 });

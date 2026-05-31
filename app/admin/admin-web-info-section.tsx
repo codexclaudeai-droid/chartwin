@@ -7,7 +7,14 @@ import { AdminNoticePopupPanel } from './admin-notice-popup-panel';
 import { AdminPublicBoardPanel } from './admin-public-board-panel';
 import { AdminWebInfoPanel } from './admin-web-info-panel';
 
-type WebInfoPageKey = 'terms' | 'privacy' | 'planServices' | 'publicBoard' | 'noticePopup' | 'payments' | 'points';
+type WebInfoPageKey =
+  | 'terms'
+  | 'privacy'
+  | 'planServices'
+  | 'publicBoard'
+  | 'noticePopup'
+  | 'payments'
+  | 'points';
 
 const WEB_INFO_SUBMENU: Array<{
   key: WebInfoPageKey;

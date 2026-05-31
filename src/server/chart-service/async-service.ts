@@ -35,7 +35,14 @@ import {
 } from '../../domain/chart-service/index.ts';
 import { createSessionCookie, parseSessionCookieClaims } from './auth.ts';
 import type { AsyncChartServiceRepository } from './async-repository.ts';
-import type { AuthSessionRecord, PublicServiceUserRecord, ServiceUserRecord } from './repository.ts';
+import type {
+  AuthSessionRecord,
+  FreeTrialPolicySettingsRecord,
+  FreeTrialUsageSource,
+  FreeTrialUserAllowanceRecord,
+  PublicServiceUserRecord,
+  ServiceUserRecord,
+} from './repository.ts';
 import { createPasswordHash, verifyPasswordHash } from './passwords.ts';
 import { toDashboardUserSummary, type UserDashboardSummary } from './dashboard.ts';
 import { redactAuditLogSensitiveFields, toPublicServiceUserRecord } from './user-serialization.ts';
@@ -76,6 +83,18 @@ export type FreeTrialRequestResult = {
   subscription: SubscriptionRecord | null;
   supportThread: SupportThreadRecord | null;
   endsAt: string | null;
+};
+
+type EffectiveFreeTrialPolicy = FreeTrialPolicySettingsRecord & {
+  eventActive: boolean;
+  effectiveDurationDays: number;
+};
+
+type FreeTrialEligibility = {
+  source: FreeTrialUsageSource;
+  durationDays: number;
+  policy: EffectiveFreeTrialPolicy;
+  allowance: FreeTrialUserAllowanceRecord | null;
 };
 
 export async function getActorFromAsyncRequest(
@@ -126,6 +145,55 @@ export async function getAsyncChartAccessSnapshot(
   };
 }
 
+export async function getAsyncFreeTrialPolicySettings(
+  repository: AsyncChartServiceRepository,
+  nowIso = new Date().toISOString(),
+): Promise<FreeTrialPolicySettingsRecord> {
+  return await repository.getFreeTrialPolicySettings() ?? createDefaultFreeTrialPolicySettings(nowIso);
+}
+
+export async function updateAsyncFreeTrialPolicySettings(
+  repository: AsyncChartServiceRepository,
+  input: {
+    admin: Actor;
+    baseDurationDays: number;
+    eventEnabled: boolean;
+    eventStartsAt: string | null;
+    eventEndsAt: string | null;
+    eventDurationDays: number | null;
+    eventAllowReapply: boolean;
+    updatedAt: string;
+  },
+): Promise<FreeTrialPolicySettingsRecord> {
+  assertAdminActor(input.admin);
+  const before = await repository.getFreeTrialPolicySettings();
+  const settings: FreeTrialPolicySettingsRecord = {
+    id: 'default',
+    baseDurationDays: normalizeFreeTrialDurationDays(input.baseDurationDays),
+    eventEnabled: Boolean(input.eventEnabled),
+    eventStartsAt: normalizeNullableIsoString(input.eventStartsAt),
+    eventEndsAt: normalizeNullableIsoString(input.eventEndsAt),
+    eventDurationDays: input.eventDurationDays == null
+      ? null
+      : normalizeFreeTrialDurationDays(input.eventDurationDays),
+    eventAllowReapply: Boolean(input.eventAllowReapply),
+    updatedByAdminId: input.admin.id,
+    updatedAt: input.updatedAt,
+  };
+
+  await repository.saveFreeTrialPolicySettings(settings);
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.free_trial_policy.update',
+    targetType: 'free_trial_policy_settings',
+    targetId: settings.id,
+    beforeJson: { settings: before },
+    afterJson: { settings },
+  }));
+
+  return settings;
+}
+
 export async function requestAsyncFreeTrial(
   repository: AsyncChartServiceRepository,
   input: { actor: Actor; requestedAt: string },
@@ -133,7 +201,12 @@ export async function requestAsyncFreeTrial(
   const user = await repository.getUserById(input.actor.id);
   if (!user) throw new Error(`User not found: ${input.actor.id}`);
 
-  const existingSubscription = await repository.getSubscriptionByUserId(user.id);
+  const [existingSubscription, policy, usageRecords, allowance] = await Promise.all([
+    repository.getSubscriptionByUserId(user.id),
+    getEffectiveFreeTrialPolicySettings(repository, input.requestedAt),
+    repository.listFreeTrialUsageRecordsByUserId(user.id),
+    repository.getFreeTrialUserAllowanceByUserId(user.id),
+  ]);
   const subscriptionStatus = existingSubscription?.status ?? SUBSCRIPTION_STATUSES.none;
   if (canUseFullChart({ role: user.role, subscriptionStatus })) {
     return {
@@ -148,9 +221,15 @@ export async function requestAsyncFreeTrial(
     throw new Error('무료체험 신청은 일반회원 계정으로만 가능합니다.');
   }
 
-  const endsAt = addUtcDays(input.requestedAt, FREE_TRIAL_DURATION_DAYS);
+  const eligibility = resolveFreeTrialEligibility({
+    existingSubscription,
+    usageCount: usageRecords.length,
+    policy,
+    allowance,
+  });
+  const endsAt = addUtcDays(input.requestedAt, eligibility.durationDays);
   const subscription: SubscriptionRecord = {
-    id: existingSubscription?.id ?? await repository.nextId('sub'),
+    id: await repository.nextId('sub'),
     userId: user.id,
     planId: null,
     status: SUBSCRIPTION_STATUSES.trialActive,
@@ -160,16 +239,34 @@ export async function requestAsyncFreeTrial(
     approvedAt: null,
     cancelledAt: null,
     refundedAt: null,
-    createdAt: existingSubscription?.createdAt ?? input.requestedAt,
+    createdAt: input.requestedAt,
     updatedAt: input.requestedAt,
   };
 
   await repository.saveSubscription(subscription);
+  if (eligibility.source === 'user_allowance' && eligibility.allowance) {
+    await repository.saveFreeTrialUserAllowance({
+      ...eligibility.allowance,
+      remainingCount: Math.max(0, eligibility.allowance.remainingCount - 1),
+      updatedAt: input.requestedAt,
+    });
+  }
+  await repository.saveFreeTrialUsageRecord({
+    id: await repository.nextId('trial_usage'),
+    userId: user.id,
+    subscriptionId: subscription.id,
+    source: eligibility.source,
+    startedAt: input.requestedAt,
+    endsAt,
+    durationDays: eligibility.durationDays,
+    policySnapshot: createFreeTrialPolicySnapshot(eligibility.policy),
+    createdAt: input.requestedAt,
+  });
   await createAsyncUserNotification(repository, {
     userId: user.id,
     category: 'subscription',
     title: '무료체험이 시작되었습니다',
-    body: `무료체험이 자동 접수되었습니다. ${FREE_TRIAL_DURATION_DAYS}일 동안 TC Chart와 핵심 시그널을 이용할 수 있습니다.`,
+    body: `무료체험이 자동 접수되었습니다. ${eligibility.durationDays}일 동안 TC Chart와 핵심 시그널을 이용할 수 있습니다.`,
     linkUrl: '/chart',
     createdAt: input.requestedAt,
   });
@@ -188,6 +285,115 @@ export async function requestAsyncFreeTrial(
     subscription,
     supportThread: supportResult.thread,
     endsAt,
+  };
+}
+
+function isFreeTrialSubscriptionStatus(status: SubscriptionRecord['status']): boolean {
+  return status === SUBSCRIPTION_STATUSES.trialRequested ||
+    status === SUBSCRIPTION_STATUSES.trialActive ||
+    status === SUBSCRIPTION_STATUSES.trialExpired;
+}
+
+async function getEffectiveFreeTrialPolicySettings(
+  repository: AsyncChartServiceRepository,
+  nowIso: string,
+): Promise<EffectiveFreeTrialPolicy> {
+  const settings = await repository.getFreeTrialPolicySettings();
+  const policy = settings ?? createDefaultFreeTrialPolicySettings(nowIso);
+  const eventActive = isFreeTrialPolicyEventActive(policy, nowIso);
+  const effectiveDurationDays = eventActive && policy.eventDurationDays
+    ? normalizeFreeTrialDurationDays(policy.eventDurationDays)
+    : normalizeFreeTrialDurationDays(policy.baseDurationDays);
+
+  return {
+    ...policy,
+    baseDurationDays: normalizeFreeTrialDurationDays(policy.baseDurationDays),
+    eventDurationDays: policy.eventDurationDays == null ? null : normalizeFreeTrialDurationDays(policy.eventDurationDays),
+    eventActive,
+    effectiveDurationDays,
+  };
+}
+
+function createDefaultFreeTrialPolicySettings(nowIso: string): FreeTrialPolicySettingsRecord {
+  return {
+    id: 'default',
+    baseDurationDays: FREE_TRIAL_DURATION_DAYS,
+    eventEnabled: false,
+    eventStartsAt: null,
+    eventEndsAt: null,
+    eventDurationDays: null,
+    eventAllowReapply: false,
+    updatedByAdminId: null,
+    updatedAt: nowIso,
+  };
+}
+
+function resolveFreeTrialEligibility(input: {
+  existingSubscription: SubscriptionRecord | null;
+  usageCount: number;
+  policy: EffectiveFreeTrialPolicy;
+  allowance: FreeTrialUserAllowanceRecord | null;
+}): FreeTrialEligibility {
+  const hasTrialHistory = input.usageCount > 0 ||
+    Boolean(input.existingSubscription && isFreeTrialSubscriptionStatus(input.existingSubscription.status));
+  if (!hasTrialHistory) {
+    return {
+      source: 'standard',
+      durationDays: input.policy.effectiveDurationDays,
+      policy: input.policy,
+      allowance: null,
+    };
+  }
+  if (input.allowance && input.allowance.remainingCount > 0) {
+    return {
+      source: 'user_allowance',
+      durationDays: input.policy.effectiveDurationDays,
+      policy: input.policy,
+      allowance: input.allowance,
+    };
+  }
+  if (input.policy.eventActive && input.policy.eventAllowReapply) {
+    return {
+      source: 'global_event',
+      durationDays: input.policy.effectiveDurationDays,
+      policy: input.policy,
+      allowance: null,
+    };
+  }
+
+  throw new Error('무료체험은 계정당 1회만 신청할 수 있습니다.');
+}
+
+function isFreeTrialPolicyEventActive(policy: FreeTrialPolicySettingsRecord, nowIso: string): boolean {
+  if (!policy.eventEnabled || !policy.eventStartsAt || !policy.eventEndsAt) return false;
+  const nowTime = new Date(nowIso).getTime();
+  return nowTime >= new Date(policy.eventStartsAt).getTime() &&
+    nowTime <= new Date(policy.eventEndsAt).getTime();
+}
+
+function normalizeFreeTrialDurationDays(value: number): number {
+  if (!Number.isFinite(value)) return FREE_TRIAL_DURATION_DAYS;
+  return Math.min(365, Math.max(1, Math.round(value)));
+}
+
+function normalizeNullableIsoString(value: string | null): string | null {
+  if (!value) return null;
+  const time = new Date(value).getTime();
+  if (!Number.isFinite(time)) return null;
+  return new Date(time).toISOString();
+}
+
+function createFreeTrialPolicySnapshot(policy: EffectiveFreeTrialPolicy): Record<string, unknown> {
+  return {
+    id: policy.id,
+    baseDurationDays: policy.baseDurationDays,
+    eventEnabled: policy.eventEnabled,
+    eventStartsAt: policy.eventStartsAt,
+    eventEndsAt: policy.eventEndsAt,
+    eventDurationDays: policy.eventDurationDays,
+    eventAllowReapply: policy.eventAllowReapply,
+    eventActive: policy.eventActive,
+    effectiveDurationDays: policy.effectiveDurationDays,
   };
 }
 
@@ -1047,13 +1253,24 @@ export async function getAsyncAdminUserDetail(
 ): Promise<AdminUserDetail> {
   await ensureAsyncRepositoryReferralCodes(repository);
   const user = await requireAsyncUser(repository, userId);
-  const [payments, supportThreads, notifications, subscription, auditEntries, referrals] = await Promise.all([
+  const [
+    payments,
+    supportThreads,
+    notifications,
+    subscription,
+    auditEntries,
+    referrals,
+    freeTrialAllowance,
+    freeTrialUsageRecords,
+  ] = await Promise.all([
     repository.listPayments(),
     repository.listSupportThreads(),
     repository.listNotificationsByUserId(user.id),
     repository.getSubscriptionByUserId(user.id),
     getAsyncAdminAuditLogEntries(repository),
     getAsyncUserReferralSummary(repository, user.id),
+    repository.getFreeTrialUserAllowanceByUserId(user.id),
+    repository.listFreeTrialUsageRecordsByUserId(user.id),
   ]);
   const userPayments = payments
     .filter((payment) => payment.userId === user.id)
@@ -1087,6 +1304,10 @@ export async function getAsyncAdminUserDetail(
     notifications,
     auditEntries: relatedAuditEntries,
     referrals,
+    freeTrial: {
+      allowance: freeTrialAllowance,
+      usageRecords: freeTrialUsageRecords,
+    },
   };
 }
 
@@ -1180,6 +1401,34 @@ export async function updateAsyncAdminUserEmail(
       previousEmail: user.email,
       nextEmail: email,
     },
+  }));
+
+  return getAsyncAdminUserDetail(repository, user.id);
+}
+
+export async function updateAsyncAdminUserFreeTrialAllowance(
+  repository: AsyncChartServiceRepository,
+  input: { admin: Actor; userId: string; remainingCount: number; note?: string; updatedAt: string },
+): Promise<AdminUserDetail> {
+  assertAdminActor(input.admin);
+  const user = await requireAsyncUser(repository, input.userId);
+  const before = await repository.getFreeTrialUserAllowanceByUserId(user.id);
+  const allowance: FreeTrialUserAllowanceRecord = {
+    userId: user.id,
+    remainingCount: normalizeFreeTrialAllowanceCount(input.remainingCount),
+    note: normalizeFreeTrialAllowanceNote(input.note),
+    updatedByAdminId: input.admin.id,
+    updatedAt: input.updatedAt,
+  };
+
+  await repository.saveFreeTrialUserAllowance(allowance);
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.user.free_trial_allowance.update',
+    targetType: 'user',
+    targetId: user.id,
+    beforeJson: { allowance: before },
+    afterJson: { allowance },
   }));
 
   return getAsyncAdminUserDetail(repository, user.id);
@@ -1975,6 +2224,16 @@ function normalizeAdminUserEmail(value: string): string {
     throw new Error('Valid email required');
   }
   return email;
+}
+
+function normalizeFreeTrialAllowanceCount(value: number): number {
+  if (!Number.isFinite(value)) throw new Error('Free trial allowance count must be a number');
+  return Math.min(999, Math.max(0, Math.round(value)));
+}
+
+function normalizeFreeTrialAllowanceNote(value?: string): string | null {
+  const note = value?.trim() ?? '';
+  return note ? note.slice(0, 500) : null;
 }
 
 function isVisibleNotification(notification: NotificationRecord): boolean {
