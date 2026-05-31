@@ -12,6 +12,7 @@ import type {
   AuthSessionRecord,
   ChartUserSettingsRecord,
   EmailOutboxRecord,
+  EmailVerificationTokenRecord,
   FreeTrialPolicySettingsRecord,
   FreeTrialUsageRecord,
   FreeTrialUserAllowanceRecord,
@@ -50,6 +51,7 @@ export function mapUserFromPostgresRow(row: PostgresRow): ServiceUserRecord {
     referralCode: readNullableString(row.referral_code) ?? createStableFallbackReferralCode(id),
     referredByUserId: readNullableString(row.referred_by_user_id),
     createdAt: readNullableIsoString(row.created_at) ?? '1970-01-01T00:00:00.000Z',
+    emailVerifiedAt: readNullableIsoString(row.email_verified_at),
   };
 }
 
@@ -66,6 +68,7 @@ export function mapUserToPostgresRow(record: ServiceUserRecord): PostgresRow {
     referral_code: record.referralCode,
     referred_by_user_id: record.referredByUserId,
     created_at: record.createdAt,
+    email_verified_at: record.emailVerifiedAt,
   };
 }
 
@@ -121,6 +124,28 @@ export function mapPasswordResetTokenFromPostgresRow(row: PostgresRow): Password
 }
 
 export function mapPasswordResetTokenToPostgresRow(record: PasswordResetTokenRecord): PostgresRow {
+  return {
+    id: record.id,
+    user_id: record.userId,
+    token_hash: record.tokenHash,
+    created_at: record.createdAt,
+    expires_at: record.expiresAt,
+    used_at: record.usedAt,
+  };
+}
+
+export function mapEmailVerificationTokenFromPostgresRow(row: PostgresRow): EmailVerificationTokenRecord {
+  return {
+    id: readString(row.id),
+    userId: readString(row.user_id),
+    tokenHash: readString(row.token_hash),
+    createdAt: readIsoString(row.created_at),
+    expiresAt: readIsoString(row.expires_at),
+    usedAt: readNullableIsoString(row.used_at),
+  };
+}
+
+export function mapEmailVerificationTokenToPostgresRow(record: EmailVerificationTokenRecord): PostgresRow {
   return {
     id: record.id,
     user_id: record.userId,

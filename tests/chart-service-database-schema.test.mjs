@@ -14,6 +14,7 @@ test('chart service database schema covers repository-backed core tables', () =>
     'users',
     'auth_sessions',
     'password_reset_tokens',
+    'email_verification_tokens',
     'subscription_plans',
     'subscriptions',
     'public_board_posts',
@@ -43,8 +44,11 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'users')?.columns.referral_code.type, 'text');
   assert.equal(tables.find((table) => table.name === 'users')?.columns.referred_by_user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'users')?.columns.created_at.type, 'timestamptz');
+  assert.equal(tables.find((table) => table.name === 'users')?.columns.email_verified_at.nullable, true);
   assert.equal(tables.find((table) => table.name === 'password_reset_tokens')?.columns.token_hash.type, 'text');
   assert.equal(tables.find((table) => table.name === 'password_reset_tokens')?.columns.user_id.references, 'users.id');
+  assert.equal(tables.find((table) => table.name === 'email_verification_tokens')?.columns.token_hash.type, 'text');
+  assert.equal(tables.find((table) => table.name === 'email_verification_tokens')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'subscriptions')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.subscription_id.references, 'subscriptions.id');
   assert.equal(tables.find((table) => table.name === 'payment_requests')?.columns.support_thread_id.references, 'support_threads.id');

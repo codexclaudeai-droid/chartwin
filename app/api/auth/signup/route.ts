@@ -58,11 +58,11 @@ export async function POST(request: NextRequest) {
     });
     const response = NextResponse.json({
       ok: true,
+      verificationRequired: true,
       user: toPublicServiceUserRecord(result.user),
-      session: {
-        id: result.session.id,
-        userId: result.session.userId,
-        expiresAt: result.session.expiresAt,
+      verification: {
+        expiresAt: result.verification.expiresAt,
+        emailOutboxId: result.verification.emailOutboxId,
       },
       agreement: {
         id: agreement.id,
@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
         privacyAcceptedAt: agreement.privacyAcceptedAt,
       },
     });
-    response.headers.set('Set-Cookie', result.cookie);
     return response;
   } catch (error) {
     return NextResponse.json({

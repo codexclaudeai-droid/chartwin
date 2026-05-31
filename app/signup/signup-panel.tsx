@@ -2,9 +2,6 @@
 
 import { Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { dispatchAuthSessionChangedEvent } from '../auth-events';
-import { primeAuthSession } from '../auth-session-client';
-import { getSafeRedirectPath } from '../auth-redirect';
 import { formatSignupPhoneNumber } from './phone-format';
 
 type WebInfoSettings = {
@@ -137,18 +134,10 @@ export function SignupPanel() {
     const payload = await response.json();
     setIsSubmitting(false);
     if (response.ok) {
-      primeAuthSession({
-        authenticated: true,
-        actor: payload.user ? { id: payload.user.id, role: payload.user.role } : null,
-        user: payload.user ?? null,
-      });
-      dispatchAuthSessionChangedEvent();
-      const searchParams = new URLSearchParams(window.location.search);
-      const nextPath = getSafeRedirectPath(searchParams) ?? '/';
-      setMessage(`${payload.user.email} 회원가입이 정상 완료되었습니다. 잠시 후 이동합니다.`);
-      window.setTimeout(() => {
-        window.location.assign(nextPath);
-      }, 800);
+      const verificationRequired = Boolean(payload.verificationRequired);
+      setMessage(verificationRequired
+        ? `${payload.user.email} 이메일 인증이 필요합니다. 발송된 인증 메일을 확인해 주세요.`
+        : `${payload.user.email} 회원가입이 정상 완료되었습니다.`);
       return;
     }
     setMessage(payload.message || '회원가입에 실패했습니다.');

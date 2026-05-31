@@ -173,9 +173,169 @@ test('signup API stores the referrer from a referral code', async () => {
   const payload = await response.json();
 
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get('set-cookie'), null);
+  assert.equal(payload.verificationRequired, true);
   assert.equal(payload.user.referredByUserId, 'user_subscriber');
   assert.equal(payload.user.phoneNumber, '010-7777-8888');
   assert.match(payload.user.referralCode, /^[A-Z0-9]{6}$/);
+});
+
+test('signup API queues email verification and login requires verified email', async () => {
+  const {
+    getChartServiceRepository,
+    resetChartServiceRateLimits,
+  } = await import('../src/server/chart-service/index.ts');
+  const signupRoute = await import('../app/api/auth/signup/route.ts');
+  const loginRoute = await import('../app/api/auth/login/route.ts');
+  const verifyRoute = await import('../app/api/auth/verify-email/route.ts');
+  const repository = getChartServiceRepository();
+  const email = `verify-signup-${Date.now()}@example.com`;
+
+  resetChartServiceRateLimits();
+  const signupResponse = await signupRoute.POST(new Request('http://localhost/api/auth/signup', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+      name: 'Verify Signup User',
+      password: 'Aa1!aaaa',
+      passwordConfirm: 'Aa1!aaaa',
+      phoneNumber: '010-2222-4444',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  }));
+  const signupPayload = await signupResponse.json();
+  const verificationEmail = repository
+    .listEmailOutboxRecords({ status: 'queued' })
+    .find((record) => record.recipientEmail === email);
+  const token = verificationEmail?.body.match(/token=([A-Za-z0-9_-]+)/)?.[1] ?? '';
+
+  assert.equal(signupResponse.status, 200);
+  assert.equal(signupPayload.verificationRequired, true);
+  assert.equal(signupResponse.headers.get('set-cookie'), null);
+  assert.equal(repository.getUserByEmail(email)?.emailVerifiedAt, null);
+  assert.equal(verificationEmail?.template, 'email_verification');
+  assert.match(verificationEmail?.subject ?? '', /Verify/);
+  assert.match(verificationEmail?.body ?? '', /\/verify-email\?token=/);
+  assert.doesNotMatch(verificationEmail?.body ?? '', /\/api\/auth\/verify-email\?token=/);
+  assert.ok(token);
+
+  resetChartServiceRateLimits();
+  const blockedLoginResponse = await loginRoute.POST(new Request('http://localhost/api/auth/login', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ email, password: 'Aa1!aaaa' }),
+  }));
+  const blockedLoginPayload = await blockedLoginResponse.json();
+
+  assert.equal(blockedLoginResponse.status, 401);
+  assert.match(blockedLoginPayload.message, /Email verification required/);
+
+  const verifyResponse = await verifyRoute.POST(new Request('http://localhost/api/auth/verify-email', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ token }),
+  }));
+  const verifyPayload = await verifyResponse.json();
+
+  assert.equal(verifyResponse.status, 200);
+  assert.equal(verifyPayload.ok, true);
+  assert.equal(verifyPayload.user.email, email);
+  assert.ok(repository.getUserByEmail(email)?.emailVerifiedAt);
+
+  resetChartServiceRateLimits();
+  const loginResponse = await loginRoute.POST(new Request('http://localhost/api/auth/login', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ email, password: 'Aa1!aaaa' }),
+  }));
+
+  assert.equal(loginResponse.status, 200);
+  assert.match(loginResponse.headers.get('set-cookie') ?? '', /tc_chart_session=/);
+});
+
+test('email verification link opens a friendly page instead of raw JSON', async () => {
+  const { GET } = await import('../app/api/auth/verify-email/route.ts');
+  const pageSource = readFileSync(new URL('../app/verify-email/page.tsx', import.meta.url), 'utf8');
+  const formSource = readFileSync(new URL('../app/verify-email/verify-email-resend-form.tsx', import.meta.url), 'utf8');
+
+  const response = await GET(new Request('http://localhost/api/auth/verify-email?token=legacy-token'));
+
+  assert.equal(response.status, 307);
+  assert.equal(response.headers.get('location'), 'http://localhost/verify-email?token=legacy-token');
+  assert.match(pageSource, /verifyAsyncEmailWithToken/);
+  assert.match(pageSource, /VerifyEmailResendForm/);
+  assert.match(pageSource, /이메일 인증이 완료되었습니다/);
+  assert.match(pageSource, /로그인하러 가기/);
+  assert.doesNotMatch(pageSource, /NextResponse\.json/);
+  assert.match(formSource, /인증 메일 재발송/);
+  assert.match(formSource, /\/api\/auth\/verify-email\/resend/);
+});
+
+test('email verification resend API queues a fresh verification email for unverified accounts', async () => {
+  const {
+    getChartServiceRepository,
+    resetChartServiceRateLimits,
+  } = await import('../src/server/chart-service/index.ts');
+  const signupRoute = await import('../app/api/auth/signup/route.ts');
+  const resendRoute = await import('../app/api/auth/verify-email/resend/route.ts');
+  const repository = getChartServiceRepository();
+  const email = `resend-verify-${Date.now()}@example.com`;
+
+  resetChartServiceRateLimits();
+  const signupResponse = await signupRoute.POST(new Request('http://localhost/api/auth/signup', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+      name: 'Resend Verify User',
+      password: 'Aa1!aaaa',
+      passwordConfirm: 'Aa1!aaaa',
+      phoneNumber: '010-3333-4444',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+    }),
+  }));
+  assert.equal(signupResponse.status, 200);
+  const beforeCount = repository
+    .listEmailOutboxRecords({ status: 'queued' })
+    .filter((record) => record.recipientEmail === email && record.template === 'email_verification')
+    .length;
+
+  resetChartServiceRateLimits();
+  const response = await resendRoute.POST(new Request('http://localhost/api/auth/verify-email/resend', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  }));
+  const payload = await response.json();
+  const verificationEmails = repository
+    .listEmailOutboxRecords({ status: 'queued' })
+    .filter((record) => record.recipientEmail === email && record.template === 'email_verification');
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.ok, true);
+  assert.equal(verificationEmails.length, beforeCount + 1);
+  assert.match(verificationEmails.at(-1)?.body ?? '', /\/verify-email\?token=/);
 });
 
 test('signup API stores policy agreement evidence for the created account', async () => {
@@ -376,18 +536,14 @@ test('signup panel lets manually entered referral codes be previewed', () => {
   assert.match(cssSource, /\.referral-code-row \.button/);
 });
 
-test('signup panel confirms completion then routes new members to redirect or home after signup', () => {
+test('signup panel confirms email verification instead of logging in immediately', () => {
   const panelSource = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
-  const redirectSource = readFileSync(new URL('../app/auth-redirect.ts', import.meta.url), 'utf8');
 
-  assert.match(panelSource, /getSafeRedirectPath/);
-  assert.match(panelSource, /new URLSearchParams\(window\.location\.search\)/);
-  assert.match(panelSource, /const nextPath = getSafeRedirectPath\(searchParams\) \?\? '\/'/);
-  assert.match(panelSource, /회원가입이 정상 완료되었습니다/);
-  assert.match(panelSource, /window\.setTimeout/);
-  assert.match(panelSource, /window\.location\.assign\(nextPath\)/);
-  assert.match(redirectSource, /getSafeRedirectPath/);
-  assert.match(redirectSource, /window\.location\.assign\(redirect\)/);
+  assert.match(panelSource, /verificationRequired/);
+  assert.match(panelSource, /이메일 인증/);
+  assert.match(panelSource, /인증 메일/);
+  assert.doesNotMatch(panelSource, /primeAuthSession/);
+  assert.doesNotMatch(panelSource, /window\.location\.assign\(nextPath\)/);
 });
 
 test('signup panel labels referral code input as optional', () => {

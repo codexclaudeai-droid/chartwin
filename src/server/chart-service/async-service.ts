@@ -44,6 +44,7 @@ import type {
   ServiceUserRecord,
 } from './repository.ts';
 import { createPasswordHash, verifyPasswordHash } from './passwords.ts';
+import { queueAsyncEmailVerification } from './email-verification.ts';
 import { toDashboardUserSummary, type UserDashboardSummary } from './dashboard.ts';
 import { redactAuditLogSensitiveFields, toPublicServiceUserRecord } from './user-serialization.ts';
 import type { AdminDashboardSummary } from './admin-dashboard.ts';
@@ -584,6 +585,9 @@ export async function authenticateAsyncUserWithPassword(
   if (!user || !verifyPasswordHash(input.password, user.passwordHash)) {
     throw new Error('Invalid email or password');
   }
+  if (!user.emailVerifiedAt) {
+    throw new Error('Email verification required');
+  }
 
   const { session, cookie } = await createAsyncSessionForUser(repository, {
     userId: user.id,
@@ -629,14 +633,15 @@ export async function registerAsyncMockUserAccount(
     referredByUserId,
     createdAt: input.createdAt,
     passwordHash: createPasswordHash(input.password),
+    emailVerifiedAt: null,
   };
   user.referralCode = createUniqueRandomReferralCode((await repository.listUsers()).map((item) => item.referralCode));
   await repository.saveUser(user);
-  const { session, cookie } = await createAsyncSessionForUser(repository, {
-    userId: user.id,
-    createdAt: input.createdAt,
+  const verification = await queueAsyncEmailVerification(repository, {
+    user,
+    requestedAt: input.createdAt,
   });
-  return { user, session, cookie };
+  return { user, verification };
 }
 
 async function getAsyncReferrerUserIdByReferralCode(

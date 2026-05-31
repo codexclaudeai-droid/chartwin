@@ -52,6 +52,7 @@ test('postgres user mapper preserves auth and account fields', () => {
     referral_code: 'TC-MEMBER',
     referred_by_user_id: 'user_referrer',
     created_at: '2026-05-23T10:00:00.000Z',
+    email_verified_at: '2026-05-23T10:05:00.000Z',
   };
 
   const record = mapUserFromPostgresRow(row);
@@ -68,6 +69,7 @@ test('postgres user mapper preserves auth and account fields', () => {
     referralCode: 'TC-MEMBER',
     referredByUserId: 'user_referrer',
     createdAt: '2026-05-23T10:00:00.000Z',
+    emailVerifiedAt: '2026-05-23T10:05:00.000Z',
   });
   assert.deepEqual(mapUserToPostgresRow(record), row);
 });
@@ -180,10 +182,11 @@ test('postgres audit row and upsert statement builder use safe parameter placeho
     referralCode: 'TC-MEMBER',
     referredByUserId: 'user_referrer',
     createdAt: '2026-05-23T10:00:00.000Z',
+    emailVerifiedAt: '2026-05-23T10:05:00.000Z',
   }), ['id']);
 
   assert.match(statement.sql, /^insert into users \(/i);
-  assert.match(statement.sql, /values \(\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8, \$9, \$10, \$11\)/i);
+  assert.match(statement.sql, /values \(\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8, \$9, \$10, \$11, \$12\)/i);
   assert.match(statement.sql, /on conflict \(id\) do update set/i);
   assert.deepEqual(statement.values, [
     'user_1',
@@ -197,6 +200,7 @@ test('postgres audit row and upsert statement builder use safe parameter placeho
     'TC-MEMBER',
     'user_referrer',
     '2026-05-23T10:00:00.000Z',
+    '2026-05-23T10:05:00.000Z',
   ]);
 });
 

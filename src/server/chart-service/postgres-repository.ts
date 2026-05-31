@@ -23,6 +23,8 @@ import {
   mapChartUserSettingsToPostgresRow,
   mapEmailOutboxFromPostgresRow,
   mapEmailOutboxToPostgresRow,
+  mapEmailVerificationTokenFromPostgresRow,
+  mapEmailVerificationTokenToPostgresRow,
   mapFreeTrialPolicySettingsFromPostgresRow,
   mapFreeTrialPolicySettingsToPostgresRow,
   mapFreeTrialUsageRecordFromPostgresRow,
@@ -71,6 +73,7 @@ import type {
   ChartUserSettingsRecord,
   EmailOutboxFilter,
   EmailOutboxRecord,
+  EmailVerificationTokenRecord,
   FreeTrialPolicySettingsRecord,
   FreeTrialUsageRecord,
   FreeTrialUserAllowanceRecord,
@@ -182,6 +185,16 @@ export function createPostgresAsyncChartServiceRepository(
       await execute(createPostgresUpsertStatement(
         'password_reset_tokens',
         mapPasswordResetTokenToPostgresRow(token),
+        ['id'],
+      ));
+    },
+    async getEmailVerificationTokenByTokenHash(tokenHash: string): Promise<EmailVerificationTokenRecord | null> {
+      return selectOne('email_verification_tokens', mapEmailVerificationTokenFromPostgresRow, { token_hash: tokenHash });
+    },
+    async saveEmailVerificationToken(token: EmailVerificationTokenRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'email_verification_tokens',
+        mapEmailVerificationTokenToPostgresRow(token),
         ['id'],
       ));
     },

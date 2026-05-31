@@ -107,6 +107,7 @@ async function createInitialAdminUser(
   repository: AsyncChartServiceRepository,
   input: { email: string; password: string; name: string },
 ): Promise<ServiceUserRecord> {
+  const createdAt = new Date().toISOString();
   const user: ServiceUserRecord = {
     id: await repository.nextId('admin'),
     email: input.email,
@@ -117,8 +118,9 @@ async function createInitialAdminUser(
     profileImageDataUrl: null,
     referralCode: '',
     referredByUserId: null,
-    createdAt: new Date().toISOString(),
+    createdAt,
     passwordHash: createPasswordHash(input.password),
+    emailVerifiedAt: createdAt,
   };
   user.referralCode = createUniqueRandomReferralCode((await repository.listUsers()).map((item) => item.referralCode));
   return user;
@@ -140,5 +142,6 @@ function createRefreshedInitialAdminUser(
     role: USER_ROLES.superAdmin,
     accountStatus: USER_ACCOUNT_STATUSES.active,
     passwordHash: createPasswordHash(input.password),
+    emailVerifiedAt: user.emailVerifiedAt ?? new Date().toISOString(),
   };
 }

@@ -19,6 +19,7 @@ import type {
   ChartServiceRepository,
   EmailOutboxRecord,
   EmailOutboxFilter,
+  EmailVerificationTokenRecord,
   FreeTrialPolicySettingsRecord,
   FreeTrialUsageRecord,
   FreeTrialUserAllowanceRecord,
@@ -43,6 +44,7 @@ export type MockChartServiceState = {
   users: ServiceUserRecord[];
   sessions: AuthSessionRecord[];
   passwordResetTokens: PasswordResetTokenRecord[];
+  emailVerificationTokens: EmailVerificationTokenRecord[];
   emailOutbox: EmailOutboxRecord[];
   plans: SubscriptionPlan[];
   subscriptions: SubscriptionRecord[];
@@ -85,6 +87,7 @@ export function createMockChartServiceState(): MockChartServiceState {
     ],
     sessions: [],
     passwordResetTokens: [],
+    emailVerificationTokens: [],
     emailOutbox: [],
     plans: getDefaultChartServiceSubscriptionPlans(),
     subscriptions: [
@@ -208,6 +211,7 @@ function createMockUser(input: {
     referredByUserId: input.referredByUserId ?? null,
     createdAt: input.createdAt ?? '2026-05-23T00:00:00.000Z',
     passwordHash: createPasswordHash('Demo1234!', { salt: `demo_${input.id}` }),
+    emailVerifiedAt: input.createdAt ?? '2026-05-23T00:00:00.000Z',
   };
 }
 
@@ -215,6 +219,7 @@ export function createMockChartServiceRepository(
   state: MockChartServiceState = createMockChartServiceState(),
 ): ChartServiceRepository {
   state.passwordResetTokens ??= [];
+  state.emailVerificationTokens ??= [];
   state.emailOutbox ??= [];
   state.referralProgramSettings ??= null;
   state.salesTeams ??= [];
@@ -262,6 +267,12 @@ export function createMockChartServiceRepository(
     },
     savePasswordResetToken(token) {
       upsertById(state.passwordResetTokens, token);
+    },
+    getEmailVerificationTokenByTokenHash(tokenHash) {
+      return cloneOrNull(state.emailVerificationTokens.find((token) => token.tokenHash === tokenHash));
+    },
+    saveEmailVerificationToken(token) {
+      upsertById(state.emailVerificationTokens, token);
     },
     listEmailOutboxRecords(filter: EmailOutboxFilter = {}) {
       return state.emailOutbox

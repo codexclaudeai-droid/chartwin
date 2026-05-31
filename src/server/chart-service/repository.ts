@@ -24,6 +24,7 @@ export type ServiceUserRecord = {
   referredByUserId: string | null;
   createdAt: string;
   passwordHash: string | null;
+  emailVerifiedAt: string | null;
 };
 
 export type PublicServiceUserRecord = Omit<ServiceUserRecord, 'passwordHash'>;
@@ -36,6 +37,15 @@ export type AuthSessionRecord = {
 };
 
 export type PasswordResetTokenRecord = {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  createdAt: string;
+  expiresAt: string;
+  usedAt: string | null;
+};
+
+export type EmailVerificationTokenRecord = {
   id: string;
   userId: string;
   tokenHash: string;
@@ -209,6 +219,8 @@ export type ChartServiceRepository = {
   deleteSession(id: string): void;
   getPasswordResetTokenByTokenHash(tokenHash: string): PasswordResetTokenRecord | null;
   savePasswordResetToken(token: PasswordResetTokenRecord): void;
+  getEmailVerificationTokenByTokenHash(tokenHash: string): EmailVerificationTokenRecord | null;
+  saveEmailVerificationToken(token: EmailVerificationTokenRecord): void;
   listEmailOutboxRecords(filter?: EmailOutboxFilter): EmailOutboxRecord[];
   saveEmailOutboxRecord(record: EmailOutboxRecord): void;
   getSubscriptionById(id: string): SubscriptionRecord | null;

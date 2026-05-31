@@ -95,6 +95,7 @@ export function registerMockUserAccount(
     referredByUserId,
     createdAt: input.createdAt,
     passwordHash: createPasswordHash(input.password),
+    emailVerifiedAt: input.createdAt,
   };
   user.referralCode = createUniqueRandomReferralCode(repository.listUsers().map((item) => item.referralCode));
   repository.saveUser(user);
@@ -142,6 +143,9 @@ export function authenticateUserWithPassword(
   const user = repository.getUserByEmail(email);
   if (!user || !verifyPasswordHash(input.password, user.passwordHash)) {
     throw new Error('Invalid email or password');
+  }
+  if (!user.emailVerifiedAt) {
+    throw new Error('Email verification required');
   }
 
   const { session, cookie } = createSessionForUser(repository, {

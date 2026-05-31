@@ -36,6 +36,7 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
         referral_code: { type: 'text' },
         referred_by_user_id: { type: 'text', nullable: true, references: 'users.id' },
         created_at: { type: 'timestamptz', default: 'now()' },
+        email_verified_at: { type: 'timestamptz', nullable: true },
       },
       indexes: [
         { name: 'idx_users_email', columns: ['email'] },
@@ -70,6 +71,21 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       indexes: [
         { name: 'idx_password_reset_tokens_token_hash', columns: ['token_hash'] },
         { name: 'idx_password_reset_tokens_user_id', columns: ['user_id'] },
+      ],
+    },
+    {
+      name: 'email_verification_tokens',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        user_id: { type: 'text', references: 'users.id' },
+        token_hash: { type: 'text' },
+        created_at: { type: 'timestamptz' },
+        expires_at: { type: 'timestamptz' },
+        used_at: { type: 'timestamptz', nullable: true },
+      },
+      indexes: [
+        { name: 'idx_email_verification_tokens_token_hash', columns: ['token_hash'] },
+        { name: 'idx_email_verification_tokens_user_id', columns: ['user_id'] },
       ],
     },
     {
@@ -512,10 +528,15 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     'alter table if exists users add column if not exists referral_code text;',
     'alter table if exists users add column if not exists referred_by_user_id text;',
     'alter table if exists users add column if not exists created_at timestamptz;',
+    'alter table if exists users add column if not exists email_verified_at timestamptz;',
     "update users set referral_code = upper(substr(md5(id), 1, 6)) where referral_code is null or referral_code = '' or referral_code !~ '^[A-Z0-9]{6}$';",
     'update users set created_at = now() where created_at is null;',
+    'update users set email_verified_at = created_at where email_verified_at is null;',
     'create index if not exists idx_users_referral_code on users (referral_code);',
     'create index if not exists idx_users_referred_by_user_id on users (referred_by_user_id);',
+    'create table if not exists email_verification_tokens (id text primary key, user_id text not null references users(id), token_hash text not null, created_at timestamptz not null, expires_at timestamptz not null, used_at timestamptz);',
+    'create index if not exists idx_email_verification_tokens_token_hash on email_verification_tokens (token_hash);',
+    'create index if not exists idx_email_verification_tokens_user_id on email_verification_tokens (user_id);',
     'alter table if exists audit_logs alter column before_json drop not null;',
     'alter table if exists audit_logs alter column after_json drop not null;',
     'create table if not exists referral_program_settings (id text primary key, subscriber_cashback_percent numeric(5,2) not null default 3, reward_percent numeric(5,2) not null default 10, salesperson_reward_percent numeric(5,2) not null default 30, sales_team_reward_percent numeric(5,2) not null default 50, updated_by_admin_id text, updated_at timestamptz not null default now());',
