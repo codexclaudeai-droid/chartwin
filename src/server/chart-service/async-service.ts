@@ -198,12 +198,13 @@ export async function getAsyncUserDashboardSummary(
   const user = await repository.getUserById(input.actor.id);
   if (!user) throw new Error(`User not found: ${input.actor.id}`);
 
-  const [supportThreads, payments, notifications, access, subscription, referrals] = await Promise.all([
+  const [supportThreads, payments, notifications, access, subscription, subscriptions, referrals] = await Promise.all([
     repository.listSupportThreads(),
     repository.listPayments(),
     repository.listNotificationsByUserId(input.actor.id),
     getAsyncChartAccessSnapshot(repository, input.actor.id),
     repository.getSubscriptionByUserId(input.actor.id),
+    repository.listSubscriptions(),
     getAsyncUserReferralSummary(repository, input.actor.id),
   ]);
   const visibleSupportThreads = supportThreads.filter((thread) => (
@@ -218,6 +219,9 @@ export async function getAsyncUserDashboardSummary(
     user: toDashboardUserSummary(user),
     access,
     subscription,
+    subscriptions: subscriptions
+      .filter((subscription) => subscription.userId === input.actor.id)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
     payments: payments
       .filter((payment) => payment.userId === input.actor.id)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
@@ -486,6 +490,14 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
   if (!plan || !plan.isActive) {
     throw new Error(`Active plan not found: ${input.planId}`);
   }
+  const amountUsd = Math.round(plan.basePriceUsd * (1 - plan.discountPercent / 100) * 100) / 100;
+  const transactionId = normalizePaymentTransactionId(input.method, input.transactionId);
+  const depositorName = normalizePaymentDepositorName(input.method, input.depositorName);
+  assertNoDuplicateAsyncSubscriptionPlanRequest(await repository.listSubscriptions(), {
+    userId: input.actor.id,
+    planId: plan.id,
+  });
+
   const subscriptionId = await repository.nextId('sub');
   const paymentId = await repository.nextId('pay');
   const supportThreadId = await repository.nextId('support');
@@ -504,9 +516,6 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
     createdAt: input.requestedAt,
     updatedAt: input.requestedAt,
   };
-  const amountUsd = Math.round(plan.basePriceUsd * (1 - plan.discountPercent / 100) * 100) / 100;
-  const transactionId = normalizePaymentTransactionId(input.method, input.transactionId);
-  const depositorName = normalizePaymentDepositorName(input.method, input.depositorName);
   const { thread: supportThread, message: supportMessage } = createDepositSupportThreadDraft({
     threadId: supportThreadId,
     messageId: await repository.nextId('support_msg'),
@@ -1904,6 +1913,33 @@ function normalizePaymentDepositorName(method: PaymentRequestRecord['method'], v
     throw new Error('Bank transfer depositor name required');
   }
   return depositorName || null;
+}
+
+function assertNoDuplicateAsyncSubscriptionPlanRequest(
+  subscriptions: SubscriptionRecord[],
+  input: { userId: string; planId: string },
+): void {
+  const duplicatedSubscription = subscriptions
+    .filter((subscription) => subscription.userId === input.userId && subscription.planId === input.planId)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .find((subscription) => (
+      subscription.status === SUBSCRIPTION_STATUSES.paymentPending ||
+      subscription.status === SUBSCRIPTION_STATUSES.paymentRequested ||
+      subscription.status === SUBSCRIPTION_STATUSES.active ||
+      subscription.status === SUBSCRIPTION_STATUSES.expiring ||
+      subscription.status === SUBSCRIPTION_STATUSES.cancelRequested ||
+      subscription.status === SUBSCRIPTION_STATUSES.refundRequested
+    ));
+
+  if (!duplicatedSubscription) return;
+  if (
+    duplicatedSubscription.status === SUBSCRIPTION_STATUSES.paymentPending ||
+    duplicatedSubscription.status === SUBSCRIPTION_STATUSES.paymentRequested
+  ) {
+    throw new Error('이미 같은 구독 플랜 신청이 접수되어 처리 중입니다. 마이프로필에서 구독내역을 확인해 주세요.');
+  }
+
+  throw new Error('이미 같은 구독 플랜을 구독 중입니다. 마이프로필에서 구독내역을 확인해 주세요.');
 }
 
 const ADMIN_ROLES: UserRole[] = ['admin', 'super_admin'];

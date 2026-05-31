@@ -97,6 +97,14 @@ export function createManualPaymentRequest(
   if (!plan || !plan.isActive) {
     throw new Error(`Active plan not found: ${input.planId}`);
   }
+  const amountUsd = calculatePlanAmountUsd(plan.basePriceUsd, plan.discountPercent);
+  const transactionId = normalizePaymentTransactionId(input.method, input.transactionId);
+  const depositorName = normalizePaymentDepositorName(input.method, input.depositorName);
+  assertNoDuplicateSubscriptionPlanRequest(repository.listSubscriptions(), {
+    userId: input.userId,
+    planId: plan.id,
+  });
+
   const subscriptionId = repository.nextId('sub');
   const paymentId = repository.nextId('pay');
   const supportThreadId = repository.nextId('support');
@@ -115,9 +123,6 @@ export function createManualPaymentRequest(
     createdAt: input.requestedAt,
     updatedAt: input.requestedAt,
   };
-  const amountUsd = calculatePlanAmountUsd(plan.basePriceUsd, plan.discountPercent);
-  const transactionId = normalizePaymentTransactionId(input.method, input.transactionId);
-  const depositorName = normalizePaymentDepositorName(input.method, input.depositorName);
   const { thread: supportThread, message: supportMessage } = createDepositSupportThreadDraft({
     threadId: supportThreadId,
     messageId: repository.nextId('support_msg'),
@@ -179,6 +184,33 @@ export function createManualPaymentRequest(
     createdAt: input.requestedAt,
   });
   return { payment, subscription, supportThread, supportMessage };
+}
+
+function assertNoDuplicateSubscriptionPlanRequest(
+  subscriptions: SubscriptionRecord[],
+  input: { userId: string; planId: string },
+): void {
+  const duplicatedSubscription = subscriptions
+    .filter((subscription) => subscription.userId === input.userId && subscription.planId === input.planId)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .find((subscription) => (
+      subscription.status === SUBSCRIPTION_STATUSES.paymentPending ||
+      subscription.status === SUBSCRIPTION_STATUSES.paymentRequested ||
+      subscription.status === SUBSCRIPTION_STATUSES.active ||
+      subscription.status === SUBSCRIPTION_STATUSES.expiring ||
+      subscription.status === SUBSCRIPTION_STATUSES.cancelRequested ||
+      subscription.status === SUBSCRIPTION_STATUSES.refundRequested
+    ));
+
+  if (!duplicatedSubscription) return;
+  if (
+    duplicatedSubscription.status === SUBSCRIPTION_STATUSES.paymentPending ||
+    duplicatedSubscription.status === SUBSCRIPTION_STATUSES.paymentRequested
+  ) {
+    throw new Error('이미 같은 구독 플랜 신청이 접수되어 처리 중입니다. 마이프로필에서 구독내역을 확인해 주세요.');
+  }
+
+  throw new Error('이미 같은 구독 플랜을 구독 중입니다. 마이프로필에서 구독내역을 확인해 주세요.');
 }
 
 export function createAuthenticatedManualPaymentRequest(

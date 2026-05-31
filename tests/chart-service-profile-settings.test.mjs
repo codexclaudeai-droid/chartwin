@@ -237,6 +237,22 @@ test('profile service status card includes subscription request actions without 
   assert.match(panelSource, /만료일/);
 });
 
+test('profile page shows subscription history beside recent payments', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /subscriptions: Array/);
+  assert.match(panelSource, /profile-subscription-history-card/);
+  assert.match(panelSource, /구독내역/);
+  assert.match(panelSource, /dashboard\.subscriptions\.slice\(0, 5\)\.map/);
+  assert.match(panelSource, /subscription-history-list/);
+  assert.match(panelSource, /subscription-history-meta/);
+  assert.match(panelSource, /formatSubscriptionResolutionDate/);
+  assert.match(styleSource, /\.subscription-history-item/);
+  assert.match(styleSource, /\.subscription-history-meta/);
+  assert.match(styleSource, /body:not\(:has\(\.landing-page\)\) \.profile-page \.subscription-history-item/);
+});
+
 test('profile subscription action policy enables buttons only for active subscriptions', () => {
   assert.deepEqual(getSubscriptionActionAvailability('active'), {
     canCancel: true,

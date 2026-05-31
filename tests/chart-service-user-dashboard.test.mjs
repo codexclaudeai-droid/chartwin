@@ -32,6 +32,8 @@ test('user dashboard summarizes account, access, subscription, payments, notific
   assert.equal(summary.user.email, 'member@example.com');
   assert.equal(summary.access.subscriptionStatus, 'payment_pending');
   assert.equal(summary.subscription?.status, 'payment_pending');
+  assert.equal(summary.subscriptions.length, 1);
+  assert.equal(summary.subscriptions[0].userId, 'user_member');
   assert.equal(summary.payments.length, 1);
   assert.equal(summary.notifications.unreadCount, 1);
   assert.equal(summary.support.visibleThreadCount, 2);

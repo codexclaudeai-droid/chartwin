@@ -9,7 +9,7 @@ test('mock service creates manual payment requests with a pending subscription',
 
   const repository = createMockChartServiceRepository();
   const result = createManualPaymentRequest(repository, {
-    userId: 'user_member',
+    userId: 'user_trial',
     planId: 'plan_monthly',
     method: 'bank_transfer',
     requestedAt: '2026-05-23T10:00:00.000Z',
@@ -41,7 +41,43 @@ test('bank transfer payment requests require a depositor name', async () => {
   }), /Bank transfer depositor name required/);
 });
 
-test('USDT payment requests store the submitted transaction id for admin review', async () => {
+test('manual payment request blocks duplicate pending requests for the same plan', async () => {
+  const {
+    createManualPaymentRequest,
+    createMockChartServiceRepository,
+  } = await import('../src/server/chart-service/index.ts');
+
+  const repository = createMockChartServiceRepository();
+
+  assert.throws(() => createManualPaymentRequest(repository, {
+    userId: 'user_member',
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T10:00:00.000Z',
+    depositorName: 'Member',
+    exchangeRate: 1360,
+  }), /이미 같은 구독 플랜 신청이 접수되어 처리 중입니다/);
+});
+
+test('manual payment request blocks duplicate active subscriptions for the same plan', async () => {
+  const {
+    createManualPaymentRequest,
+    createMockChartServiceRepository,
+  } = await import('../src/server/chart-service/index.ts');
+
+  const repository = createMockChartServiceRepository();
+
+  assert.throws(() => createManualPaymentRequest(repository, {
+    userId: 'user_subscriber',
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T10:00:00.000Z',
+    depositorName: 'Subscriber',
+    exchangeRate: 1360,
+  }), /이미 같은 구독 플랜을 구독 중입니다/);
+});
+
+test('manual payment request allows a different plan while another plan is pending', async () => {
   const {
     createManualPaymentRequest,
     createMockChartServiceRepository,
@@ -50,6 +86,26 @@ test('USDT payment requests store the submitted transaction id for admin review'
   const repository = createMockChartServiceRepository();
   const result = createManualPaymentRequest(repository, {
     userId: 'user_member',
+    planId: 'plan_half_year',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T10:00:00.000Z',
+    depositorName: 'Member',
+    exchangeRate: 1360,
+  });
+
+  assert.equal(result.subscription.planId, 'plan_half_year');
+  assert.equal(result.subscription.status, 'payment_pending');
+});
+
+test('USDT payment requests store the submitted transaction id for admin review', async () => {
+  const {
+    createManualPaymentRequest,
+    createMockChartServiceRepository,
+  } = await import('../src/server/chart-service/index.ts');
+
+  const repository = createMockChartServiceRepository();
+  const result = createManualPaymentRequest(repository, {
+    userId: 'user_trial',
     planId: 'plan_monthly',
     method: 'usdt',
     requestedAt: '2026-05-23T10:00:00.000Z',
@@ -83,7 +139,7 @@ test('admin can verify a USDT TXID against TronScan transfer data', async () => 
     updatedAt: '2026-05-23T09:00:00.000Z',
   });
   const requested = createManualPaymentRequest(repository, {
-    userId: 'user_member',
+    userId: 'user_trial',
     planId: 'plan_monthly',
     method: 'usdt',
     requestedAt: '2026-05-23T10:00:00.000Z',
@@ -135,7 +191,7 @@ test('admin TXID verification marks mismatched USDT recipient as mismatch', asyn
     updatedAt: '2026-05-23T09:00:00.000Z',
   });
   const requested = createManualPaymentRequest(repository, {
-    userId: 'user_member',
+    userId: 'user_trial',
     planId: 'plan_monthly',
     method: 'usdt',
     requestedAt: '2026-05-23T10:00:00.000Z',
@@ -190,7 +246,7 @@ test('admin can confirm payment without activating subscription', async () => {
 
   const repository = createMockChartServiceRepository();
   const requested = createManualPaymentRequest(repository, {
-    userId: 'user_member',
+    userId: 'user_trial',
     planId: 'plan_monthly',
     method: 'bank_transfer',
     requestedAt: '2026-05-23T10:00:00.000Z',
@@ -222,7 +278,7 @@ test('admin can approve a confirmed payment subscription separately', async () =
   const repository = createMockChartServiceRepository();
   const requested = createManualPaymentRequest(repository, {
     userId: 'user_member',
-    planId: 'plan_monthly',
+    planId: 'plan_half_year',
     method: 'bank_transfer',
     requestedAt: '2026-05-23T10:00:00.000Z',
     depositorName: 'Member',
@@ -257,7 +313,7 @@ test('admin can refund a confirmed payment before subscription activation', asyn
   const repository = createMockChartServiceRepository();
   const requested = createManualPaymentRequest(repository, {
     userId: 'user_member',
-    planId: 'plan_monthly',
+    planId: 'plan_half_year',
     method: 'bank_transfer',
     requestedAt: '2026-05-23T10:00:00.000Z',
     depositorName: 'Member',

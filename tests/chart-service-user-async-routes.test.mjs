@@ -118,3 +118,39 @@ test('payment request route rejects bank transfers without a depositor name', as
   assert.equal(paymentPayload.ok, false);
   assert.match(paymentPayload.message, /Bank transfer depositor name required/);
 });
+
+test('payment request route blocks duplicate subscription plan requests', async () => {
+  const { resetChartServiceRateLimits } = await import('../src/server/chart-service/index.ts');
+  const loginRoute = await import('../app/api/auth/login/route.ts');
+  const paymentRoute = await import('../app/api/payments/request/route.ts');
+
+  resetChartServiceRateLimits();
+  const loginResponse = await loginRoute.POST(new Request('http://localhost/api/auth/login', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ email: 'member@example.com', password: 'Demo1234!' }),
+  }));
+
+  const paymentResponse = await paymentRoute.POST(new Request('http://localhost/api/payments/request', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+      cookie: loginResponse.headers.get('set-cookie') ?? '',
+    },
+    body: JSON.stringify({
+      planId: 'plan_monthly',
+      method: 'bank_transfer',
+      depositorName: 'Member',
+      exchangeRate: 1360,
+    }),
+  }));
+  const paymentPayload = await paymentResponse.json();
+
+  assert.equal(paymentResponse.status, 400);
+  assert.equal(paymentPayload.ok, false);
+  assert.match(paymentPayload.message, /이미 같은 구독 플랜 신청이 접수되어 처리 중입니다/);
+});

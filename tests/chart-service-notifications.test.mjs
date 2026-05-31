@@ -27,7 +27,7 @@ test('manual payment request creates a receipt notification for the requesting u
   const repository = createMockChartServiceRepository();
 
   const result = createManualPaymentRequest(repository, {
-    userId: 'user_member',
+    userId: 'user_trial',
     planId: 'plan_monthly',
     method: 'bank_transfer',
     requestedAt: '2026-05-23T12:00:00.000Z',
@@ -35,7 +35,7 @@ test('manual payment request creates a receipt notification for the requesting u
   });
 
   const notifications = listNotificationsForUser(repository, {
-    actor: { id: 'user_member', role: 'member' },
+    actor: { id: 'user_trial', role: 'member' },
   });
   const receipt = notifications.find((notification) => (
     notification.category === 'payment' &&

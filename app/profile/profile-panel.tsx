@@ -44,6 +44,18 @@ type Dashboard = {
     endsAt: string | null;
     updatedAt: string;
   } | null;
+  subscriptions: Array<{
+    id: string;
+    planId: string | null;
+    status: SubscriptionStatus;
+    startsAt: string | null;
+    endsAt: string | null;
+    approvedAt: string | null;
+    cancelledAt: string | null;
+    refundedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
   payments: Array<{
     id: string;
     method: string;
@@ -665,6 +677,48 @@ export function ProfilePanel() {
           <p className="notice compact">{subscriptionActionAvailability.reason}</p>
         </div>
 
+        <div className="card wide profile-subscription-history-card">
+          <h2>구독내역</h2>
+          {dashboard.subscriptions.length > 0 ? (
+            <div className="subscription-history-list">
+              {dashboard.subscriptions.slice(0, 5).map((subscription, subscriptionIndex) => (
+                <article className="subscription-history-item" key={subscription.id}>
+                  <div className="subscription-history-summary">
+                    <div>
+                      <strong>구독 {subscriptionIndex + 1}</strong>
+                      <p>{subscription.planId ?? '무료체험/수동 구독'}</p>
+                    </div>
+                    <div>
+                      <span className="badge">{formatSubscriptionStatusLabel(subscription.status)}</span>
+                      <p>{formatDateTime(subscription.updatedAt)}</p>
+                    </div>
+                  </div>
+                  <dl className="subscription-history-meta">
+                    <div>
+                      <dt>시작일</dt>
+                      <dd>{subscription.startsAt ? formatDateTime(subscription.startsAt) : '승인 전'}</dd>
+                    </div>
+                    <div>
+                      <dt>종료일</dt>
+                      <dd>{subscription.endsAt ? formatDateTime(subscription.endsAt) : '미정'}</dd>
+                    </div>
+                    <div>
+                      <dt>승인일</dt>
+                      <dd>{subscription.approvedAt ? formatDateTime(subscription.approvedAt) : '대기'}</dd>
+                    </div>
+                    <div>
+                      <dt>처리일</dt>
+                      <dd>{formatSubscriptionResolutionDate(subscription)}</dd>
+                    </div>
+                  </dl>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="notice">확인 가능한 구독내역이 없습니다. 구독 신청 후 처리 상태가 이곳에 표시됩니다.</p>
+          )}
+        </div>
+
         <div className="card wide profile-payment-summary-card">
           <h2>최근 결제 요청</h2>
           {latestPayment ? (
@@ -730,6 +784,11 @@ function formatDateTime(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function formatSubscriptionResolutionDate(subscription: Dashboard['subscriptions'][number]): string {
+  const value = subscription.cancelledAt ?? subscription.refundedAt ?? subscription.updatedAt;
+  return value ? formatDateTime(value) : '진행 중';
 }
 
 function getReferralLink(referralCode: string): string {

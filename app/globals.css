@@ -4728,7 +4728,8 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .mini-card,
-.payment-card {
+.payment-card,
+.subscription-history-item {
   background: rgba(255, 253, 247, 0.72);
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -5256,10 +5257,47 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .mini-card p,
-.payment-card p {
+.payment-card p,
+.subscription-history-summary p {
   color: var(--muted);
   line-height: 1.6;
   margin: 8px 0 0;
+}
+
+.subscription-history-list {
+  display: grid;
+  gap: 12px;
+}
+
+.subscription-history-summary {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.subscription-history-meta {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 12px 0 0;
+  padding-top: 12px;
+}
+
+.subscription-history-meta div {
+  display: grid;
+  gap: 4px;
+}
+
+.subscription-history-meta dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.subscription-history-meta dd {
+  margin: 0;
 }
 
 .payment-list {
@@ -13228,7 +13266,8 @@ body:not(:has(.landing-page)) .pricing-checkout-card .pricing-plan-card .button.
 }
 
 body:not(:has(.landing-page)) .profile-page .mini-card,
-body:not(:has(.landing-page)) .profile-page .payment-card {
+body:not(:has(.landing-page)) .profile-page .payment-card,
+body:not(:has(.landing-page)) .profile-page .subscription-history-item {
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.065), rgba(76, 141, 255, 0.045)),
     rgba(5, 14, 29, 0.58);
@@ -13279,9 +13318,18 @@ body:not(:has(.landing-page)) .profile-page .profile-avatar-default-icon {
 body:not(:has(.landing-page)) .profile-page .referral-card small,
 body:not(:has(.landing-page)) .profile-page .mini-card p,
 body:not(:has(.landing-page)) .profile-page .payment-card p,
+body:not(:has(.landing-page)) .profile-page .subscription-history-summary p,
 body:not(:has(.landing-page)) .profile-page .admin-history-list p,
 body:not(:has(.landing-page)) .profile-page .admin-history-list small {
   color: rgba(216, 236, 255, 0.68);
+}
+
+body:not(:has(.landing-page)) .profile-page .subscription-history-meta {
+  border-top-color: rgba(125, 183, 255, 0.14);
+}
+
+body:not(:has(.landing-page)) .profile-page .subscription-history-meta dt {
+  color: rgba(216, 236, 255, 0.62);
 }
 
 body:not(:has(.landing-page)) .profile-page .copy-icon-button,

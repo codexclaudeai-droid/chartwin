@@ -17,6 +17,7 @@ export type UserDashboardSummary = {
   user: DashboardUserSummary;
   access: ChartAccessSnapshot;
   subscription: SubscriptionRecord | null;
+  subscriptions: SubscriptionRecord[];
   payments: PaymentRequestRecord[];
   notifications: {
     totalCount: number;
@@ -46,11 +47,16 @@ export function getUserDashboardSummary(
     .listPayments()
     .filter((payment) => payment.userId === input.actor.id)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const subscriptions = repository
+    .listSubscriptions()
+    .filter((subscription) => subscription.userId === input.actor.id)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   return {
     user: toDashboardUserSummary(user),
     access: getChartAccessSnapshot(repository, input.actor.id),
     subscription: repository.getSubscriptionByUserId(input.actor.id),
+    subscriptions,
     payments,
     notifications: getNotificationSummaryForUser(repository, input),
     support: {
