@@ -459,6 +459,19 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(panelSource, /ProfileAvatarPicker/);
   assert.match(panelSource, /selectedAvatarPath/);
   assert.match(panelSource, /profileImageMode/);
+  assert.match(panelSource, /profileImageUploadProgress/);
+  assert.match(panelSource, /isProfileImageUploading/);
+  assert.match(panelSource, /profileImageConvertedFileSizeBytes/);
+  assert.match(panelSource, /formatProfileImageFileSize\(profileImageConvertedFileSizeBytes\)/);
+  assert.match(panelSource, /setProfileImageConvertedFileSizeBytes\(compressedImage\.file\.size\)/);
+  assert.match(panelSource, /PROFILE_IMAGE_UPLOAD_PROGRESS_MIN_DURATION_MS = 1400/);
+  assert.match(panelSource, /profileImageUploadStartedAtRef/);
+  assert.match(panelSource, /startProfileImageUploadProgress/);
+  assert.match(panelSource, /finishProfileImageUploadProgress/);
+  assert.match(panelSource, /Date\.now\(\) - profileImageUploadStartedAtRef\.current/);
+  assert.match(panelSource, /Math\.max\(0, PROFILE_IMAGE_UPLOAD_PROGRESS_MIN_DURATION_MS - elapsedMs\)/);
+  assert.match(panelSource, /if \(!shouldShowUploadProgress\) \{[\s\S]*?setSelectedImageFile\(null\);[\s\S]*?profileImageFileInputRef\.current\.value = ''/);
+  assert.match(panelSource, /shouldShowUploadProgress\s*\?\s*'프로필 이미지가 WebP로 변환되어 업로드되었습니다\.'\s*:\s*'프로필 이미지가 적용되었습니다\.'/);
   assert.match(panelSource, /profile-image-section/);
   assert.match(panelSource, /profile-image-mode-tabs/);
   assert.match(panelSource, /role="tablist"/);
@@ -476,12 +489,19 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(panelSource, /profile-image-save-button/);
   assert.match(panelSource, /profile-image-file-row/);
   assert.match(panelSource, /profile-image-file-help/);
+  assert.match(panelSource, /role="progressbar"/);
+  assert.match(panelSource, /aria-valuenow=\{Math\.round\(profileImageUploadProgress\)\}/);
+  assert.match(panelSource, /profile-image-upload-progress-fill/);
+  assert.match(panelSource, /profile-image-converted-size/);
   assert.match(panelSource, /<\/div>\s*<p className="profile-image-file-help">/);
   assert.match(styleSource, /\.profile-avatar-preview/);
   assert.match(styleSource, /\.profile-image-section/);
   assert.match(styleSource, /\.profile-image-mode-tabs/);
   assert.match(styleSource, /\.profile-image-mode-tab/);
   assert.match(styleSource, /\.profile-image-mode-panel/);
+  assert.match(styleSource, /--profile-image-picker-height: 128px/);
+  assert.match(styleSource, /\.profile-image-mode-panel\s*\{[\s\S]*?align-content: center/);
+  assert.match(styleSource, /\.profile-image-mode-panel\s*\{[\s\S]*?min-height: var\(--profile-image-picker-height\)/);
   assert.match(styleSource, /\.profile-avatar-option-list/);
   assert.match(styleSource, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
   assert.doesNotMatch(styleSource, /\.profile-avatar-option input\[type="radio"\]/);
@@ -501,6 +521,20 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(styleSource, /line-height: 44px/);
   assert.match(styleSource, /::file-selector-button/);
   assert.match(styleSource, /height: 30px/);
+  assert.match(styleSource, /\.profile-image-upload-progress/);
+  assert.match(styleSource, /\.profile-image-upload-progress-fill/);
+  assert.match(styleSource, /transition: width 180ms ease/);
+  assert.match(styleSource, /\.profile-image-converted-size/);
+});
+
+test('profile image size labels format converted upload sizes clearly', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /function formatProfileImageFileSize\(sizeBytes: number\): string/);
+  assert.match(panelSource, /if \(sizeBytes < 1024\) return `\$\{Math\.round\(sizeBytes\)\} B`/);
+  assert.match(panelSource, /return `\$\{formatCompactDecimal\(sizeBytes \/ 1024\)\} KB`/);
+  assert.match(panelSource, /function formatCompactDecimal\(value: number\): string/);
+  assert.match(panelSource, /\.toFixed\(1\)\.replace/);
 });
 
 test('profile image editing lives inside the profile edit modal with neutral avatar choices', () => {
@@ -509,6 +543,10 @@ test('profile image editing lives inside the profile edit modal with neutral ava
   const modalSource = panelSource.slice(
     panelSource.indexOf('className="profile-edit-modal"'),
     panelSource.indexOf('<div className="referral-card">'),
+  );
+  const openModalSource = panelSource.slice(
+    panelSource.indexOf('function openProfileEditModal'),
+    panelSource.indexOf('function closeProfileEditModal'),
   );
 
   assert.match(modalSource, /profile-edit-image-form/);
@@ -520,6 +558,8 @@ test('profile image editing lives inside the profile edit modal with neutral ava
   assert.doesNotMatch(modalSource, /label="남성"|label="여성"|<legend>/);
   assert.match(panelSource, /function ProfileAvatarPicker/);
   assert.match(panelSource, /DEFAULT_PROFILE_AVATARS\.map/);
+  assert.match(openModalSource, /setProfileImageMode\('avatar'\)/);
+  assert.doesNotMatch(openModalSource, /currentAvatarPath \? 'avatar' : 'upload'/);
   assert.match(panelSource, /<button[\s\S]*?aria-pressed=\{isSelected\}[\s\S]*?<img alt=\{avatarLabel\} src=\{avatar\.path\} \/>/);
   assert.doesNotMatch(panelSource, /<span>\{avatar\.label\}<\/span>/);
   assert.match(styleSource, /\.profile-edit-image-form/);

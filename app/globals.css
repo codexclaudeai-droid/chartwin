@@ -5469,6 +5469,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .profile-image-section {
+  --profile-image-picker-height: 128px;
   display: grid;
   gap: 12px;
 }
@@ -5516,8 +5517,16 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .profile-image-mode-panel {
+  align-content: center;
   display: grid;
   gap: 10px;
+  min-height: var(--profile-image-picker-height);
+  position: relative;
+}
+
+.profile-image-upload-panel {
+  box-sizing: border-box;
+  padding-bottom: 24px;
 }
 
 .profile-avatar-option-list {
@@ -5607,6 +5616,51 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 
 .profile-image-file-selection {
   margin: 0;
+}
+
+.profile-image-converted-size {
+  color: rgba(216, 236, 255, 0.82);
+  display: block;
+  font-size: 12px;
+  font-weight: 750;
+  margin-top: 4px;
+}
+
+.profile-image-upload-progress {
+  align-items: center;
+  bottom: 0;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+.profile-image-upload-progress-track {
+  background: rgba(125, 183, 255, 0.14);
+  border-radius: 999px;
+  display: block;
+  height: 7px;
+  overflow: hidden;
+}
+
+.profile-image-upload-progress-fill {
+  background: linear-gradient(90deg, var(--tradingcore-electric), var(--tradingcore-azure));
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+  transition: width 180ms ease;
+  width: 0;
+}
+
+.profile-image-upload-progress-label {
+  color: rgba(216, 236, 255, 0.82);
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1;
+  min-width: 34px;
+  text-align: right;
 }
 
 .profile-image-save-button {

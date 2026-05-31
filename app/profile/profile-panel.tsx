@@ -126,6 +126,8 @@ type ProfileResponse = {
 
 type ProfileImageMode = 'avatar' | 'upload';
 
+const PROFILE_IMAGE_UPLOAD_PROGRESS_MIN_DURATION_MS = 1400;
+
 export function ProfilePanel() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [nameDraft, setNameDraft] = useState('');
@@ -136,6 +138,9 @@ export function ProfilePanel() {
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedAvatarPath, setSelectedAvatarPath] = useState('');
   const [profileImageMode, setProfileImageMode] = useState<ProfileImageMode>('avatar');
+  const [profileImageUploadProgress, setProfileImageUploadProgress] = useState(0);
+  const [isProfileImageUploading, setIsProfileImageUploading] = useState(false);
+  const [profileImageConvertedFileSizeBytes, setProfileImageConvertedFileSizeBytes] = useState<number | null>(null);
   const [message, setMessage] = useState('마이프로필 정보를 불러오는 중입니다.');
   const [settingsMessage, setSettingsMessage] = useState('연락번호, 비밀번호, 추천 정보를 관리할 수 있습니다.');
   const [referralCopyMessage, setReferralCopyMessage] = useState('');
@@ -144,6 +149,9 @@ export function ProfilePanel() {
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
   const profileNameInputRef = useRef<HTMLInputElement | null>(null);
   const profileImageFileInputRef = useRef<HTMLInputElement | null>(null);
+  const profileImageProgressTimerRef = useRef<number | null>(null);
+  const profileImageProgressFinishTimerRef = useRef<number | null>(null);
+  const profileImageUploadStartedAtRef = useRef(0);
 
   useEffect(() => {
     void refresh();
@@ -169,6 +177,71 @@ export function ProfilePanel() {
     const target = document.getElementById(`payment-${targetPaymentId}`);
     target?.scrollIntoView({ block: 'center' });
   }, [dashboard, targetPaymentId]);
+
+  useEffect(() => {
+    return () => clearProfileImageUploadProgressTimers();
+  }, []);
+
+  function clearProfileImageUploadProgressTimers() {
+    if (profileImageProgressTimerRef.current !== null) {
+      window.clearInterval(profileImageProgressTimerRef.current);
+      profileImageProgressTimerRef.current = null;
+    }
+
+    if (profileImageProgressFinishTimerRef.current !== null) {
+      window.clearTimeout(profileImageProgressFinishTimerRef.current);
+      profileImageProgressFinishTimerRef.current = null;
+    }
+  }
+
+  function resetProfileImageUploadProgress() {
+    clearProfileImageUploadProgressTimers();
+    profileImageUploadStartedAtRef.current = 0;
+    setIsProfileImageUploading(false);
+    setProfileImageUploadProgress(0);
+    setProfileImageConvertedFileSizeBytes(null);
+  }
+
+  function startProfileImageUploadProgress() {
+    clearProfileImageUploadProgressTimers();
+    profileImageUploadStartedAtRef.current = Date.now();
+    setIsProfileImageUploading(true);
+    setProfileImageUploadProgress(8);
+    setProfileImageConvertedFileSizeBytes(null);
+    profileImageProgressTimerRef.current = window.setInterval(() => {
+      setProfileImageUploadProgress((currentProgress) => {
+        if (currentProgress >= 92) return currentProgress;
+        const increment = currentProgress < 48 ? 7 : currentProgress < 76 ? 4 : 2;
+        return Math.min(92, currentProgress + increment);
+      });
+    }, 220);
+  }
+
+  function advanceProfileImageUploadProgress(nextProgress: number) {
+    setProfileImageUploadProgress((currentProgress) => Math.max(currentProgress, nextProgress));
+  }
+
+  function finishProfileImageUploadProgress() {
+    if (profileImageProgressTimerRef.current !== null) {
+      window.clearInterval(profileImageProgressTimerRef.current);
+      profileImageProgressTimerRef.current = null;
+    }
+    if (profileImageProgressFinishTimerRef.current !== null) {
+      window.clearTimeout(profileImageProgressFinishTimerRef.current);
+      profileImageProgressFinishTimerRef.current = null;
+    }
+    const elapsedMs = Date.now() - profileImageUploadStartedAtRef.current;
+    const remainingMs = Math.max(0, PROFILE_IMAGE_UPLOAD_PROGRESS_MIN_DURATION_MS - elapsedMs);
+    setIsProfileImageUploading(true);
+    profileImageProgressFinishTimerRef.current = window.setTimeout(() => {
+      setProfileImageUploadProgress(100);
+      profileImageProgressFinishTimerRef.current = window.setTimeout(() => {
+        setIsProfileImageUploading(false);
+        setProfileImageUploadProgress(0);
+        profileImageProgressFinishTimerRef.current = null;
+      }, 520);
+    }, remainingMs);
+  }
 
   async function refresh() {
     setIsBusy(true);
@@ -226,12 +299,13 @@ export function ProfilePanel() {
   }
 
   function openProfileEditModal() {
+    resetProfileImageUploadProgress();
     if (dashboard) {
       const currentAvatarPath = resolveDefaultProfileAvatarPath(dashboard.user.profileImageDataUrl);
       setNameDraft(dashboard.user.name);
       setPhoneDraft(dashboard.user.phoneNumber ?? '');
       setSelectedAvatarPath(currentAvatarPath);
-      setProfileImageMode(currentAvatarPath ? 'avatar' : 'upload');
+      setProfileImageMode('avatar');
     }
     setSelectedImageFile(null);
     if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
@@ -246,12 +320,13 @@ export function ProfilePanel() {
   }
 
   function closeProfileEditModal() {
+    resetProfileImageUploadProgress();
     if (dashboard) {
       const currentAvatarPath = resolveDefaultProfileAvatarPath(dashboard.user.profileImageDataUrl);
       setNameDraft(dashboard.user.name);
       setPhoneDraft(dashboard.user.phoneNumber ?? '');
       setSelectedAvatarPath(currentAvatarPath);
-      setProfileImageMode(currentAvatarPath ? 'avatar' : 'upload');
+      setProfileImageMode('avatar');
     }
     setSelectedImageFile(null);
     if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
@@ -315,6 +390,7 @@ export function ProfilePanel() {
   }
 
   function switchProfileImageMode(nextMode: ProfileImageMode) {
+    resetProfileImageUploadProgress();
     setProfileImageMode(nextMode);
     if (nextMode === 'avatar') {
       setSelectedImageFile(null);
@@ -337,11 +413,17 @@ export function ProfilePanel() {
       return;
     }
 
+    const shouldShowUploadProgress = profileImageMode === 'upload' && Boolean(selectedImageFile);
+    if (shouldShowUploadProgress) startProfileImageUploadProgress();
+
     setIsBusy(true);
     let requestBody: ReturnType<typeof createProfileImagePolicyPayload> & { dataUrl: string } | { avatarPath: string };
     try {
       if (profileImageMode === 'upload' && selectedImageFile) {
+        advanceProfileImageUploadProgress(34);
         const compressedImage = await createCompressedProfileImageUpload(selectedImageFile);
+        setProfileImageConvertedFileSizeBytes(compressedImage.file.size);
+        advanceProfileImageUploadProgress(68);
         requestBody = {
           ...createProfileImagePolicyPayload(compressedImage.file),
           dataUrl: compressedImage.dataUrl,
@@ -351,32 +433,53 @@ export function ProfilePanel() {
       }
     } catch (error) {
       setIsBusy(false);
+      if (shouldShowUploadProgress) resetProfileImageUploadProgress();
       setSettingsMessage(error instanceof Error ? error.message : '프로필 이미지 변환에 실패했습니다.');
       return;
     }
 
-    const response = await fetch('/api/profile/avatar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-    });
-    const payload = await response.json() as ProfileResponse;
+    let response: Response;
+    let payload: ProfileResponse;
+    try {
+      if (shouldShowUploadProgress) advanceProfileImageUploadProgress(84);
+      response = await fetch('/api/profile/avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+      if (shouldShowUploadProgress) advanceProfileImageUploadProgress(96);
+      payload = await response.json() as ProfileResponse;
+    } catch (error) {
+      setIsBusy(false);
+      if (shouldShowUploadProgress) resetProfileImageUploadProgress();
+      setSettingsMessage(error instanceof Error ? error.message : '프로필 이미지 저장에 실패했습니다.');
+      return;
+    }
     setIsBusy(false);
 
     if (!response.ok || !payload.dashboard) {
+      if (shouldShowUploadProgress) resetProfileImageUploadProgress();
       setSettingsMessage(payload.message || '프로필 이미지 저장에 실패했습니다.');
       return;
     }
 
     setDashboard(payload.dashboard);
-    setSelectedImageFile(null);
+    if (!shouldShowUploadProgress) {
+      setSelectedImageFile(null);
+      setProfileImageConvertedFileSizeBytes(null);
+      if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
+    }
     setSelectedAvatarPath(resolveDefaultProfileAvatarPath(payload.dashboard.user.profileImageDataUrl));
-    if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
     primeAuthSession({
       authenticated: true,
       user: payload.dashboard.user,
     });
-    setSettingsMessage('프로필 이미지가 저장되었습니다.');
+    if (shouldShowUploadProgress) finishProfileImageUploadProgress();
+    setSettingsMessage(
+      shouldShowUploadProgress
+        ? '프로필 이미지가 WebP로 변환되어 업로드되었습니다.'
+        : '프로필 이미지가 적용되었습니다.',
+    );
     dispatchAuthSessionChangedEvent();
   }
 
@@ -602,7 +705,7 @@ export function ProfilePanel() {
                     </div>
                   )}
                   {profileImageMode === 'upload' && (
-                    <div className="profile-image-mode-panel" role="tabpanel">
+                    <div className="profile-image-mode-panel profile-image-upload-panel" role="tabpanel">
                       <label htmlFor="profileImageFile">이미지파일 업로드</label>
                       <div className="profile-image-file-row">
                         <input
@@ -611,15 +714,41 @@ export function ProfilePanel() {
                           ref={profileImageFileInputRef}
                           onChange={(event) => {
                             setSelectedImageFile(event.target.files?.[0] ?? null);
+                            setProfileImageConvertedFileSizeBytes(null);
                             setSelectedAvatarPath('');
                           }}
                           type="file"
                         />
                       </div>
                       <p className="profile-image-file-help">PNG, JPG, WEBP 파일은 512px 이하 WebP로 자동 변환됩니다. 최대 300KB.</p>
-                      {selectedImageFile && (
+                      {isProfileImageUploading && (
+                        <div
+                          aria-label="프로필 이미지 업로드 진행률"
+                          aria-valuemax={100}
+                          aria-valuemin={0}
+                          aria-valuenow={Math.round(profileImageUploadProgress)}
+                          className="profile-image-upload-progress"
+                          role="progressbar"
+                        >
+                          <span className="profile-image-upload-progress-track" aria-hidden="true">
+                            <span
+                              className="profile-image-upload-progress-fill"
+                              style={{ width: `${Math.round(profileImageUploadProgress)}%` }}
+                            />
+                          </span>
+                          <span className="profile-image-upload-progress-label">
+                            {Math.round(profileImageUploadProgress)}%
+                          </span>
+                        </div>
+                      )}
+                      {selectedImageFile && !isProfileImageUploading && (
                         <p className="notice profile-image-file-selection">
                           선택 파일: {selectedImageFile.name} / {selectedImageFile.type || 'unknown'} / {selectedImageFile.size} bytes
+                          {profileImageConvertedFileSizeBytes !== null && (
+                            <span className="profile-image-converted-size">
+                              변환 파일: {formatProfileImageFileSize(profileImageConvertedFileSizeBytes)}
+                            </span>
+                          )}
                         </p>
                       )}
                     </div>
@@ -918,6 +1047,15 @@ function getReferralCopyAlertMessage(label: string): string {
 
 function resolveDefaultProfileAvatarPath(value: string | null): string {
   return DEFAULT_PROFILE_AVATARS.some((avatar) => avatar.path === value) ? String(value) : '';
+}
+
+function formatProfileImageFileSize(sizeBytes: number): string {
+  if (sizeBytes < 1024) return `${Math.round(sizeBytes)} B`;
+  return `${formatCompactDecimal(sizeBytes / 1024)} KB`;
+}
+
+function formatCompactDecimal(value: number): string {
+  return value.toFixed(1).replace(/\.0$/, '');
 }
 
 function ProfileAvatarPicker({
