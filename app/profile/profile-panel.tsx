@@ -597,7 +597,7 @@ export function ProfilePanel() {
           <div className="profile-danger-zone">
             <div>
               <strong>회원탈퇴</strong>
-              <p>탈퇴하면 현재 세션이 종료되고 계정 로그인이 차단됩니다.</p>
+              <p>탈퇴시 세션이 종료되고 로그인이 차단됩니다.</p>
             </div>
             <button
               className="button danger"

@@ -251,11 +251,39 @@ a {
 }
 
 .session-button {
+  -webkit-tap-highlight-color: transparent;
+  align-items: center;
   background: transparent;
   border: 0;
+  box-shadow: none;
   cursor: pointer;
+  display: inline-flex;
   font: inherit;
+  justify-content: center;
   padding: 0;
+}
+
+.session-logout-button {
+  border-radius: 999px;
+  flex: 0 0 auto;
+  height: 32px;
+  width: 32px;
+}
+
+.session-logout-button svg {
+  fill: none;
+  height: 20px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  width: 20px;
+}
+
+.session-logout-button:is(:hover, :focus-visible, :active) {
+  background: transparent;
+  box-shadow: none;
+  outline: 0;
 }
 
 .session-button:disabled {
@@ -8630,6 +8658,21 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   padding: 0 13px;
 }
 
+.mobile-nav-panel .session .session-logout-button {
+  border-radius: 999px;
+  height: 38px;
+  justify-content: center;
+  justify-self: start;
+  min-height: 38px;
+  padding: 0;
+  width: 38px;
+}
+
+.mobile-nav-panel .session .session-logout-button svg {
+  height: 21px;
+  width: 21px;
+}
+
 .mobile-nav-panel .session .session-signup-cta {
   min-height: 36px;
   padding: 0 13px;
@@ -8641,6 +8684,14 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   background: rgba(76, 141, 255, 0.18);
   border: 0;
   color: #ffffff;
+}
+
+.mobile-nav-panel .session .session-logout-button:hover,
+.mobile-nav-panel .session .session-logout-button:focus-visible,
+.mobile-nav-panel .session .session-logout-button:active {
+  background: transparent;
+  box-shadow: none;
+  outline: 0;
 }
 
 .mobile-nav-panel .session {

@@ -33,6 +33,9 @@ test('session navigation source renders avatar name and role badge together', ()
   assert.match(source, /className="session-avatar"/);
   assert.match(source, /user\.profileImageDataUrl/);
   assert.match(source, /DefaultSessionAvatarIcon/);
+  assert.match(source, /LogoutIcon/);
+  assert.match(source, /className="session-button session-logout-button"/);
+  assert.match(source, /aria-label=\{isBusy \? '로그아웃 처리 중' : '로그아웃'\}/);
   assert.match(source, /className="session-user-name"/);
   assert.match(source, /className="session-role"/);
   assert.match(cssSource, /\.session-avatar/);
@@ -40,4 +43,7 @@ test('session navigation source renders avatar name and role badge together', ()
   assert.match(cssSource, /\.session-avatar\s*\{[\s\S]*?border: 1px solid rgba\(255, 255, 255, 0\.42\)/);
   assert.match(cssSource, /\.session-avatar svg\s*\{[\s\S]*?stroke: currentColor/);
   assert.match(cssSource, /\.session-user-name/);
+  assert.match(cssSource, /\.session-logout-button/);
+  assert.match(cssSource, /\.session-logout-button svg\s*\{[\s\S]*?stroke: currentColor/);
+  assert.match(cssSource, /\.mobile-nav-panel \.session \.session-logout-button/);
 });

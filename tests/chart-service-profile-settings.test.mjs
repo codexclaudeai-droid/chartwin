@@ -342,6 +342,8 @@ test('profile panel exposes a member withdrawal danger action', () => {
   assert.match(panelSource, /withdrawAccount/);
   assert.match(panelSource, /method: 'DELETE'/);
   assert.match(panelSource, /회원탈퇴/);
+  assert.match(panelSource, /탈퇴시 세션이 종료되고 로그인이 차단됩니다\./);
+  assert.doesNotMatch(panelSource, /탈퇴하면 현재 세션이 종료되고 계정 로그인이 차단됩니다\./);
   assert.match(panelSource, /canWithdrawAccount/);
   assert.match(panelSource, /\{canWithdraw && \(/);
   assert.doesNotMatch(panelSource, /관리자 계정은 회원관리/);
