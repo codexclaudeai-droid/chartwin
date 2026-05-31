@@ -28,6 +28,10 @@ export function ChartAccessPreview({
   const cleanupRef = useRef<(() => void) | null>(null);
   const [ready, setReady] = useState(false);
   const isMember = audience === 'member';
+  const guestTrialSignupHref = appendQueryParams(signupHref, {
+    redirect: '/chart',
+    trial: 'auto',
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -66,13 +70,14 @@ export function ChartAccessPreview({
           confirmTitle={isMember ? '7일 무료체험을 시작할까요?' : '무료체험 신청을 진행할까요?'}
           confirmDescription={isMember
             ? '무료체험 신청 즉시 7일간 TC Chart 이용 권한이 열립니다. 확인 후 바로 차트 화면으로 이동합니다.'
-            : '이미 가입된 경우 로그인 후 무료체험을 신청할 수 있습니다. 아직 회원가입 전이라면 가입을 완료한 뒤 무료체험을 바로 신청할 수 있습니다.'}
-          confirmActionLabel={isMember ? '7일 무료체험 시작' : '다음 절차로 진행'}
+            : '회원가입후 바로 무료체험신청 접수진행됩니다.'}
+          confirmActionLabel={isMember ? '7일 무료체험 시작' : '다음'}
           confirmCancelLabel="나중에"
+          confirmRedirectHref={isMember ? undefined : guestTrialSignupHref}
           loginHref={loginHref}
           requestSource={isMember ? 'chart-preview-member' : 'chart-preview-guest'}
           returnHref="/chart"
-          signupHref={signupHref}
+          signupHref={isMember ? signupHref : guestTrialSignupHref}
           redirectOnSuccess={isMember}
         >
           무료체험 신청
@@ -185,7 +190,7 @@ function mountParticlePreview(
     }
   }
 
-  function render(now: number) {
+  function render() {
     frameId = window.requestAnimationFrame(render);
     particles.rotation.y += 0.002;
     particles.rotation.x += 0.001;
@@ -208,7 +213,7 @@ function mountParticlePreview(
     startedAt = now;
     updateIntro(now);
   });
-  render(performance.now());
+  render();
 
   return () => {
     window.cancelAnimationFrame(frameId);
@@ -265,6 +270,16 @@ function createParticleTexture(THREE: any) {
   context.fillStyle = gradient;
   context.fillRect(0, 0, 64, 64);
   return new THREE.CanvasTexture(canvas);
+}
+
+function appendQueryParams(href: string, params: Record<string, string>): string {
+  const url = new URL(href, 'https://tc-chart.local');
+  for (const [key, value] of Object.entries(params)) {
+    if (!url.searchParams.has(key)) {
+      url.searchParams.set(key, value);
+    }
+  }
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 function easeInOutCubic(value: number): number {

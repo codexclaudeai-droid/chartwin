@@ -15,6 +15,7 @@ type FreeTrialRequestButtonProps = {
   confirmDescription?: string;
   confirmActionLabel?: string;
   confirmCancelLabel?: string;
+  confirmRedirectHref?: string;
   redirectOnSuccess?: boolean;
 };
 
@@ -41,6 +42,7 @@ export function FreeTrialRequestButton({
   confirmDescription,
   confirmActionLabel = '진행하기',
   confirmCancelLabel = '취소',
+  confirmRedirectHref,
   redirectOnSuccess = false,
 }: FreeTrialRequestButtonProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,6 +61,10 @@ export function FreeTrialRequestButton({
 
   function confirmAndRequestTrial() {
     setShowConfirmPrompt(false);
+    if (confirmRedirectHref) {
+      window.location.assign(confirmRedirectHref);
+      return;
+    }
     void requestTrial();
   }
 

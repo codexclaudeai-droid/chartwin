@@ -1,10 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server.js';
 import {
   assertSameOriginMutationRequest,
+  createAsyncSessionForUser,
   getAsyncChartServicePersistence,
   getAsyncWebInfoSettingsForDisplay,
   guardMutationRequest,
   registerAsyncMockUserAccount,
+  requestAsyncFreeTrial,
   saveAsyncSignupAgreementEvidence,
   toPublicServiceUserRecord,
 } from '../../../../src/server/chart-service/index.ts';
@@ -34,10 +36,11 @@ export async function POST(request: NextRequest) {
       throw new Error('Required signup agreements must be accepted');
     }
 
+    const autoStartTrial = body.autoStartTrial === true;
     const acceptedAt = new Date().toISOString();
     const ipAddress = getRequestIpAddress(request);
     const userAgent = request.headers.get('user-agent')?.trim() || null;
-    const { result, agreement } = await persistence.runMutation(async (repository) => {
+    const { result, agreement, trial, session } = await persistence.runMutation(async (repository) => {
       const webInfoSettings = await getAsyncWebInfoSettingsForDisplay(repository);
       const signupResult = await registerAsyncMockUserAccount(repository, {
         email: String(body.email || ''),
@@ -54,16 +57,46 @@ export async function POST(request: NextRequest) {
         ipAddress,
         userAgent,
       });
-      return { result: signupResult, agreement: signupAgreement };
+      if (!autoStartTrial) {
+        return {
+          result: signupResult,
+          agreement: signupAgreement,
+          trial: null,
+          session: null,
+        };
+      }
+
+      const trialResult = await requestAsyncFreeTrial(repository, {
+        actor: {
+          id: signupResult.user.id,
+          role: signupResult.user.role,
+        },
+        requestedAt: acceptedAt,
+      });
+      const sessionResult = await createAsyncSessionForUser(repository, {
+        userId: signupResult.user.id,
+        createdAt: acceptedAt,
+      });
+      return {
+        result: signupResult,
+        agreement: signupAgreement,
+        trial: trialResult,
+        session: sessionResult,
+      };
     });
     const response = NextResponse.json({
       ok: true,
-      verificationRequired: true,
+      verificationRequired: !autoStartTrial,
+      redirectTo: autoStartTrial ? '/chart' : null,
       user: toPublicServiceUserRecord(result.user),
       verification: {
         expiresAt: result.verification.expiresAt,
         emailOutboxId: result.verification.emailOutboxId,
       },
+      trial: trial ? {
+        status: trial.status,
+        endsAt: trial.endsAt,
+      } : null,
       agreement: {
         id: agreement.id,
         userId: agreement.userId,
@@ -71,6 +104,9 @@ export async function POST(request: NextRequest) {
         privacyAcceptedAt: agreement.privacyAcceptedAt,
       },
     });
+    if (session) {
+      response.headers.set('Set-Cookie', session.cookie);
+    }
     return response;
   } catch (error) {
     return NextResponse.json({

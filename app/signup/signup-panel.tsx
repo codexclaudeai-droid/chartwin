@@ -58,6 +58,7 @@ export function SignupPanel() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isCheckingReferral, setIsCheckingReferral] = useState(false);
+  const [autoTrialIntent, setAutoTrialIntent] = useState(false);
   const [referrerPreview, setReferrerPreview] = useState<ReferrerPreview | null>(null);
   const [emailCheck, setEmailCheck] = useState<{
     email: string;
@@ -69,6 +70,7 @@ export function SignupPanel() {
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
+    setAutoTrialIntent(searchParams.get('trial') === 'auto');
     const referralCodeFromUrl = searchParams.get('ref')?.trim() ?? '';
     if (referralCodeFromUrl) {
       setReferralCode(referralCodeFromUrl);
@@ -129,11 +131,17 @@ export function SignupPanel() {
         referralCode,
         acceptedTerms,
         acceptedPrivacy,
+        autoStartTrial: autoTrialIntent,
       }),
     });
     const payload = await response.json();
     setIsSubmitting(false);
     if (response.ok) {
+      if (payload.redirectTo) {
+        setMessage('회원가입이 완료되었습니다. 무료체험을 접수하고 차트로 이동합니다.');
+        window.location.assign(String(payload.redirectTo));
+        return;
+      }
       const verificationRequired = Boolean(payload.verificationRequired);
       setMessage(verificationRequired
         ? `${payload.user.email} 이메일 인증이 필요합니다. 발송된 인증 메일을 확인해 주세요.`
