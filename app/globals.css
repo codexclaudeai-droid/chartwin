@@ -10067,7 +10067,7 @@ body:not(:has(.landing-page)) .chart-preview-logo {
 
 body:not(:has(.landing-page)) .chart-preview-actions {
   align-items: center;
-  bottom: calc(clamp(76px, 12vh, 132px) + 50px);
+  bottom: calc(clamp(76px, 12vh, 132px) + 10px);
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -10093,21 +10093,40 @@ body:not(:has(.landing-page)) .chart-preview-actions .button {
 }
 
 body:not(:has(.landing-page)) .chart-preview-primary {
-  border: 1px solid rgba(86, 240, 255, 0.78);
+  border: 1px solid #009ee8;
   background: transparent;
   box-shadow: none;
-  color: #56f0ff;
+  color: #009ee8;
+  isolation: isolate;
+  overflow: visible;
+  position: relative;
+}
+
+body:not(:has(.landing-page)) .chart-preview-primary::after {
+  border-radius: inherit;
+  box-shadow:
+    0 0 14px rgba(0, 144, 255, 0.58),
+    0 0 34px rgba(0, 84, 210, 0.36);
+  content: "";
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 160ms ease;
+  z-index: -1;
 }
 
 body:not(:has(.landing-page)) .chart-preview-actions .button.chart-preview-primary:is(:hover, :focus-visible, :active):not(:disabled) {
-  border-color: rgba(138, 255, 255, 1);
-  background: linear-gradient(180deg, #9dffff 0%, #18e7ff 46%, #00a8ff 100%);
-  box-shadow:
-    0 0 18px rgba(24, 231, 255, 0.72),
-    0 0 48px rgba(0, 168, 255, 0.42);
-  color: #020713;
+  border-color: #009ee8;
+  background: #009ee8;
+  box-shadow: none;
+  color: #ffffff;
   outline: 0;
   transform: translateY(-1px);
+}
+
+body:not(:has(.landing-page)) .chart-preview-actions .button.chart-preview-primary:is(:hover, :focus-visible, :active):not(:disabled)::after {
+  opacity: 1;
 }
 
 body:not(:has(.landing-page)) .chart-preview-secondary {
@@ -10127,7 +10146,7 @@ body:has(.chart-preview-page) .topbar {
   }
 
   body:not(:has(.landing-page)) .chart-preview-actions {
-    bottom: calc(clamp(72px, 13vh, 112px) + 50px);
+    bottom: calc(clamp(72px, 13vh, 112px) + 10px);
     display: grid;
     width: min(100%, 360px);
   }
