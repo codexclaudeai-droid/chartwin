@@ -5468,24 +5468,56 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   margin-top: 6px;
 }
 
-.profile-avatar-option-groups {
+.profile-image-section {
   display: grid;
   gap: 12px;
 }
 
-.profile-avatar-option-group {
-  border: 0;
+.profile-image-mode-tabs {
+  align-items: center;
+  background: rgba(2, 7, 19, 0.32);
+  border: 1px solid var(--line);
+  border-radius: 14px;
   display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 5px;
 }
 
-.profile-avatar-option-group legend {
+.profile-image-mode-tab {
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
   color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
   font-size: 13px;
   font-weight: 850;
-  padding: 0;
+  justify-content: center;
+  min-height: 38px;
+  outline: 0;
+  padding: 0 10px;
+}
+
+.profile-image-mode-tab.active {
+  background: rgba(76, 141, 255, 0.24);
+  color: #ffffff;
+}
+
+.profile-image-mode-tab:focus,
+.profile-image-mode-tab:focus-visible,
+.profile-image-mode-tab:active {
+  box-shadow: none;
+  outline: 0;
+}
+
+.profile-image-mode-panel {
+  display: grid;
+  gap: 10px;
 }
 
 .profile-avatar-option-list {
@@ -5495,85 +5527,52 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .profile-avatar-option {
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
   align-items: center;
   background: transparent;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: 10px;
+  box-shadow: none;
   color: var(--muted);
   cursor: pointer;
   display: grid;
+  font: inherit;
   gap: 5px;
   justify-items: center;
   min-width: 0;
+  outline: 0;
   padding: 6px 4px;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.profile-avatar-option input[type="radio"] {
-  -webkit-appearance: none;
-  appearance: none;
-  background: rgba(2, 7, 19, 0.2);
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
-  border-radius: 999px;
-  box-shadow: none;
-  cursor: pointer;
-  height: 14px;
-  margin: 0;
-  outline: 0;
-  position: relative;
-  width: 14px;
-}
-
-.profile-avatar-option input[type="radio"]::after {
-  background: var(--accent);
-  border-radius: 999px;
-  content: "";
-  inset: 3px;
-  opacity: 0;
-  position: absolute;
-  transition: opacity 120ms ease;
-}
-
-.profile-avatar-option input[type="radio"]:checked::after {
-  opacity: 1;
-}
-
-.profile-avatar-option input[type="radio"]:focus,
-.profile-avatar-option input[type="radio"]:focus-visible,
-.profile-avatar-option input[type="radio"]:active {
-  box-shadow: none;
-  outline: 0;
 }
 
 .profile-avatar-option img {
   aspect-ratio: 1;
   background: rgba(12, 102, 90, 0.08);
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: 999px;
+  box-shadow: 0 0 0 1px var(--line);
   object-fit: cover;
+  transition: box-shadow 140ms ease, transform 140ms ease;
   width: 48px;
-}
-
-.profile-avatar-option span {
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.2;
 }
 
 .profile-avatar-option:hover,
 .profile-avatar-option.selected {
-  border-color: transparent;
   outline: 0;
 }
 
-.profile-avatar-option:focus-within {
+.profile-avatar-option:focus,
+.profile-avatar-option:focus-visible,
+.profile-avatar-option:active {
   box-shadow: none;
   outline: 0;
 }
 
 .profile-avatar-option.selected img {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow:
+    0 0 0 1px rgba(125, 183, 255, 0.38),
+    0 0 24px color-mix(in srgb, var(--accent) 46%, transparent);
+  transform: translateY(-1px);
 }
 
 .profile-image-file-row {
@@ -13460,11 +13459,6 @@ body:not(:has(.landing-page)) .profile-page input[type="file"] {
 body:not(:has(.landing-page)) .profile-page .referral-card .referral-copy-message {
   background: transparent;
   border: 0;
-  color: rgba(216, 236, 255, 0.68);
-}
-
-body:not(:has(.landing-page)) .profile-page .profile-avatar-option-group legend,
-body:not(:has(.landing-page)) .profile-page .profile-avatar-option span {
   color: rgba(216, 236, 255, 0.68);
 }
 

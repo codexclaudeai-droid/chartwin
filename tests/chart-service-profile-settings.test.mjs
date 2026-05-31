@@ -10,7 +10,14 @@ import {
   verifyPasswordHash,
 } from '../src/server/chart-service/index.ts';
 import { DEFAULT_PROFILE_AVATARS } from '../src/domain/chart-service/index.ts';
-import { createProfileImagePolicyPayload } from '../app/profile/profile-image-policy.ts';
+import {
+  createProfileImagePolicyPayload,
+  getProfileImageWebpFilename,
+  PROFILE_IMAGE_CANVAS_MAX_SIZE,
+  PROFILE_IMAGE_UPLOAD_MAX_BYTES,
+  PROFILE_IMAGE_WEBP_MIME_TYPE,
+  PROFILE_IMAGE_WEBP_QUALITIES,
+} from '../app/profile/profile-image-policy.ts';
 import { getSubscriptionActionAvailability } from '../app/profile/subscription-action-policy.ts';
 
 test('profile settings update only the authenticated users display name', () => {
@@ -75,6 +82,25 @@ test('profile image policy payload uses the selected browser file metadata', () 
     mimeType: 'image/webp',
     sizeBytes: 120_000,
   });
+});
+
+test('profile image upload policy converts browser files to bounded webp assets', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+
+  assert.equal(PROFILE_IMAGE_UPLOAD_MAX_BYTES, 300_000);
+  assert.equal(PROFILE_IMAGE_CANVAS_MAX_SIZE, 512);
+  assert.equal(PROFILE_IMAGE_WEBP_MIME_TYPE, 'image/webp');
+  assert.deepEqual([...PROFILE_IMAGE_WEBP_QUALITIES], [0.88, 0.82, 0.76, 0.7, 0.64]);
+  assert.equal(getProfileImageWebpFilename('avatar.png'), 'avatar.webp');
+  assert.equal(getProfileImageWebpFilename('family.photo.jpeg'), 'family.photo.webp');
+  assert.equal(getProfileImageWebpFilename(''), 'profile-image.webp');
+  assert.match(panelSource, /createCompressedProfileImageUpload/);
+  assert.match(panelSource, /PROFILE_IMAGE_CANVAS_MAX_SIZE/);
+  assert.match(panelSource, /PROFILE_IMAGE_WEBP_QUALITIES/);
+  assert.match(panelSource, /PROFILE_IMAGE_UPLOAD_MAX_BYTES/);
+  assert.match(panelSource, /canvas\.toBlob/);
+  assert.match(panelSource, /createProfileImagePolicyPayload\(compressedImage\.file\)/);
+  assert.match(panelSource, /dataUrl: compressedImage\.dataUrl/);
 });
 
 test('profile image upload route stores the avatar data url on the dashboard user', async () => {
@@ -432,9 +458,18 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(panelSource, /DEFAULT_PROFILE_AVATARS/);
   assert.match(panelSource, /ProfileAvatarPicker/);
   assert.match(panelSource, /selectedAvatarPath/);
+  assert.match(panelSource, /profileImageMode/);
+  assert.match(panelSource, /profile-image-section/);
+  assert.match(panelSource, /profile-image-mode-tabs/);
+  assert.match(panelSource, /role="tablist"/);
+  assert.match(panelSource, /aria-selected=\{profileImageMode === 'avatar'\}/);
+  assert.match(panelSource, /aria-selected=\{profileImageMode === 'upload'\}/);
+  assert.match(panelSource, /profileImageMode === 'avatar'/);
+  assert.match(panelSource, /profileImageMode === 'upload'/);
   assert.match(panelSource, /avatarPath: selectedAvatarPath/);
-  assert.match(panelSource, /name="profileAvatarPath"/);
-  assert.match(panelSource, /type="radio"/);
+  assert.doesNotMatch(panelSource, /name="profileAvatarPath"/);
+  assert.doesNotMatch(panelSource, /type="radio"/);
+  assert.match(panelSource, /aria-pressed=\{isSelected\}/);
   assert.match(panelSource, /기본 아바타 선택/);
   assert.doesNotMatch(panelSource, /gender="male"|gender="female"/);
   assert.match(panelSource, /프로필 이미지 적용/);
@@ -443,15 +478,17 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(panelSource, /profile-image-file-help/);
   assert.match(panelSource, /<\/div>\s*<p className="profile-image-file-help">/);
   assert.match(styleSource, /\.profile-avatar-preview/);
-  assert.match(styleSource, /\.profile-avatar-option-groups/);
+  assert.match(styleSource, /\.profile-image-section/);
+  assert.match(styleSource, /\.profile-image-mode-tabs/);
+  assert.match(styleSource, /\.profile-image-mode-tab/);
+  assert.match(styleSource, /\.profile-image-mode-panel/);
   assert.match(styleSource, /\.profile-avatar-option-list/);
   assert.match(styleSource, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
-  assert.match(styleSource, /\.profile-avatar-option input\[type="radio"\]/);
-  assert.match(styleSource, /appearance: none/);
-  assert.match(styleSource, /\.profile-avatar-option-group legend\s*\{[\s\S]*?color: var\(--muted\)/);
+  assert.doesNotMatch(styleSource, /\.profile-avatar-option input\[type="radio"\]/);
+  assert.match(styleSource, /\.profile-avatar-option\s*\{[\s\S]*?appearance: none/);
   assert.match(styleSource, /\.profile-avatar-option\s*\{[\s\S]*?color: var\(--muted\)/);
-  assert.match(styleSource, /body:not\(:has\(\.landing-page\)\) \.profile-page \.profile-avatar-option-group legend,\s*body:not\(:has\(\.landing-page\)\) \.profile-page \.profile-avatar-option span\s*\{[\s\S]*?color: rgba\(216, 236, 255, 0\.68\)/);
   assert.match(styleSource, /\.profile-avatar-option\.selected img/);
+  assert.match(styleSource, /0 0 24px/);
   assert.match(styleSource, /\.profile-card-header/);
   assert.match(styleSource, /\.profile-card-header \.toolbar-actions/);
   assert.match(styleSource, /\.profile-avatar-default-icon/);
@@ -478,34 +515,35 @@ test('profile image editing lives inside the profile edit modal with neutral ava
   assert.match(modalSource, /uploadProfileImage/);
   assert.match(modalSource, /profileImageFile/);
   assert.match(modalSource, /ProfileAvatarPicker/);
+  assert.match(modalSource, /profile-image-mode-tabs/);
   assert.doesNotMatch(modalSource, /gender="male"|gender="female"/);
   assert.doesNotMatch(modalSource, /label="남성"|label="여성"|<legend>/);
   assert.match(panelSource, /function ProfileAvatarPicker/);
   assert.match(panelSource, /DEFAULT_PROFILE_AVATARS\.map/);
-  assert.match(panelSource, /<img alt="" src=\{avatar\.path\} \/>\s*<input/);
+  assert.match(panelSource, /<button[\s\S]*?aria-pressed=\{isSelected\}[\s\S]*?<img alt=\{avatarLabel\} src=\{avatar\.path\} \/>/);
   assert.doesNotMatch(panelSource, /<span>\{avatar\.label\}<\/span>/);
   assert.match(styleSource, /\.profile-edit-image-form/);
   assert.match(styleSource, /:focus:not\(:focus-visible\)/);
   assert.match(styleSource, /-webkit-tap-highlight-color: transparent/);
 });
 
-test('profile avatar radio selection saves the selected avatar immediately', () => {
+test('profile avatar selection waits for the shared apply button', () => {
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
 
-  assert.match(panelSource, /async function selectProfileAvatar\(avatarPath: string\)/);
-  assert.match(panelSource, /body: JSON\.stringify\(\{ avatarPath \}\)/);
-  assert.match(panelSource, /void selectProfileAvatar\(avatarPath\)/);
+  assert.doesNotMatch(panelSource, /async function selectProfileAvatar\(avatarPath: string\)/);
+  assert.match(panelSource, /requestBody = \{ avatarPath: selectedAvatarPath \}/);
+  assert.match(panelSource, /body: JSON\.stringify\(requestBody\)/);
   assert.match(panelSource, /setSelectedAvatarPath\(avatarPath\)/);
   assert.match(panelSource, /primeAuthSession/);
   assert.match(panelSource, /dispatchAuthSessionChangedEvent/);
 });
 
-test('profile avatar radios suppress native click highlight boxes', () => {
+test('profile avatar image buttons suppress native click highlight boxes', () => {
   const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
-  assert.match(styleSource, /\.profile-avatar-option input\[type="radio"\]\s*\{[\s\S]*?appearance: none/);
-  assert.match(styleSource, /\.profile-avatar-option input\[type="radio"\]:focus/);
-  assert.match(styleSource, /\.profile-avatar-option input\[type="radio"\]:focus-visible/);
+  assert.match(styleSource, /\.profile-avatar-option\s*\{[\s\S]*?appearance: none/);
+  assert.match(styleSource, /\.profile-avatar-option:focus/);
+  assert.match(styleSource, /\.profile-avatar-option:focus-visible/);
   assert.match(styleSource, /box-shadow: none/);
   assert.match(styleSource, /outline: 0/);
 });

@@ -30,7 +30,7 @@ export type UploadPolicyResult = {
   reason: 'ok' | 'unsupported_type' | 'mime_mismatch' | 'too_large';
 };
 
-const MAX_PROFILE_IMAGE_BYTES = 200_000;
+const MAX_PROFILE_IMAGE_BYTES = 300_000;
 const PROFILE_IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',

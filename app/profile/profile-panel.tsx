@@ -16,7 +16,14 @@ import {
   type PaymentStatus,
   type SubscriptionStatus,
 } from '../../src/domain/chart-service/index.ts';
-import { createProfileImagePolicyPayload } from './profile-image-policy';
+import {
+  createProfileImagePolicyPayload,
+  getProfileImageWebpFilename,
+  PROFILE_IMAGE_CANVAS_MAX_SIZE,
+  PROFILE_IMAGE_UPLOAD_MAX_BYTES,
+  PROFILE_IMAGE_WEBP_MIME_TYPE,
+  PROFILE_IMAGE_WEBP_QUALITIES,
+} from './profile-image-policy';
 import {
   formatProfilePaymentMethodLabel,
   getProfilePaymentFlowSteps,
@@ -117,6 +124,8 @@ type ProfileResponse = {
   dashboard?: Dashboard;
 };
 
+type ProfileImageMode = 'avatar' | 'upload';
+
 export function ProfilePanel() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [nameDraft, setNameDraft] = useState('');
@@ -126,6 +135,7 @@ export function ProfilePanel() {
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedAvatarPath, setSelectedAvatarPath] = useState('');
+  const [profileImageMode, setProfileImageMode] = useState<ProfileImageMode>('avatar');
   const [message, setMessage] = useState('마이프로필 정보를 불러오는 중입니다.');
   const [settingsMessage, setSettingsMessage] = useState('연락번호, 비밀번호, 추천 정보를 관리할 수 있습니다.');
   const [referralCopyMessage, setReferralCopyMessage] = useState('');
@@ -217,9 +227,11 @@ export function ProfilePanel() {
 
   function openProfileEditModal() {
     if (dashboard) {
+      const currentAvatarPath = resolveDefaultProfileAvatarPath(dashboard.user.profileImageDataUrl);
       setNameDraft(dashboard.user.name);
       setPhoneDraft(dashboard.user.phoneNumber ?? '');
-      setSelectedAvatarPath(resolveDefaultProfileAvatarPath(dashboard.user.profileImageDataUrl));
+      setSelectedAvatarPath(currentAvatarPath);
+      setProfileImageMode(currentAvatarPath ? 'avatar' : 'upload');
     }
     setSelectedImageFile(null);
     if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
@@ -235,9 +247,11 @@ export function ProfilePanel() {
 
   function closeProfileEditModal() {
     if (dashboard) {
+      const currentAvatarPath = resolveDefaultProfileAvatarPath(dashboard.user.profileImageDataUrl);
       setNameDraft(dashboard.user.name);
       setPhoneDraft(dashboard.user.phoneNumber ?? '');
-      setSelectedAvatarPath(resolveDefaultProfileAvatarPath(dashboard.user.profileImageDataUrl));
+      setSelectedAvatarPath(currentAvatarPath);
+      setProfileImageMode(currentAvatarPath ? 'avatar' : 'upload');
     }
     setSelectedImageFile(null);
     if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
@@ -300,49 +314,47 @@ export function ProfilePanel() {
     setPhoneDraft(formatSignupPhoneNumber(event.currentTarget.value));
   }
 
-  async function selectProfileAvatar(avatarPath: string) {
-    setSelectedAvatarPath(avatarPath);
-    setSelectedImageFile(null);
-    if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
-
-    setIsBusy(true);
-    const response = await fetch('/api/profile/avatar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ avatarPath }),
-    });
-    const payload = await response.json() as ProfileResponse;
-    setIsBusy(false);
-
-    if (!response.ok || !payload.dashboard) {
-      setSettingsMessage(payload.message || '프로필 이미지 저장에 실패했습니다.');
+  function switchProfileImageMode(nextMode: ProfileImageMode) {
+    setProfileImageMode(nextMode);
+    if (nextMode === 'avatar') {
+      setSelectedImageFile(null);
+      if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
+      setSelectedAvatarPath((currentPath) => currentPath || DEFAULT_PROFILE_AVATARS[0]?.path || '');
       return;
     }
 
-    setDashboard(payload.dashboard);
-    setSelectedAvatarPath(resolveDefaultProfileAvatarPath(payload.dashboard.user.profileImageDataUrl));
-    primeAuthSession({
-      authenticated: true,
-      user: payload.dashboard.user,
-    });
-    setSettingsMessage('프로필 이미지가 저장되었습니다.');
-    dispatchAuthSessionChangedEvent();
+    setSelectedAvatarPath('');
   }
 
   async function uploadProfileImage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedImageFile && !selectedAvatarPath) {
-      setSettingsMessage('프로필 이미지 파일을 먼저 선택해주세요.');
+    if (profileImageMode === 'avatar' && !selectedAvatarPath) {
+      setSettingsMessage('기본 아바타를 먼저 선택해주세요.');
+      return;
+    }
+    if (profileImageMode === 'upload' && !selectedImageFile) {
+      setSettingsMessage('이미지 파일을 먼저 선택해주세요.');
       return;
     }
 
     setIsBusy(true);
-    const requestBody = selectedImageFile
-      ? {
-          ...createProfileImagePolicyPayload(selectedImageFile),
-          dataUrl: await readFileAsDataUrl(selectedImageFile),
-        }
-      : { avatarPath: selectedAvatarPath };
+    let requestBody: ReturnType<typeof createProfileImagePolicyPayload> & { dataUrl: string } | { avatarPath: string };
+    try {
+      if (profileImageMode === 'upload' && selectedImageFile) {
+        const compressedImage = await createCompressedProfileImageUpload(selectedImageFile);
+        requestBody = {
+          ...createProfileImagePolicyPayload(compressedImage.file),
+          dataUrl: compressedImage.dataUrl,
+        };
+      } else {
+        requestBody = { avatarPath: selectedAvatarPath };
+      }
+    } catch (error) {
+      setIsBusy(false);
+      setSettingsMessage(error instanceof Error ? error.message : '프로필 이미지 변환에 실패했습니다.');
+      return;
+    }
+
     const response = await fetch('/api/profile/avatar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -555,32 +567,64 @@ export function ProfilePanel() {
                 </div>
               </form>
               <form className="form profile-settings-form profile-edit-image-form" onSubmit={uploadProfileImage}>
-                <span className="form-section-label">기본 아바타 선택</span>
-                <ProfileAvatarPicker
-                  selectedAvatarPath={selectedAvatarPath}
-                  onSelect={(avatarPath) => {
-                    void selectProfileAvatar(avatarPath);
-                  }}
-                />
-                <label htmlFor="profileImageFile">프로필 이미지 파일</label>
-                <div className="profile-image-file-row">
-                  <input
-                    accept="image/png,image/jpeg,image/webp"
-                    id="profileImageFile"
-                    ref={profileImageFileInputRef}
-                    onChange={(event) => {
-                      setSelectedImageFile(event.target.files?.[0] ?? null);
-                      setSelectedAvatarPath('');
-                    }}
-                    type="file"
-                  />
+                <div className="profile-image-section">
+                  <span className="form-section-label">프로필 이미지 선택</span>
+                  <div className="profile-image-mode-tabs" role="tablist" aria-label="프로필 이미지 선택 방식">
+                    <button
+                      aria-selected={profileImageMode === 'avatar'}
+                      className={`profile-image-mode-tab${profileImageMode === 'avatar' ? ' active' : ''}`}
+                      onClick={() => switchProfileImageMode('avatar')}
+                      role="tab"
+                      type="button"
+                    >
+                      기본 아바타 선택
+                    </button>
+                    <button
+                      aria-selected={profileImageMode === 'upload'}
+                      className={`profile-image-mode-tab${profileImageMode === 'upload' ? ' active' : ''}`}
+                      onClick={() => switchProfileImageMode('upload')}
+                      role="tab"
+                      type="button"
+                    >
+                      이미지파일 업로드
+                    </button>
+                  </div>
+                  {profileImageMode === 'avatar' && (
+                    <div className="profile-image-mode-panel" role="tabpanel">
+                      <ProfileAvatarPicker
+                        selectedAvatarPath={selectedAvatarPath}
+                        onSelect={(avatarPath) => {
+                          setSelectedAvatarPath(avatarPath);
+                          setSelectedImageFile(null);
+                          if (profileImageFileInputRef.current) profileImageFileInputRef.current.value = '';
+                        }}
+                      />
+                    </div>
+                  )}
+                  {profileImageMode === 'upload' && (
+                    <div className="profile-image-mode-panel" role="tabpanel">
+                      <label htmlFor="profileImageFile">이미지파일 업로드</label>
+                      <div className="profile-image-file-row">
+                        <input
+                          accept="image/png,image/jpeg,image/webp"
+                          id="profileImageFile"
+                          ref={profileImageFileInputRef}
+                          onChange={(event) => {
+                            setSelectedImageFile(event.target.files?.[0] ?? null);
+                            setSelectedAvatarPath('');
+                          }}
+                          type="file"
+                        />
+                      </div>
+                      <p className="profile-image-file-help">PNG, JPG, WEBP 파일은 512px 이하 WebP로 자동 변환됩니다. 최대 300KB.</p>
+                      {selectedImageFile && (
+                        <p className="notice profile-image-file-selection">
+                          선택 파일: {selectedImageFile.name} / {selectedImageFile.type || 'unknown'} / {selectedImageFile.size} bytes
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <p className="profile-image-file-help">PNG, JPG, WEBP 파일만 등록할 수 있습니다.</p>
-                {selectedImageFile && (
-                  <p className="notice profile-image-file-selection">
-                    선택 파일: {selectedImageFile.name} / {selectedImageFile.type || 'unknown'} / {selectedImageFile.size} bytes
-                  </p>
-                )}
                 <button className="button secondary profile-image-save-button" type="submit" disabled={isBusy}>프로필 이미지 적용</button>
               </form>
             </div>
@@ -884,33 +928,104 @@ function ProfileAvatarPicker({
   onSelect: (avatarPath: string) => void;
 }) {
   return (
-    <div className="profile-avatar-option-list" role="radiogroup" aria-label="기본 아바타 선택">
+    <div className="profile-avatar-option-list" role="list" aria-label="기본 아바타 선택">
       {DEFAULT_PROFILE_AVATARS.map((avatar, index) => {
         const isSelected = selectedAvatarPath === avatar.path;
         const avatarLabel = `아바타 ${index + 1}`;
         return (
-          <label
+          <button
+            aria-label={avatarLabel}
+            aria-pressed={isSelected}
             className={`profile-avatar-option${isSelected ? ' selected' : ''}`}
             key={avatar.id}
+            onClick={() => onSelect(avatar.path)}
             title={avatarLabel}
+            type="button"
           >
-            <img alt="" src={avatar.path} />
-            <input
-              aria-label={avatarLabel}
-              checked={isSelected}
-              name="profileAvatarPath"
-              onChange={() => onSelect(avatar.path)}
-              type="radio"
-              value={avatar.path}
-            />
-          </label>
+            <img alt={avatarLabel} src={avatar.path} />
+          </button>
         );
       })}
     </div>
   );
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
+type CompressedProfileImageUpload = {
+  file: {
+    name: string;
+    type: string;
+    size: number;
+  };
+  dataUrl: string;
+};
+
+async function createCompressedProfileImageUpload(file: File): Promise<CompressedProfileImageUpload> {
+  const { image, objectUrl } = await loadImageFromFile(file);
+  try {
+    const sourceWidth = image.naturalWidth || image.width;
+    const sourceHeight = image.naturalHeight || image.height;
+    const sourceSize = Math.min(sourceWidth, sourceHeight);
+    if (!sourceSize) throw new Error('프로필 이미지 크기를 확인할 수 없습니다.');
+
+    const sourceX = Math.max(0, Math.floor((sourceWidth - sourceSize) / 2));
+    const sourceY = Math.max(0, Math.floor((sourceHeight - sourceSize) / 2));
+    const targetSizes = [
+      PROFILE_IMAGE_CANVAS_MAX_SIZE,
+      Math.min(384, PROFILE_IMAGE_CANVAS_MAX_SIZE),
+      Math.min(256, PROFILE_IMAGE_CANVAS_MAX_SIZE),
+    ];
+
+    for (const targetSize of targetSizes) {
+      const outputSize = Math.max(1, Math.min(targetSize, sourceSize));
+      const canvas = document.createElement('canvas');
+      canvas.width = outputSize;
+      canvas.height = outputSize;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('프로필 이미지 변환을 지원하지 않는 브라우저입니다.');
+
+      context.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, outputSize, outputSize);
+      for (const quality of PROFILE_IMAGE_WEBP_QUALITIES) {
+        const blob = await canvasToBlob(canvas, PROFILE_IMAGE_WEBP_MIME_TYPE, quality);
+        if (!blob || blob.type !== PROFILE_IMAGE_WEBP_MIME_TYPE) continue;
+        if (blob.size <= PROFILE_IMAGE_UPLOAD_MAX_BYTES) {
+          return {
+            file: {
+              name: getProfileImageWebpFilename(file.name),
+              type: PROFILE_IMAGE_WEBP_MIME_TYPE,
+              size: blob.size,
+            },
+            dataUrl: await readFileAsDataUrl(blob),
+          };
+        }
+      }
+    }
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  throw new Error('이미지 용량이 큽니다. 더 단순한 이미지를 선택해주세요.');
+}
+
+function loadImageFromFile(file: File): Promise<{ image: HTMLImageElement; objectUrl: string }> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.addEventListener('load', () => resolve({ image, objectUrl }), { once: true });
+    image.addEventListener('error', () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('프로필 이미지 파일을 읽을 수 없습니다.'));
+    }, { once: true });
+    image.src = objectUrl;
+  });
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality: number): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), mimeType, quality);
+  });
+}
+
+function readFileAsDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.addEventListener('load', () => resolve(String(reader.result || '')));

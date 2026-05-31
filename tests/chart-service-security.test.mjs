@@ -16,11 +16,11 @@ test('password policy requires length, uppercase, lowercase, number, and special
 test('profile image upload policy blocks svg, gif, oversized, and mismatched mime files', async () => {
   const { validateProfileImageUpload } = await import('../src/domain/chart-service/index.ts');
 
-  assert.equal(validateProfileImageUpload({ filename: 'avatar.png', mimeType: 'image/png', sizeBytes: 200_000 }).ok, true);
+  assert.equal(validateProfileImageUpload({ filename: 'avatar.png', mimeType: 'image/png', sizeBytes: 300_000 }).ok, true);
   assert.equal(validateProfileImageUpload({ filename: 'avatar.svg', mimeType: 'image/svg+xml', sizeBytes: 20_000 }).ok, false);
   assert.equal(validateProfileImageUpload({ filename: 'avatar.gif', mimeType: 'image/gif', sizeBytes: 20_000 }).ok, false);
   assert.equal(validateProfileImageUpload({ filename: 'avatar.jpg', mimeType: 'image/png', sizeBytes: 20_000 }).ok, false);
-  assert.equal(validateProfileImageUpload({ filename: 'avatar.webp', mimeType: 'image/webp', sizeBytes: 200_001 }).ok, false);
+  assert.equal(validateProfileImageUpload({ filename: 'avatar.webp', mimeType: 'image/webp', sizeBytes: 300_001 }).ok, false);
 });
 
 test('admin guard allows admin and super admin only', async () => {
