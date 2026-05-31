@@ -198,6 +198,102 @@ export function SubscriptionAdminPanel() {
     );
   }
 
+  function renderSubscriptionPaymentCell(item: AdminSubscriptionQueueItem) {
+    return item.payment ? (
+      <>
+        <strong>{item.payment.id}</strong>
+        <span>
+          {formatPaymentStatusLabel(item.payment.status)} / {formatPaymentAmountUsd(item.payment.amountUsd)}
+        </span>
+      </>
+    ) : (
+      <span className="admin-subscription-empty-text">결제 없음</span>
+    );
+  }
+
+  function renderSubscriptionActionControls(
+    item: AdminSubscriptionQueueItem,
+    currentNote: string,
+    canSubmitNote: boolean,
+    quickMemos: SubscriptionQuickMemo[],
+  ) {
+    return (
+      <>
+        <input
+          aria-label={`${item.subscription.id} 관리자 처리 메모`}
+          className="admin-note-input"
+          placeholder="처리 메모 입력"
+          value={currentNote}
+          onChange={(event) => {
+            const nextNote = event.currentTarget.value;
+            setSubscriptionOperationNotes((currentNotes) => ({
+              ...currentNotes,
+              [item.subscription.id]: nextNote,
+            }));
+          }}
+        />
+        {quickMemos.length > 0 && (
+          <div className="quick-memo-row" aria-label={`${item.subscription.id} 빠른 메모`}>
+            <span>빠른 메모</span>
+            {quickMemos.map((memo) => (
+              <button
+                className="quick-memo-button"
+                type="button"
+                key={memo.key}
+                onClick={() => applyQuickMemo(item.subscription.id, memo.note)}
+              >
+                {memo.label}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="actions compact">
+          {item.subscription.status === 'payment_requested' && (
+            <button
+              className="button"
+              type="button"
+              onClick={() => runOperation(item.subscription.id, 'approve')}
+              disabled={isBusy}
+            >
+              구독 승인
+            </button>
+          )}
+          {item.subscription.status === 'cancel_requested' && (
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => runOperation(item.subscription.id, 'cancel')}
+              disabled={isBusy || !canSubmitNote}
+            >
+              취소 승인
+            </button>
+          )}
+          {item.subscription.status === 'refund_requested' && (
+            <button
+              className="button danger"
+              type="button"
+              onClick={() => runOperation(item.subscription.id, 'refund')}
+              disabled={isBusy || !canSubmitNote}
+            >
+              환불 승인
+            </button>
+          )}
+          {(item.subscription.status === 'cancel_requested' ||
+            item.subscription.status === 'refund_requested') && (
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => runOperation(item.subscription.id, 'reject')}
+              disabled={isBusy || !canSubmitNote}
+            >
+              반려
+            </button>
+          )}
+        </div>
+      </>
+    );
+  }
+
   const activeFilter = getSubscriptionQueueFilterPreset(activeFilterKey);
   const filteredItems = filterSubscriptionQueueItems(items, activeFilterKey);
 
@@ -284,89 +380,10 @@ export function SubscriptionAdminPanel() {
                   </td>
                   <td className="admin-subscription-status-cell">{renderSubscriptionFlowStatus(item)}</td>
                   <td className="admin-subscription-payment-cell">
-                    {item.payment ? (
-                      <>
-                        <strong>{item.payment.id}</strong>
-                        <span>
-                          {formatPaymentStatusLabel(item.payment.status)} / {formatPaymentAmountUsd(item.payment.amountUsd)}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="admin-subscription-empty-text">결제 없음</span>
-                    )}
+                    {renderSubscriptionPaymentCell(item)}
                   </td>
                   <td className="admin-subscription-action-cell">
-                    <input
-                      aria-label={`${item.subscription.id} 관리자 처리 메모`}
-                      className="admin-note-input"
-                      placeholder="처리 메모 입력"
-                      value={currentNote}
-                      onChange={(event) => {
-                        const nextNote = event.currentTarget.value;
-                        setSubscriptionOperationNotes((currentNotes) => ({
-                          ...currentNotes,
-                          [item.subscription.id]: nextNote,
-                        }));
-                      }}
-                    />
-                    {quickMemos.length > 0 && (
-                      <div className="quick-memo-row" aria-label={`${item.subscription.id} 빠른 메모`}>
-                        <span>빠른 메모</span>
-                        {quickMemos.map((memo) => (
-                          <button
-                            className="quick-memo-button"
-                            type="button"
-                            key={memo.key}
-                            onClick={() => applyQuickMemo(item.subscription.id, memo.note)}
-                          >
-                            {memo.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <div className="actions compact">
-                      {item.subscription.status === 'payment_requested' && (
-                        <button
-                          className="button"
-                          type="button"
-                          onClick={() => runOperation(item.subscription.id, 'approve')}
-                          disabled={isBusy}
-                        >
-                          구독 승인
-                        </button>
-                      )}
-                      {item.subscription.status === 'cancel_requested' && (
-                        <button
-                          className="button secondary"
-                          type="button"
-                          onClick={() => runOperation(item.subscription.id, 'cancel')}
-                          disabled={isBusy || !canSubmitNote}
-                        >
-                          취소 승인
-                        </button>
-                      )}
-                      {item.subscription.status === 'refund_requested' && (
-                        <button
-                          className="button danger"
-                          type="button"
-                          onClick={() => runOperation(item.subscription.id, 'refund')}
-                          disabled={isBusy || !canSubmitNote}
-                        >
-                          환불 승인
-                        </button>
-                      )}
-                      {(item.subscription.status === 'cancel_requested' ||
-                        item.subscription.status === 'refund_requested') && (
-                        <button
-                          className="button secondary"
-                          type="button"
-                          onClick={() => runOperation(item.subscription.id, 'reject')}
-                          disabled={isBusy || !canSubmitNote}
-                        >
-                          반려
-                        </button>
-                      )}
-                    </div>
+                    {renderSubscriptionActionControls(item, currentNote, canSubmitNote, quickMemos)}
                   </td>
                 </tr>
               );
@@ -378,6 +395,71 @@ export function SubscriptionAdminPanel() {
             )}
           </tbody>
         </table>
+        <div className="admin-subscription-mobile-list" aria-label="모바일 구독관리 카드 목록">
+          {filteredItems.map((item) => {
+            const currentNote = subscriptionOperationNotes[item.subscription.id] || '';
+            const canSubmitNote = canSubmitAdminOperationNote(currentNote);
+            const quickMemos = SUBSCRIPTION_QUICK_MEMOS.filter((memo) => memo.supports(item));
+
+            return (
+              <article className="admin-subscription-mobile-card" key={`mobile-${item.subscription.id}`}>
+                <div className="admin-subscription-mobile-card-title-row">
+                  <div>
+                    <strong>{item.subscription.id}</strong>
+                    <small>갱신 {formatSubscriptionDateTime(item.subscription.updatedAt)}</small>
+                  </div>
+                  <span className="badge manual-flow-badge">{formatSubscriptionStatusLabel(item.subscription.status)}</span>
+                </div>
+                <div className="admin-subscription-mobile-card-status-row">
+                  {renderSubscriptionFlowStatus(item)}
+                </div>
+                <dl className="admin-subscription-mobile-card-info-grid">
+                  <div>
+                    <dt>회원</dt>
+                    <dd>{item.user.email}</dd>
+                  </div>
+                  <div>
+                    <dt>이름</dt>
+                    <dd>{item.user.name}</dd>
+                  </div>
+                  <div>
+                    <dt>플랜</dt>
+                    <dd>{formatAdminPlanPeriodLabel(item.plan)}</dd>
+                  </div>
+                  <div>
+                    <dt>결제</dt>
+                    <dd>
+                      {item.payment
+                        ? `${item.payment.id} · ${formatPaymentAmountUsd(item.payment.amountUsd)}`
+                        : '결제 없음'}
+                    </dd>
+                  </div>
+                  {item.subscription.startsAt && (
+                    <div>
+                      <dt>시작</dt>
+                      <dd>{formatSubscriptionDateTime(item.subscription.startsAt)}</dd>
+                    </div>
+                  )}
+                  {item.subscription.endsAt && (
+                    <div>
+                      <dt>만료</dt>
+                      <dd>{formatSubscriptionDateTime(item.subscription.endsAt)}</dd>
+                    </div>
+                  )}
+                </dl>
+                <div className="admin-subscription-mobile-card-payment">
+                  {renderSubscriptionPaymentCell(item)}
+                </div>
+                <div className="admin-subscription-mobile-card-actions">
+                  {renderSubscriptionActionControls(item, currentNote, canSubmitNote, quickMemos)}
+                </div>
+              </article>
+            );
+          })}
+          {filteredItems.length === 0 && (
+            <p className="admin-subscription-mobile-empty">대기 중인 구독 요청이 없습니다.</p>
+          )}
+        </div>
       </section>
       {confirmationDialog}
     </>

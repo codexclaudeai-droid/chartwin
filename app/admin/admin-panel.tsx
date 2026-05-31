@@ -254,6 +254,85 @@ export function AdminPanel() {
     );
   }
 
+  function renderPaymentTransactionBox(item: AdminPaymentQueueItem) {
+    if (!item.payment.transactionId) return null;
+
+    return (
+      <div className="admin-payment-txid-box">
+        <small title={item.payment.transactionId}>
+          TXID {formatCompactTransactionId(item.payment.transactionId)}
+        </small>
+        {renderTransactionVerificationBadge(item)}
+        {item.payment.transactionVerificationMessage && (
+          <small>{item.payment.transactionVerificationMessage}</small>
+        )}
+        {item.payment.transactionVerifiedAt && (
+          <small>확인 {formatAdminPaymentDateTime(item.payment.transactionVerifiedAt)}</small>
+        )}
+        <a
+          className="text-link compact"
+          href={createTronScanTransactionUrl(item.payment.transactionId)}
+          rel="noreferrer"
+          target="_blank"
+        >
+          TronScan
+        </a>
+      </div>
+    );
+  }
+
+  function renderPaymentActionControls(item: AdminPaymentQueueItem) {
+    return (
+      <>
+        <input
+          aria-label={`${item.payment.id} 관리자 처리 메모`}
+          className="admin-note-input"
+          onChange={(event) => setOperationNotes((currentNotes) => ({
+            ...currentNotes,
+            [item.payment.id]: event.target.value,
+          }))}
+          placeholder="처리 메모 입력"
+          value={operationNotes[item.payment.id] || ''}
+        />
+        <div className="quick-memo-row" aria-label={`${item.payment.id} 빠른 메모`}>
+          <span>빠른 메모</span>
+          {PAYMENT_QUICK_MEMOS.filter((memo) => memo.supports(item)).map((memo) => (
+            <button
+              className="quick-memo-button"
+              key={memo.key}
+              onClick={() => applyQuickMemo(item.payment.id, memo.note)}
+              type="button"
+            >
+              {memo.label}
+            </button>
+          ))}
+        </div>
+        <div className="actions compact">
+          {(item.payment.status === 'pending' || item.payment.status === 'requested') && (
+            <button className="button" type="button" onClick={() => runOperation(item.payment.id, 'confirm')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
+              입금 확인
+            </button>
+          )}
+          {item.payment.status === 'confirmed' && (
+            <button className="button danger" type="button" onClick={() => runOperation(item.payment.id, 'refund')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
+              환불
+            </button>
+          )}
+          {(item.payment.status === 'pending' || item.payment.status === 'requested') && (
+            <button className="button secondary" type="button" onClick={() => runOperation(item.payment.id, 'reject')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
+              반려
+            </button>
+          )}
+          {item.payment.method === 'usdt' && item.payment.transactionId && (
+            <button className="button secondary" type="button" onClick={() => verifyTransactionId(item.payment.id)} disabled={isBusy}>
+              다시 확인
+            </button>
+          )}
+        </div>
+      </>
+    );
+  }
+
   const activeFilter = getPaymentQueueFilterPreset(activeFilterKey);
   const filteredPayments = filterPaymentQueueItems(payments, activeFilterKey);
 
@@ -317,78 +396,13 @@ export function AdminPanel() {
               <td className="admin-payment-member-cell">
                 <strong>{item.user.email}</strong>
                 <span>{item.payment.depositorName || item.user.name}</span>
-                {item.payment.transactionId && (
-                  <div className="admin-payment-txid-box">
-                    <small title={item.payment.transactionId}>
-                      TXID {formatCompactTransactionId(item.payment.transactionId)}
-                    </small>
-                    {renderTransactionVerificationBadge(item)}
-                    {item.payment.transactionVerificationMessage && (
-                      <small>{item.payment.transactionVerificationMessage}</small>
-                    )}
-                    {item.payment.transactionVerifiedAt && (
-                      <small>확인 {formatAdminPaymentDateTime(item.payment.transactionVerifiedAt)}</small>
-                    )}
-                    <a
-                      className="text-link compact"
-                      href={createTronScanTransactionUrl(item.payment.transactionId)}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      TronScan
-                    </a>
-                  </div>
-                )}
+                {renderPaymentTransactionBox(item)}
               </td>
               <td className="admin-payment-plan-cell"><strong>{formatAdminPlanPeriodLabel(item.plan)}</strong></td>
               <td className="admin-payment-amount-cell">${item.payment.amountUsd}</td>
               <td className="admin-payment-status-cell">{renderPaymentFlowStatus(item)}</td>
               <td className="admin-payment-action-cell">
-                <input
-                  aria-label={`${item.payment.id} 관리자 처리 메모`}
-                  className="admin-note-input"
-                  onChange={(event) => setOperationNotes((currentNotes) => ({
-                    ...currentNotes,
-                    [item.payment.id]: event.target.value,
-                  }))}
-                  placeholder="처리 메모 입력"
-                  value={operationNotes[item.payment.id] || ''}
-                />
-                <div className="quick-memo-row" aria-label={`${item.payment.id} 빠른 메모`}>
-                  <span>빠른 메모</span>
-                  {PAYMENT_QUICK_MEMOS.filter((memo) => memo.supports(item)).map((memo) => (
-                    <button
-                      className="quick-memo-button"
-                      key={memo.key}
-                      onClick={() => applyQuickMemo(item.payment.id, memo.note)}
-                      type="button"
-                    >
-                      {memo.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="actions compact">
-                  {(item.payment.status === 'pending' || item.payment.status === 'requested') && (
-                    <button className="button" type="button" onClick={() => runOperation(item.payment.id, 'confirm')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
-                      입금 확인
-                    </button>
-                  )}
-                  {item.payment.status === 'confirmed' && (
-                    <button className="button danger" type="button" onClick={() => runOperation(item.payment.id, 'refund')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
-                      환불
-                    </button>
-                  )}
-                  {(item.payment.status === 'pending' || item.payment.status === 'requested') && (
-                    <button className="button secondary" type="button" onClick={() => runOperation(item.payment.id, 'reject')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
-                      반려
-                    </button>
-                  )}
-                  {item.payment.method === 'usdt' && item.payment.transactionId && (
-                    <button className="button secondary" type="button" onClick={() => verifyTransactionId(item.payment.id)} disabled={isBusy}>
-                      다시 확인
-                    </button>
-                  )}
-                </div>
+                {renderPaymentActionControls(item)}
               </td>
             </tr>
           ))}
@@ -399,6 +413,52 @@ export function AdminPanel() {
           )}
         </tbody>
       </table>
+      <div className="admin-payment-mobile-list" aria-label="모바일 입금관리 카드 목록">
+        {filteredPayments.map((item) => (
+          <article className="admin-payment-mobile-card" key={`mobile-${item.payment.id}`}>
+            <div className="admin-payment-mobile-card-title-row">
+              <div>
+                <strong>{item.payment.id}</strong>
+                <small>{formatAdminPaymentMethodLabel(item.payment.method)} · {formatAdminPaymentDateTime(item.payment.createdAt)}</small>
+              </div>
+              <span className="admin-payment-amount-cell">${item.payment.amountUsd}</span>
+            </div>
+            <div className="admin-payment-mobile-card-status-row">
+              {renderPaymentFlowStatus(item)}
+            </div>
+            <dl className="admin-payment-mobile-card-info-grid">
+              <div>
+                <dt>회원</dt>
+                <dd>{item.user.email}</dd>
+              </div>
+              <div>
+                <dt>입금자</dt>
+                <dd>{item.payment.depositorName || item.user.name}</dd>
+              </div>
+              <div>
+                <dt>플랜</dt>
+                <dd>{formatAdminPlanPeriodLabel(item.plan)}</dd>
+              </div>
+              <div>
+                <dt>금액</dt>
+                <dd>${item.payment.amountUsd}</dd>
+              </div>
+            </dl>
+            {renderPaymentTransactionBox(item)}
+            {item.supportThread && (
+              <a className="text-link compact" href={createAdminSupportThreadUrl(item.supportThread.id)}>
+                입금확인 요청글
+              </a>
+            )}
+            <div className="admin-payment-mobile-card-actions">
+              {renderPaymentActionControls(item)}
+            </div>
+          </article>
+        ))}
+        {filteredPayments.length === 0 && (
+          <p className="admin-payment-mobile-empty">표시할 결제 요청이 없습니다.</p>
+        )}
+      </div>
     </section>
     {confirmationDialog}
     </>

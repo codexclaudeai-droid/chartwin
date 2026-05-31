@@ -326,6 +326,32 @@ test('admin payment panel flattens nested queue surfaces to reduce padding build
   assert.match(memoButtonRule, /border-color:\s*rgba\(125, 183, 255, 0\.12\)/);
 });
 
+test('admin payment panel renders a mobile card list instead of the table', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /admin-payment-mobile-list/);
+  assert.match(source, /admin-payment-mobile-card/);
+  assert.match(source, /admin-payment-mobile-card-info-grid/);
+  assert.match(source, /admin-payment-mobile-card-actions/);
+  assert.match(cssSource, /#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?#admin-payments > \.table\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display: grid/);
+  assert.match(cssSource, /#admin-payments \.admin-payment-mobile-card-info-grid,[\s\S]*?#admin-subscriptions \.admin-subscription-mobile-card-info-grid\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+});
+
+test('admin payment panel removes the outer card shell spacing across viewports', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const panelRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) \.admin-page section\.card\.wide\[id\^="admin-"\]\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(panelRule, /padding:\s*0\s*!important/);
+  assert.match(panelRule, /border:\s*0\s*!important/);
+  assert.match(panelRule, /background:\s*transparent\s*!important/);
+  assert.match(panelRule, /box-shadow:\s*none\s*!important/);
+});
+
 test('admin payment panel labels confirmation as deposit confirmation only', () => {
   const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
 

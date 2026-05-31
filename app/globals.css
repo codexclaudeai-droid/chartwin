@@ -8992,6 +8992,13 @@ body:not(:has(.landing-page)) .admin-page .card {
   border-color: rgba(125, 183, 255, 0.16);
 }
 
+body:not(:has(.landing-page)) .admin-page section.card.wide[id^="admin-"] {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 body:not(:has(.landing-page)) .pricing-page {
   background:
     radial-gradient(circle at 82% 10%, rgba(55, 125, 255, 0.24), transparent 32vw),
@@ -11420,6 +11427,103 @@ body:not(:has(.landing-page)) .admin-payment-action-cell .button {
   padding-inline: 10px;
 }
 
+body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-list {
+  display: none;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-card,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-card {
+  border: 1px solid rgba(125, 183, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(2, 7, 19, 0.34);
+  box-shadow: none;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-card-title-row,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-card-title-row {
+  align-items: flex-start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-card-title-row strong,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-card-title-row strong {
+  color: #ffffff;
+  display: block;
+  font-size: 0.96rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-card-title-row small,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-card-title-row small {
+  color: rgba(216, 236, 255, 0.62);
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.45;
+  margin-top: 5px;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-card-status-row,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-card-status-row,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-card-payment {
+  border-top: 1px solid rgba(125, 183, 255, 0.1);
+  padding-top: 10px;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-card-info-grid,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-card-info-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-card-info-grid div,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-card-info-grid div {
+  border-top: 1px solid rgba(125, 183, 255, 0.1);
+  min-width: 0;
+  padding-top: 9px;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-card-info-grid dt,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-card-info-grid dt {
+  color: rgba(216, 236, 255, 0.48);
+  font-size: 0.7rem;
+  font-weight: 900;
+  margin: 0 0 4px;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-card-info-grid dd,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-card-info-grid dd {
+  color: rgba(232, 242, 255, 0.84);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.42;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-card-actions,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-card-actions {
+  border-top: 1px solid rgba(125, 183, 255, 0.1);
+  display: grid;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-empty,
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-empty {
+  color: rgba(216, 236, 255, 0.58);
+  font-weight: 800;
+  margin: 0;
+}
+
 @media (max-width: 1180px) {
   body:not(:has(.landing-page)) #admin-payments .table {
     display: block;
@@ -11437,6 +11541,17 @@ body:not(:has(.landing-page)) .admin-payment-action-cell .button {
   body:not(:has(.landing-page)) #admin-payments .table td:nth-child(6) {
     min-width: 260px;
     white-space: normal;
+  }
+}
+
+@media (max-width: 720px) {
+  body:not(:has(.landing-page)) #admin-payments > .table {
+    display: none;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-list {
+    display: grid;
+    gap: 12px;
   }
 }
 
@@ -11677,6 +11792,10 @@ body:not(:has(.landing-page)) .admin-subscription-action-cell .button {
   padding-inline: 10px;
 }
 
+body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-list {
+  display: none;
+}
+
 @media (max-width: 1180px) {
   body:not(:has(.landing-page)) #admin-subscriptions .table {
     display: block;
@@ -11694,6 +11813,17 @@ body:not(:has(.landing-page)) .admin-subscription-action-cell .button {
   body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(6) {
     min-width: 260px;
     white-space: normal;
+  }
+}
+
+@media (max-width: 720px) {
+  body:not(:has(.landing-page)) #admin-subscriptions > .table {
+    display: none;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-list {
+    display: grid;
+    gap: 12px;
   }
 }
 

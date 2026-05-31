@@ -328,6 +328,32 @@ test('admin subscription panel flattens nested queue surfaces to reduce padding 
   assert.match(memoButtonRule, /border-color:\s*rgba\(125, 183, 255, 0\.12\)/);
 });
 
+test('admin subscription panel renders a mobile card list instead of the table', () => {
+  const source = fs.readFileSync(new URL('../app/admin/subscription-admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(source, /admin-subscription-mobile-list/);
+  assert.match(source, /admin-subscription-mobile-card/);
+  assert.match(source, /admin-subscription-mobile-card-info-grid/);
+  assert.match(source, /admin-subscription-mobile-card-actions/);
+  assert.match(cssSource, /#admin-subscriptions \.admin-subscription-mobile-list\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?#admin-subscriptions > \.table\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?#admin-subscriptions \.admin-subscription-mobile-list\s*\{[\s\S]*?display: grid/);
+  assert.match(cssSource, /#admin-subscriptions \.admin-subscription-mobile-card-info-grid\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+});
+
+test('admin subscription panel removes the outer card shell spacing across viewports', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const panelRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) \.admin-page section\.card\.wide\[id\^="admin-"\]\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(panelRule, /padding:\s*0\s*!important/);
+  assert.match(panelRule, /border:\s*0\s*!important/);
+  assert.match(panelRule, /background:\s*transparent\s*!important/);
+  assert.match(panelRule, /box-shadow:\s*none\s*!important/);
+});
+
 test('admin subscription panel refreshes its filtered queue after local operations without overwriting success context', () => {
   const source = fs.readFileSync(new URL('../app/admin/subscription-admin-panel.tsx', import.meta.url), 'utf8');
 
