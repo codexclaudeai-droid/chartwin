@@ -14,6 +14,7 @@ import type {
   EmailOutboxRecord,
   PasswordResetTokenRecord,
   PaymentTransferSettingsRecord,
+  NoticePopupRecord,
   PublicBoardPostRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
@@ -469,6 +470,36 @@ export function mapPublicBoardPostToPostgresRow(record: PublicBoardPostRecord): 
     body: record.body,
     is_published: record.isPublished,
     sort_order: record.sortOrder,
+    created_at: record.createdAt,
+    updated_at: record.updatedAt,
+    updated_by_admin_id: record.updatedByAdminId,
+  };
+}
+
+export function mapNoticePopupFromPostgresRow(row: PostgresRow): NoticePopupRecord {
+  return {
+    id: readString(row.id),
+    title: readString(row.title),
+    bodyHtml: readString(row.body_html),
+    isActive: readBoolean(row.is_active),
+    sortOrder: readNumber(row.sort_order),
+    startAt: readNullableIsoString(row.start_at),
+    endAt: readNullableIsoString(row.end_at),
+    createdAt: readIsoString(row.created_at),
+    updatedAt: readIsoString(row.updated_at),
+    updatedByAdminId: readNullableString(row.updated_by_admin_id),
+  };
+}
+
+export function mapNoticePopupToPostgresRow(record: NoticePopupRecord): PostgresRow {
+  return {
+    id: record.id,
+    title: record.title,
+    body_html: record.bodyHtml,
+    is_active: record.isActive,
+    sort_order: record.sortOrder,
+    start_at: record.startAt,
+    end_at: record.endAt,
     created_at: record.createdAt,
     updated_at: record.updatedAt,
     updated_by_admin_id: record.updatedByAdminId,

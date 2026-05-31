@@ -9,6 +9,8 @@ import {
   mapAuthSessionToPostgresRow,
   mapNotificationFromPostgresRow,
   mapNotificationToPostgresRow,
+  mapNoticePopupFromPostgresRow,
+  mapNoticePopupToPostgresRow,
   mapPaymentFromPostgresRow,
   mapPaymentToPostgresRow,
   mapPaymentTransferSettingsFromPostgresRow,
@@ -472,6 +474,46 @@ test('postgres public board post mapper preserves publishing controls', () => {
     created_at: '2026-05-25T09:00:00.000Z',
     updated_at: '2026-05-25T10:00:00.000Z',
     updated_by_admin_id: null,
+  });
+});
+
+test('postgres notice popup mapper preserves schedule controls', () => {
+  const popup = mapNoticePopupFromPostgresRow({
+    id: 'notice_popup_1',
+    title: 'Scheduled notice',
+    body_html: '<p>Notice body</p>',
+    is_active: true,
+    sort_order: '7',
+    start_at: '2026-05-31T00:00:00.000Z',
+    end_at: '2026-05-31T23:59:00.000Z',
+    created_at: '2026-05-30T09:00:00.000Z',
+    updated_at: '2026-05-30T10:00:00.000Z',
+    updated_by_admin_id: 'admin_1',
+  });
+
+  assert.deepEqual(popup, {
+    id: 'notice_popup_1',
+    title: 'Scheduled notice',
+    bodyHtml: '<p>Notice body</p>',
+    isActive: true,
+    sortOrder: 7,
+    startAt: '2026-05-31T00:00:00.000Z',
+    endAt: '2026-05-31T23:59:00.000Z',
+    createdAt: '2026-05-30T09:00:00.000Z',
+    updatedAt: '2026-05-30T10:00:00.000Z',
+    updatedByAdminId: 'admin_1',
+  });
+  assert.deepEqual(mapNoticePopupToPostgresRow(popup), {
+    id: 'notice_popup_1',
+    title: 'Scheduled notice',
+    body_html: '<p>Notice body</p>',
+    is_active: true,
+    sort_order: 7,
+    start_at: '2026-05-31T00:00:00.000Z',
+    end_at: '2026-05-31T23:59:00.000Z',
+    created_at: '2026-05-30T09:00:00.000Z',
+    updated_at: '2026-05-30T10:00:00.000Z',
+    updated_by_admin_id: 'admin_1',
   });
 });
 

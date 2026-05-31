@@ -143,6 +143,19 @@ export type PublicBoardPostRecord = {
   updatedByAdminId: string | null;
 };
 
+export type NoticePopupRecord = {
+  id: string;
+  title: string;
+  bodyHtml: string;
+  isActive: boolean;
+  sortOrder: number;
+  startAt: string | null;
+  endAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  updatedByAdminId: string | null;
+};
+
 export type EmailOutboxFilter = {
   status?: EmailOutboxStatus;
 };
@@ -189,6 +202,9 @@ export type ChartServiceRepository = {
   saveReferralLedger(ledger: ReferralLedgerRecord): void;
   listPublicBoardPosts(): PublicBoardPostRecord[];
   savePublicBoardPost(post: PublicBoardPostRecord): void;
+  listNoticePopups(): NoticePopupRecord[];
+  saveNoticePopup(popup: NoticePopupRecord): void;
+  deleteNoticePopup(id: string): void;
   getSupportThreadById(id: string): SupportThreadRecord | null;
   listSupportThreads(): SupportThreadRecord[];
   saveSupportThread(thread: SupportThreadRecord): void;

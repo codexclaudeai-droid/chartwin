@@ -32,6 +32,7 @@ test('admin dashboard sections define the professional sidebar order', () => {
     { label: '개인정보보호정책', href: '#admin-web-info-privacy' },
     { label: '플랜 제공서비스', href: '#admin-plan-services' },
     { label: '공개게시판', href: '#admin-public-board' },
+    { label: '공지팝업', href: '#admin-notice-popup' },
     { label: '입금정보관리', href: '#admin-payment-settings' },
     { label: '포인트관리', href: '#admin-point-settings' },
   ]);
@@ -50,6 +51,7 @@ test('admin dashboard shell maps legacy anchors and deep links to sidebar sectio
   assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info-terms'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info-privacy'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-plan-services'), 'webInfo');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-notice-popup'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-symbols'), 'symbols');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-statistics'), 'statistics');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-sales'), 'sales');
@@ -174,14 +176,17 @@ test('admin refresh controls use the shared icon button', () => {
   assert.match(buttonSource, /admin-refresh-icon-button refresh-icon-button/);
   assert.match(sharedButtonSource, /className=\{className\}/);
   assert.match(sharedButtonSource, /aria-label="새로고침"/);
-  assert.match(sharedButtonSource, /M18\.2 8\.1A7 7 0 1 0 19 15/);
-  assert.match(sharedButtonSource, /M18\.4 3\.8v4\.8h-4\.8/);
+  assert.match(sharedButtonSource, /M7\.2 8\.1A6\.8 6\.8 0 0 1 18\.8 9\.2/);
+  assert.match(sharedButtonSource, /M18\.9 5\.1v4\.1h-4\.1/);
+  assert.match(sharedButtonSource, /M16\.8 15\.9A6\.8 6\.8 0 0 1 5\.2 14\.8/);
+  assert.match(sharedButtonSource, /M5\.1 18\.9v-4\.1h4\.1/);
   assert.match(dashboardSource, /AdminRefreshButton/);
   assert.match(symbolsSource, /AdminRefreshButton/);
   assert.match(supportSource, /RefreshIconButton/);
   assert.match(profileSource, /RefreshIconButton/);
   assert.match(notificationsSource, /RefreshIconButton/);
-  assert.match(cssSource, /\.refresh-icon-button\s*\{[\s\S]*?background:\s*transparent/);
+  assert.match(cssSource, /\.refresh-icon-button\s*\{[\s\S]*?background:\s*rgba\(125, 183, 255, 0\.1\)/);
+  assert.match(cssSource, /\.refresh-icon-button\s*\{[\s\S]*?border:\s*1px solid transparent/);
   assert.match(cssSource, /\.refresh-icon-button svg\s*\{[\s\S]*?height:\s*20px/);
   assert.match(cssSource, /\.toolbar > \.refresh-icon-button\s*\{[\s\S]*?margin-left:\s*auto/);
   assert.match(cssSource, /\.toolbar-actions:has\(\.refresh-icon-button\),[\s\S]*?\.toolbar \.actions\.compact:has\(\.refresh-icon-button\)\s*\{[\s\S]*?margin-left:\s*auto/);

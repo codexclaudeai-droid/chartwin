@@ -30,6 +30,7 @@ export * from './payment-settings.ts';
 export * from './web-info.ts';
 export * from './signup-agreements.ts';
 export * from './public-board.ts';
+export * from './notice-popups.ts';
 export * from './txid-verification.ts';
 export * from './database-schema.ts';
 export * from './postgres-mappers.ts';

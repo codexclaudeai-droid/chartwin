@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { AdminPaymentSettingsPanel } from './admin-payment-settings-panel';
 import { AdminPointSettingsPanel } from './admin-point-settings-panel';
+import { AdminNoticePopupPanel } from './admin-notice-popup-panel';
 import { AdminPublicBoardPanel } from './admin-public-board-panel';
 import { AdminWebInfoPanel } from './admin-web-info-panel';
 
-type WebInfoPageKey = 'terms' | 'privacy' | 'planServices' | 'publicBoard' | 'payments' | 'points';
+type WebInfoPageKey = 'terms' | 'privacy' | 'planServices' | 'publicBoard' | 'noticePopup' | 'payments' | 'points';
 
 const WEB_INFO_SUBMENU: Array<{
   key: WebInfoPageKey;
@@ -17,6 +18,7 @@ const WEB_INFO_SUBMENU: Array<{
   { key: 'privacy', label: '개인정보보호정책', href: '#admin-web-info-privacy' },
   { key: 'planServices', label: '플랜 제공서비스', href: '#admin-plan-services' },
   { key: 'publicBoard', label: '공개게시판', href: '#admin-public-board' },
+  { key: 'noticePopup', label: '공지팝업', href: '#admin-notice-popup' },
   { key: 'payments', label: '입금정보관리', href: '#admin-payment-settings' },
   { key: 'points', label: '포인트관리', href: '#admin-point-settings' },
 ];
@@ -53,6 +55,7 @@ export function AdminWebInfoSection() {
       {activePage === 'privacy' && <AdminWebInfoPanel mode="privacy" />}
       {activePage === 'planServices' && <AdminWebInfoPanel mode="planServices" />}
       {activePage === 'publicBoard' && <AdminPublicBoardPanel />}
+      {activePage === 'noticePopup' && <AdminNoticePopupPanel />}
       {activePage === 'payments' && <AdminPaymentSettingsPanel />}
       {activePage === 'points' && <AdminPointSettingsPanel />}
     </div>
@@ -64,6 +67,7 @@ function getWebInfoPageFromHash(hash: string): WebInfoPageKey {
   if (targetId === 'admin-web-info-privacy') return 'privacy';
   if (targetId === 'admin-plan-services') return 'planServices';
   if (targetId === 'admin-public-board') return 'publicBoard';
+  if (targetId === 'admin-notice-popup') return 'noticePopup';
   if (targetId === 'admin-payment-settings') return 'payments';
   if (targetId === 'admin-point-settings') return 'points';
   return 'terms';

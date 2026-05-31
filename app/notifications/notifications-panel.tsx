@@ -9,7 +9,7 @@ import {
 import { RefreshIconButton } from '../shared/refresh-icon-button';
 import {
   formatNotificationVoiceMessage,
-  speakNotificationVoice,
+  playNotificationVoice,
 } from '../../src/domain/chart-service/notification-voice.ts';
 import {
   NOTIFICATION_FILTER_TABS,
@@ -152,7 +152,7 @@ export function NotificationsPanel() {
     const latestNotification = newUnreadNotifications.at(-1);
     if (!latestNotification) return;
 
-    speakNotificationVoice(formatNotificationVoiceMessage({
+    void playNotificationVoice(formatNotificationVoiceMessage({
       category: latestNotification.category,
       title: normalizeNotificationTitle(latestNotification.title),
       body: latestNotification.body,

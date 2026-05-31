@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { AdminNavLink } from './admin-nav-link';
 import { MobileNav } from './mobile-nav';
 import { NotificationNavLink } from './notification-nav-link';
+import { NoticePopupViewer } from './notice-popup-viewer';
 import { ProfileNavLink } from './profile-nav-link';
 import { SessionNav } from './session-nav';
 import './globals.css';
@@ -67,6 +68,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <MobileNav />
           </header>
           {children}
+          <NoticePopupViewer />
         </div>
       </body>
     </html>

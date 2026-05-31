@@ -17,7 +17,18 @@ type SpeechSynthesisUtteranceConstructor = new (text: string) => SpeechSynthesis
 type NotificationVoiceOptions = {
   speechSynthesis?: SpeechSynthesisLike | null;
   Utterance?: SpeechSynthesisUtteranceConstructor | null;
+  Audio?: (new (src?: string) => HTMLAudioElement) | null;
+  fetch?: typeof fetch | null;
 };
+
+export const STORED_NOTIFICATION_AUDIO_PATHS = {
+  signalBuy: '/audio/notifications/signal-buy.mp3',
+  signalSell: '/audio/notifications/signal-sell.mp3',
+  paymentRequested: '/audio/notifications/payment-requested.mp3',
+  paymentConfirmed: '/audio/notifications/payment-confirmed.mp3',
+  subscriptionApproved: '/audio/notifications/subscription-approved.mp3',
+  supportReplied: '/audio/notifications/support-replied.mp3',
+} as const;
 
 const FEMALE_KOREAN_VOICE_HINTS = [
   'heami',
@@ -83,6 +94,32 @@ export function speakNotificationVoice(message: string, options: NotificationVoi
   }
 }
 
+export async function playNotificationVoice(message: string, options: NotificationVoiceOptions = {}): Promise<boolean> {
+  const text = normalizeVoiceText(message);
+  if (!text) return false;
+
+  const audioPath = getStoredNotificationAudioPath(text);
+  if (audioPath && await tryPlayStoredNotificationAudio(audioPath, options)) {
+    return true;
+  }
+
+  return speakNotificationVoice(text, options);
+}
+
+export function getStoredNotificationAudioPath(message: string): string | null {
+  const text = normalizeVoiceText(message);
+  if (!text) return null;
+
+  if (text === '매수신호발생') return STORED_NOTIFICATION_AUDIO_PATHS.signalBuy;
+  if (text === '매도신호발생') return STORED_NOTIFICATION_AUDIO_PATHS.signalSell;
+  if (includesAny(text, ['입금 확인 요청이 접수'])) return STORED_NOTIFICATION_AUDIO_PATHS.paymentRequested;
+  if (includesAny(text, ['입금 확인이 완료'])) return STORED_NOTIFICATION_AUDIO_PATHS.paymentConfirmed;
+  if (includesAny(text, ['구독 승인이 완료', '구독이 활성화'])) return STORED_NOTIFICATION_AUDIO_PATHS.subscriptionApproved;
+  if (includesAny(text, ['문의 답변이 등록'])) return STORED_NOTIFICATION_AUDIO_PATHS.supportReplied;
+
+  return null;
+}
+
 function getSituationVoiceMessage(notification: VoiceNotificationInput): string | null {
   const title = normalizeVoiceText(notification.title);
   const body = normalizeVoiceText(notification.body ?? '');
@@ -129,6 +166,34 @@ function includesAny(value: string, needles: string[]): boolean {
   return needles.some((needle) => value.includes(needle));
 }
 
+async function tryPlayStoredNotificationAudio(
+  audioPath: string,
+  options: NotificationVoiceOptions,
+): Promise<boolean> {
+  const AudioConstructor = options.Audio ?? getBrowserAudioConstructor();
+  if (!AudioConstructor) return false;
+
+  const fetcher = options.fetch ?? getBrowserFetch();
+  if (fetcher) {
+    try {
+      const response = await fetcher(audioPath, { method: 'HEAD', cache: 'force-cache' });
+      if (!response.ok) return false;
+    } catch {
+      return false;
+    }
+  }
+
+  try {
+    const audio = new AudioConstructor(audioPath);
+    audio.preload = 'auto';
+    audio.volume = 0.95;
+    await audio.play();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function pickWarmKoreanVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
   const koreanVoices = voices.filter((voice) => voice.lang.toLowerCase().startsWith('ko'));
   if (!koreanVoices.length) return null;
@@ -155,4 +220,14 @@ function getBrowserSpeechSynthesis(): SpeechSynthesisLike | null {
 function getBrowserSpeechSynthesisUtterance(): SpeechSynthesisUtteranceConstructor | null {
   if (typeof SpeechSynthesisUtterance === 'undefined') return null;
   return SpeechSynthesisUtterance;
+}
+
+function getBrowserAudioConstructor(): (new (src?: string) => HTMLAudioElement) | null {
+  if (typeof Audio === 'undefined') return null;
+  return Audio;
+}
+
+function getBrowserFetch(): typeof fetch | null {
+  if (typeof fetch === 'undefined') return null;
+  return fetch;
 }

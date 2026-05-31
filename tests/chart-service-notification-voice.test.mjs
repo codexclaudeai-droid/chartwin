@@ -4,11 +4,16 @@ import test from 'node:test';
 test('notification voice formats signal messages and speaks with softer Korean settings', async () => {
   const {
     formatSignalVoiceMessage,
+    getStoredNotificationAudioPath,
+    playNotificationVoice,
     speakNotificationVoice,
+    STORED_NOTIFICATION_AUDIO_PATHS,
   } = await import('../src/domain/chart-service/notification-voice.ts');
 
   assert.equal(formatSignalVoiceMessage('LONG'), '매수신호발생');
   assert.equal(formatSignalVoiceMessage('SHORT'), '매도신호발생');
+  assert.equal(getStoredNotificationAudioPath('매수신호발생'), STORED_NOTIFICATION_AUDIO_PATHS.signalBuy);
+  assert.equal(getStoredNotificationAudioPath('매도신호발생'), STORED_NOTIFICATION_AUDIO_PATHS.signalSell);
 
   const calls = [];
   const spoken = [];
@@ -46,6 +51,32 @@ test('notification voice formats signal messages and speaks with softer Korean s
   assert.equal(spoken[0].pitch, 1.18);
   assert.equal(spoken[0].volume, 0.95);
   assert.equal(spoken[0].voice, voices[1]);
+
+  const audioCalls = [];
+  class FakeAudio {
+    constructor(src) {
+      this.src = src;
+      audioCalls.push(['audio', src]);
+    }
+
+    async play() {
+      audioCalls.push(['play', this.src]);
+    }
+  }
+  const didPlayStoredAudio = await playNotificationVoice('매수신호발생', {
+    Audio: FakeAudio,
+    fetch: async (url, init) => {
+      audioCalls.push(['fetch', url, init.method]);
+      return { ok: true };
+    },
+  });
+
+  assert.equal(didPlayStoredAudio, true);
+  assert.deepEqual(audioCalls, [
+    ['fetch', STORED_NOTIFICATION_AUDIO_PATHS.signalBuy, 'HEAD'],
+    ['audio', STORED_NOTIFICATION_AUDIO_PATHS.signalBuy],
+    ['play', STORED_NOTIFICATION_AUDIO_PATHS.signalBuy],
+  ]);
 });
 
 test('notification voice reads service notifications by situation', async () => {

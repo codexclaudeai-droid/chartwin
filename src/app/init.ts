@@ -80,7 +80,7 @@ import {
 import { type PatternAnalysisScope } from '../patterns/pattern-detector';
 import {
   formatSignalVoiceMessage,
-  speakNotificationVoice,
+  playNotificationVoice,
 } from '../domain/chart-service/notification-voice';
 import type { CandleData } from '../types';
 import type { DisplayCurrency } from '../types/market';
@@ -2643,7 +2643,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     };
     ensureSignalNoticeStyle();
     const speakSignalNotice = (side: 'LONG' | 'SHORT') => {
-      speakNotificationVoice(formatSignalVoiceMessage(side));
+      void playNotificationVoice(formatSignalVoiceMessage(side));
     };
     const formatSignalNoticePrice = (symbol: string, value: number): string => {
       if (!Number.isFinite(value)) return '-';

@@ -31,6 +31,8 @@ import {
   mapPaymentToPostgresRow,
   mapPaymentTransferSettingsFromPostgresRow,
   mapPaymentTransferSettingsToPostgresRow,
+  mapNoticePopupFromPostgresRow,
+  mapNoticePopupToPostgresRow,
   mapPlanFromPostgresRow,
   mapPlanToPostgresRow,
   mapPublicBoardPostFromPostgresRow,
@@ -65,6 +67,7 @@ import type {
   EmailOutboxRecord,
   PasswordResetTokenRecord,
   PaymentTransferSettingsRecord,
+  NoticePopupRecord,
   PublicBoardPostRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
@@ -312,6 +315,22 @@ export function createPostgresAsyncChartServiceRepository(
         mapPublicBoardPostToPostgresRow(post),
         ['id'],
       ));
+    },
+    async listNoticePopups(): Promise<NoticePopupRecord[]> {
+      return selectMany('notice_popups', mapNoticePopupFromPostgresRow, {}, {
+        orderBy: ['sort_order', 'updated_at'],
+        direction: 'asc',
+      });
+    },
+    async saveNoticePopup(popup: NoticePopupRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'notice_popups',
+        mapNoticePopupToPostgresRow(popup),
+        ['id'],
+      ));
+    },
+    async deleteNoticePopup(id: string): Promise<void> {
+      await execute(createPostgresDeleteStatement('notice_popups', { id }));
     },
     async getSupportThreadById(id: string): Promise<SupportThreadRecord | null> {
       return selectOne('support_threads', mapSupportThreadFromPostgresRow, { id });

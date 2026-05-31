@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { PublicBoardPostRecord } from '../../src/server/chart-service/repository.ts';
+import { NumberStepper } from '../shared/number-stepper';
 import { AdminRefreshButton } from './admin-refresh-button';
 import { dispatchAdminRefreshEvent } from './admin-refresh-events';
 
@@ -103,11 +104,11 @@ export function AdminPublicBoardPanel() {
               </label>
               <label htmlFor={`${post.id}-sort-order`}>
                 표시 순서
-                <input
+                <NumberStepper
                   id={`${post.id}-sort-order`}
-                  type="number"
                   value={post.sortOrder}
-                  onChange={(event) => updatePost(post.id, { sortOrder: Number(event.target.value) })}
+                  onChange={(sortOrder) => updatePost(post.id, { sortOrder })}
+                  step={1}
                 />
               </label>
               <label className="inline-check" htmlFor={`${post.id}-published`}>

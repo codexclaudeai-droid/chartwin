@@ -13,6 +13,7 @@ import {
 import type {
   ChartUserSettingsRecord,
   ChartServiceRepository,
+  NoticePopupRecord,
   PaymentTransferSettingsRecord,
   PublicBoardPostRecord,
   SalesTeamRecord,
@@ -77,6 +78,9 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
     typeof persistence.repository.savePaymentTransferSettings === 'function' &&
     typeof persistence.repository.listPublicBoardPosts === 'function' &&
     typeof persistence.repository.savePublicBoardPost === 'function' &&
+    typeof persistence.repository.listNoticePopups === 'function' &&
+    typeof persistence.repository.saveNoticePopup === 'function' &&
+    typeof persistence.repository.deleteNoticePopup === 'function' &&
     typeof persistence.repository.listSignupAgreementsByUserId === 'function' &&
     typeof persistence.repository.saveSignupAgreement === 'function' &&
     typeof persistence.repository.getChartUserSettings === 'function' &&
@@ -91,6 +95,9 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
 
 function hasMemoryRepositoryCapabilities(repository: ChartServiceRepository): boolean {
   return typeof repository.getSupportMessageById === 'function' &&
+    typeof repository.listNoticePopups === 'function' &&
+    typeof repository.saveNoticePopup === 'function' &&
+    typeof repository.deleteNoticePopup === 'function' &&
     typeof repository.getChartUserSettings === 'function' &&
     typeof repository.saveChartUserSettings === 'function' &&
     typeof repository.getSignalAdminSettings === 'function' &&
@@ -110,6 +117,7 @@ function copyRecoverableMemoryRepositoryRecords(
   copyRecords(source.listPayments, target.savePayment);
   copyRecords(source.listSalesTeams, target.saveSalesTeam);
   copyRecords(source.listPublicBoardPosts, target.savePublicBoardPost);
+  copyRecords(source.listNoticePopups, target.saveNoticePopup);
   copyRecords(source.listSupportThreads, target.saveSupportThread);
   copyRecords(source.listAuditLogs, target.appendAuditLog);
   copyRecords(() => source.listEmailOutboxRecords?.() ?? [], target.saveEmailOutboxRecord);
@@ -174,6 +182,7 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
     __fallbackSignalAdminSettings?: SignalAdminSettingsRecord[];
     __fallbackPaymentTransferSettings?: PaymentTransferSettingsRecord | null;
     __fallbackPublicBoardPosts?: PublicBoardPostRecord[];
+    __fallbackNoticePopups?: NoticePopupRecord[];
     __fallbackSignupAgreements?: SignupAgreementRecord[];
   };
 
@@ -182,6 +191,7 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
   mutableRepository.__fallbackSignalAdminSettings ??= [];
   mutableRepository.__fallbackPaymentTransferSettings ??= null;
   mutableRepository.__fallbackPublicBoardPosts ??= getDefaultPublicBoardPosts();
+  mutableRepository.__fallbackNoticePopups ??= [];
   mutableRepository.__fallbackSignupAgreements ??= [];
 
   if (typeof mutableRepository.listSalesTeams !== 'function') {
@@ -233,6 +243,32 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
         posts.push(structuredClone(post));
       }
       mutableRepository.__fallbackPublicBoardPosts = posts;
+    };
+  }
+
+  if (typeof mutableRepository.listNoticePopups !== 'function') {
+    mutableRepository.listNoticePopups = () => (
+      mutableRepository.__fallbackNoticePopups ?? []
+    ).map((popup) => structuredClone(popup));
+  }
+
+  if (typeof mutableRepository.saveNoticePopup !== 'function') {
+    mutableRepository.saveNoticePopup = (popup) => {
+      const popups = mutableRepository.__fallbackNoticePopups ?? [];
+      const index = popups.findIndex((item) => item.id === popup.id);
+      if (index >= 0) {
+        popups[index] = structuredClone(popup);
+      } else {
+        popups.push(structuredClone(popup));
+      }
+      mutableRepository.__fallbackNoticePopups = popups;
+    };
+  }
+
+  if (typeof mutableRepository.deleteNoticePopup !== 'function') {
+    mutableRepository.deleteNoticePopup = (id) => {
+      mutableRepository.__fallbackNoticePopups = (mutableRepository.__fallbackNoticePopups ?? [])
+        .filter((popup) => popup.id !== id);
     };
   }
 

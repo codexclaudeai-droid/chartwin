@@ -21,6 +21,7 @@ import type {
   EmailOutboxFilter,
   PasswordResetTokenRecord,
   PaymentTransferSettingsRecord,
+  NoticePopupRecord,
   PublicBoardPostRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
@@ -51,6 +52,7 @@ export type MockChartServiceState = {
   signalAdminSettings: SignalAdminSettingsRecord[];
   signupAgreements: SignupAgreementRecord[];
   publicBoardPosts: PublicBoardPostRecord[];
+  noticePopups: NoticePopupRecord[];
   referralLedgers: ReferralLedgerRecord[];
   supportThreads: SupportThreadRecord[];
   supportMessages: SupportMessageRecord[];
@@ -129,6 +131,7 @@ export function createMockChartServiceState(): MockChartServiceState {
     signalAdminSettings: [],
     signupAgreements: [],
     publicBoardPosts: getDefaultPublicBoardPosts(),
+    noticePopups: [],
     referralLedgers: [
       {
         id: 'ref_ledger_pending',
@@ -212,6 +215,7 @@ export function createMockChartServiceRepository(
   state.signalAdminSettings ??= [];
   state.signupAgreements ??= [];
   state.publicBoardPosts ??= getDefaultPublicBoardPosts();
+  state.noticePopups ??= [];
 
   return {
     nextId(prefix: string): string {
@@ -327,6 +331,13 @@ export function createMockChartServiceRepository(
     listPublicBoardPosts: () => state.publicBoardPosts.map((post) => structuredClone(post)),
     savePublicBoardPost(post) {
       upsertById(state.publicBoardPosts, post);
+    },
+    listNoticePopups: () => state.noticePopups.map((popup) => structuredClone(popup)),
+    saveNoticePopup(popup) {
+      upsertById(state.noticePopups, popup);
+    },
+    deleteNoticePopup(id) {
+      state.noticePopups = state.noticePopups.filter((popup) => popup.id !== id);
     },
     getSupportThreadById: (id) => cloneOrNull(state.supportThreads.find((thread) => thread.id === id)),
     listSupportThreads: () => state.supportThreads.map((thread) => ({ ...thread })),
