@@ -9911,6 +9911,140 @@ body:has(.chart-runtime-page) .chart-runtime-page {
   height: 100vh;
 }
 
+body:not(:has(.landing-page)) .chart-preview-page {
+  align-items: center;
+  background:
+    radial-gradient(circle at 50% 52%, rgba(76, 141, 255, 0.2), transparent 28vw),
+    radial-gradient(circle at 50% 50%, rgba(86, 240, 255, 0.08), transparent 36vw),
+    #020713;
+  color: #ffffff;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  height: 100vh;
+  justify-items: center;
+  overflow: hidden;
+  padding: clamp(24px, 5vw, 56px);
+  position: relative;
+}
+
+body:not(:has(.landing-page)) .chart-preview-canvas {
+  inset: 0;
+  position: absolute;
+  z-index: 0;
+}
+
+body:not(:has(.landing-page)) .chart-preview-canvas canvas {
+  display: block;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+body:not(:has(.landing-page)) .chart-preview-content {
+  align-self: center;
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  max-width: min(720px, 100%);
+  opacity: 0;
+  position: relative;
+  text-align: center;
+  transform: translateY(10px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+  z-index: 1;
+}
+
+body:not(:has(.landing-page)) .chart-preview-page.ready .chart-preview-content {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+body:not(:has(.landing-page)) .chart-preview-logo {
+  height: auto;
+  max-height: clamp(62px, 10vw, 118px);
+  max-width: min(340px, 72vw);
+  object-fit: contain;
+  width: auto;
+}
+
+body:not(:has(.landing-page)) .chart-preview-content h1 {
+  color: #f7fbff;
+  font-size: clamp(30px, 5vw, 62px);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.08;
+  margin: 0;
+  text-shadow: 0 12px 44px rgba(2, 7, 19, 0.72);
+}
+
+body:not(:has(.landing-page)) .chart-preview-content p {
+  color: rgba(216, 236, 255, 0.78);
+  font-size: clamp(15px, 2vw, 19px);
+  font-weight: 650;
+  line-height: 1.62;
+  margin: 0;
+  max-width: 560px;
+  text-shadow: 0 10px 28px rgba(2, 7, 19, 0.82);
+}
+
+body:not(:has(.landing-page)) .chart-preview-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  opacity: 0;
+  position: relative;
+  transform: translateY(10px);
+  transition: opacity 0.65s ease 0.15s, transform 0.65s ease 0.15s;
+  z-index: 1;
+}
+
+body:not(:has(.landing-page)) .chart-preview-page.ready .chart-preview-actions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+body:not(:has(.landing-page)) .chart-preview-actions .button {
+  border-radius: 999px;
+  justify-content: center;
+  min-height: 46px;
+  min-width: 138px;
+  padding-inline: 22px;
+}
+
+body:not(:has(.landing-page)) .chart-preview-primary {
+  border-color: rgba(86, 240, 255, 0.72);
+  background: linear-gradient(180deg, #62efff, #347dff);
+  box-shadow: 0 0 30px rgba(76, 141, 255, 0.28);
+  color: #020713;
+}
+
+body:not(:has(.landing-page)) .chart-preview-secondary {
+  border-color: rgba(216, 236, 255, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+  color: #eef7ff;
+}
+
+body:has(.chart-preview-page) .topbar {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  body:not(:has(.landing-page)) .chart-preview-page {
+    padding: 22px;
+  }
+
+  body:not(:has(.landing-page)) .chart-preview-actions {
+    align-self: end;
+    display: grid;
+    width: min(100%, 360px);
+  }
+
+  body:not(:has(.landing-page)) .chart-preview-actions .button {
+    width: 100%;
+  }
+}
+
 body:not(:has(.landing-page)) .auth-hero,
 body:not(:has(.landing-page)) .support-page-hero,
 body:not(:has(.landing-page)) .notifications-page-hero,

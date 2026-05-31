@@ -10,6 +10,10 @@ type FreeTrialRequestButtonProps = {
   loginHref?: string;
   signupHref?: string;
   returnHref?: string;
+  confirmTitle?: string;
+  confirmDescription?: string;
+  confirmActionLabel?: string;
+  confirmCancelLabel?: string;
 };
 
 type TrialRequestPayload = {
@@ -30,10 +34,29 @@ export function FreeTrialRequestButton({
   loginHref = '/login?redirect=/',
   signupHref = '/signup?redirect=/',
   returnHref = '/',
+  confirmTitle,
+  confirmDescription,
+  confirmActionLabel = '진행하기',
+  confirmCancelLabel = '취소',
 }: FreeTrialRequestButtonProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [showConfirmPrompt, setShowConfirmPrompt] = useState(false);
   const [resultModal, setResultModal] = useState<ResultModalState | null>(null);
+
+  function handleClick() {
+    if (confirmTitle && confirmDescription) {
+      setShowConfirmPrompt(true);
+      return;
+    }
+
+    void requestTrial();
+  }
+
+  function confirmAndRequestTrial() {
+    setShowConfirmPrompt(false);
+    void requestTrial();
+  }
 
   async function requestTrial() {
     setIsSubmitting(true);
@@ -76,9 +99,31 @@ export function FreeTrialRequestButton({
 
   return (
     <>
-      <button className={className} type="button" onClick={requestTrial} disabled={isSubmitting}>
+      <button className={className} type="button" onClick={handleClick} disabled={isSubmitting}>
         {isSubmitting ? '처리 중' : children}
       </button>
+      {showConfirmPrompt ? (
+        <div className="pricing-auth-modal-backdrop" role="presentation" onClick={() => setShowConfirmPrompt(false)}>
+          <div
+            aria-labelledby="free-trial-confirm-title"
+            aria-modal="true"
+            className="pricing-auth-modal"
+            role="dialog"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="free-trial-confirm-title">{confirmTitle}</h3>
+            <p>{confirmDescription}</p>
+            <div className="pricing-auth-modal-actions">
+              <button className="button secondary" type="button" onClick={() => setShowConfirmPrompt(false)}>
+                {confirmCancelLabel}
+              </button>
+              <button className="button" type="button" onClick={confirmAndRequestTrial}>
+                {confirmActionLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {showAuthPrompt ? (
         <AuthPromptModal
           title="무료체험 신청은 로그인이 필요합니다"

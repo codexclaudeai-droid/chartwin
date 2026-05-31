@@ -1,11 +1,11 @@
 import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
 import {
   getActorFromAsyncRequest,
   getAsyncChartAccessSnapshot,
   getAsyncChartServicePersistence,
 } from '../../src/server/chart-service/index.ts';
 import { FreeTrialRequestButton } from '../shared/free-trial-request-button';
+import { ChartAccessPreview } from './chart-access-preview';
 import { ChartRuntime } from './chart-runtime';
 
 export const dynamic = 'force-dynamic';
@@ -42,6 +42,6 @@ export default async function ChartPage() {
       </main>
     );
   } catch {
-    redirect('/login?redirect=/chart');
+    return <ChartAccessPreview />;
   }
 }

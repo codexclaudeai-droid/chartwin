@@ -18,9 +18,9 @@ export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageP
     <main className="page auth-page">
       <section className="card auth-card">
         <span className="eyebrow">Email Verification</span>
-        <h1>{result.ok ? '이메일 인증이 완료되었습니다' : '이메일 인증을 완료하지 못했습니다'}</h1>
+        <h1>{result.ok === true ? '이메일 인증이 완료되었습니다' : '이메일 인증을 완료하지 못했습니다'}</h1>
         <p className="lede">
-          {result.ok
+          {result.ok === true
             ? `${result.email} 계정의 이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다.`
             : result.message}
         </p>
@@ -28,7 +28,7 @@ export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageP
           <Link className="button" href="/login">로그인하러 가기</Link>
           <Link className="button secondary" href="/signup">회원가입으로 돌아가기</Link>
         </div>
-        {!result.ok && <VerifyEmailResendForm />}
+        {result.ok !== true && <VerifyEmailResendForm />}
       </section>
     </main>
   );
