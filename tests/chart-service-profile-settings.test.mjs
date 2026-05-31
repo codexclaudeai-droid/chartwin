@@ -436,7 +436,7 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(panelSource, /기본 아바타 선택/);
   assert.match(panelSource, /남성/);
   assert.match(panelSource, /여성/);
-  assert.match(panelSource, /프로필 이미지 저장/);
+  assert.match(panelSource, /프로필 이미지 적용/);
   assert.match(panelSource, /profile-image-save-button/);
   assert.match(panelSource, /profile-image-file-row/);
   assert.match(panelSource, /profile-image-file-help/);

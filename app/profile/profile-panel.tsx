@@ -639,7 +639,7 @@ export function ProfilePanel() {
               선택 파일: {selectedImageFile.name} / {selectedImageFile.type || 'unknown'} / {selectedImageFile.size} bytes
             </p>
           )}
-          <button className="button secondary profile-image-save-button" type="submit" disabled={isBusy}>프로필 이미지 저장</button>
+          <button className="button secondary profile-image-save-button" type="submit" disabled={isBusy}>프로필 이미지 적용</button>
         </form>
         {canWithdraw && (
           <div className="profile-danger-zone">
