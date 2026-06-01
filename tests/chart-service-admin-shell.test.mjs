@@ -187,10 +187,10 @@ test('admin refresh controls use the shared icon button', () => {
   assert.match(sharedButtonSource, /setIsRefreshing\(true\)/);
   assert.match(sharedButtonSource, /window\.setTimeout/);
   assert.match(sharedButtonSource, /aria-label="새로고침"/);
-  assert.match(sharedButtonSource, /M7\.2 8\.1A6\.8 6\.8 0 0 1 18\.8 9\.2/);
-  assert.match(sharedButtonSource, /M18\.9 5\.1v4\.1h-4\.1/);
-  assert.match(sharedButtonSource, /M16\.8 15\.9A6\.8 6\.8 0 0 1 5\.2 14\.8/);
-  assert.match(sharedButtonSource, /M5\.1 18\.9v-4\.1h4\.1/);
+  assert.match(sharedButtonSource, /M19\.2 6\.8v4\.8h-4\.8/);
+  assert.match(sharedButtonSource, /M18\.5 11\.6a6\.5 6\.5 0 1 1-1\.9-4\.6/);
+  assert.doesNotMatch(sharedButtonSource, /M7\.2 8\.1A6\.8 6\.8 0 0 1 18\.8 9\.2/);
+  assert.doesNotMatch(sharedButtonSource, /M5\.1 18\.9v-4\.1h4\.1/);
   assert.match(dashboardSource, /AdminRefreshButton/);
   assert.match(symbolsSource, /AdminRefreshButton/);
   assert.match(supportSource, /RefreshIconButton/);
@@ -201,7 +201,10 @@ test('admin refresh controls use the shared icon button', () => {
   assert.match(cssSource, /\.refresh-icon-button\s*\{[\s\S]*?background:\s*rgba\(125, 183, 255, 0\.1\)/);
   assert.match(cssSource, /\.refresh-icon-button\s*\{[\s\S]*?border:\s*1px solid transparent/);
   assert.match(cssSource, /\.refresh-icon-button svg\s*\{[\s\S]*?height:\s*20px/);
+  assert.match(cssSource, /\.refresh-icon-button svg\s*\{[\s\S]*?transition:\s*transform 160ms cubic-bezier\(0\.2, 0\.8, 0\.2, 1\)/);
   assert.match(cssSource, /\.refresh-icon-button--spinning svg\s*\{[\s\S]*?animation:\s*refresh-icon-button-spin 520ms cubic-bezier\(0\.2, 0\.8, 0\.2, 1\)/);
+  assert.match(cssSource, /\.refresh-icon-button:active:not\(:disabled\) svg\s*\{[\s\S]*?transform:\s*rotate\(90deg\) scale\(0\.94\)/);
+  assert.doesNotMatch(cssSource, /\.refresh-icon-button:focus-visible:not\(:disabled\)\s*\{[\s\S]*?transform:\s*rotate\(18deg\)/);
   assert.match(cssSource, /@keyframes refresh-icon-button-spin[\s\S]*?to\s*\{[\s\S]*?transform:\s*rotate\(360deg\)/);
   assert.match(cssSource, /\.toolbar > \.refresh-icon-button\s*\{[\s\S]*?margin-left:\s*auto/);
   assert.match(cssSource, /\.toolbar-actions:has\(\.refresh-icon-button\),[\s\S]*?\.toolbar \.actions\.compact:has\(\.refresh-icon-button\)\s*\{[\s\S]*?margin-left:\s*auto/);

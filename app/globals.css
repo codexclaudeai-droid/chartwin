@@ -9439,6 +9439,7 @@ body:not(:has(.landing-page)) .toolbar .actions.compact > .refresh-icon-button {
 body:not(:has(.landing-page)) .refresh-icon-button svg {
   height: 20px;
   transform-origin: center;
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
   width: 20px;
 }
 
@@ -9446,12 +9447,15 @@ body:not(:has(.landing-page)) .refresh-icon-button--spinning svg {
   animation: refresh-icon-button-spin 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+body:not(:has(.landing-page)) .refresh-icon-button:active:not(:disabled) svg {
+  transform: rotate(90deg) scale(0.94);
+}
+
 body:not(:has(.landing-page)) .refresh-icon-button:hover:not(:disabled),
 body:not(:has(.landing-page)) .refresh-icon-button:focus-visible:not(:disabled) {
   border-color: transparent;
   background: rgba(125, 183, 255, 0.18);
   color: #ffffff;
-  transform: rotate(18deg);
 }
 
 @keyframes refresh-icon-button-spin {
