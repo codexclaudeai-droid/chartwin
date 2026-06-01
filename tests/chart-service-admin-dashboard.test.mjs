@@ -136,3 +136,36 @@ test('admin dashboard summary cards route directly to each operation filter', ()
   assert.match(dashboardSource, /href="#admin-users"/);
   assert.match(dashboardSource, /dispatchAdminQueuePresetEvent\(\{\s*panel: 'users',\s*presetKey: 'suspended',\s*\}\)/);
 });
+
+test('admin dashboard operation cards use large contextual background marks', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const summaryCardRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-overview \.dashboard-summary-card\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const operationMarkRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-overview \.dashboard-payment-card::after,[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-overview \.dashboard-audit-card::after\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(summaryCardRule, /position:\s*relative/);
+  assert.match(summaryCardRule, /overflow:\s*hidden/);
+  assert.match(cssSource, /dashboard-payment-card::after/);
+  assert.match(cssSource, /dashboard-subscription-card::after/);
+  assert.match(cssSource, /dashboard-support-card::after/);
+  assert.match(cssSource, /dashboard-user-card::after/);
+  assert.match(cssSource, /dashboard-audit-card::after/);
+  assert.match(operationMarkRule, /height:\s*96px/);
+  assert.match(operationMarkRule, /width:\s*96px/);
+  assert.match(operationMarkRule, /right:\s*18px/);
+  assert.match(operationMarkRule, /z-index:\s*0/);
+  assert.match(cssSource, /dashboard-payment-card::after\s*\{[\s\S]*?mask:\s*url\("data:image\/svg\+xml/);
+  assert.match(cssSource, /dashboard-subscription-card::after\s*\{[\s\S]*?mask:\s*url\("data:image\/svg\+xml/);
+  assert.match(cssSource, /dashboard-subscription-card::after\s*\{[\s\S]*?M11 10v4h4/);
+  assert.match(cssSource, /dashboard-support-card::after\s*\{[\s\S]*?mask:\s*url\("data:image\/svg\+xml/);
+  assert.match(cssSource, /dashboard-support-card::after\s*\{[\s\S]*?-webkit-mask:\s*url\("data:image\/svg\+xml/);
+  assert.match(cssSource, /dashboard-support-card::after\s*\{[\s\S]*?M10 22C14\.4183 22/);
+  assert.match(cssSource, /dashboard-support-card::after\s*\{[\s\S]*?M18 14\.5018/);
+  assert.match(cssSource, /dashboard-support-card::after\s*\{[\s\S]*?M6\.51828 14H6\.52728/);
+  assert.match(cssSource, /dashboard-support-card::after\s*\{[\s\S]*?background:\s*rgba\(125, 183, 255, 0\.17\)/);
+  assert.match(cssSource, /dashboard-user-card::after\s*\{[\s\S]*?mask:\s*url\("data:image\/svg\+xml/);
+  assert.match(cssSource, /dashboard-audit-card::after\s*\{[\s\S]*?mask:\s*url\("data:image\/svg\+xml/);
+});

@@ -611,6 +611,23 @@ test('admin support reply edit and delete controls move into top-right icon butt
   assert.match(styleSource, /#admin-support \.admin-support-reply-icon-button\s*\{[\s\S]*?width: 30px/);
 });
 
+test('support panels indent admin replies with a return arrow marker', () => {
+  const supportSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const adminSource = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(supportSource, /support-admin-reply-line/);
+  assert.match(supportSource, /support-admin-reply-enter-icon/);
+  assert.match(supportSource, /support-admin-reply-copy/);
+  assert.match(adminSource, /admin-support-reply-enter-icon/);
+  assert.match(adminSource, /admin-support-message-content/);
+  assert.match(supportSource, /M15 10l4 4-4 4/);
+  assert.match(adminSource, /M15 10l4 4-4 4/);
+  assert.match(styleSource, /\.support-message-list \.support-admin-reply-line\s*\{[\s\S]*?grid-template-columns: 20px minmax\(0, 1fr\)/);
+  assert.match(styleSource, /#admin-support \.admin-support-admin-reply\s*\{[\s\S]*?grid-template-columns: 20px minmax\(0, 1fr\)/);
+  assert.match(styleSource, /\.support-admin-reply-enter-icon svg,[\s\S]*?#admin-support \.admin-support-reply-enter-icon svg\s*\{[\s\S]*?stroke-linejoin: round/);
+});
+
 test('member support panel supports notification deep links to a thread', () => {
   const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
   const pageSource = fs.readFileSync(new URL('../app/support/page.tsx', import.meta.url), 'utf8');

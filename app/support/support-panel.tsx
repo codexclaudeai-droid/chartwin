@@ -512,9 +512,21 @@ export function SupportPanel() {
                     id={`support-messages-${item.thread.id}`}
                   >
                     {item.messages.map((threadMessage) => (
-                      <p className={threadMessage.isAdminReply ? 'admin-reply' : undefined} key={threadMessage.id}>
-                        {threadMessage.isAdminReply ? '관리자 답변: ' : '문의 내용: '}
-                        {formatSupportMessageDisplayBody(item.thread, threadMessage.body)}
+                      <p className={threadMessage.isAdminReply ? 'admin-reply support-admin-reply-line' : undefined} key={threadMessage.id}>
+                        {threadMessage.isAdminReply ? (
+                          <>
+                            <SupportReplyReturnIcon className="support-admin-reply-enter-icon" />
+                            <span className="support-admin-reply-copy">
+                              <strong>관리자 답변</strong>
+                              <span>{formatSupportMessageDisplayBody(item.thread, threadMessage.body)}</span>
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <strong>문의 내용</strong>
+                            <span>{formatSupportMessageDisplayBody(item.thread, threadMessage.body)}</span>
+                          </>
+                        )}
                       </p>
                     ))}
                   </div>
@@ -557,6 +569,17 @@ function getSupportMessageDisplayBody(thread: SupportThreadListItem['thread'], b
 }
 
 const formatSupportMessageDisplayBody = getSupportMessageDisplayBody;
+
+function SupportReplyReturnIcon({ className }: { className: string }) {
+  return (
+    <span className={className} aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M15 10l4 4-4 4" />
+        <path d="M19 14H9a4 4 0 0 1-4-4V5" />
+      </svg>
+    </span>
+  );
+}
 
 function PrivateSupportThreadLockIcon() {
   return (

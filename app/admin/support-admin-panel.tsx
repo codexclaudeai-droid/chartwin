@@ -480,49 +480,52 @@ export function SupportAdminPanel() {
                     className={threadMessage.isAdminReply ? 'admin-support-message admin-support-admin-reply' : 'admin-support-message'}
                     key={threadMessage.id}
                   >
-                    <div className="admin-support-message-heading">
-                      <strong>{threadMessage.isAdminReply ? '관리자' : '문의'}</strong>
-                      {threadMessage.isAdminReply ? (
-                        <div className="admin-support-reply-icon-actions" role="group" aria-label="관리자 답변 관리">
-                          <IconButton
-                            className="admin-support-reply-icon-button action-icon-button edit"
-                            label="관리자 답변 수정"
-                            onClick={() => startReplyEdit(threadMessage)}
-                            disabled={isBusy}
-                          >
-                            <EditActionIcon />
-                          </IconButton>
-                          <IconButton
-                            className="admin-support-reply-icon-button action-icon-button delete"
-                            label="관리자 답변 삭제"
-                            onClick={() => void deleteReply(threadMessage.id, item.thread.id)}
-                            disabled={isBusy}
-                          >
-                            <DeleteActionIcon />
-                          </IconButton>
+                    {threadMessage.isAdminReply ? <SupportReplyReturnIcon className="admin-support-reply-enter-icon" /> : null}
+                    <div className="admin-support-message-content">
+                      <div className="admin-support-message-heading">
+                        <strong>{threadMessage.isAdminReply ? '관리자' : '문의'}</strong>
+                        {threadMessage.isAdminReply ? (
+                          <div className="admin-support-reply-icon-actions" role="group" aria-label="관리자 답변 관리">
+                            <IconButton
+                              className="admin-support-reply-icon-button action-icon-button edit"
+                              label="관리자 답변 수정"
+                              onClick={() => startReplyEdit(threadMessage)}
+                              disabled={isBusy}
+                            >
+                              <EditActionIcon />
+                            </IconButton>
+                            <IconButton
+                              className="admin-support-reply-icon-button action-icon-button delete"
+                              label="관리자 답변 삭제"
+                              onClick={() => void deleteReply(threadMessage.id, item.thread.id)}
+                              disabled={isBusy}
+                            >
+                              <DeleteActionIcon />
+                            </IconButton>
+                          </div>
+                        ) : null}
+                      </div>
+                      <span className="admin-support-message-body">{threadMessage.body}</span>
+                      {threadMessage.isAdminReply && isEditingReply ? (
+                        <div className="admin-support-reply-edit-panel">
+                          <textarea
+                            value={replyEditDraft}
+                            onChange={(event) => setReplyEditById((current) => ({
+                              ...current,
+                              [threadMessage.id]: event.target.value,
+                            }))}
+                          />
+                          <div className="admin-support-reply-edit-actions">
+                            <button className="button" type="button" onClick={() => void saveReplyEdit(threadMessage.id, item.thread.id)} disabled={isBusy}>
+                              저장
+                            </button>
+                            <button className="button secondary" type="button" onClick={() => setEditingReplyId(null)} disabled={isBusy}>
+                              취소
+                            </button>
+                          </div>
                         </div>
                       ) : null}
                     </div>
-                    <span className="admin-support-message-body">{threadMessage.body}</span>
-                    {threadMessage.isAdminReply && isEditingReply ? (
-                      <div className="admin-support-reply-edit-panel">
-                        <textarea
-                          value={replyEditDraft}
-                          onChange={(event) => setReplyEditById((current) => ({
-                            ...current,
-                            [threadMessage.id]: event.target.value,
-                          }))}
-                        />
-                        <div className="admin-support-reply-edit-actions">
-                          <button className="button" type="button" onClick={() => void saveReplyEdit(threadMessage.id, item.thread.id)} disabled={isBusy}>
-                            저장
-                          </button>
-                          <button className="button secondary" type="button" onClick={() => setEditingReplyId(null)} disabled={isBusy}>
-                            취소
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
                   </article>
                 );
               })}
@@ -574,6 +577,17 @@ function formatDateTime(value: string): string {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function SupportReplyReturnIcon({ className }: { className: string }) {
+  return (
+    <span className={className} aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M15 10l4 4-4 4" />
+        <path d="M19 14H9a4 4 0 0 1-4-4V5" />
+      </svg>
+    </span>
+  );
 }
 
 function PrivateSupportThreadLockIcon() {
