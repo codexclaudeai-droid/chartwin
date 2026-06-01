@@ -71,7 +71,7 @@ export function MobileNav() {
           </Link>
           <Link href="/#landing-plans">
             <span className="mobile-nav-link-icon" aria-hidden="true"><ReceiptText /></span>
-            <span className="mobile-nav-link-label">구독</span>
+            <span className="mobile-nav-link-label">구독플랜</span>
           </Link>
           <Link href="/support">
             <span className="mobile-nav-link-icon" aria-hidden="true"><Headset /></span>

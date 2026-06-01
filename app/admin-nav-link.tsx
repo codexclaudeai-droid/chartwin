@@ -46,7 +46,7 @@ export function AdminNavLink() {
   return (
     <Link href="/admin">
       <span className="mobile-nav-link-icon" aria-hidden="true"><ShieldCheck /></span>
-      <span className="mobile-nav-link-label">관리자</span>
+      <span className="mobile-nav-link-label">관리대시보드</span>
     </Link>
   );
 }

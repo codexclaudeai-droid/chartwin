@@ -309,10 +309,10 @@ test('admin refresh controls use the shared icon button', () => {
   assert.match(sharedButtonSource, /setIsRefreshing\(true\)/);
   assert.match(sharedButtonSource, /window\.setTimeout/);
   assert.match(sharedButtonSource, /aria-label="새로고침"/);
-  assert.match(sharedButtonSource, /M7\.2 8\.1A6\.8 6\.8 0 0 1 18\.8 9\.2/);
-  assert.match(sharedButtonSource, /M18\.9 5\.1v4\.1h-4\.1/);
-  assert.match(sharedButtonSource, /M16\.8 15\.9A6\.8 6\.8 0 0 1 5\.2 14\.8/);
-  assert.match(sharedButtonSource, /M5\.1 18\.9v-4\.1h4\.1/);
+  assert.match(sharedButtonSource, /M3 12a9 9 0 0 1 9-9 9\.75 9\.75 0 0 1 6\.74 2\.74L21 8/);
+  assert.match(sharedButtonSource, /M21 3v5h-5/);
+  assert.match(sharedButtonSource, /M21 12a9 9 0 0 1-9 9 9\.75 9\.75 0 0 1-6\.74-2\.74L3 16/);
+  assert.match(sharedButtonSource, /M8 16H3v5/);
   assert.match(dashboardSource, /AdminRefreshButton/);
   assert.match(symbolsSource, /AdminRefreshButton/);
   assert.match(supportSource, /RefreshIconButton/);

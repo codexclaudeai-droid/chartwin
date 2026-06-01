@@ -569,13 +569,19 @@ export function ProfilePanel() {
     <section className="profile-layout">
       <div className="card">
         <div className="profile-card-header">
-          <div className="profile-avatar-preview">
+          <button
+            aria-label="프로필 이미지 수정"
+            className="profile-avatar-preview"
+            type="button"
+            onClick={openProfileEditModal}
+          >
             {dashboard.user.profileImageDataUrl ? (
               <img alt={`${dashboard.user.name} 프로필 이미지`} src={dashboard.user.profileImageDataUrl} />
             ) : (
               <DefaultProfileIcon />
             )}
-          </div>
+            <span className="profile-avatar-edit-label" aria-hidden="true">EDIT</span>
+          </button>
           <div className="toolbar-actions">
             <button className="button" type="button" onClick={openProfileEditModal}>프로필수정</button>
             <RefreshIconButton onClick={refresh} disabled={isBusy} />

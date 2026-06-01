@@ -464,7 +464,11 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(panelSource, /profile-card-header/);
   assert.doesNotMatch(panelSource, /<h2>마이프로필<\/h2>/);
   assert.match(panelSource, /<button className="button" type="button" onClick=\{openProfileEditModal\}>프로필수정<\/button>\s*<RefreshIconButton/);
-  assert.match(panelSource, /profile-avatar-preview/);
+  assert.match(panelSource, /aria-label="프로필 이미지 수정"/);
+  assert.match(panelSource, /className="profile-avatar-preview"/);
+  assert.match(panelSource, /onClick=\{openProfileEditModal\}/);
+  assert.match(panelSource, /profile-avatar-edit-label/);
+  assert.match(panelSource, />EDIT<\/span>/);
   assert.match(panelSource, /dashboard\.user\.profileImageDataUrl/);
   assert.match(panelSource, /DefaultProfileIcon/);
   assert.match(panelSource, /profile-avatar-default-icon/);
@@ -527,6 +531,12 @@ test('profile image file control keeps the picker and guide text vertically alig
   assert.match(styleSource, /\.profile-card-header/);
   assert.match(styleSource, /\.profile-card-header \.toolbar-actions/);
   assert.match(styleSource, /\.profile-avatar-default-icon/);
+  assert.match(styleSource, /\.profile-avatar-preview\s*\{[\s\S]*?border-radius: 999px/);
+  assert.match(styleSource, /\.profile-avatar-preview\s*\{[\s\S]*?cursor: pointer/);
+  assert.match(styleSource, /\.profile-avatar-preview\s*\{[\s\S]*?position: relative/);
+  assert.match(styleSource, /\.profile-avatar-preview:is\(:hover, :focus-visible\) \.profile-avatar-edit-label\s*\{[\s\S]*?opacity: 1/);
+  assert.match(styleSource, /\.profile-avatar-edit-label\s*\{[\s\S]*?background: rgba\(2, 7, 19, 0\.64\)/);
+  assert.match(styleSource, /\.profile-avatar-edit-label\s*\{[\s\S]*?letter-spacing: 0\.08em/);
   assert.match(styleSource, /\.profile-image-save-button/);
   assert.match(styleSource, /justify-content: center/);
   assert.match(styleSource, /\.profile-image-file-row/);

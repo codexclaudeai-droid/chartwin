@@ -99,7 +99,7 @@ a {
   color: var(--tradingcore-cream);
   display: grid;
   gap: 16px;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   min-height: 64px;
   padding: 0 28px;
   position: relative;
@@ -159,7 +159,7 @@ a {
 
 .nav {
   display: flex;
-  gap: 36px;
+  gap: 54px;
   justify-content: center;
 }
 
@@ -175,6 +175,55 @@ a {
   align-items: center;
   display: inline-flex;
   gap: 6px;
+}
+
+.topbar > .nav-alert-link {
+  align-self: center;
+  color: rgba(247, 255, 232, 0.74);
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  position: relative;
+  width: 34px;
+}
+
+.topbar > .nav-alert-link .mobile-nav-link-icon {
+  color: rgba(247, 255, 232, 0.74);
+  height: 22px;
+  width: 22px;
+}
+
+.topbar > .nav-alert-link .mobile-nav-link-icon svg {
+  height: 20px;
+  stroke-width: 2;
+  width: 20px;
+}
+
+.topbar > .nav-alert-link:is(:hover, :focus-visible, :active),
+.topbar > .nav-alert-link:is(:hover, :focus-visible, :active) .mobile-nav-link-icon {
+  color: #ffffff;
+}
+
+.topbar > .nav-alert-link .mobile-nav-link-label {
+  display: none;
+}
+
+.topbar > .nav-alert-link .nav-badge {
+  border: 1px solid #151515;
+  height: 17px;
+  min-width: 17px;
+  padding: 0 4px;
+  position: absolute;
+  right: -3px;
+  top: 3px;
+}
+
+.nav > a .mobile-nav-link-icon {
+  display: none;
+}
+
+.nav > a .mobile-nav-link-label {
+  display: inline;
 }
 
 .nav-badge {
@@ -5813,10 +5862,14 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   background: rgba(12, 102, 90, 0.1);
   border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
   border-radius: 999px;
+  color: var(--accent);
+  cursor: pointer;
   display: inline-flex;
   height: 84px;
   justify-content: center;
   overflow: hidden;
+  padding: 0;
+  position: relative;
   width: 84px;
 }
 
@@ -5824,6 +5877,29 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   height: 100%;
   object-fit: cover;
   width: 100%;
+}
+
+.profile-avatar-preview:is(:hover, :focus-visible, :active) {
+  outline: 0;
+}
+
+.profile-avatar-preview:is(:hover, :focus-visible) .profile-avatar-edit-label {
+  opacity: 1;
+}
+
+.profile-avatar-edit-label {
+  align-items: center;
+  background: rgba(2, 7, 19, 0.64);
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  inset: 0;
+  justify-content: center;
+  letter-spacing: 0.08em;
+  opacity: 0;
+  position: absolute;
+  transition: opacity 160ms ease;
 }
 
 .profile-avatar-default-icon {
@@ -9177,6 +9253,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   }
 
   .topbar > .nav,
+  .topbar > .nav-alert-link,
   .topbar > .session {
     display: none;
   }

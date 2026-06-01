@@ -901,8 +901,9 @@ test('top navigation links the landing page to the TC Chart route', () => {
 
   assert.match(layoutSource, /<nav className="nav" aria-label="Primary">/);
   assert.match(layoutSource, /<Link href="\/chart" aria-label="TC Chart 페이지">TC차트<\/Link>/);
-  assert.match(layoutSource, /<Link href="\/#landing-plans">구독<\/Link>/);
+  assert.match(layoutSource, /<Link href="\/#landing-plans">구독플랜<\/Link>/);
   assert.match(layoutSource, /<Link href="\/support">고객센터<\/Link>/);
+  assert.match(layoutSource, /<\/nav>\s*<NotificationNavLink \/>\s*<SessionNav \/>/);
   assert.doesNotMatch(layoutSource, /<ProfileNavLink \/>/);
   assert.match(mobileNavSource, /<ProfileNavLink \/>/);
   assert.equal(
@@ -916,7 +917,7 @@ test('top navigation links the landing page to the TC Chart route', () => {
   assert.match(mobileNavSource, /Headset/);
   assert.match(mobileNavSource, /mobile-nav-link-icon/);
   assert.match(mobileNavSource, /mobile-nav-link-label/);
-  assert.doesNotMatch(layoutSource, /<Link href="\/pricing">구독<\/Link>/);
+  assert.doesNotMatch(layoutSource, /<Link href="\/pricing">구독플랜<\/Link>/);
   assert.match(layoutSource, /<MobileNav \/>/);
 
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
@@ -928,11 +929,17 @@ test('top navigation links the landing page to the TC Chart route', () => {
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*0 22px 56px rgba\(0, 0, 0, 0\.42\)/s);
   assert.match(cssSource, /\.mobile-nav-link-icon\s*\{[^}]*color: rgba\(125, 183, 255, 0\.92\)/s);
   assert.match(cssSource, /\.mobile-nav-link-icon svg\s*\{[^}]*height: 18px/s);
+  assert.match(cssSource, /\.nav\s*\{[\s\S]*?gap: 54px/);
+  assert.match(cssSource, /\.topbar > \.nav-alert-link\s*\{[\s\S]*?color: rgba\(247, 255, 232, 0\.74\)/);
+  assert.match(cssSource, /\.topbar > \.nav-alert-link:is\(:hover, :focus-visible, :active\),[\s\S]*?\.topbar > \.nav-alert-link:is\(:hover, :focus-visible, :active\) \.mobile-nav-link-icon\s*\{[\s\S]*?color: #ffffff/);
+  assert.match(cssSource, /\.topbar > \.nav-alert-link \.mobile-nav-link-label\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /\.topbar > \.nav-alert-link \.nav-badge\s*\{[\s\S]*?position: absolute[\s\S]*?right: -3px[\s\S]*?top: 3px/);
+  assert.match(cssSource, /\.nav > a \.mobile-nav-link-icon\s*\{[\s\S]*?display: none/);
   assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-toggle span:nth-child\(1\)\s*\{[^}]*rotate\(45deg\)/s);
   assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-toggle span:nth-child\(2\)\s*\{[^}]*opacity: 0/s);
   assert.match(cssSource, /@media \(max-width: 900px\)\s*\{[\s\S]*?\.nav\s*\{[\s\S]*?gap: 22px/);
   assert.match(cssSource, /@media \(max-width: 900px\)\s*\{[\s\S]*?\.nav a,[\s\S]*?\.session a,[\s\S]*?\.session-button\s*\{[\s\S]*?white-space: nowrap/);
-  assert.match(cssSource, /@media \(max-width: 760px\)\s*\{[\s\S]*?\.topbar > \.nav,[\s\S]*?\.topbar > \.session\s*\{[^}]*display: none/s);
+  assert.match(cssSource, /@media \(max-width: 760px\)\s*\{[\s\S]*?\.topbar > \.nav,[\s\S]*?\.topbar > \.nav-alert-link,[\s\S]*?\.topbar > \.session\s*\{[^}]*display: none/s);
   assert.match(cssSource, /@media \(max-width: 760px\)\s*\{[\s\S]*?\.mobile-nav\s*\{[^}]*display: block/s);
 });
 
