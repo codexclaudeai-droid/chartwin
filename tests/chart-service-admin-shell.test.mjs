@@ -130,6 +130,10 @@ test('admin sidebar can collapse into an icon rail', () => {
   assert.match(shellSource, /title=\{isSidebarCollapsed \? section\.label : undefined\}/);
   assert.match(cssSource, /\.admin-dashboard-sidebar-heading/);
   assert.match(cssSource, /\.admin-dashboard-sidebar-toggle/);
+  assert.match(cssSource, /\.admin-dashboard-sidebar-toggle\s*\{[\s\S]*?background:\s*transparent/);
+  assert.match(cssSource, /\.admin-dashboard-sidebar-toggle\s*\{[\s\S]*?border:\s*1px solid transparent/);
+  assert.match(cssSource, /\.admin-dashboard-sidebar-toggle:hover\s*\{[\s\S]*?background:\s*rgba\(255, 255, 255, 0\.14\)/);
+  assert.match(cssSource, /\.admin-dashboard-sidebar-toggle:focus-visible\s*\{[\s\S]*?outline:\s*0/);
   assert.match(cssSource, /\.admin-dashboard-menu-icon/);
   assert.match(
     cssSource,

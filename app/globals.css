@@ -3009,8 +3009,8 @@ a {
 
 .admin-dashboard-sidebar-toggle {
   align-items: center;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 10px;
   color: rgba(255, 255, 255, 0.82);
   cursor: pointer;
@@ -3021,16 +3021,17 @@ a {
   width: 36px;
 }
 
-.admin-dashboard-sidebar-toggle:hover,
-.admin-dashboard-sidebar-toggle:focus-visible {
+.admin-dashboard-sidebar-toggle:hover {
   background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.3);
   color: #fff;
 }
 
 .admin-dashboard-sidebar-toggle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: #fff;
+  outline: 0;
 }
 
 .admin-dashboard-sidebar-toggle svg {
@@ -12745,8 +12746,8 @@ body:not(:has(.landing-page)) #admin-payments > .toolbar h2 {
 
 body:not(:has(.landing-page)) #admin-payments .quick-filter-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(154px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(6, minmax(96px, 1fr));
+  gap: 8px;
   margin: 16px 0 14px;
   padding: 0;
   border: 0;
@@ -12758,11 +12759,21 @@ body:not(:has(.landing-page)) #admin-payments .quick-filter-row {
 
 body:not(:has(.landing-page)) #admin-payments .quick-filter-row .button {
   justify-content: space-between;
-  min-height: 44px;
+  gap: 8px;
+  min-height: 42px;
+  min-width: 0;
   border-color: rgba(125, 183, 255, 0.18);
   border-radius: 13px;
   background: rgba(255, 255, 255, 0.05);
   color: rgba(216, 236, 255, 0.76);
+  padding-inline: 11px;
+}
+
+body:not(:has(.landing-page)) #admin-payments .quick-filter-row .button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body:not(:has(.landing-page)) #admin-payments .quick-filter-row .button.active {
@@ -12777,6 +12788,8 @@ body:not(:has(.landing-page)) #admin-payments .quick-filter-count {
   border-color: rgba(125, 183, 255, 0.24);
   background: rgba(2, 7, 19, 0.38);
   color: #ffffff;
+  min-width: 28px;
+  padding-inline: 7px;
 }
 
 body:not(:has(.landing-page)) #admin-payments .table {
@@ -12789,10 +12802,10 @@ body:not(:has(.landing-page)) #admin-payments .table {
 }
 
 body:not(:has(.landing-page)) #admin-payments .table th {
-  padding: 14px 16px;
+  padding: 12px 10px;
   background: rgba(76, 141, 255, 0.12);
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -12802,6 +12815,7 @@ body:not(:has(.landing-page)) #admin-payments .table td {
   border-top: 1px solid rgba(125, 183, 255, 0.1);
   background: rgba(255, 255, 255, 0.025);
   color: rgba(232, 242, 255, 0.78);
+  padding: 12px 10px;
 }
 
 body:not(:has(.landing-page)) #admin-payments .table tbody tr:hover td {
@@ -12810,32 +12824,32 @@ body:not(:has(.landing-page)) #admin-payments .table tbody tr:hover td {
 
 body:not(:has(.landing-page)) #admin-payments .table th:nth-child(1),
 body:not(:has(.landing-page)) #admin-payments .table td:nth-child(1) {
-  width: 17%;
+  width: 14%;
 }
 
 body:not(:has(.landing-page)) #admin-payments .table th:nth-child(2),
 body:not(:has(.landing-page)) #admin-payments .table td:nth-child(2) {
-  width: 25%;
+  width: 18%;
 }
 
 body:not(:has(.landing-page)) #admin-payments .table th:nth-child(3),
 body:not(:has(.landing-page)) #admin-payments .table td:nth-child(3) {
-  width: 11%;
+  width: 8%;
 }
 
 body:not(:has(.landing-page)) #admin-payments .table th:nth-child(4),
 body:not(:has(.landing-page)) #admin-payments .table td:nth-child(4) {
-  width: 9%;
+  width: 8%;
 }
 
 body:not(:has(.landing-page)) #admin-payments .table th:nth-child(5),
 body:not(:has(.landing-page)) #admin-payments .table td:nth-child(5) {
-  width: 19%;
+  width: 14%;
 }
 
 body:not(:has(.landing-page)) #admin-payments .table th:nth-child(6),
 body:not(:has(.landing-page)) #admin-payments .table td:nth-child(6) {
-  width: 19%;
+  width: 38%;
 }
 
 body:not(:has(.landing-page)) #admin-payments .table td {
@@ -12855,22 +12869,48 @@ body:not(:has(.landing-page)) .admin-payment-member-cell strong,
 body:not(:has(.landing-page)) .admin-payment-plan-cell strong {
   color: #ffffff;
   display: block;
-  font-size: 0.95rem;
-  line-height: 1.35;
+  font-size: 0.86rem;
+  line-height: 1.22;
 }
 
 body:not(:has(.landing-page)) .admin-payment-id-cell span,
 body:not(:has(.landing-page)) .admin-payment-member-cell span {
   color: rgba(216, 236, 255, 0.66);
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   font-weight: 750;
-  line-height: 1.45;
-  margin-top: 6px;
+  line-height: 1.25;
+  margin-top: 4px;
+}
+
+body:not(:has(.landing-page)) .admin-payment-id-cell .admin-payment-id-meta {
+  display: grid;
+  gap: 2px;
+}
+
+body:not(:has(.landing-page)) .admin-payment-id-cell .admin-payment-id-meta span {
+  margin-top: 0;
 }
 
 body:not(:has(.landing-page)) .admin-payment-id-cell .text-link {
-  margin-top: 10px;
+  margin-top: 8px;
+}
+
+body:not(:has(.landing-page)) .admin-payment-member-cell {
+  min-width: 0;
+}
+
+body:not(:has(.landing-page)) .admin-payment-member-cell strong,
+body:not(:has(.landing-page)) .admin-payment-member-cell span {
+  overflow-wrap: anywhere;
+}
+
+body:not(:has(.landing-page)) .admin-payment-plan-cell {
+  min-width: 0;
+}
+
+body:not(:has(.landing-page)) .admin-payment-plan-cell strong {
+  white-space: nowrap;
 }
 
 body:not(:has(.landing-page)) .admin-payment-amount-cell {
@@ -12893,6 +12933,17 @@ body:not(:has(.landing-page)) .admin-payment-txid-box {
 
 body:not(:has(.landing-page)) #admin-payments .manual-flow-badge {
   border-color: rgba(125, 183, 255, 0.2);
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  line-height: 1.05;
+  margin: 0;
+  padding: 4px 7px;
+  width: fit-content;
+}
+
+body:not(:has(.landing-page)) #admin-payments .manual-flow-badge span {
+  white-space: nowrap;
 }
 
 body:not(:has(.landing-page)) #admin-payments .badge.manual-flow-badge.done {
@@ -12904,6 +12955,9 @@ body:not(:has(.landing-page)) #admin-payments .badge.manual-flow-badge.done {
 body:not(:has(.landing-page)) #admin-payments .manual-flow-description,
 body:not(:has(.landing-page)) #admin-payments .manual-flow-raw-status {
   color: rgba(216, 236, 255, 0.62);
+  font-size: 0.68rem;
+  line-height: 1.18;
+  margin-top: 4px;
 }
 
 body:not(:has(.landing-page)) .admin-payment-txid-box small {
@@ -12917,7 +12971,10 @@ body:not(:has(.landing-page)) .admin-payment-txid-box .text-link {
 }
 
 body:not(:has(.landing-page)) .admin-payment-action-cell .admin-note-input {
+  font-size: 0.74rem;
+  min-height: 32px;
   min-width: 0;
+  padding: 7px 9px;
 }
 
 body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .admin-note-input {
@@ -12929,6 +12986,7 @@ body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .admin-
 
 body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .admin-note-input::placeholder {
   color: rgba(216, 236, 255, 0.42);
+  font-size: 0.7rem;
 }
 
 body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .admin-note-input:focus {
@@ -12938,12 +12996,14 @@ body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .admin-
 
 body:not(:has(.landing-page)) .admin-payment-action-cell .quick-memo-row {
   align-items: flex-start;
-  gap: 7px;
-  margin: 10px 0;
+  gap: 5px;
+  margin: 7px 0;
 }
 
 body:not(:has(.landing-page)) .admin-payment-action-cell .quick-memo-row > span {
   flex: 0 0 100%;
+  font-size: 0.7rem;
+  line-height: 1.1;
 }
 
 body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .quick-memo-row > span {
@@ -12954,6 +13014,9 @@ body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .quick-
   border-color: rgba(125, 183, 255, 0.12);
   background: transparent;
   color: rgba(216, 236, 255, 0.8);
+  font-size: 0.68rem;
+  min-height: 25px;
+  padding: 3px 5px;
 }
 
 body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .quick-memo-button:hover,
@@ -12966,15 +13029,17 @@ body:not(:has(.landing-page)) #admin-payments .admin-payment-action-cell .quick-
 body:not(:has(.landing-page)) .admin-payment-action-cell .actions.compact {
   align-items: stretch;
   display: grid;
-  gap: 8px;
+  gap: 6px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 body:not(:has(.landing-page)) .admin-payment-action-cell .button {
   justify-content: center;
-  min-height: 36px;
-  padding-inline: 10px;
+  font-size: 0.78rem;
+  min-height: 32px;
+  padding-inline: 6px;
+  white-space: nowrap;
 }
 
 body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-list {
@@ -13074,7 +13139,26 @@ body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-em
   margin: 0;
 }
 
+@media (max-width: 1280px) {
+  body:not(:has(.landing-page)) #admin-payments .quick-filter-row {
+    grid-template-columns: repeat(3, minmax(96px, 1fr));
+  }
+
+  body:not(:has(.landing-page)) #admin-payments > .table {
+    display: none;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-list {
+    display: grid;
+    gap: 12px;
+  }
+}
+
 @media (max-width: 1180px) {
+  body:not(:has(.landing-page)) #admin-payments .quick-filter-row {
+    grid-template-columns: repeat(3, minmax(96px, 1fr));
+  }
+
   body:not(:has(.landing-page)) #admin-payments .table {
     display: block;
     overflow-x: auto;
@@ -13106,6 +13190,10 @@ body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-em
 }
 
 @media (max-width: 720px) {
+  body:not(:has(.landing-page)) #admin-payments .quick-filter-row {
+    grid-template-columns: repeat(2, minmax(96px, 1fr));
+  }
+
   body:not(:has(.landing-page)) #admin-payments > .table {
     display: none;
   }
@@ -13150,8 +13238,8 @@ body:not(:has(.landing-page)) #admin-subscriptions > .toolbar h2 {
 
 body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(154px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(5, minmax(96px, 1fr));
+  gap: 8px;
   margin: 16px 0 14px;
   padding: 0;
   border: 0;
@@ -13162,11 +13250,21 @@ body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row {
 
 body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row .button {
   justify-content: space-between;
-  min-height: 44px;
+  gap: 8px;
+  min-height: 42px;
+  min-width: 0;
   border-color: rgba(125, 183, 255, 0.18);
   border-radius: 13px;
   background: rgba(255, 255, 255, 0.05);
   color: rgba(216, 236, 255, 0.76);
+  padding-inline: 11px;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row .button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row .button.active {
@@ -13181,6 +13279,8 @@ body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-count {
   border-color: rgba(125, 183, 255, 0.24);
   background: rgba(2, 7, 19, 0.38);
   color: #ffffff;
+  min-width: 28px;
+  padding-inline: 7px;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .table {
@@ -13193,10 +13293,10 @@ body:not(:has(.landing-page)) #admin-subscriptions .table {
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .table th {
-  padding: 14px 16px;
+  padding: 12px 10px;
   background: rgba(76, 141, 255, 0.12);
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -13206,6 +13306,7 @@ body:not(:has(.landing-page)) #admin-subscriptions .table td {
   border-top: 1px solid rgba(125, 183, 255, 0.1);
   background: rgba(255, 255, 255, 0.025);
   color: rgba(232, 242, 255, 0.78);
+  padding: 12px 10px;
   vertical-align: top;
 }
 
@@ -13215,32 +13316,32 @@ body:not(:has(.landing-page)) #admin-subscriptions .table tbody tr:hover td {
 
 body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(1),
 body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(1) {
-  width: 16%;
+  width: 13%;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(2),
 body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(2) {
-  width: 20%;
+  width: 17%;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(3),
 body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(3) {
-  width: 14%;
+  width: 10%;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(4),
 body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(4) {
-  width: 17%;
+  width: 14%;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(5),
 body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(5) {
-  width: 16%;
+  width: 11%;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(6),
 body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(6) {
-  width: 17%;
+  width: 35%;
 }
 
 body:not(:has(.landing-page)) .admin-subscription-id-cell,
@@ -13258,8 +13359,8 @@ body:not(:has(.landing-page)) .admin-subscription-plan-cell strong,
 body:not(:has(.landing-page)) .admin-subscription-payment-cell strong {
   color: #ffffff;
   display: block;
-  font-size: 0.95rem;
-  line-height: 1.35;
+  font-size: 0.86rem;
+  line-height: 1.22;
 }
 
 body:not(:has(.landing-page)) .admin-subscription-id-cell span,
@@ -13268,19 +13369,59 @@ body:not(:has(.landing-page)) .admin-subscription-plan-cell span,
 body:not(:has(.landing-page)) .admin-subscription-payment-cell span {
   color: rgba(216, 236, 255, 0.66);
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   font-weight: 750;
-  line-height: 1.45;
-  margin-top: 6px;
+  line-height: 1.25;
+  margin-top: 4px;
+}
+
+body:not(:has(.landing-page)) .admin-subscription-id-cell .admin-subscription-id-meta,
+body:not(:has(.landing-page)) .admin-subscription-payment-cell .admin-subscription-payment-meta {
+  display: grid;
+  gap: 2px;
+}
+
+body:not(:has(.landing-page)) .admin-subscription-id-cell .admin-subscription-id-meta span,
+body:not(:has(.landing-page)) .admin-subscription-payment-cell .admin-subscription-payment-meta span {
+  margin-top: 0;
+}
+
+body:not(:has(.landing-page)) .admin-subscription-member-cell,
+body:not(:has(.landing-page)) .admin-subscription-plan-cell,
+body:not(:has(.landing-page)) .admin-subscription-payment-cell {
+  min-width: 0;
+}
+
+body:not(:has(.landing-page)) .admin-subscription-member-cell strong,
+body:not(:has(.landing-page)) .admin-subscription-member-cell span {
+  overflow-wrap: anywhere;
+}
+
+body:not(:has(.landing-page)) .admin-subscription-plan-cell strong {
+  white-space: nowrap;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-badge {
   border-color: rgba(125, 183, 255, 0.2);
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  line-height: 1.05;
+  margin: 0;
+  padding: 4px 7px;
+  width: fit-content;
+}
+
+body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-badge span {
+  white-space: nowrap;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-description,
 body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-raw-status {
   color: rgba(216, 236, 255, 0.62);
+  font-size: 0.68rem;
+  line-height: 1.18;
+  margin-top: 4px;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-payment-cell {
@@ -13296,7 +13437,10 @@ body:not(:has(.landing-page)) .admin-subscription-empty-text {
 }
 
 body:not(:has(.landing-page)) .admin-subscription-action-cell .admin-note-input {
+  font-size: 0.74rem;
+  min-height: 32px;
   min-width: 0;
+  padding: 7px 9px;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .admin-note-input {
@@ -13308,6 +13452,7 @@ body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-ce
 
 body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .admin-note-input::placeholder {
   color: rgba(216, 236, 255, 0.42);
+  font-size: 0.7rem;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .admin-note-input:focus {
@@ -13317,19 +13462,24 @@ body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-ce
 
 body:not(:has(.landing-page)) .admin-subscription-action-cell .quick-memo-row {
   align-items: flex-start;
-  gap: 7px;
-  margin: 10px 0;
+  gap: 5px;
+  margin: 7px 0;
 }
 
 body:not(:has(.landing-page)) .admin-subscription-action-cell .quick-memo-row > span {
   flex: 0 0 100%;
   color: rgba(216, 236, 255, 0.58);
+  font-size: 0.7rem;
+  line-height: 1.1;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .quick-memo-button {
   border-color: rgba(125, 183, 255, 0.12);
   background: transparent;
   color: rgba(216, 236, 255, 0.8);
+  font-size: 0.68rem;
+  min-height: 25px;
+  padding: 3px 5px;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .quick-memo-button:hover,
@@ -13342,22 +13492,43 @@ body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-ce
 body:not(:has(.landing-page)) .admin-subscription-action-cell .actions.compact {
   align-items: stretch;
   display: grid;
-  gap: 8px;
+  gap: 6px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 body:not(:has(.landing-page)) .admin-subscription-action-cell .button {
   justify-content: center;
-  min-height: 36px;
-  padding-inline: 10px;
+  font-size: 0.78rem;
+  min-height: 32px;
+  padding-inline: 6px;
+  white-space: nowrap;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-list {
   display: none;
 }
 
+@media (max-width: 1280px) {
+  body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row {
+    grid-template-columns: repeat(3, minmax(96px, 1fr));
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions > .table {
+    display: none;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-list {
+    display: grid;
+    gap: 12px;
+  }
+}
+
 @media (max-width: 1180px) {
+  body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row {
+    grid-template-columns: repeat(3, minmax(96px, 1fr));
+  }
+
   body:not(:has(.landing-page)) #admin-subscriptions .table {
     display: block;
     overflow-x: auto;
@@ -13389,6 +13560,10 @@ body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-li
 }
 
 @media (max-width: 720px) {
+  body:not(:has(.landing-page)) #admin-subscriptions .quick-filter-row {
+    grid-template-columns: repeat(2, minmax(96px, 1fr));
+  }
+
   body:not(:has(.landing-page)) #admin-subscriptions > .table {
     display: none;
   }

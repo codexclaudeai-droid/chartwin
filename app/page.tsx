@@ -1,5 +1,12 @@
 ﻿import Link from 'next/link';
 import type { Metadata } from 'next';
+import {
+  Activity,
+  BellRing,
+  ChartNoAxesCombined,
+  FileChartColumn,
+  type LucideIcon,
+} from 'lucide-react';
 import LandingHeroSlider from './landing-hero-slider.tsx';
 import LandingChartMotion from './landing-chart-motion.tsx';
 import LandingScrollFadeMotion from './landing-scroll-fade-motion.tsx';
@@ -53,6 +60,13 @@ const tcChartFeatures = [
     body: 'TradingCore 추천 시그널은 과거 데이터 기반 백테스팅과 승률 분석 결과를 바탕으로 검증합니다. 막연한 기대감이 아닌 객관적인 데이터로 전략을 점검할 수 있습니다.',
     points: ['과거 데이터 기반 검증', '승률 통계 확인', '전략 신뢰도 점검'],
   },
+];
+
+const tcChartFeatureIcons: LucideIcon[] = [
+  ChartNoAxesCombined,
+  BellRing,
+  Activity,
+  FileChartColumn,
 ];
 
 const landingPlanFeaturesById: Record<string, string[]> = {
@@ -209,47 +223,11 @@ function renderLandingPlanIcon(plan: SubscriptionPlan) {
 }
 
 function renderTcChartFeatureIcon(index: number) {
-  const iconSet = [
-    (
-      <>
-        <path d="M4 16l4-4 3 3 6-8 3 4" />
-        <path d="M4 20h16" />
-        <path d="M8 12v8M11 15v5M17 7v13" />
-      </>
-    ),
-    (
-      <>
-        <circle cx="12" cy="13" r="6" />
-        <path d="M8 4l-3 3M16 4l3 3" />
-        <path d="M12 10v4l3 2" />
-        <path d="M9 21l1-2M15 21l-1-2" />
-      </>
-    ),
-    (
-      <>
-        <path d="M5 19l6-15 6 15" />
-        <path d="M8 13h8" />
-        <path d="M12 4v4" />
-        <path d="M4 20h16" />
-        <path d="M18 6l2 2-5 5-2-2z" />
-      </>
-    ),
-    (
-      <>
-        <path d="M7 3h8l4 4v14H7z" />
-        <path d="M15 3v5h4" />
-        <path d="M10 13h6" />
-        <path d="M10 17h4" />
-        <path d="M10 9h2" />
-      </>
-    ),
-  ];
+  const FeatureIcon = tcChartFeatureIcons[index % tcChartFeatureIcons.length];
 
   return (
     <span className="tc-chart-feature-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" focusable="false">
-        {iconSet[index % iconSet.length]}
-      </svg>
+      <FeatureIcon strokeWidth={1.7} />
     </span>
   );
 }

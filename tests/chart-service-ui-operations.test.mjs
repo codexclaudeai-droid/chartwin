@@ -271,12 +271,76 @@ test('admin payment panel groups payment queue details for readability', () => {
   assert.match(source, /formatAdminPaymentDateTime/);
   assert.match(source, /formatCompactTransactionId/);
   assert.match(source, /admin-payment-id-cell/);
+  assert.match(source, /admin-payment-id-meta/);
   assert.match(source, /admin-payment-member-cell/);
   assert.match(source, /admin-payment-txid-box/);
   assert.match(source, /admin-payment-action-cell/);
   assert.match(cssSource, /#admin-payments \.table\s*\{[\s\S]*?table-layout: fixed/s);
+  assert.match(cssSource, /\.admin-payment-id-cell \.admin-payment-id-meta\s*\{[\s\S]*?display: grid/s);
   assert.match(cssSource, /\.admin-payment-txid-box/);
   assert.match(cssSource, /\.admin-payment-action-cell \.actions\.compact\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/s);
+});
+
+test('admin payment desktop table compacts narrow columns and wraps flow labels', () => {
+  const source = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const statusColumnRule = cssSource.match(
+    /#admin-payments \.table th:nth-child\(5\),\s*body:not\(:has\(\.landing-page\)\) #admin-payments \.table td:nth-child\(5\)\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const planColumnRule = cssSource.match(
+    /#admin-payments \.table th:nth-child\(3\),\s*body:not\(:has\(\.landing-page\)\) #admin-payments \.table td:nth-child\(3\)\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const memberColumnRule = cssSource.match(
+    /#admin-payments \.table th:nth-child\(2\),\s*body:not\(:has\(\.landing-page\)\) #admin-payments \.table td:nth-child\(2\)\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const actionColumnRule = cssSource.match(
+    /#admin-payments \.table th:nth-child\(6\),\s*body:not\(:has\(\.landing-page\)\) #admin-payments \.table td:nth-child\(6\)\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(source, /flowBadge\.label\.split\(/);
+  assert.match(source, /badgeLines\.map/);
+  assert.match(source, /placeholder="메모"/);
+  assert.match(statusColumnRule, /width:\s*14%/);
+  assert.match(planColumnRule, /width:\s*8%/);
+  assert.match(memberColumnRule, /width:\s*18%/);
+  assert.match(actionColumnRule, /width:\s*38%/);
+  assert.match(cssSource, /#admin-payments \.manual-flow-badge\s*\{[\s\S]*?display: grid[\s\S]*?width: fit-content/s);
+  assert.match(cssSource, /#admin-payments \.manual-flow-badge span\s*\{[\s\S]*?white-space: nowrap/s);
+  assert.match(cssSource, /#admin-payments \.admin-payment-action-cell \.admin-note-input::placeholder\s*\{[\s\S]*?font-size:\s*0\.7rem/s);
+  assert.match(cssSource, /#admin-payments \.admin-payment-action-cell \.quick-memo-button\s*\{[\s\S]*?font-size:\s*0\.68rem/s);
+  assert.match(cssSource, /\.admin-payment-action-cell \.button\s*\{[\s\S]*?min-height:\s*32px[\s\S]*?white-space:\s*nowrap/s);
+});
+
+test('admin payment summary filters wrap like compact responsive cards', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const quickFilterRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-payments \.quick-filter-row\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(quickFilterRule, /grid-template-columns:\s*repeat\(6, minmax\(96px, 1fr\)\)/);
+  assert.match(quickFilterRule, /gap:\s*8px/);
+  assert.match(cssSource, /#admin-payments \.quick-filter-row \.button span\s*\{[\s\S]*?text-overflow:\s*ellipsis/s);
+  assert.match(cssSource, /#admin-payments \.quick-filter-count\s*\{[\s\S]*?min-width:\s*28px/s);
+  assert.match(
+    cssSource,
+    /@media \(max-width: 1280px\)[\s\S]*?#admin-payments \.quick-filter-row\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(96px, 1fr\)\)/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 1280px\)[\s\S]*?#admin-payments > \.table\s*\{[\s\S]*?display:\s*none/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 1280px\)[\s\S]*?#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display:\s*grid/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 1180px\)[\s\S]*?#admin-payments \.quick-filter-row\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(96px, 1fr\)\)/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 720px\)[\s\S]*?#admin-payments \.quick-filter-row\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(96px, 1fr\)\)/,
+  );
 });
 
 test('admin payment panel uses a dark operational queue finish', () => {
@@ -335,6 +399,8 @@ test('admin payment panel renders a mobile card list instead of the table', () =
   assert.match(source, /admin-payment-mobile-card-info-grid/);
   assert.match(source, /admin-payment-mobile-card-actions/);
   assert.match(cssSource, /#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /@media \(max-width: 1280px\)\s*\{[\s\S]*?#admin-payments > \.table\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /@media \(max-width: 1280px\)\s*\{[\s\S]*?#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display: grid/);
   assert.match(cssSource, /@media \(max-width: 960px\)\s*\{[\s\S]*?#admin-payments > \.table\s*\{[\s\S]*?display: none/);
   assert.match(cssSource, /@media \(max-width: 960px\)\s*\{[\s\S]*?#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display: grid/);
   assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?#admin-payments > \.table\s*\{[\s\S]*?display: none/);
@@ -925,6 +991,13 @@ test('landing page presents TC Chart feature capabilities under the TradingCore 
   assert.match(landingSpecSource, /Contact actions/);
   assert.match(landingSpecSource, /Do not replace this section with start-route cards or a chart preview block/);
   assert.match(pageSource, /tcChartFeatures/);
+  assert.match(pageSource, /from 'lucide-react'/);
+  assert.match(pageSource, /type LucideIcon/);
+  assert.match(pageSource, /const tcChartFeatureIcons/);
+  assert.match(pageSource, /ChartNoAxesCombined/);
+  assert.match(pageSource, /BellRing/);
+  assert.match(pageSource, /Activity/);
+  assert.match(pageSource, /FileChartColumn/);
   assert.match(pageSource, /landing-tc-chart-features/);
   assert.match(pageSource, /TC Chart Features/);
   assert.match(pageSource, /TradingCore \| 실시간 알고리즘 트레이딩 시그널/);
@@ -938,6 +1011,7 @@ test('landing page presents TC Chart feature capabilities under the TradingCore 
   assert.match(pageSource, /추세선·채널 작도/);
   assert.doesNotMatch(pageSource, /previewVolumes/);
   assert.doesNotMatch(pageSource, /chart-preview-command-panel/);
+  assert.doesNotMatch(pageSource, /const iconSet = \[/);
   assert.match(cssSource, /\.landing-tc-chart-features/);
   assert.match(cssSource, /\.tc-chart-feature-grid/);
   assert.match(cssSource, /\.tc-chart-feature-grid\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/s);

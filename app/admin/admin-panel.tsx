@@ -230,10 +230,13 @@ export function AdminPanel() {
       paymentStatus: item.payment.status,
       subscriptionStatus: item.subscription?.status ?? null,
     });
+    const badgeLines = flowBadge.label.split(/\s*·\s*|\/+/);
 
     return (
       <div className="manual-flow-cell">
-        <span className={`badge manual-flow-badge ${flowBadge.tone}`}>{flowBadge.label}</span>
+        <span className={`badge manual-flow-badge ${flowBadge.tone}`}>
+          {badgeLines.map((line) => <span key={line}>{line}</span>)}
+        </span>
         <small className="manual-flow-description">{flowBadge.description}</small>
         <small className="manual-flow-raw-status">결제 상태: {formatPaymentStatusLabel(item.payment.status)}</small>
       </div>
@@ -293,7 +296,7 @@ export function AdminPanel() {
             ...currentNotes,
             [item.payment.id]: event.target.value,
           }))}
-          placeholder="처리 메모 입력"
+          placeholder="메모"
           value={operationNotes[item.payment.id] || ''}
         />
         <div className="quick-memo-row" aria-label={`${item.payment.id} 빠른 메모`}>
@@ -390,8 +393,9 @@ export function AdminPanel() {
             <tr className="admin-payment-row" id={getAdminPaymentDomId(item.payment.id)} key={item.payment.id}>
               <td className="admin-payment-id-cell">
                 <strong title={item.payment.id}>{paymentDisplayId}</strong>
-                <span>
-                  {formatAdminPaymentMethodLabel(item.payment.method)} · {formatAdminPaymentDateTime(item.payment.createdAt)}
+                <span className="admin-payment-id-meta">
+                  <span>{formatAdminPaymentMethodLabel(item.payment.method)}</span>
+                  <span>{formatAdminPaymentDateTime(item.payment.createdAt)}</span>
                 </span>
                 {item.supportThread && (
                   <a className="text-link compact" href={createAdminSupportThreadUrl(item.supportThread.id)}>

@@ -188,10 +188,13 @@ export function SubscriptionAdminPanel() {
       subscriptionStatus: item.subscription.status,
       paymentStatus: item.payment?.status ?? null,
     });
+    const badgeLines = flowBadge.label.split(/\s*·\s*|\/+/);
 
     return (
       <div className="manual-flow-cell">
-        <span className={`badge manual-flow-badge ${flowBadge.tone}`}>{flowBadge.label}</span>
+        <span className={`badge manual-flow-badge ${flowBadge.tone}`}>
+          {badgeLines.map((line) => <span key={line}>{line}</span>)}
+        </span>
         <small className="manual-flow-description">{flowBadge.description}</small>
         <small className="manual-flow-raw-status">
           구독 상태: {formatSubscriptionStatusLabel(item.subscription.status)}
@@ -204,8 +207,9 @@ export function SubscriptionAdminPanel() {
     return item.payment ? (
       <>
         <strong title={item.payment.id}>{paymentDisplayId ?? item.payment.id}</strong>
-        <span>
-          {formatPaymentStatusLabel(item.payment.status)} / {formatPaymentAmountUsd(item.payment.amountUsd)}
+        <span className="admin-subscription-payment-meta">
+          <span>{formatPaymentStatusLabel(item.payment.status)}</span>
+          <span>{formatPaymentAmountUsd(item.payment.amountUsd)}</span>
         </span>
       </>
     ) : (
@@ -224,7 +228,7 @@ export function SubscriptionAdminPanel() {
         <input
           aria-label={`${item.subscription.id} 관리자 처리 메모`}
           className="admin-note-input"
-          placeholder="처리 메모 입력"
+          placeholder="메모"
           value={currentNote}
           onChange={(event) => {
             const nextNote = event.currentTarget.value;
@@ -371,7 +375,10 @@ export function SubscriptionAdminPanel() {
                 >
                   <td className="admin-subscription-id-cell">
                     <strong title={item.subscription.id}>{subscriptionDisplayId}</strong>
-                    <span>갱신 {formatSubscriptionDateTime(item.subscription.updatedAt)}</span>
+                    <span className="admin-subscription-id-meta">
+                      <span>갱신</span>
+                      <span>{formatSubscriptionDateTime(item.subscription.updatedAt)}</span>
+                    </span>
                   </td>
                   <td className="admin-subscription-member-cell">
                     <strong>{item.user.email}</strong>
