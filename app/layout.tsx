@@ -4,7 +4,6 @@ import { AdminNavLink } from './admin-nav-link';
 import { MobileNav } from './mobile-nav';
 import { NotificationNavLink } from './notification-nav-link';
 import { NoticePopupViewer } from './notice-popup-viewer';
-import { ProfileNavLink } from './profile-nav-link';
 import { SessionNav } from './session-nav';
 import './globals.css';
 
@@ -60,7 +59,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <Link href="/chart" aria-label="TC Chart 페이지">TC차트</Link>
               <Link href="/#landing-plans">구독</Link>
               <Link href="/support">고객센터</Link>
-              <ProfileNavLink />
               <NotificationNavLink />
               <AdminNavLink />
             </nav>

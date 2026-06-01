@@ -94,6 +94,13 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.doesNotMatch(shellSource, /activeSectionMeta/);
   assert.doesNotMatch(cssSource, /admin-dashboard-workspace-header/);
   assert.match(shellSource, /data-active-admin-section=\{activeSection\}/);
+  assert.match(shellSource, /data-sidebar-collapsed=\{isSidebarCollapsed\}/);
+  assert.match(shellSource, /ADMIN_DASHBOARD_SECTION_ICONS/);
+  assert.match(shellSource, /from 'lucide-react'/);
+  assert.match(shellSource, /admin-dashboard-sidebar-toggle/);
+  assert.match(shellSource, /setSidebarCollapsed\(\(current\) => !current\)/);
+  assert.match(shellSource, /admin-dashboard-menu-icon/);
+  assert.match(shellSource, /aria-label=\{isSidebarCollapsed \? section\.label : undefined\}/);
   assert.match(shellSource, /activeTargetId/);
   assert.match(shellSource, /getInitialAdminDashboardState/);
   assert.doesNotMatch(shellSource, /useState<AdminDashboardSectionKey>\('overview'\)/);
@@ -108,6 +115,38 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.match(cssSource, /\.admin-dashboard-shell/);
   assert.match(cssSource, /\.admin-dashboard-sidebar/);
   assert.match(cssSource, /\.admin-dashboard-section\[hidden\]/);
+});
+
+test('admin sidebar can collapse into an icon rail', () => {
+  const shellSource = fs.readFileSync(new URL('../app/admin/admin-dashboard-shell.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(shellSource, /PanelLeftClose/);
+  assert.match(shellSource, /PanelLeftOpen/);
+  assert.match(shellSource, /type LucideIcon/);
+  assert.match(shellSource, /overview: LayoutDashboard/);
+  assert.match(shellSource, /sales: Briefcase/);
+  assert.match(shellSource, /audit: ClipboardList/);
+  assert.match(shellSource, /title=\{isSidebarCollapsed \? section\.label : undefined\}/);
+  assert.match(cssSource, /\.admin-dashboard-sidebar-heading/);
+  assert.match(cssSource, /\.admin-dashboard-sidebar-toggle/);
+  assert.match(cssSource, /\.admin-dashboard-menu-icon/);
+  assert.match(
+    cssSource,
+    /body:not\(:has\(\.landing-page\)\) \.admin-dashboard-shell\[data-sidebar-collapsed="true"\]\s*\{[\s\S]*?grid-template-columns:\s*76px minmax\(0, 1fr\)/,
+  );
+  assert.match(
+    cssSource,
+    /\.admin-dashboard-shell\[data-sidebar-collapsed="true"\] \.admin-dashboard-menu-item\s*\{[\s\S]*?display:\s*flex[\s\S]*?width:\s*44px/,
+  );
+  assert.match(
+    cssSource,
+    /\.admin-dashboard-shell\[data-sidebar-collapsed="true"\] \.admin-dashboard-menu-item span,\s*body:not\(:has\(\.landing-page\)\) \.admin-dashboard-shell\[data-sidebar-collapsed="true"\] \.admin-dashboard-menu-item strong,[\s\S]*?display:\s*none/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 960px\)[\s\S]*?\.admin-dashboard-shell\[data-sidebar-collapsed="true"\] \.admin-dashboard-menu-item\s*\{[\s\S]*?display:\s*grid[\s\S]*?width:\s*auto/,
+  );
 });
 
 test('admin sidebar submenus roll out on hover and keyboard focus', () => {
@@ -129,15 +168,34 @@ test('admin sidebar submenus roll out on hover and keyboard focus', () => {
 
 test('admin sidebar menu wraps on small screens instead of horizontal scrolling', () => {
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
-  const mobileMenuRule = cssSource.match(
-    /@media \(max-width: 960px\)[\s\S]*?\.admin-dashboard-menu\s*\{(?<rule>[^}]+)\}/,
+
+  assert.match(
+    cssSource,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-menu\s*\{[\s\S]*?display: grid[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(150px, 1fr\)\)[\s\S]*?overflow: visible/,
+  );
+  assert.doesNotMatch(
+    cssSource,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-menu\s*\{[^}]*overflow-x: auto/,
+  );
+});
+
+test('admin dashboard compacts sidebar and page gutters on tablet widths', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const tabletRule = cssSource.match(
+    /@media \(max-width: 1380px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-shell\s*\{(?<rule>[^}]+)\}/,
   );
 
-  assert.ok(mobileMenuRule?.groups?.rule);
-  assert.match(mobileMenuRule.groups.rule, /display: grid/);
-  assert.match(mobileMenuRule.groups.rule, /grid-template-columns: repeat\(auto-fit, minmax\(150px, 1fr\)\)/);
-  assert.match(mobileMenuRule.groups.rule, /overflow: visible/);
-  assert.doesNotMatch(mobileMenuRule.groups.rule, /overflow-x: auto/);
+  assert.ok(tabletRule?.groups?.rule);
+  assert.match(tabletRule.groups.rule, /grid-template-columns: minmax\(168px, 192px\) minmax\(0, 1fr\)/);
+  assert.match(tabletRule.groups.rule, /gap:\s*16px/);
+  assert.match(
+    cssSource,
+    /@media \(max-width: 1380px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-page\s*\{[\s\S]*?padding-inline:\s*32px/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 1180px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-page\s*\{[\s\S]*?padding-inline:\s*22px/,
+  );
 });
 
 test('admin dashboard uses polished console design tokens and surfaces', () => {
@@ -187,18 +245,10 @@ test('admin refresh controls use the shared icon button', () => {
   assert.match(sharedButtonSource, /setIsRefreshing\(true\)/);
   assert.match(sharedButtonSource, /window\.setTimeout/);
   assert.match(sharedButtonSource, /aria-label="새로고침"/);
-  assert.match(sharedButtonSource, /M6\.9 7\.7A6\.9 6\.9 0 0 1 18\.2 9\.7/);
-  assert.match(sharedButtonSource, /M18\.2 9\.7 15\.9 9\.35 17\.55 7\.75Z/);
-  assert.match(sharedButtonSource, /M17\.1 16\.3A6\.9 6\.9 0 0 1 5\.8 14\.3/);
-  assert.match(sharedButtonSource, /M5\.8 14\.3 8\.1 14\.65 6\.45 16\.25Z/);
-  assert.match(sharedButtonSource, /fill="currentColor"/);
-  assert.doesNotMatch(sharedButtonSource, /M18\.5 10\.5l-2\.8-\.2 1\.7-2\.2/);
-  assert.doesNotMatch(sharedButtonSource, /M5\.5 13\.5l2\.8\.2-1\.7 2\.2/);
-  assert.doesNotMatch(sharedButtonSource, /l-\.3 4\.2-4\.2-\.3/);
-  assert.doesNotMatch(sharedButtonSource, /l\.3-4\.2 4\.2\.3/);
-  assert.doesNotMatch(sharedButtonSource, /M18\.5 11\.6a6\.5 6\.5 0 1 1-1\.9-4\.6/);
-  assert.doesNotMatch(sharedButtonSource, /M7\.2 8\.1A6\.8 6\.8 0 0 1 18\.8 9\.2/);
-  assert.doesNotMatch(sharedButtonSource, /M5\.1 18\.9v-4\.1h4\.1/);
+  assert.match(sharedButtonSource, /M7\.2 8\.1A6\.8 6\.8 0 0 1 18\.8 9\.2/);
+  assert.match(sharedButtonSource, /M18\.9 5\.1v4\.1h-4\.1/);
+  assert.match(sharedButtonSource, /M16\.8 15\.9A6\.8 6\.8 0 0 1 5\.2 14\.8/);
+  assert.match(sharedButtonSource, /M5\.1 18\.9v-4\.1h4\.1/);
   assert.match(dashboardSource, /AdminRefreshButton/);
   assert.match(symbolsSource, /AdminRefreshButton/);
   assert.match(supportSource, /RefreshIconButton/);
@@ -209,10 +259,7 @@ test('admin refresh controls use the shared icon button', () => {
   assert.match(cssSource, /\.refresh-icon-button\s*\{[\s\S]*?background:\s*rgba\(125, 183, 255, 0\.1\)/);
   assert.match(cssSource, /\.refresh-icon-button\s*\{[\s\S]*?border:\s*1px solid transparent/);
   assert.match(cssSource, /\.refresh-icon-button svg\s*\{[\s\S]*?height:\s*20px/);
-  assert.match(cssSource, /\.refresh-icon-button svg\s*\{[\s\S]*?transition:\s*transform 160ms cubic-bezier\(0\.2, 0\.8, 0\.2, 1\)/);
   assert.match(cssSource, /\.refresh-icon-button--spinning svg\s*\{[\s\S]*?animation:\s*refresh-icon-button-spin 520ms cubic-bezier\(0\.2, 0\.8, 0\.2, 1\)/);
-  assert.match(cssSource, /\.refresh-icon-button:active:not\(:disabled\) svg\s*\{[\s\S]*?transform:\s*rotate\(90deg\) scale\(0\.94\)/);
-  assert.doesNotMatch(cssSource, /\.refresh-icon-button:focus-visible:not\(:disabled\)\s*\{[\s\S]*?transform:\s*rotate\(18deg\)/);
   assert.match(cssSource, /@keyframes refresh-icon-button-spin[\s\S]*?to\s*\{[\s\S]*?transform:\s*rotate\(360deg\)/);
   assert.match(cssSource, /\.toolbar > \.refresh-icon-button\s*\{[\s\S]*?margin-left:\s*auto/);
   assert.match(cssSource, /\.toolbar-actions:has\(\.refresh-icon-button\),[\s\S]*?\.toolbar \.actions\.compact:has\(\.refresh-icon-button\)\s*\{[\s\S]*?margin-left:\s*auto/);

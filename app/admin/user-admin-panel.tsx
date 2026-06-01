@@ -765,7 +765,7 @@ export function UserAdminPanel() {
                   <div className="member-directory-meta-grid">
                     <span>연락번호 {item.user.phoneNumber || '미등록'}</span>
                     <span>추천인 {item.referrer?.email ?? '없음'}</span>
-                    <span>가입일 {formatDateTime(item.user.createdAt)}</span>
+                    <span>가입일 {formatCompactDate(item.user.createdAt)}</span>
                   </div>
                 </td>
                 <td className="admin-user-role-cell">
@@ -779,21 +779,21 @@ export function UserAdminPanel() {
                     <>
                       <span className="badge admin-user-plan-badge">{formatAdminPlanTierLabel(item.subscription)}</span>
                       <strong>{formatSubscriptionStatusLabel(item.subscription.status)}</strong>
-                      {item.subscription.endsAt && <small>만료 {formatDateTime(item.subscription.endsAt)}</small>}
+                      {item.subscription.endsAt && <small>만료 {formatCompactDate(item.subscription.endsAt)}</small>}
                     </>
                   ) : (
                     <span className="admin-user-empty-text">구독 없음</span>
                   )}
                 </td>
                 <td className="admin-user-access-cell">
-                  <span>{formatChartAccessLabel(item.access)}</span>
+                  {renderCompactChartAccess(item.access)}
                 </td>
                 <td className="admin-user-payment-cell">
                   {item.latestPayment ? (
                     <>
                       <strong>{formatPaymentStatusLabel(item.latestPayment.status)}</strong>
                       <small>
-                        {formatPaymentAmountUsd(item.latestPayment.amountUsd)} / {formatDateTime(item.latestPayment.updatedAt)}
+                        {formatPaymentAmountUsd(item.latestPayment.amountUsd)} / {formatCompactDate(item.latestPayment.updatedAt)}
                       </small>
                     </>
                   ) : (
@@ -1203,6 +1203,21 @@ function formatDateTime(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function formatCompactDate(value: string): string {
+  const date = new Date(value);
+  const year = String(date.getFullYear()).slice(-2);
+  return `${year}.${date.getMonth() + 1}.${date.getDate()}`;
+}
+
+function renderCompactChartAccess(access: AdminUserDirectoryItem['access']) {
+  return (
+    <>
+      <span>차트 {access.fullChart ? 'O' : 'X'}</span>
+      <span>시그널 {access.paidSignals ? 'O' : 'X'}</span>
+    </>
+  );
 }
 
 function getAccountStatusClassName(accountStatus: UserAccountStatus): string {

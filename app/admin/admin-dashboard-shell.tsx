@@ -1,6 +1,21 @@
 'use client';
 
 import {
+  BarChart3,
+  Briefcase,
+  ClipboardList,
+  CreditCard,
+  Globe,
+  LayoutDashboard,
+  List,
+  MessageCircle,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Repeat,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
+import {
   createContext,
   useContext,
   useEffect,
@@ -15,9 +30,23 @@ import {
 
 const AdminDashboardShellContext = createContext<AdminDashboardSectionKey>('overview');
 
+const ADMIN_DASHBOARD_SECTION_ICONS: Record<AdminDashboardSectionKey, LucideIcon> = {
+  overview: LayoutDashboard,
+  webInfo: Globe,
+  symbols: List,
+  users: Users,
+  support: MessageCircle,
+  payments: CreditCard,
+  subscriptions: Repeat,
+  sales: Briefcase,
+  statistics: BarChart3,
+  audit: ClipboardList,
+};
+
 export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode }>) {
   const [activeSection, setActiveSection] = useState<AdminDashboardSectionKey>(() => getInitialAdminDashboardState().activeSection);
   const [activeTargetId, setActiveTargetId] = useState(() => getInitialAdminDashboardState().activeTargetId);
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     function syncActiveSection() {
@@ -48,23 +77,44 @@ export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode
 
   return (
     <AdminDashboardShellContext.Provider value={activeSection}>
-      <div className="admin-dashboard-shell" data-active-admin-section={activeSection}>
+      <div
+        className="admin-dashboard-shell"
+        data-active-admin-section={activeSection}
+        data-sidebar-collapsed={isSidebarCollapsed}
+      >
         <aside className="admin-dashboard-sidebar" aria-label="관리자 메뉴">
           <div className="admin-dashboard-sidebar-header">
-            <span>Admin Console</span>
-            <strong>운영 대시보드</strong>
+            <div className="admin-dashboard-sidebar-heading">
+              <span>Admin Console</span>
+              <strong>운영 대시보드</strong>
+            </div>
+            <button
+              aria-label={isSidebarCollapsed ? '관리자 메뉴 펼치기' : '관리자 메뉴 접기'}
+              aria-pressed={isSidebarCollapsed}
+              className="admin-dashboard-sidebar-toggle"
+              onClick={() => setSidebarCollapsed((current) => !current)}
+              type="button"
+            >
+              {isSidebarCollapsed
+                ? <PanelLeftOpen aria-hidden="true" />
+                : <PanelLeftClose aria-hidden="true" />}
+            </button>
           </div>
           <nav className="admin-dashboard-menu" aria-label="관리자 카테고리">
             {ADMIN_DASHBOARD_SECTIONS.map((section) => {
               const isActive = section.key === activeSection;
               const activeChildHref = getActiveChildHref(section, activeTargetId);
+              const SectionIcon = ADMIN_DASHBOARD_SECTION_ICONS[section.key];
               return (
                 <div className="admin-dashboard-menu-group" key={section.key}>
                   <a
+                    aria-label={isSidebarCollapsed ? section.label : undefined}
                     aria-current={isActive ? 'page' : undefined}
                     className={`admin-dashboard-menu-item${isActive ? ' active' : ''}`}
                     href={section.href}
+                    title={isSidebarCollapsed ? section.label : undefined}
                   >
+                    <SectionIcon aria-hidden="true" className="admin-dashboard-menu-icon" />
                     <span>{section.eyebrow}</span>
                     <strong>{section.label}</strong>
                   </a>

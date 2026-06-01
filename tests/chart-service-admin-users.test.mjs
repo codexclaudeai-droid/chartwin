@@ -510,10 +510,15 @@ test('admin user panel groups directory state into readable table cells', () => 
   assert.match(source, /admin-user-role-cell/);
   assert.match(source, /admin-user-account-status/);
   assert.match(source, /admin-user-subscription-cell/);
+  assert.match(source, /formatCompactDate\(item\.user\.createdAt\)/);
+  assert.match(source, /renderCompactChartAccess\(item\.access\)/);
+  assert.match(source, /차트 \{access\.fullChart \? 'O' : 'X'\}/);
+  assert.match(source, /시그널 \{access\.paidSignals \? 'O' : 'X'\}/);
   assert.match(source, /admin-user-payment-cell/);
   assert.match(source, /admin-user-ops-grid/);
   assert.match(cssSource, /\.member-directory-meta-grid/);
   assert.match(cssSource, /\.admin-user-account-status/);
+  assert.match(cssSource, /#admin-users \.admin-user-access-cell span\s*\{[\s\S]*?white-space:\s*nowrap;/);
   assert.match(cssSource, /\.admin-user-ops-grid/);
 });
 
@@ -535,12 +540,14 @@ test('admin user directory table keeps stable columns inside a horizontal scroll
   assert.match(shellRule, /overflow-x:\s*auto;/);
   assert.match(shellRule, /max-width:\s*100%;/);
   assert.ok(tableRule);
-  assert.match(tableRule, /min-width:\s*1120px;/);
+  assert.match(tableRule, /min-width:\s*980px;/);
   assert.match(tableRule, /table-layout:\s*auto;/);
   assert.ok(memberCellRule);
   assert.match(memberCellRule, /display:\s*table-cell;/);
   assert.doesNotMatch(memberCellRule, /display:\s*grid;/);
-  assert.match(memberCellRule, /min-width:\s*320px;/);
+  assert.match(memberCellRule, /min-width:\s*260px;/);
+  assert.match(cssSource, /#admin-users \.admin-user-table-scroll > \.table th:nth-child\(5\),[\s\S]*?#admin-users \.admin-user-table-scroll > \.table td:nth-child\(5\)\s*\{[\s\S]*?width:\s*15%;[\s\S]*?min-width:\s*150px;/);
+  assert.match(cssSource, /#admin-users \.admin-user-table-scroll > \.table th:nth-child\(6\),[\s\S]*?#admin-users \.admin-user-table-scroll > \.table td:nth-child\(6\)\s*\{[\s\S]*?width:\s*13%;[\s\S]*?min-width:\s*138px;/);
   assert.match(cssSource, /#admin-users \.member-directory-cell small\s*\{[\s\S]*?overflow-wrap:\s*anywhere;/);
 });
 
@@ -556,13 +563,15 @@ test('admin user directory switches to mobile cards below tablet width', () => {
   assert.match(source, /users\.map\(\(item\) => \(/);
   assert.match(source, /openDetail\(item\.user\.id\)/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-list\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /@media \(max-width: 1180px\)\s*\{[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-table-scroll\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /@media \(max-width: 1180px\)\s*\{[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-list\s*\{[\s\S]*?display: grid/);
   assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-table-scroll\s*\{[\s\S]*?display: none/);
   assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-list\s*\{[\s\S]*?display: grid/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-card\s*\{[\s\S]*?border: 1px solid rgba\(125, 183, 255, 0\.16\)/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-card-info-grid\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 });
 
-test('admin user summary shows six status pills in three columns with withdrawal count', () => {
+test('admin user summary adapts from six columns to three then two columns', () => {
   const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
   const cssSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
@@ -575,7 +584,9 @@ test('admin user summary shows six status pills in three columns with withdrawal
   assert.match(source, /영업자 <strong>\{userDirectorySummary\.salespersonCount\.toLocaleString\('ko-KR'\)\}<\/strong>/);
   assert.match(source, /관리자 <strong>\{userDirectorySummary\.adminCount\.toLocaleString\('ko-KR'\)\}<\/strong>/);
   assert.match(source, /정지 <strong>\{userDirectorySummary\.suspendedCount\.toLocaleString\('ko-KR'\)\}<\/strong>/);
-  assert.match(cssSource, /#admin-users \.admin-user-summary-strip\s*\{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(cssSource, /#admin-users \.admin-user-summary-strip\s*\{[\s\S]*?grid-template-columns: repeat\(6, minmax\(96px, 1fr\)\)/);
+  assert.match(cssSource, /@media \(max-width: 1180px\)[\s\S]*?#admin-users \.admin-user-summary-strip\s*\{[\s\S]*?grid-template-columns: repeat\(3, minmax\(96px, 1fr\)\)/);
+  assert.match(cssSource, /@media \(max-width: 680px\)[\s\S]*?#admin-users \.admin-user-summary-strip\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(96px, 1fr\)\)/);
   assert.match(cssSource, /#admin-users \.admin-user-summary-pill\.muted\s*\{/);
 });
 
@@ -586,12 +597,13 @@ test('admin user search filters keep query role status and submit on one row bef
 
   assert.ok(filterRule?.groups?.rule);
   assert.ok(tabletRule?.groups?.rule);
-  assert.match(filterRule.groups.rule, /grid-template-columns: minmax\(260px, 1\.6fr\) minmax\(150px, 0\.7fr\) minmax\(150px, 0\.7fr\) auto/);
+  assert.match(filterRule.groups.rule, /grid-template-columns: minmax\(0, 1\.6fr\) minmax\(112px, 0\.52fr\) minmax\(112px, 0\.52fr\) minmax\(92px, auto\)/);
   assert.match(filterRule.groups.rule, /padding:\s*0/);
   assert.match(filterRule.groups.rule, /border:\s*0/);
   assert.match(filterRule.groups.rule, /background:\s*transparent/);
   assert.match(filterRule.groups.rule, /box-shadow:\s*none/);
-  assert.match(tabletRule.groups.rule, /grid-template-columns: minmax\(220px, 1fr\) minmax\(132px, 0\.48fr\) minmax\(132px, 0\.48fr\) auto/);
+  assert.match(cssSource, /#admin-users > \.admin-filter-row input,[\s\S]*?#admin-users > \.admin-filter-row select\s*\{[\s\S]*?min-width:\s*0;[\s\S]*?width:\s*100%;/);
+  assert.match(tabletRule.groups.rule, /grid-template-columns: minmax\(0, 1fr\) minmax\(104px, 0\.42fr\) minmax\(104px, 0\.42fr\) minmax\(88px, auto\)/);
   assert.match(cssSource, /@media \(max-width: 680px\)[\s\S]*?#admin-users > \.admin-filter-row\s*\{[\s\S]*?grid-template-columns: 1fr/);
 });
 

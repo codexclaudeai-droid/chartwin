@@ -524,6 +524,27 @@ test('admin sales date range inputs remove the dark focus outline', () => {
   assert.match(dateInputFocusRule, /outline:\s*0/);
 });
 
+test('admin sales date range stays compact on 320px mobile widths', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(
+    cssSource,
+    /@media \(max-width: 360px\)[\s\S]*?#admin-sales \.sales-filter-grid\s*\{[\s\S]*?padding:\s*12px 0 0/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 360px\)[\s\S]*?#admin-sales \.sales-date-range-field\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) 10px minmax\(0, 1fr\)[\s\S]*?padding:\s*0 7px/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 360px\)[\s\S]*?#admin-sales \.sales-date-range-field input\[type="date"\]\s*\{[\s\S]*?font-size:\s*12px[\s\S]*?min-height:\s*34px/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 360px\)[\s\S]*?#admin-sales \.sales-date-range-field input\[type="date"\]::-webkit-calendar-picker-indicator\s*\{[\s\S]*?width:\s*15px/,
+  );
+});
+
 test('admin sales panel keeps management sections visible before summary data loads', () => {
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-sales-panel.tsx', import.meta.url), 'utf8');
 
@@ -546,13 +567,25 @@ test('admin sales panel has polished operator dashboard styling', () => {
   assert.match(cssSource, /#admin-sales \.table tfoot/);
 });
 
+test('admin sales management sections use dividers instead of nested card shells', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(
+    cssSource,
+    /#admin-sales \.sales-filter-grid,[\s\S]*?#admin-sales \.sales-team-panel\s*\{[\s\S]*?border-top: 1px solid rgba\(125, 183, 255, 0\.16\)[\s\S]*?border-radius:\s*0[\s\S]*?background:\s*transparent[\s\S]*?box-shadow:\s*none/,
+  );
+  assert.match(cssSource, /#admin-sales \.sales-filter-grid\s*\{[\s\S]*?padding:\s*14px 0 0/);
+});
+
 test('admin sales submenu tabs center labels inside rounded pills', () => {
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
+  assert.match(cssSource, /#admin-sales \.sales-submenu-tabs\s*\{[\s\S]*?background:\s*transparent[\s\S]*?border-bottom: 1px solid rgba\(125, 183, 255, 0\.16\)[\s\S]*?border-radius:\s*0/);
   assert.match(cssSource, /#admin-sales \.sales-submenu-tabs a\s*\{[^}]*display: inline-flex/);
   assert.match(cssSource, /#admin-sales \.sales-submenu-tabs a\s*\{[^}]*align-items: center/);
   assert.match(cssSource, /#admin-sales \.sales-submenu-tabs a\s*\{[^}]*justify-content: center/);
   assert.match(cssSource, /#admin-sales \.sales-submenu-tabs a\s*\{[^}]*line-height: 1/);
+  assert.match(cssSource, /@media \(max-width: 520px\)[\s\S]*?#admin-sales \.sales-submenu-tabs\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 });
 
 test('admin sales team page groups team cards and member table for readability', () => {

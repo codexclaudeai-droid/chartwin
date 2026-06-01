@@ -335,6 +335,8 @@ test('admin payment panel renders a mobile card list instead of the table', () =
   assert.match(source, /admin-payment-mobile-card-info-grid/);
   assert.match(source, /admin-payment-mobile-card-actions/);
   assert.match(cssSource, /#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /@media \(max-width: 960px\)\s*\{[\s\S]*?#admin-payments > \.table\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /@media \(max-width: 960px\)\s*\{[\s\S]*?#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display: grid/);
   assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?#admin-payments > \.table\s*\{[\s\S]*?display: none/);
   assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display: grid/);
   assert.match(cssSource, /#admin-payments \.admin-payment-mobile-card-info-grid,[\s\S]*?#admin-subscriptions \.admin-subscription-mobile-card-info-grid\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
@@ -808,7 +810,8 @@ test('top navigation links the landing page to the TC Chart route', () => {
   assert.match(layoutSource, /<Link href="\/chart" aria-label="TC Chart 페이지">TC차트<\/Link>/);
   assert.match(layoutSource, /<Link href="\/#landing-plans">구독<\/Link>/);
   assert.match(layoutSource, /<Link href="\/support">고객센터<\/Link>/);
-  assert.match(layoutSource, /<ProfileNavLink \/>/);
+  assert.doesNotMatch(layoutSource, /<ProfileNavLink \/>/);
+  assert.match(mobileNavSource, /<ProfileNavLink \/>/);
   assert.equal(
     ((layoutSource + mobileNavSource).match(/<Link href="\/#landing-plans">구독<\/Link>/g) ?? []).length,
     2,
@@ -825,6 +828,8 @@ test('top navigation links the landing page to the TC Chart route', () => {
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*0 22px 56px rgba\(0, 0, 0, 0\.42\)/s);
   assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-toggle span:nth-child\(1\)\s*\{[^}]*rotate\(45deg\)/s);
   assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-toggle span:nth-child\(2\)\s*\{[^}]*opacity: 0/s);
+  assert.match(cssSource, /@media \(max-width: 900px\)\s*\{[\s\S]*?\.nav\s*\{[\s\S]*?gap: 22px/);
+  assert.match(cssSource, /@media \(max-width: 900px\)\s*\{[\s\S]*?\.nav a,[\s\S]*?\.session a,[\s\S]*?\.session-button\s*\{[\s\S]*?white-space: nowrap/);
   assert.match(cssSource, /@media \(max-width: 760px\)\s*\{[\s\S]*?\.topbar > \.nav,[\s\S]*?\.topbar > \.session\s*\{[^}]*display: none/s);
   assert.match(cssSource, /@media \(max-width: 760px\)\s*\{[\s\S]*?\.mobile-nav\s*\{[^}]*display: block/s);
 });
@@ -1180,7 +1185,7 @@ test('pricing copy makes deposit confirmation explicitly manual', () => {
   assert.match(cssSource, /\.pricing-page\s*\{[^}]*display: grid/s);
   assert.match(cssSource, /\.pricing-page\s*\{[^}]*justify-content: center/s);
   assert.match(cssSource, /\.pricing-page-hero\s*\{[^}]*max-width: 1180px/s);
-  assert.match(cssSource, /\.pricing-checkout-card\s*\{[^}]*max-width: 1180px/s);
+  assert.match(cssSource, /\.pricing-checkout-card\s*\{[^}]*max-width: 1320px/s);
   assert.match(cssSource, /\.pricing-checkout-card\s*\{[^}]*width: 100%/s);
   assert.doesNotMatch(pageSource, /pricingFlowSteps/);
   assert.doesNotMatch(pageSource, /pricing-flow-summary/);
@@ -1311,15 +1316,15 @@ test('pricing payment request lets members choose a subscription plan from cards
   const panelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
-  assert.match(panelSource, /plan-card-grid/);
-  assert.match(panelSource, /plan-card/);
+  assert.match(panelSource, /pricing-plan-selection-grid/);
+  assert.match(panelSource, /pricing-plan-card/);
   assert.match(panelSource, /type="radio"/);
   assert.match(panelSource, /checked=\{selectedPlanId === plan\.id\}/);
   assert.match(panelSource, /onChange=\{\(\) => setSelectedPlanId\(plan\.id\)\}/);
   assert.match(panelSource, /discountedAmount\(plan\)/);
   assert.doesNotMatch(panelSource, /<select id="planId"/);
-  assert.match(cssSource, /\.plan-card-grid/);
-  assert.match(cssSource, /\.plan-card\.selected/);
+  assert.match(cssSource, /\.pricing-plan-selection-grid/);
+  assert.match(cssSource, /\.pricing-checkout-card \.pricing-plan-card\.selected/);
 });
 
 test('pricing plan cards place selection buttons inside each card and highlight the half-year plan', () => {
@@ -1328,22 +1333,36 @@ test('pricing plan cards place selection buttons inside each card and highlight 
 
   assert.match(panelSource, /isRecommendedPlan\(plan\)/);
   assert.match(panelSource, /plan\.id === 'plan_half_year'/);
-  assert.match(panelSource, /formatCheckoutPlanName/);
+  assert.match(panelSource, /formatPricingLandingPlanName/);
   assert.match(panelSource, /getCheckoutPlanServices/);
   assert.match(panelSource, /planServices/);
-  assert.match(panelSource, /plan-card-service-list/);
+  assert.match(panelSource, /landing-plan-feature-list/);
   assert.match(panelSource, /BASIC/);
   assert.match(panelSource, /PRO/);
   assert.match(panelSource, /ELITE/);
-  assert.match(panelSource, /formatCheckoutPlanName\(plan\)/);
+  assert.match(panelSource, /formatPricingLandingPlanName\(plan\)/);
   assert.match(panelSource, /formatCheckoutPlanName\(selectedPlan\)/);
-  assert.match(panelSource, /plan-card-select-button/);
+  assert.match(panelSource, /landing-plan-card-footer/);
   assert.match(panelSource, /추천 플랜/);
-  assert.match(panelSource, /플랜선택/);
+  assert.match(panelSource, /플랜 선택하기/);
   assert.match(panelSource, /선택됨/);
-  assert.match(cssSource, /\.plan-card\.recommended/);
-  assert.match(cssSource, /\.plan-card-badge/);
-  assert.match(cssSource, /\.plan-card-select-button/);
+  assert.match(cssSource, /\.pricing-checkout-card \.pricing-plan-card\.featured/);
+  assert.match(cssSource, /\.landing-plan-badge/);
+  assert.match(cssSource, /\.pricing-checkout-card \.pricing-plan-card \.button/);
+});
+
+test('pricing plan selection has roomier desktop card columns', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const planSelectionRule = cssSource.match(/body:not\(:has\(\.landing-page\)\) \.pricing-plan-selection-grid\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? '';
+  const planCardRule = cssSource.match(/body:not\(:has\(\.landing-page\)\) \.pricing-checkout-card \.pricing-plan-card\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? '';
+
+  assert.match(planSelectionRule, /grid-template-columns:\s*repeat\(3, minmax\(260px, 1fr\)\)/);
+  assert.match(planSelectionRule, /gap:\s*18px/);
+  assert.match(planCardRule, /padding:\s*22px/);
+  assert.match(
+    cssSource,
+    /@media \(max-width: 900px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.pricing-plan-selection-grid\s*\{[\s\S]*?grid-template-columns:\s*1fr[\s\S]*?gap:\s*14px/,
+  );
 });
 
 test('pricing selected plan buttons stay inside responsive plan cards', () => {
