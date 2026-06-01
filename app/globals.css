@@ -10347,7 +10347,7 @@ body:not(:has(.landing-page)) .chart-preview-actions {
 
 body:not(:has(.landing-page)) .chart-preview-page.ready .chart-preview-actions {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
 }
 
 body:not(:has(.landing-page)) .chart-preview-actions .button {
