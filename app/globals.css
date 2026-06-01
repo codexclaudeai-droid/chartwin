@@ -9415,6 +9415,11 @@ body:not(:has(.landing-page)) .refresh-icon-button {
   width: 34px;
 }
 
+body:not(:has(.landing-page)) .refresh-icon-button--spinning {
+  background: rgba(125, 183, 255, 0.18);
+  color: #ffffff;
+}
+
 body:not(:has(.landing-page)) .toolbar > .refresh-icon-button {
   margin-left: auto;
 }
@@ -9433,7 +9438,12 @@ body:not(:has(.landing-page)) .toolbar .actions.compact > .refresh-icon-button {
 
 body:not(:has(.landing-page)) .refresh-icon-button svg {
   height: 20px;
+  transform-origin: center;
   width: 20px;
+}
+
+body:not(:has(.landing-page)) .refresh-icon-button--spinning svg {
+  animation: refresh-icon-button-spin 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 body:not(:has(.landing-page)) .refresh-icon-button:hover:not(:disabled),
@@ -9442,6 +9452,16 @@ body:not(:has(.landing-page)) .refresh-icon-button:focus-visible:not(:disabled) 
   background: rgba(125, 183, 255, 0.18);
   color: #ffffff;
   transform: rotate(18deg);
+}
+
+@keyframes refresh-icon-button-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 body:not(:has(.landing-page)) .refresh-icon-button:disabled {

@@ -175,12 +175,17 @@ test('admin refresh controls use the shared icon button', () => {
   const symbolsSource = fs.readFileSync(new URL('../app/admin/admin-symbols-panel.tsx', import.meta.url), 'utf8');
   const supportSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
   const profileSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const pricingSubscriptionSource = fs.readFileSync(new URL('../app/pricing/subscription-actions-panel.tsx', import.meta.url), 'utf8');
   const notificationsSource = fs.readFileSync(new URL('../app/notifications/notifications-panel.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(buttonSource, /RefreshIconButton/);
   assert.match(buttonSource, /admin-refresh-icon-button refresh-icon-button/);
-  assert.match(sharedButtonSource, /className=\{className\}/);
+  assert.match(sharedButtonSource, /className=\{buttonClassName\}/);
+  assert.match(sharedButtonSource, /useState/);
+  assert.match(sharedButtonSource, /refresh-icon-button--spinning/);
+  assert.match(sharedButtonSource, /setIsRefreshing\(true\)/);
+  assert.match(sharedButtonSource, /window\.setTimeout/);
   assert.match(sharedButtonSource, /aria-label="새로고침"/);
   assert.match(sharedButtonSource, /M7\.2 8\.1A6\.8 6\.8 0 0 1 18\.8 9\.2/);
   assert.match(sharedButtonSource, /M18\.9 5\.1v4\.1h-4\.1/);
@@ -190,10 +195,14 @@ test('admin refresh controls use the shared icon button', () => {
   assert.match(symbolsSource, /AdminRefreshButton/);
   assert.match(supportSource, /RefreshIconButton/);
   assert.match(profileSource, /RefreshIconButton/);
+  assert.match(pricingSubscriptionSource, /RefreshIconButton/);
+  assert.doesNotMatch(pricingSubscriptionSource, /<button className="button secondary" type="button" onClick=\{refresh\}/);
   assert.match(notificationsSource, /RefreshIconButton/);
   assert.match(cssSource, /\.refresh-icon-button\s*\{[\s\S]*?background:\s*rgba\(125, 183, 255, 0\.1\)/);
   assert.match(cssSource, /\.refresh-icon-button\s*\{[\s\S]*?border:\s*1px solid transparent/);
   assert.match(cssSource, /\.refresh-icon-button svg\s*\{[\s\S]*?height:\s*20px/);
+  assert.match(cssSource, /\.refresh-icon-button--spinning svg\s*\{[\s\S]*?animation:\s*refresh-icon-button-spin 520ms cubic-bezier\(0\.2, 0\.8, 0\.2, 1\)/);
+  assert.match(cssSource, /@keyframes refresh-icon-button-spin[\s\S]*?to\s*\{[\s\S]*?transform:\s*rotate\(360deg\)/);
   assert.match(cssSource, /\.toolbar > \.refresh-icon-button\s*\{[\s\S]*?margin-left:\s*auto/);
   assert.match(cssSource, /\.toolbar-actions:has\(\.refresh-icon-button\),[\s\S]*?\.toolbar \.actions\.compact:has\(\.refresh-icon-button\)\s*\{[\s\S]*?margin-left:\s*auto/);
   assert.match(cssSource, /\.toolbar-actions > \.refresh-icon-button,[\s\S]*?\.toolbar \.actions\.compact > \.refresh-icon-button\s*\{[\s\S]*?order:\s*99/);

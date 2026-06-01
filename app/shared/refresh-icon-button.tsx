@@ -1,16 +1,36 @@
+'use client';
+
+import { useState } from 'react';
+
+const REFRESH_ICON_SPIN_MS = 520;
+
 type RefreshIconButtonProps = {
   className?: string;
   disabled?: boolean;
-  onClick: () => void;
+  onClick: () => void | Promise<void>;
 };
 
 export function RefreshIconButton({ className = 'refresh-icon-button', disabled = false, onClick }: RefreshIconButtonProps) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const buttonClassName = isRefreshing ? `${className} refresh-icon-button--spinning` : className;
+
+  async function handleClick() {
+    if (disabled || isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      await onClick();
+    } finally {
+      window.setTimeout(() => setIsRefreshing(false), REFRESH_ICON_SPIN_MS);
+    }
+  }
+
   return (
     <button
       aria-label="새로고침"
-      className={className}
+      className={buttonClassName}
       disabled={disabled}
-      onClick={onClick}
+      onClick={handleClick}
       title="새로고침"
       type="button"
     >
