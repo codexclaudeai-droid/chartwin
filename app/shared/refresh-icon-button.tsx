@@ -36,28 +36,28 @@ export function RefreshIconButton({ className = 'refresh-icon-button', disabled 
     >
       <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
         <path
-          d="M4.9 13.2A7.4 7.4 0 0 1 17.8 6.2"
+          d="M6.9 7.7A6.9 6.9 0 0 1 18.5 10.5"
           stroke="currentColor"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="2.15"
         />
         <path
-          d="M18.4 6.3l-.3 4.2-4.2-.3"
+          d="M18.5 10.5l-2.8-.2 1.7-2.2"
           stroke="currentColor"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="2.15"
         />
         <path
-          d="M19.1 10.8A7.4 7.4 0 0 1 6.2 17.8"
+          d="M17.1 16.3A6.9 6.9 0 0 1 5.5 13.5"
           stroke="currentColor"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="2.15"
         />
         <path
-          d="M5.6 17.7l.3-4.2 4.2.3"
+          d="M5.5 13.5l2.8.2-1.7 2.2"
           stroke="currentColor"
           strokeLinecap="round"
           strokeLinejoin="round"
