@@ -187,10 +187,13 @@ test('admin refresh controls use the shared icon button', () => {
   assert.match(sharedButtonSource, /setIsRefreshing\(true\)/);
   assert.match(sharedButtonSource, /window\.setTimeout/);
   assert.match(sharedButtonSource, /aria-label="새로고침"/);
-  assert.match(sharedButtonSource, /M6\.9 7\.7A6\.9 6\.9 0 0 1 18\.5 10\.5/);
-  assert.match(sharedButtonSource, /M18\.5 10\.5l-2\.8-\.2 1\.7-2\.2/);
-  assert.match(sharedButtonSource, /M17\.1 16\.3A6\.9 6\.9 0 0 1 5\.5 13\.5/);
-  assert.match(sharedButtonSource, /M5\.5 13\.5l2\.8\.2-1\.7 2\.2/);
+  assert.match(sharedButtonSource, /M6\.9 7\.7A6\.9 6\.9 0 0 1 18\.2 9\.7/);
+  assert.match(sharedButtonSource, /M18\.2 9\.7 15\.9 9\.35 17\.55 7\.75Z/);
+  assert.match(sharedButtonSource, /M17\.1 16\.3A6\.9 6\.9 0 0 1 5\.8 14\.3/);
+  assert.match(sharedButtonSource, /M5\.8 14\.3 8\.1 14\.65 6\.45 16\.25Z/);
+  assert.match(sharedButtonSource, /fill="currentColor"/);
+  assert.doesNotMatch(sharedButtonSource, /M18\.5 10\.5l-2\.8-\.2 1\.7-2\.2/);
+  assert.doesNotMatch(sharedButtonSource, /M5\.5 13\.5l2\.8\.2-1\.7 2\.2/);
   assert.doesNotMatch(sharedButtonSource, /l-\.3 4\.2-4\.2-\.3/);
   assert.doesNotMatch(sharedButtonSource, /l\.3-4\.2 4\.2\.3/);
   assert.doesNotMatch(sharedButtonSource, /M18\.5 11\.6a6\.5 6\.5 0 1 1-1\.9-4\.6/);
