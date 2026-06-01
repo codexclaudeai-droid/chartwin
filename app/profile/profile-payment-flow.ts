@@ -17,13 +17,42 @@ export type ProfilePaymentFlowStep = {
 export function formatProfilePaymentMethodLabel(method: string): string {
   const normalizedMethod = method.trim().toLowerCase();
   const labels: Record<string, string> = {
-    bank_transfer: '은행이체',
-    bank: '은행이체',
-    usdt: 'USDT전송',
-    usdt_transfer: 'USDT전송',
+    bank_transfer: '원화이체',
+    bank: '원화이체',
+    usdt: '가상화폐 USDT',
+    usdt_transfer: '가상화폐 USDT',
   };
 
   return labels[normalizedMethod] ?? method;
+}
+
+export function formatProfilePaymentDisplay(payment: {
+  method: string;
+  amountUsd: number;
+  amountKrw: number | null;
+}): string {
+  const methodLabel = formatProfilePaymentMethodLabel(payment.method);
+  const normalizedMethod = payment.method.trim().toLowerCase();
+
+  if (normalizedMethod === 'bank_transfer' || normalizedMethod === 'bank') {
+    const amountLabel = typeof payment.amountKrw === 'number' && payment.amountKrw > 0
+      ? `${payment.amountKrw.toLocaleString('ko-KR')}원`
+      : '원화금액 미확인';
+    return `${amountLabel} / ${methodLabel}`;
+  }
+
+  if (normalizedMethod === 'usdt' || normalizedMethod === 'usdt_transfer') {
+    const amountLabel = payment.amountUsd.toLocaleString('en-US', {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: Number.isInteger(payment.amountUsd) ? 0 : 2,
+    });
+    return `${amountLabel} USDT / ${methodLabel}`;
+  }
+
+  return `${payment.amountUsd.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  })} / ${methodLabel}`;
 }
 
 export function getProfilePaymentFlowTone(input: {

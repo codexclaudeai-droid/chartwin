@@ -10,7 +10,6 @@ import { RefreshIconButton } from '../shared/refresh-icon-button';
 import { formatSignupPhoneNumber } from '../signup/phone-format';
 import {
   formatChartAccessLabel,
-  formatPaymentAmountUsd,
   formatPaymentStatusLabel,
   formatSubscriptionStatusLabel,
   DEFAULT_PROFILE_AVATARS,
@@ -27,6 +26,7 @@ import {
 } from './profile-image-policy';
 import {
   formatProfilePaymentMethodLabel,
+  formatProfilePaymentDisplay,
   getProfilePaymentFlowSteps,
   getProfilePaymentFlowTone,
 } from './profile-payment-flow';
@@ -936,7 +936,7 @@ export function ProfilePanel() {
             </article>
           </div>
           <div className="actions">
-            <Link className="button" href="/pricing">구독 관리</Link>
+            <Link className="button" href="/pricing">구독신청</Link>
             <Link className="button secondary" href={notificationCenterHref}>알림 보기</Link>
             <Link className="button secondary" href="/support">고객센터</Link>
           </div>
@@ -970,7 +970,7 @@ export function ProfilePanel() {
                   <div className="subscription-history-summary">
                     <div>
                       <strong>구독 {subscriptionIndex + 1}</strong>
-                      <p>{subscription.planId ?? '무료체험/수동 구독'}</p>
+                      <p>{formatProfileSubscriptionPlanLabel(subscription.planId)}</p>
                     </div>
                     <div>
                       <span className="badge">{formatSubscriptionStatusLabel(subscription.status)}</span>
@@ -1022,7 +1022,7 @@ export function ProfilePanel() {
                     <div className="payment-card-summary">
                       <div>
                         <strong>결제 요청 {paymentIndex + 1}</strong>
-                        <p>{formatPaymentAmountUsd(payment.amountUsd)} / {formatProfilePaymentMethodLabel(payment.method)}</p>
+                        <p>{formatProfilePaymentDisplay(payment)}</p>
                       </div>
                       <div>
                         <span className="badge">{formatPaymentStatusLabel(payment.status)}</span>
@@ -1068,6 +1068,31 @@ function formatDateTime(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function formatProfileSubscriptionPlanLabel(planId: string | null): string {
+  if (!planId) return '무료체험/수동 구독';
+
+  const normalizedPlanId = planId.trim().toLowerCase();
+  const planLabels: Record<string, string> = {
+    plan_monthly: '베이직 1개월',
+    basic: '베이직 1개월',
+    monthly: '베이직 1개월',
+    '1 month': '베이직 1개월',
+    plan_half_year: '프로 6개월',
+    pro: '프로 6개월',
+    'half year': '프로 6개월',
+    'half-year': '프로 6개월',
+    '6 months': '프로 6개월',
+    plan_yearly: '엘리트 1년',
+    elite: '엘리트 1년',
+    yearly: '엘리트 1년',
+    annual: '엘리트 1년',
+    '1 year': '엘리트 1년',
+    '12 months': '엘리트 1년',
+  };
+
+  return planLabels[normalizedPlanId] ?? planId;
 }
 
 function formatSubscriptionResolutionDate(subscription: Dashboard['subscriptions'][number]): string {

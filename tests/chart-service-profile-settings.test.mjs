@@ -305,6 +305,8 @@ test('profile service status card includes subscription request actions without 
   assert.doesNotMatch(profileSource, /<SubscriptionActionsPanel/);
   assert.match(panelSource, /getSubscriptionActionAvailability/);
   assert.match(panelSource, /requestSubscriptionAction/);
+  assert.match(panelSource, /<Link className="button" href="\/pricing">구독신청<\/Link>/);
+  assert.doesNotMatch(panelSource, /<Link className="button" href="\/pricing">구독 관리<\/Link>/);
   assert.match(panelSource, /\/api\/subscription\/cancel-request/);
   assert.match(panelSource, /\/api\/subscription\/refund-request/);
   assert.match(panelSource, /disabled=\{isBusy \|\| !subscriptionActionAvailability\.canCancel\}/);
@@ -322,6 +324,10 @@ test('profile page shows subscription history beside recent payments', () => {
   assert.match(panelSource, /profile-subscription-history-card/);
   assert.match(panelSource, /구독내역/);
   assert.match(panelSource, /dashboard\.subscriptions\.slice\(0, 5\)\.map/);
+  assert.match(panelSource, /formatProfileSubscriptionPlanLabel\(subscription\.planId\)/);
+  assert.match(panelSource, /plan_monthly: '베이직 1개월'/);
+  assert.match(panelSource, /plan_half_year: '프로 6개월'/);
+  assert.match(panelSource, /plan_yearly: '엘리트 1년'/);
   assert.match(panelSource, /subscription-history-list/);
   assert.match(panelSource, /subscription-history-meta/);
   assert.match(panelSource, /formatSubscriptionResolutionDate/);
@@ -627,13 +633,17 @@ test('profile panel renders my referral list with individual and total points', 
 
 test('profile payment flow localizes payment methods and exposes stage highlight tones', async () => {
   const {
+    formatProfilePaymentDisplay,
     formatProfilePaymentMethodLabel,
     getProfilePaymentFlowTone,
   } = await import('../app/profile/profile-payment-flow.ts');
 
-  assert.equal(formatProfilePaymentMethodLabel('bank_transfer'), '은행이체');
-  assert.equal(formatProfilePaymentMethodLabel('usdt'), 'USDT전송');
+  assert.equal(formatProfilePaymentMethodLabel('bank_transfer'), '원화이체');
+  assert.equal(formatProfilePaymentMethodLabel('usdt'), '가상화폐 USDT');
   assert.equal(formatProfilePaymentMethodLabel('manual'), 'manual');
+  assert.equal(formatProfilePaymentDisplay({ method: 'bank_transfer', amountUsd: 199, amountKrw: 270640 }), '270,640원 / 원화이체');
+  assert.equal(formatProfilePaymentDisplay({ method: 'bank_transfer', amountUsd: 199, amountKrw: null }), '원화금액 미확인 / 원화이체');
+  assert.equal(formatProfilePaymentDisplay({ method: 'usdt', amountUsd: 199, amountKrw: null }), '199 USDT / 가상화폐 USDT');
   assert.equal(getProfilePaymentFlowTone({ paymentStatus: 'pending' }), 'pending');
   assert.equal(getProfilePaymentFlowTone({
     paymentStatus: 'confirmed',
@@ -651,7 +661,7 @@ test('profile recent payment cards use localized methods and highlighted flow st
   const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
   const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
-  assert.match(panelSource, /formatProfilePaymentMethodLabel\(payment\.method\)/);
+  assert.match(panelSource, /formatProfilePaymentDisplay\(payment\)/);
   assert.match(panelSource, /getProfilePaymentFlowTone/);
   assert.match(panelSource, /payment-flow-steps \$\{paymentFlowTone\}/);
   assert.match(styleSource, /\.payment-flow-steps\.pending/);
