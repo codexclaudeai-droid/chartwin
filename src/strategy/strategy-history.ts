@@ -2,6 +2,7 @@ const STRATEGY_MIN_HISTORY: Record<string, number> = {
   strategy_pine_bbands_directed: 200,
   strategy_js_double_break: 120,
   strategy_js_grid_atr_bnf_srouter_v1: 60,
+  strategy_js_mtf_1m_scalper: 260,
 };
 
 export function getStrategyMinimumHistory(strategyId: string | null | undefined): number {

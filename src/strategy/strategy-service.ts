@@ -625,6 +625,7 @@ export function loadStrategies(): StrategyDefinition[] {
           || saved.id === 'strategy_pine_sma_5_20'
           || saved.id === 'strategy_js_grid_martingale'
           || saved.id === 'strategy_js_grid_atr_bnf_srouter_v1'
+          || saved.id === 'strategy_js_mtf_1m_scalper'
         )
         && (saved.version ?? 0) < def.version
       ) {

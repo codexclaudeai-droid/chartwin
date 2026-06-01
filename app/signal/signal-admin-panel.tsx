@@ -82,6 +82,7 @@ const STRATEGIES: StrategyItem[] = [
   { id: 'strategy_js_shayhuang_vwap_fast', name: 'ShayHuang_VWAP_Fast', desc: 'VWAP breakout with continuation filters' },
   { id: 'strategy_js_grid_martingale', name: 'Grid Martingale Scalping', desc: 'Grid martingale scalping strategy' },
   { id: 'strategy_js_grid_atr_bnf_srouter_v1', name: 'Grid+ATR+BNF+SRouter v1', desc: 'Adaptive grid strategy with ATR and regime routing' },
+  { id: 'strategy_js_mtf_1m_scalper', name: 'MTF 1m Scalper', desc: '1m EMA cross with derived 5m trend filter' },
 ];
 
 const DEFAULT_USER_STRATEGY_ID = 'strategy_js_grid_martingale';
