@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
         admin,
         confirmedAt: new Date().toISOString(),
         adminNote: typeof body.adminNote === 'string' ? body.adminNote : undefined,
+        provisionalSale: body.provisionalSale === true,
       });
     });
 

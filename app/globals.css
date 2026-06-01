@@ -273,6 +273,7 @@ a {
 }
 
 .session-logout-button {
+  aspect-ratio: 1 / 1;
   border-radius: 999px;
   flex: 0 0 auto;
   height: 32px;
@@ -3037,6 +3038,11 @@ a {
 .admin-dashboard-sidebar-toggle svg {
   height: 18px;
   width: 18px;
+}
+
+.admin-dashboard-mobile-menu-toggle,
+.admin-dashboard-mobile-menu-backdrop {
+  display: none;
 }
 
 .admin-dashboard-sidebar-header span,
@@ -9060,6 +9066,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .mobile-nav-panel .session .session-logout-button {
+  aspect-ratio: 1 / 1;
   border-radius: 999px;
   height: 38px;
   justify-content: center;
@@ -9085,6 +9092,35 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   background: rgba(76, 141, 255, 0.18);
   border: 0;
   color: #ffffff;
+}
+
+.mobile-nav-links a {
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+.mobile-nav-links a .nav-badge {
+  margin-left: auto;
+}
+
+.mobile-nav-link-icon {
+  align-items: center;
+  color: rgba(125, 183, 255, 0.92);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 20px;
+  justify-content: center;
+  width: 20px;
+}
+
+.mobile-nav-link-icon svg {
+  height: 18px;
+  stroke-width: 2;
+  width: 18px;
+}
+
+.mobile-nav-link-label {
+  min-width: 0;
 }
 
 .mobile-nav-panel .session .session-logout-button:hover,
@@ -9867,6 +9903,7 @@ body:not(:has(.landing-page)) .admin-dashboard-shell[data-sidebar-collapsed="tru
 
 @media (max-width: 960px) {
   body:not(:has(.landing-page)) .admin-dashboard-shell {
+    gap: 14px;
     grid-template-columns: 1fr;
   }
 
@@ -9874,17 +9911,105 @@ body:not(:has(.landing-page)) .admin-dashboard-shell[data-sidebar-collapsed="tru
     grid-template-columns: 1fr;
   }
 
+  body:not(:has(.landing-page)) .admin-dashboard-mobile-menu-toggle {
+    align-items: center;
+    background: rgba(8, 17, 31, 0.9);
+    border: 1px solid rgba(125, 183, 255, 0.22);
+    border-radius: 12px;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+    color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    display: inline-flex;
+    height: 42px;
+    justify-content: center;
+    left: max(12px, env(safe-area-inset-left));
+    position: fixed;
+    top: calc(68px + env(safe-area-inset-top));
+    touch-action: manipulation;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+    will-change: transform;
+    width: 42px;
+    z-index: 86;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-mobile-menu-toggle:hover,
+  body:not(:has(.landing-page)) .admin-dashboard-mobile-menu-toggle:focus-visible {
+    background: rgba(76, 141, 255, 0.24);
+    border-color: rgba(125, 183, 255, 0.4);
+    color: #fff;
+    outline: 0;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-mobile-menu-toggle svg {
+    height: 20px;
+    width: 20px;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-shell[data-mobile-sidebar-open="true"] .admin-dashboard-mobile-menu-toggle {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    left: min(218px, calc(100vw - 138px));
+    top: calc(14px + env(safe-area-inset-top));
+    transform: translateX(0);
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-shell[data-mobile-sidebar-open="true"] .admin-dashboard-mobile-menu-toggle:hover,
+  body:not(:has(.landing-page)) .admin-dashboard-shell[data-mobile-sidebar-open="true"] .admin-dashboard-mobile-menu-toggle:focus-visible {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-mobile-menu-backdrop {
+    background: rgba(2, 7, 19, 0.56);
+    border: 0;
+    cursor: pointer;
+    display: block;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;
+    transition: opacity 180ms ease;
+    z-index: 78;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-shell[data-mobile-sidebar-open="true"] .admin-dashboard-mobile-menu-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   body:not(:has(.landing-page)) .admin-dashboard-sidebar {
-    position: static;
+    border-radius: 0 18px 18px 0;
+    bottom: 0;
+    box-shadow: 18px 0 48px rgba(0, 0, 0, 0.36);
+    left: 0;
+    max-width: 288px;
+    min-width: min(256px, calc(100vw - 84px));
+    overflow-y: auto;
+    position: fixed;
+    top: 0;
+    transform: translateX(-108%);
+    transition: transform 220ms ease;
+    width: min(272px, calc(100vw - 84px));
+    z-index: 82;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-shell[data-mobile-sidebar-open="true"] .admin-dashboard-sidebar {
+    transform: translateX(0);
   }
 
   body:not(:has(.landing-page)) .admin-dashboard-shell[data-sidebar-collapsed="true"] .admin-dashboard-sidebar {
-    width: auto;
+    width: min(272px, calc(100vw - 84px));
   }
 
   body:not(:has(.landing-page)) .admin-dashboard-shell[data-sidebar-collapsed="true"] .admin-dashboard-sidebar-header {
     justify-items: stretch;
-    padding: 16px 16px 14px;
+    padding: 16px 58px 14px 16px;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-sidebar-header {
+    padding: 16px 58px 14px 16px;
   }
 
   body:not(:has(.landing-page)) .admin-dashboard-shell[data-sidebar-collapsed="true"] .admin-dashboard-sidebar-heading {
@@ -9896,15 +10021,55 @@ body:not(:has(.landing-page)) .admin-dashboard-shell[data-sidebar-collapsed="tru
     width: 36px;
   }
 
+  body:not(:has(.landing-page)) .admin-dashboard-sidebar .admin-dashboard-sidebar-toggle {
+    display: none;
+  }
+
   body:not(:has(.landing-page)) .admin-dashboard-menu {
     display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 4px;
+    grid-template-columns: 1fr;
     overflow: visible;
+    padding: 8px 10px 12px;
   }
 
   body:not(:has(.landing-page)) .admin-dashboard-menu-item {
     min-width: 0;
+    padding: 8px 10px;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-menu-group {
+    gap: 3px;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-menu-group:has(.admin-dashboard-submenu) .admin-dashboard-menu-item::after {
+    font-size: 9px;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-menu-item strong {
+    font-size: 13px;
+    line-height: 1.16;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-sidebar-header span,
+  body:not(:has(.landing-page)) .admin-dashboard-menu-item span {
+    font-size: 9px;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-submenu {
+    gap: 2px;
+    margin-left: 14px;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-menu-group:hover .admin-dashboard-submenu,
+  body:not(:has(.landing-page)) .admin-dashboard-menu-group:focus-within .admin-dashboard-submenu,
+  body:not(:has(.landing-page)) .admin-dashboard-menu-group:has(.admin-dashboard-menu-item.active) .admin-dashboard-submenu {
+    margin-bottom: 2px;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-submenu a {
+    font-size: 12px;
+    padding: 3px 0 3px 10px;
   }
 
   body:not(:has(.landing-page)) .admin-dashboard-shell[data-sidebar-collapsed="true"] .admin-dashboard-menu {
@@ -10071,7 +10236,7 @@ body:not(:has(.landing-page)) .support-public-board-grid {
   }
 
 body:not(:has(.landing-page)) .admin-dashboard-sidebar {
-  position: static;
+  position: fixed;
 }
 }
 
@@ -10800,6 +10965,24 @@ body:not(:has(.landing-page)) .checkbox-row input:is(:hover, :focus, :focus-visi
   outline: 0;
 }
 
+@media (max-width: 640px) {
+  body:not(:has(.landing-page)) #admin-trial-policy .settings-grid label:nth-child(3),
+  body:not(:has(.landing-page)) #admin-trial-policy .settings-grid label:nth-child(4) {
+    grid-column: 1 / -1;
+  }
+
+  body:not(:has(.landing-page)) #admin-trial-policy input[type="datetime-local"] {
+    font-size: 13px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  body:not(:has(.landing-page)) #admin-trial-policy .checkbox-row {
+    justify-content: flex-start;
+    white-space: normal;
+  }
+}
+
 body:not(:has(.landing-page)) .support-workspace {
   align-items: start;
   grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
@@ -11222,6 +11405,14 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
     padding: 24px 16px 92px;
   }
 
+  body:not(:has(.landing-page)) .admin-page {
+    padding-top: 16px;
+  }
+
+  body:not(:has(.landing-page)) .admin-page-hero {
+    display: none;
+  }
+
   .profile-card-header {
     align-items: center;
   }
@@ -11248,6 +11439,10 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   body:not(:has(.landing-page)) .admin-dashboard-workspace,
   body:not(:has(.landing-page)) .admin-dashboard-sidebar {
     border-radius: 16px;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-sidebar {
+    border-radius: 0 16px 16px 0;
   }
 }
 

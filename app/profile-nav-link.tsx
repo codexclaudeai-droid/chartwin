@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { UserRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { subscribeAuthSessionChangedEvent } from './auth-events';
 import { getAuthSession } from './auth-session-client';
@@ -36,5 +37,10 @@ export function ProfileNavLink() {
   }, []);
 
   if (!canShow) return null;
-  return <Link href="/profile">마이프로필</Link>;
+  return (
+    <Link href="/profile">
+      <span className="mobile-nav-link-icon" aria-hidden="true"><UserRound /></span>
+      <span className="mobile-nav-link-label">마이프로필</span>
+    </Link>
+  );
 }

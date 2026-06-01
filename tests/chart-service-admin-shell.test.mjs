@@ -94,9 +94,17 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.doesNotMatch(shellSource, /activeSectionMeta/);
   assert.doesNotMatch(cssSource, /admin-dashboard-workspace-header/);
   assert.match(shellSource, /data-active-admin-section=\{activeSection\}/);
+  assert.match(shellSource, /data-mobile-sidebar-open=\{isMobileSidebarOpen\}/);
   assert.match(shellSource, /data-sidebar-collapsed=\{isSidebarCollapsed\}/);
   assert.match(shellSource, /ADMIN_DASHBOARD_SECTION_ICONS/);
   assert.match(shellSource, /from 'lucide-react'/);
+  assert.match(shellSource, /admin-dashboard-mobile-menu-toggle/);
+  assert.match(shellSource, /admin-dashboard-mobile-menu-backdrop/);
+  assert.match(shellSource, /aria-controls="admin-dashboard-sidebar"/);
+  assert.match(shellSource, /id="admin-dashboard-sidebar"/);
+  assert.match(shellSource, /setMobileSidebarOpen\(\(current\) => !current\)/);
+  assert.match(shellSource, /setMobileSidebarOpen\(false\)/);
+  assert.match(shellSource, /event\.key === 'Escape'/);
   assert.match(shellSource, /admin-dashboard-sidebar-toggle/);
   assert.match(shellSource, /setSidebarCollapsed\(\(current\) => !current\)/);
   assert.match(shellSource, /admin-dashboard-menu-icon/);
@@ -170,16 +178,55 @@ test('admin sidebar submenus roll out on hover and keyboard focus', () => {
   assert.match(cssSource, /\.admin-dashboard-submenu a\[aria-current="page"\]/);
 });
 
-test('admin sidebar menu wraps on small screens instead of horizontal scrolling', () => {
+test('admin sidebar slides in from a floating mobile menu button', () => {
+  const shellSource = fs.readFileSync(new URL('../app/admin/admin-dashboard-shell.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
+  assert.match(shellSource, /Menu/);
+  assert.match(shellSource, /aria-expanded=\{isMobileSidebarOpen\}/);
   assert.match(
     cssSource,
-    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-menu\s*\{[\s\S]*?display: grid[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(150px, 1fr\)\)[\s\S]*?overflow: visible/,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-mobile-menu-toggle\s*\{[\s\S]*?display:\s*inline-flex[\s\S]*?position:\s*fixed[\s\S]*?top:\s*calc\(68px \+ env\(safe-area-inset-top\)\)[\s\S]*?z-index:\s*86/,
   );
-  assert.doesNotMatch(
+  assert.match(
     cssSource,
-    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-menu\s*\{[^}]*overflow-x: auto/,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-shell\[data-mobile-sidebar-open="true"\] \.admin-dashboard-mobile-menu-toggle\s*\{[\s\S]*?background:\s*transparent[\s\S]*?border-color:\s*transparent[\s\S]*?box-shadow:\s*none[\s\S]*?left:\s*min\(218px, calc\(100vw - 138px\)\)[\s\S]*?top:\s*calc\(14px \+ env\(safe-area-inset-top\)\)/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-shell\[data-mobile-sidebar-open="true"\] \.admin-dashboard-mobile-menu-toggle:hover,[\s\S]*?\.admin-dashboard-shell\[data-mobile-sidebar-open="true"\] \.admin-dashboard-mobile-menu-toggle:focus-visible\s*\{[\s\S]*?background:\s*transparent[\s\S]*?border-color:\s*transparent[\s\S]*?box-shadow:\s*none/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-sidebar-header\s*\{[\s\S]*?padding:\s*16px 58px 14px 16px/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-sidebar\s*\{[\s\S]*?max-width:\s*288px[\s\S]*?min-width:\s*min\(256px, calc\(100vw - 84px\)\)[\s\S]*?position:\s*fixed[\s\S]*?transform:\s*translateX\(-108%\)[\s\S]*?width:\s*min\(272px, calc\(100vw - 84px\)\)/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-shell\[data-mobile-sidebar-open="true"\] \.admin-dashboard-sidebar\s*\{[\s\S]*?transform:\s*translateX\(0\)/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-mobile-menu-backdrop\s*\{[\s\S]*?position:\s*fixed[\s\S]*?pointer-events:\s*none/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-shell\[data-mobile-sidebar-open="true"\] \.admin-dashboard-mobile-menu-backdrop\s*\{[\s\S]*?pointer-events:\s*auto/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-menu\s*\{[\s\S]*?gap:\s*4px[\s\S]*?grid-template-columns:\s*1fr[\s\S]*?overflow:\s*visible[\s\S]*?padding:\s*8px 10px 12px/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-menu-item\s*\{[\s\S]*?padding:\s*8px 10px/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-submenu a\s*\{[\s\S]*?font-size:\s*12px[\s\S]*?padding:\s*3px 0 3px 10px/,
   );
 });
 
@@ -199,6 +246,19 @@ test('admin dashboard compacts sidebar and page gutters on tablet widths', () =>
   assert.match(
     cssSource,
     /@media \(max-width: 1180px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-page\s*\{[\s\S]*?padding-inline:\s*22px/,
+  );
+});
+
+test('admin mobile hero is removed so content starts immediately', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(
+    cssSource,
+    /@media \(max-width: 640px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-page\s*\{[\s\S]*?padding-top:\s*16px/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 640px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-page-hero\s*\{[\s\S]*?display:\s*none/,
   );
 });
 

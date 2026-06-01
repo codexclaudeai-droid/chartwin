@@ -44,5 +44,13 @@ test('admin free trial policy panel is reachable from subscription management', 
   assert.match(panelSource, /\/api\/admin\/trial-policy/);
   assert.match(panelSource, /eventAllowReapply/);
   assert.match(cssSource, /input\[type="datetime-local"\]::-webkit-calendar-picker-indicator/);
+  assert.match(
+    cssSource,
+    /@media \(max-width: 640px\)[\s\S]*?#admin-trial-policy \.settings-grid label:nth-child\(3\),[\s\S]*?#admin-trial-policy \.settings-grid label:nth-child\(4\)\s*\{[\s\S]*?grid-column:\s*1 \/ -1/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 640px\)[\s\S]*?#admin-trial-policy input\[type="datetime-local"\]\s*\{[\s\S]*?font-size:\s*13px[\s\S]*?width:\s*100%/,
+  );
   assert.match(routeSource, /updateAsyncFreeTrialPolicySettings/);
 });

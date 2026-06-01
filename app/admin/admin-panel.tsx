@@ -79,6 +79,12 @@ const PAYMENT_QUICK_MEMOS: PaymentQuickMemo[] = [
     supports: (item) => (item.payment.status === 'pending' || item.payment.status === 'requested') && item.payment.method === 'usdt',
   },
   {
+    key: 'provisional-sale',
+    label: '가매출',
+    note: '가매출 구독승인',
+    supports: (item) => item.payment.status === 'pending' || item.payment.status === 'requested',
+  },
+  {
     key: 'deposit-rejected',
     label: '입금 반려',
     note: '입금 내역 확인 불가',
@@ -178,6 +184,7 @@ export function AdminPanel() {
       body: JSON.stringify({
         paymentId,
         adminNote,
+        provisionalSale: operation === 'confirm' && isProvisionalSaleNote(adminNote),
       }),
     });
     const payload = await response.json();
@@ -223,6 +230,10 @@ export function AdminPanel() {
       ...currentNotes,
       [paymentId]: note,
     }));
+  }
+
+  function isProvisionalSaleNote(note: string): boolean {
+    return note.includes('가매출');
   }
 
   function renderPaymentFlowStatus(item: AdminPaymentQueueItem) {

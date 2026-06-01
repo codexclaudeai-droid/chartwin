@@ -29,5 +29,6 @@ test('payment confirmation route no longer activates subscriptions directly', ()
   const source = readFileSync(new URL('../app/api/admin/payments/confirm/route.ts', import.meta.url), 'utf8');
 
   assert.match(source, /confirmAsyncManualPaymentRequest/);
+  assert.match(source, /provisionalSale: body\.provisionalSale === true/);
   assert.doesNotMatch(source, /confirmAsyncManualPaymentAndActivateSubscription/);
 });

@@ -89,6 +89,11 @@ export type AdminSalesManagementSummary = {
     salesUsd: number;
     points: number;
   };
+  provisionalTotals: {
+    salesCount: number;
+    salesUsd: number;
+    points: number;
+  };
 };
 
 export type AdminCustomerSalespersonAssignment = {
@@ -459,6 +464,9 @@ function buildAdminSalesManagementSummary(
   const rows = selectedSalesperson
     ? buildSalesRows(source, selectedSalesperson.id, { from, to })
     : [];
+  const provisionalRows = selectedSalesperson
+    ? buildProvisionalSalesRows(source, selectedSalesperson.id, { from, to })
+    : [];
   const salespersonItems = filteredSalespeople.map((user) => {
     const salespersonRows = buildSalesRows(source, user.id, { from, to });
     return toSalespersonItem(source, user, salespersonRows);
@@ -489,6 +497,7 @@ function buildAdminSalesManagementSummary(
     teamTotals: summarizeRows(teamRows),
     rows,
     totals: summarizeRows(rows),
+    provisionalTotals: summarizeRows(provisionalRows),
   };
 }
 
@@ -528,6 +537,7 @@ function buildSalesRows(
 
   return source.payments
     .filter((payment) => payment.status === PAYMENT_STATUSES.confirmed)
+    .filter((payment) => !isProvisionalSalePayment(payment))
     .filter((payment) => customerById.get(payment.userId)?.referredByUserId === salespersonId)
     .filter((payment) => isWithinDateRange(payment.confirmedAt ?? payment.updatedAt, dateRange))
     .map((payment) => {
@@ -546,6 +556,35 @@ function buildSalesRows(
     .sort((a, b) => b.salesDate.localeCompare(a.salesDate));
 }
 
+function buildProvisionalSalesRows(
+  source: SalesSource,
+  salespersonId: string,
+  dateRange: { from: string | null; to: string | null },
+): AdminSalesManagementRow[] {
+  const customerById = new Map(source.users.map((user) => [user.id, user]));
+  const planById = new Map(source.plans.map((plan) => [plan.id, plan]));
+
+  return source.payments
+    .filter((payment) => payment.status === PAYMENT_STATUSES.confirmed)
+    .filter(isProvisionalSalePayment)
+    .filter((payment) => customerById.get(payment.userId)?.referredByUserId === salespersonId)
+    .filter((payment) => isWithinDateRange(payment.confirmedAt ?? payment.updatedAt, dateRange))
+    .map((payment) => {
+      const customer = customerById.get(payment.userId);
+      return {
+        paymentId: payment.id,
+        salesDate: (payment.confirmedAt ?? payment.updatedAt).slice(0, 10),
+        email: customer?.email ?? payment.userId,
+        customerName: customer?.name ?? 'Unknown',
+        subscriptionPlan: planById.get(payment.planId)?.name ?? payment.planId,
+        amountUsd: payment.amountUsd,
+        commissionPercent: 0,
+        points: 0,
+      };
+    })
+    .sort((a, b) => b.salesDate.localeCompare(a.salesDate));
+}
+
 function buildSalesRowsForSalespeople(
   source: SalesSource,
   salespersonIds: string[],
@@ -558,6 +597,7 @@ function buildSalesRowsForSalespeople(
 
   return source.payments
     .filter((payment) => payment.status === PAYMENT_STATUSES.confirmed)
+    .filter((payment) => !isProvisionalSalePayment(payment))
     .filter((payment) => {
       const customer = customerById.get(payment.userId);
       return customer?.referredByUserId ? teamSalespersonIds.has(customer.referredByUserId) : false;
@@ -577,6 +617,10 @@ function buildSalesRowsForSalespeople(
       };
     })
     .sort((a, b) => b.salesDate.localeCompare(a.salesDate));
+}
+
+function isProvisionalSalePayment(payment: SalesSource['payments'][number]): boolean {
+  return typeof payment.adminNote === 'string' && payment.adminNote.includes('가매출');
 }
 
 function buildSalesTeamItems(

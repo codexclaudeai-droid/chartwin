@@ -87,6 +87,44 @@ test('admin sales management summary lists salesperson revenue rows and totals',
   });
 });
 
+test('admin sales management summary excludes provisional sales and reports them separately', () => {
+  const repository = createMockChartServiceRepository();
+  const salesperson = repository.getUserById('user_subscriber');
+  const customer = repository.getUserById('user_member');
+  if (!salesperson || !customer) throw new Error('fixture users missing');
+  repository.saveUser({ ...salesperson, role: USER_ROLES.salesperson });
+  repository.saveUser({ ...customer, referredByUserId: salesperson.id });
+  repository.savePayment({
+    ...repository.getPaymentById('pay_pending'),
+    id: 'pay_provisional_sales_1',
+    userId: customer.id,
+    subscriptionId: 'sub_pending',
+    status: 'confirmed',
+    amountUsd: 300,
+    adminNote: '가매출 구독승인',
+    confirmedAt: '2026-05-24T03:00:00.000Z',
+    updatedAt: '2026-05-24T03:00:00.000Z',
+  });
+
+  const summary = getAdminSalesManagementSummary(repository, {
+    salespersonId: salesperson.id,
+    from: '2026-05-01',
+    to: '2026-05-31',
+  });
+
+  assert.equal(summary.rows.length, 0);
+  assert.deepEqual(summary.totals, {
+    salesCount: 0,
+    salesUsd: 0,
+    points: 0,
+  });
+  assert.deepEqual(summary.provisionalTotals, {
+    salesCount: 1,
+    salesUsd: 300,
+    points: 0,
+  });
+});
+
 test('admin sales management summary uses point settings as the default salesperson percent', () => {
   const repository = createMockChartServiceRepository();
   const salesperson = repository.getUserById('user_subscriber');
@@ -441,6 +479,8 @@ test('admin sales panel renders filters commission editing table totals and exce
   assert.match(panelSource, /activePage === 'people'/);
   assert.match(panelSource, /activePage === 'assignments'/);
   assert.match(panelSource, /activePage === 'revenue'/);
+  assert.match(panelSource, /provisionalTotals/);
+  assert.match(panelSource, /가매출 별도집계/);
   assert.match(panelSource, /검색\/선택 영업자/);
   assert.match(panelSource, /배정 대상 회원/);
   assert.match(panelSource, /visibleSummary\.selectedSalesperson\?\.name/);

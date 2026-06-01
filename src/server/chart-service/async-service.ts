@@ -1480,7 +1480,7 @@ export async function deleteAsyncAdminUserAccount(
 
 export async function confirmAsyncManualPaymentRequest(
   repository: AsyncChartServiceRepository,
-  input: { paymentId: string; admin: Actor; confirmedAt: string; adminNote?: string },
+  input: { paymentId: string; admin: Actor; confirmedAt: string; adminNote?: string; provisionalSale?: boolean },
 ): Promise<{ payment: PaymentRequestRecord; subscription: SubscriptionRecord }> {
   assertAdminActor(input.admin);
   const adminNote = typeof input.adminNote === 'string' && input.adminNote.trim()
@@ -1488,27 +1488,38 @@ export async function confirmAsyncManualPaymentRequest(
     : undefined;
   const payment = await requireAsyncPayment(repository, input.paymentId);
   const subscription = await requireAsyncSubscription(repository, payment.subscriptionId);
+  const plan = input.provisionalSale && subscription.planId ? await repository.getPlanById(subscription.planId) : null;
+  if (input.provisionalSale && !plan) {
+    throw new Error(`Plan not found for subscription: ${subscription.id}`);
+  }
+  const paymentAdminNote = normalizeProvisionalSaleAdminNote(adminNote, input.provisionalSale);
 
   const confirmedPayment = confirmPaymentRequest(payment, {
     adminId: input.admin.id,
     confirmedAt: input.confirmedAt,
-    adminNote,
+    adminNote: paymentAdminNote,
   });
-  const approvalPendingSubscription: SubscriptionRecord = {
-    ...subscription,
-    status: SUBSCRIPTION_STATUSES.paymentRequested,
-    updatedAt: input.confirmedAt,
-  };
+  const nextSubscription: SubscriptionRecord = input.provisionalSale && plan
+    ? approveSubscription(subscription, {
+      adminId: input.admin.id,
+      approvedAt: input.confirmedAt,
+      durationDays: plan.durationDays,
+    })
+    : {
+      ...subscription,
+      status: SUBSCRIPTION_STATUSES.paymentRequested,
+      updatedAt: input.confirmedAt,
+    };
 
   await repository.savePayment(confirmedPayment);
-  await repository.saveSubscription(approvalPendingSubscription);
+  await repository.saveSubscription(nextSubscription);
   await repository.appendAuditLog(createAuditLogDraft({
     actor: input.admin,
-    action: 'payment.confirm',
+    action: input.provisionalSale ? 'payment.provisional_sale.confirm_and_subscription.activate' : 'payment.confirm',
     targetType: 'payment_request',
     targetId: payment.id,
     beforeJson: { payment, subscription },
-    afterJson: { payment: confirmedPayment, subscription: approvalPendingSubscription },
+    afterJson: { payment: confirmedPayment, subscription: nextSubscription },
   }));
   await createAsyncUserNotification(repository, {
     userId: payment.userId,
@@ -1519,7 +1530,13 @@ export async function confirmAsyncManualPaymentRequest(
     createdAt: input.confirmedAt,
   });
 
-  return { payment: confirmedPayment, subscription: approvalPendingSubscription };
+  return { payment: confirmedPayment, subscription: nextSubscription };
+}
+
+function normalizeProvisionalSaleAdminNote(adminNote: string | undefined, provisionalSale?: boolean): string | undefined {
+  if (!provisionalSale) return adminNote;
+  if (!adminNote) return '가매출';
+  return adminNote.includes('가매출') ? adminNote : `가매출 - ${adminNote}`;
 }
 
 export async function approveAsyncSubscriptionActivationRequest(

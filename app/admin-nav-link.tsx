@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { subscribeAuthSessionChangedEvent } from './auth-events';
 import { getAuthSession } from './auth-session-client';
@@ -42,5 +43,10 @@ export function AdminNavLink() {
   }, []);
 
   if (!canShow) return null;
-  return <Link href="/admin">관리자</Link>;
+  return (
+    <Link href="/admin">
+      <span className="mobile-nav-link-icon" aria-hidden="true"><ShieldCheck /></span>
+      <span className="mobile-nav-link-label">관리자</span>
+    </Link>
+  );
 }

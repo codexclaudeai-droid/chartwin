@@ -37,7 +37,8 @@ test('session navigation source renders avatar name and role badge together', ()
   assert.match(source, /session-muted" aria-hidden="true"/);
   assert.match(source, /user\.profileImageDataUrl/);
   assert.match(source, /DefaultSessionAvatarIcon/);
-  assert.match(source, /LogoutIcon/);
+  assert.match(source, /import \{ LogOut \} from 'lucide-react'/);
+  assert.match(source, /<LogOut aria-hidden="true" \/>/);
   assert.match(source, /className="session-button session-logout-button"/);
   assert.match(source, /aria-label=\{isBusy \? '로그아웃 처리 중' : '로그아웃'\}/);
   assert.match(source, /className="session-user-name"/);
@@ -48,8 +49,11 @@ test('session navigation source renders avatar name and role badge together', ()
   assert.match(cssSource, /\.session-avatar svg\s*\{[\s\S]*?stroke: currentColor/);
   assert.match(cssSource, /\.session-user-name/);
   assert.match(cssSource, /\.session-logout-button/);
+  assert.match(cssSource, /\.session-logout-button\s*\{[\s\S]*?aspect-ratio: 1 \/ 1/);
+  assert.match(cssSource, /\.session-logout-button\s*\{[\s\S]*?border-radius: 999px/);
   assert.match(cssSource, /\.session-logout-button svg\s*\{[\s\S]*?stroke: currentColor/);
   assert.match(cssSource, /\.session-button:disabled\s*\{[^}]*cursor: default/);
   assert.doesNotMatch(cssSource, /\.session-button:disabled\s*\{[^}]*cursor: not-allowed/);
   assert.match(cssSource, /\.mobile-nav-panel \.session \.session-logout-button/);
+  assert.match(cssSource, /\.mobile-nav-panel \.session \.session-logout-button\s*\{[\s\S]*?aspect-ratio: 1 \/ 1/);
 });

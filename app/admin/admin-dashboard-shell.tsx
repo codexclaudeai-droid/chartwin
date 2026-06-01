@@ -8,6 +8,7 @@ import {
   Globe,
   LayoutDashboard,
   List,
+  Menu,
   MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
@@ -47,6 +48,7 @@ export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode
   const [activeSection, setActiveSection] = useState<AdminDashboardSectionKey>(() => getInitialAdminDashboardState().activeSection);
   const [activeTargetId, setActiveTargetId] = useState(() => getInitialAdminDashboardState().activeTargetId);
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     function syncActiveSection() {
@@ -55,6 +57,7 @@ export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode
         : window.location.hash);
       setActiveSection(getAdminDashboardSectionFromLocation(window.location.hash, window.location.search));
       setActiveTargetId(targetId || getDefaultTargetIdForSearch(window.location.search));
+      setMobileSidebarOpen(false);
     }
 
     syncActiveSection();
@@ -75,14 +78,49 @@ export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode
     });
   }, [activeTargetId]);
 
+  useEffect(() => {
+    if (!isMobileSidebarOpen) return;
+
+    function closeMobileSidebarOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setMobileSidebarOpen(false);
+      }
+    }
+
+    document.addEventListener('keydown', closeMobileSidebarOnEscape);
+    return () => {
+      document.removeEventListener('keydown', closeMobileSidebarOnEscape);
+    };
+  }, [isMobileSidebarOpen]);
+
   return (
     <AdminDashboardShellContext.Provider value={activeSection}>
       <div
         className="admin-dashboard-shell"
         data-active-admin-section={activeSection}
+        data-mobile-sidebar-open={isMobileSidebarOpen}
         data-sidebar-collapsed={isSidebarCollapsed}
       >
-        <aside className="admin-dashboard-sidebar" aria-label="관리자 메뉴">
+        <button
+          aria-controls="admin-dashboard-sidebar"
+          aria-expanded={isMobileSidebarOpen}
+          aria-label={isMobileSidebarOpen ? '관리자 메뉴 닫기' : '관리자 메뉴 열기'}
+          className="admin-dashboard-mobile-menu-toggle"
+          onClick={() => setMobileSidebarOpen((current) => !current)}
+          type="button"
+        >
+          {isMobileSidebarOpen
+            ? <PanelLeftClose aria-hidden="true" />
+            : <Menu aria-hidden="true" />}
+        </button>
+        <button
+          aria-label="관리자 메뉴 닫기"
+          className="admin-dashboard-mobile-menu-backdrop"
+          onClick={() => setMobileSidebarOpen(false)}
+          tabIndex={isMobileSidebarOpen ? 0 : -1}
+          type="button"
+        />
+        <aside className="admin-dashboard-sidebar" aria-label="관리자 메뉴" id="admin-dashboard-sidebar">
           <div className="admin-dashboard-sidebar-header">
             <div className="admin-dashboard-sidebar-heading">
               <span>Admin Console</span>
@@ -112,6 +150,7 @@ export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode
                     aria-current={isActive ? 'page' : undefined}
                     className={`admin-dashboard-menu-item${isActive ? ' active' : ''}`}
                     href={section.href}
+                    onClick={() => setMobileSidebarOpen(false)}
                     title={isSidebarCollapsed ? section.label : undefined}
                   >
                     <SectionIcon aria-hidden="true" className="admin-dashboard-menu-icon" />
@@ -128,6 +167,7 @@ export function AdminDashboardShell({ children }: Readonly<{ children: ReactNode
                           className={isChildActive ? 'active' : ''}
                           href={child.href}
                           key={child.href}
+                          onClick={() => setMobileSidebarOpen(false)}
                         >
                           {child.label}
                         </a>

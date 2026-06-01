@@ -1,6 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import {
+  ChartCandlestick,
+  Headset,
+  Home,
+  ReceiptText,
+} from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { useState } from 'react';
 import { AdminNavLink } from './admin-nav-link';
@@ -55,10 +61,22 @@ export function MobileNav() {
           <span aria-hidden="true" />
         </button>
         <nav className="mobile-nav-links" aria-label="모바일 메뉴">
-          <Link href="/">홈</Link>
-          <Link href="/chart" aria-label="TC Chart 페이지">TC차트</Link>
-          <Link href="/#landing-plans">구독</Link>
-          <Link href="/support">고객센터</Link>
+          <Link href="/">
+            <span className="mobile-nav-link-icon" aria-hidden="true"><Home /></span>
+            <span className="mobile-nav-link-label">홈</span>
+          </Link>
+          <Link href="/chart" aria-label="TC Chart 페이지">
+            <span className="mobile-nav-link-icon" aria-hidden="true"><ChartCandlestick /></span>
+            <span className="mobile-nav-link-label">TC차트</span>
+          </Link>
+          <Link href="/#landing-plans">
+            <span className="mobile-nav-link-icon" aria-hidden="true"><ReceiptText /></span>
+            <span className="mobile-nav-link-label">구독</span>
+          </Link>
+          <Link href="/support">
+            <span className="mobile-nav-link-icon" aria-hidden="true"><Headset /></span>
+            <span className="mobile-nav-link-label">고객센터</span>
+          </Link>
           <ProfileNavLink />
           <NotificationNavLink />
           <AdminNavLink />

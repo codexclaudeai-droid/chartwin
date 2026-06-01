@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { BellRing } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { formatNotificationBadgeCount } from '../src/domain/chart-service/index.ts';
 import { subscribeAuthSessionChangedEvent } from './auth-events';
@@ -62,7 +63,8 @@ export function NotificationNavLink() {
 
   return (
     <Link className="nav-alert-link" href={notificationHref}>
-      알림
+      <span className="mobile-nav-link-icon" aria-hidden="true"><BellRing /></span>
+      <span className="mobile-nav-link-label">알림</span>
       {badge && <span className="nav-badge" aria-label={`안 읽은 알림 ${badge}개`}>{badge}</span>}
     </Link>
   );

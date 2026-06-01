@@ -533,6 +533,7 @@ export function confirmManualPaymentRequest(
     admin: Actor;
     confirmedAt: string;
     adminNote?: string;
+    provisionalSale?: boolean;
   },
 ): { payment: PaymentRequestRecord; subscription: SubscriptionRecord } {
   assertAdminActor(input.admin);
@@ -541,27 +542,38 @@ export function confirmManualPaymentRequest(
     : undefined;
   const payment = requirePayment(repository, input.paymentId);
   const subscription = requireSubscription(repository, payment.subscriptionId);
+  const plan = input.provisionalSale && subscription.planId ? repository.getPlanById(subscription.planId) : null;
+  if (input.provisionalSale && !plan) {
+    throw new Error(`Plan not found for subscription: ${subscription.id}`);
+  }
+  const paymentAdminNote = normalizeProvisionalSaleAdminNote(adminNote, input.provisionalSale);
 
   const confirmedPayment = confirmPaymentRequest(payment, {
     adminId: input.admin.id,
     confirmedAt: input.confirmedAt,
-    adminNote,
+    adminNote: paymentAdminNote,
   });
-  const approvalPendingSubscription: SubscriptionRecord = {
-    ...subscription,
-    status: SUBSCRIPTION_STATUSES.paymentRequested,
-    updatedAt: input.confirmedAt,
-  };
+  const nextSubscription: SubscriptionRecord = input.provisionalSale && plan
+    ? approveSubscription(subscription, {
+      adminId: input.admin.id,
+      approvedAt: input.confirmedAt,
+      durationDays: plan.durationDays,
+    })
+    : {
+      ...subscription,
+      status: SUBSCRIPTION_STATUSES.paymentRequested,
+      updatedAt: input.confirmedAt,
+    };
 
   repository.savePayment(confirmedPayment);
-  repository.saveSubscription(approvalPendingSubscription);
+  repository.saveSubscription(nextSubscription);
   repository.appendAuditLog(createAuditLogDraft({
     actor: input.admin,
-    action: 'payment.confirm',
+    action: input.provisionalSale ? 'payment.provisional_sale.confirm_and_subscription.activate' : 'payment.confirm',
     targetType: 'payment_request',
     targetId: payment.id,
     beforeJson: { payment, subscription },
-    afterJson: { payment: confirmedPayment, subscription: approvalPendingSubscription },
+    afterJson: { payment: confirmedPayment, subscription: nextSubscription },
   }));
   createUserNotification(repository, {
     userId: payment.userId,
@@ -572,7 +584,13 @@ export function confirmManualPaymentRequest(
     createdAt: input.confirmedAt,
   });
 
-  return { payment: confirmedPayment, subscription: approvalPendingSubscription };
+  return { payment: confirmedPayment, subscription: nextSubscription };
+}
+
+function normalizeProvisionalSaleAdminNote(adminNote: string | undefined, provisionalSale?: boolean): string | undefined {
+  if (!provisionalSale) return adminNote;
+  if (!adminNote) return '가매출';
+  return adminNote.includes('가매출') ? adminNote : `가매출 - ${adminNote}`;
 }
 
 export function approveSubscriptionActivationRequest(

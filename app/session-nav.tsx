@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LogOut } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   dispatchAuthSessionChangedEvent,
@@ -77,7 +78,7 @@ export function SessionNav() {
           onClick={logout}
           disabled={isBusy}
         >
-          <LogoutIcon />
+          <LogOut aria-hidden="true" />
         </button>
       </div>
     );
@@ -96,16 +97,6 @@ function DefaultSessionAvatarIcon() {
     <svg aria-hidden="true" viewBox="0 0 24 24">
       <circle cx="12" cy="8" r="4" />
       <path d="M4.8 20c1.15-4.35 3.55-6.5 7.2-6.5s6.05 2.15 7.2 6.5" />
-    </svg>
-  );
-}
-
-function LogoutIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24">
-      <path d="M10 6H6.8A1.8 1.8 0 0 0 5 7.8v8.4A1.8 1.8 0 0 0 6.8 18H10" />
-      <path d="M14 8l4 4-4 4" />
-      <path d="M18 12H9" />
     </svg>
   );
 }

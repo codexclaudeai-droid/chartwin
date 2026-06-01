@@ -98,6 +98,29 @@ test('admin payment confirmation leaves subscription approval for the subscripti
   assert.equal(paymentQueueItem?.subscription?.status, 'payment_requested');
 });
 
+test('admin payment provisional sale confirms payment and activates subscription directly', async () => {
+  const {
+    confirmManualPaymentRequest,
+  } = await import('../src/server/chart-service/index.ts');
+  const repository = createMockChartServiceRepository();
+
+  const result = confirmManualPaymentRequest(repository, {
+    paymentId: 'pay_pending',
+    admin: { id: 'admin_1', role: 'admin' },
+    confirmedAt: '2026-05-23T12:10:00.000Z',
+    adminNote: '가매출 구독승인',
+    provisionalSale: true,
+  });
+  const paymentQueueItem = listAdminPaymentQueue(repository)
+    .find((item) => item.payment.id === 'pay_pending');
+
+  assert.equal(result.payment.status, 'confirmed');
+  assert.match(result.payment.adminNote ?? '', /가매출/);
+  assert.equal(result.subscription.status, 'active');
+  assert.equal(paymentQueueItem?.subscription?.status, 'active');
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'payment.provisional_sale.confirm_and_subscription.activate');
+});
+
 test('admin payment queue API does not expose user password hashes', async () => {
   const {
     createSessionForUser,
@@ -258,6 +281,10 @@ test('admin payment panel exposes quick memo buttons for required admin notes', 
   assert.match(source, /quick-memo-row/);
   assert.match(source, /입금자명\/금액 일치 확인/);
   assert.match(source, /TXID 수신주소\/금액 일치 확인/);
+  assert.match(source, /key: 'provisional-sale'/);
+  assert.match(source, /label: '가매출'/);
+  assert.match(source, /note: '가매출 구독승인'/);
+  assert.match(source, /provisionalSale: operation === 'confirm' && isProvisionalSaleNote\(adminNote\)/);
   assert.match(source, /입금 내역 확인 불가/);
   assert.match(source, /환불 사유 확인 후 처리/);
   assert.match(cssSource, /\.quick-memo-row/);
@@ -879,9 +906,16 @@ test('top navigation links the landing page to the TC Chart route', () => {
   assert.doesNotMatch(layoutSource, /<ProfileNavLink \/>/);
   assert.match(mobileNavSource, /<ProfileNavLink \/>/);
   assert.equal(
-    ((layoutSource + mobileNavSource).match(/<Link href="\/#landing-plans">구독<\/Link>/g) ?? []).length,
+    ((layoutSource + mobileNavSource).match(/<Link href="\/#landing-plans"/g) ?? []).length,
     2,
   );
+  assert.match(mobileNavSource, /from 'lucide-react'/);
+  assert.match(mobileNavSource, /Home/);
+  assert.match(mobileNavSource, /ChartCandlestick/);
+  assert.match(mobileNavSource, /ReceiptText/);
+  assert.match(mobileNavSource, /Headset/);
+  assert.match(mobileNavSource, /mobile-nav-link-icon/);
+  assert.match(mobileNavSource, /mobile-nav-link-label/);
   assert.doesNotMatch(layoutSource, /<Link href="\/pricing">구독<\/Link>/);
   assert.match(layoutSource, /<MobileNav \/>/);
 
@@ -892,6 +926,8 @@ test('top navigation links the landing page to the TC Chart route', () => {
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*rgba\(15, 29, 52, 0\.98\)/s);
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*border: 1px solid rgba\(125, 183, 255, 0\.24\) !important/s);
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*0 22px 56px rgba\(0, 0, 0, 0\.42\)/s);
+  assert.match(cssSource, /\.mobile-nav-link-icon\s*\{[^}]*color: rgba\(125, 183, 255, 0\.92\)/s);
+  assert.match(cssSource, /\.mobile-nav-link-icon svg\s*\{[^}]*height: 18px/s);
   assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-toggle span:nth-child\(1\)\s*\{[^}]*rotate\(45deg\)/s);
   assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-toggle span:nth-child\(2\)\s*\{[^}]*opacity: 0/s);
   assert.match(cssSource, /@media \(max-width: 900px\)\s*\{[\s\S]*?\.nav\s*\{[\s\S]*?gap: 22px/);
@@ -936,6 +972,28 @@ test('mobile navigation slides from the left and closes on menu or outside touch
   assert.match(cssSource, /\.mobile-nav-panel\s*\{[^}]*transform: translateX\(-104%\)/s);
   assert.match(cssSource, /\.mobile-nav\.open \.mobile-nav-panel\s*\{[^}]*transform: translateX\(0\)/s);
   assert.match(cssSource, /@media \(hover: none\), \(pointer: coarse\)\s*\{[\s\S]*?-webkit-tap-highlight-color: transparent/s);
+});
+
+test('mobile navigation links use lucide concept icons before labels', () => {
+  const mobileNavSource = fs.readFileSync(new URL('../app/mobile-nav.tsx', import.meta.url), 'utf8');
+  const profileSource = fs.readFileSync(new URL('../app/profile-nav-link.tsx', import.meta.url), 'utf8');
+  const notificationSource = fs.readFileSync(new URL('../app/notification-nav-link.tsx', import.meta.url), 'utf8');
+  const adminSource = fs.readFileSync(new URL('../app/admin-nav-link.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(mobileNavSource, /Home/);
+  assert.match(mobileNavSource, /ChartCandlestick/);
+  assert.match(mobileNavSource, /ReceiptText/);
+  assert.match(mobileNavSource, /Headset/);
+  assert.match(profileSource, /UserRound/);
+  assert.match(notificationSource, /BellRing/);
+  assert.match(adminSource, /ShieldCheck/);
+  assert.match((mobileNavSource.match(/mobile-nav-link-icon/g) ?? []).join(' '), /mobile-nav-link-icon/);
+  assert.match(profileSource, /mobile-nav-link-icon/);
+  assert.match(notificationSource, /mobile-nav-link-icon/);
+  assert.match(adminSource, /mobile-nav-link-icon/);
+  assert.match(cssSource, /\.mobile-nav-links a\s*\{[\s\S]*?gap:\s*10px[\s\S]*?justify-content:\s*flex-start/);
+  assert.match(cssSource, /\.mobile-nav-links a \.nav-badge\s*\{[\s\S]*?margin-left:\s*auto/);
 });
 
 test('mobile navigation drawer has compact square-edged panel with internal close control and session divider', () => {

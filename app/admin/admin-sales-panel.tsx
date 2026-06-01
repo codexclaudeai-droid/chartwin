@@ -82,6 +82,11 @@ type SalesSummary = {
     salesUsd: number;
     points: number;
   };
+  provisionalTotals: {
+    salesCount: number;
+    salesUsd: number;
+    points: number;
+  };
 };
 
 type SalesResponse = {
@@ -115,6 +120,11 @@ const EMPTY_SALES_SUMMARY: SalesSummary = {
   },
   rows: [],
   totals: {
+    salesCount: 0,
+    salesUsd: 0,
+    points: 0,
+  },
+  provisionalTotals: {
     salesCount: 0,
     salesUsd: 0,
     points: 0,
@@ -829,6 +839,11 @@ export function AdminSalesPanel() {
         {activePage === 'revenue' && (
         <>
           <div className="sales-summary-grid">
+            <div className="mini-card">
+              <span>가매출 별도집계</span>
+              <strong>{formatUsd(visibleSummary.provisionalTotals.salesUsd)}</strong>
+              <p>가매출 {visibleSummary.provisionalTotals.salesCount}건 / 포인트 {formatPoint(visibleSummary.provisionalTotals.points)}</p>
+            </div>
             <div className="mini-card">
               <span>선택 영업자</span>
               <strong>{visibleSummary.selectedSalesperson?.name ?? '영업자 없음'}</strong>
