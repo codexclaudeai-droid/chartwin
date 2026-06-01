@@ -1,4 +1,4 @@
-const DEV_PATH_SUFFIX = '/dev.html';
+const DEV_PATH_SUFFIXES = ['/dev', '/dev.html'];
 
 export type AppVariant = 'beta' | 'dev';
 
@@ -13,7 +13,7 @@ export function getAppVariant(): AppVariant {
     return metaVariant;
   }
   const pathname = String(window.location.pathname || '').toLowerCase();
-  return pathname.endsWith(DEV_PATH_SUFFIX) || pathname.endsWith('dev.html') ? 'dev' : 'beta';
+  return DEV_PATH_SUFFIXES.some((suffix) => pathname === suffix || pathname.endsWith(suffix)) ? 'dev' : 'beta';
 }
 
 export function isDevAppVariant(): boolean {

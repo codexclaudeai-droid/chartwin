@@ -253,6 +253,7 @@ const BOLLINGER_RISK_DEFAULT_CONFIG: BollingerRiskConfig = {
 };
 
 const DOUBLE_BREAK_STRATEGY_ID = 'strategy_js_double_break';
+const MTF_1M_SCALPER_STRATEGY_ID = 'strategy_js_mtf_1m_scalper';
 const DOUBLE_BREAK_PARAM_DEFAULT_KEY = '__double_break_config_default__';
 const DOUBLE_BREAK_PARAM_SYMBOL_PREFIX = '__double_break_config_symbol__';
 const STRATEGY_RISK_LINES_VISIBLE_STORAGE_KEY = 'my-chart-lib-strategy-risk-lines-visible-v1';
@@ -2954,6 +2955,134 @@ export class SimpleChart {
     };
   }
 
+  private getMtf1mScalperRiskConfig(): { atrPeriod: number; atrMult: number; tpMult: number } {
+    const params = this.getStrategyParams(MTF_1M_SCALPER_STRATEGY_ID);
+    return {
+      atrPeriod: Math.max(1, Math.round(Number(params.atrPeriod) || 14)),
+      atrMult: Math.max(0.01, Number(params.atrMult) || 1.5),
+      tpMult: Math.max(0.01, Number(params.tpMult) || 1.5),
+    };
+  }
+
+  private buildMtf1mScalperReport(args: StrategyReportArgs): StrategyReportResult | null {
+    if (this.activeStrategyId !== MTF_1M_SCALPER_STRATEGY_ID || !this.data.length || !this.strategySignals.length) return null;
+    const range = this.resolveStrategyReportRange(args);
+    if (!range) return null;
+    const { start, end } = range;
+    const feeRate = (args.feeBps + args.slippageBps) / 10000;
+    const risk = this.getMtf1mScalperRiskConfig();
+    const atr = this.calcAtrSeries(risk.atrPeriod);
+    const trades: StrategyReportTrade[] = [];
+    const includeTrade = (tradeSide: 'LONG' | 'SHORT'): boolean => (
+      args.sideFilter === 'all' || args.sideFilter === tradeSide.toLowerCase()
+    );
+
+    let side: 'LONG' | 'SHORT' | null = null;
+    let entry = 0;
+    let stop = 0;
+    let tp = 0;
+    let entryIndex = -1;
+    let entryTime: number | null = null;
+    let signalCount = 0;
+
+    const closePosition = (exit: number, exitIndex: number, status: 'CLOSED' | 'OPEN') => {
+      if (!side || entryIndex < 0) return;
+      const gross = side === 'LONG' ? exit - entry : entry - exit;
+      const net = gross - (entry + exit) * feeRate;
+      if (includeTrade(side)) {
+        trades.push({
+          side,
+          status,
+          entry,
+          exit,
+          pnl: net,
+          stopLoss: stop,
+          takeProfits: [tp],
+          entryIndex,
+          exitIndex,
+          entryTime,
+          exitTime: status === 'CLOSED' && Number.isFinite(Number(this.data[exitIndex]?.time))
+            ? Number(this.data[exitIndex]?.time)
+            : null,
+        });
+      }
+      side = null;
+      entry = 0;
+      stop = 0;
+      tp = 0;
+      entryIndex = -1;
+      entryTime = null;
+    };
+
+    const openPosition = (nextSide: 'LONG' | 'SHORT', index: number) => {
+      const candle = this.data[index];
+      if (!candle) return;
+      const atrNow = atr[index];
+      const atrValue = atrNow && Number.isFinite(atrNow) ? atrNow : Math.max(1e-9, candle.high - candle.low);
+      side = nextSide;
+      entry = candle.close;
+      entryIndex = index;
+      entryTime = Number.isFinite(Number(candle.time)) ? Number(candle.time) : null;
+      const distance = atrValue * risk.atrMult;
+      if (nextSide === 'LONG') {
+        stop = entry - distance;
+        tp = entry + distance * risk.tpMult;
+      } else {
+        stop = entry + distance;
+        tp = entry - distance * risk.tpMult;
+      }
+      if (includeTrade(nextSide)) signalCount += 1;
+    };
+
+    for (let i = start; i < end; i += 1) {
+      const candle = this.data[i];
+      if (!candle) continue;
+
+      if (side && i > entryIndex) {
+        if (side === 'LONG') {
+          const stopHit = candle.low <= stop;
+          const tpHit = candle.high >= tp;
+          if (stopHit && tpHit) {
+            closePosition(candle.close >= candle.open ? tp : stop, i, 'CLOSED');
+          } else if (stopHit) {
+            closePosition(stop, i, 'CLOSED');
+          } else if (tpHit) {
+            closePosition(tp, i, 'CLOSED');
+          }
+        } else {
+          const stopHit = candle.high >= stop;
+          const tpHit = candle.low <= tp;
+          if (stopHit && tpHit) {
+            closePosition(candle.close <= candle.open ? tp : stop, i, 'CLOSED');
+          } else if (stopHit) {
+            closePosition(stop, i, 'CLOSED');
+          } else if (tpHit) {
+            closePosition(tp, i, 'CLOSED');
+          }
+        }
+      }
+
+      const signal = this.strategySignals[i] ?? 0;
+      if (signal > 0) {
+        if (side === 'SHORT') closePosition(candle.close, i, 'CLOSED');
+        if (side !== 'LONG') openPosition('LONG', i);
+      } else if (signal < 0) {
+        if (side === 'LONG') closePosition(candle.close, i, 'CLOSED');
+        if (side !== 'SHORT') openPosition('SHORT', i);
+      }
+    }
+
+    let openPositionCount = 0;
+    if (side && entryIndex >= start) {
+      const lastIndex = Math.max(start, end - 1);
+      const lastClose = this.data[lastIndex]?.close ?? entry;
+      openPositionCount = includeTrade(side) ? 1 : 0;
+      closePosition(lastClose, lastIndex, 'OPEN');
+    }
+
+    return this.buildSummaryReport(args, trades, signalCount, openPositionCount, start, end);
+  }
+
   private buildGridMartingaleReport(args: StrategyReportArgs): StrategyReportResult | null {
     if (this.activeStrategyId !== 'strategy_js_grid_martingale' || !this.data.length || !this.strategySignals.length) return null;
     const range = this.resolveStrategyReportRange(args);
@@ -3513,6 +3642,9 @@ export class SimpleChart {
       return this.buildBollingerRiskManagedReport(args);
     }
 
+    const mtf1mScalper = this.buildMtf1mScalperReport(args);
+    if (mtf1mScalper) return mtf1mScalper;
+
     const doubleBreak = this.getDoubleBreakResult();
     if (!doubleBreak) return null;
 
@@ -3956,6 +4088,33 @@ export class SimpleChart {
               candle.close - atrValue * risk.tp1AtrMult,
               candle.close - atrValue * risk.tp2AtrMult,
             ],
+          });
+        }
+      }
+    }
+
+    if (this.activeStrategyId === MTF_1M_SCALPER_STRATEGY_ID) {
+      const risk = this.getMtf1mScalperRiskConfig();
+      const atr = this.calcAtrSeries(risk.atrPeriod);
+      for (let i = 0; i < this.strategySignals.length; i += 1) {
+        const signal = this.strategySignals[i] ?? 0;
+        if (!signal) continue;
+        const candle = this.data[i];
+        if (!candle) continue;
+        const atrNow = atr[i];
+        const atrValue = atrNow && Number.isFinite(atrNow) ? atrNow : Math.max(1e-9, candle.high - candle.low);
+        const distance = atrValue * risk.atrMult;
+        if (signal > 0) {
+          details.set(i, {
+            side: 'LONG',
+            stopLoss: candle.close - distance,
+            takeProfits: [candle.close + distance * risk.tpMult],
+          });
+        } else if (signal < 0) {
+          details.set(i, {
+            side: 'SHORT',
+            stopLoss: candle.close + distance,
+            takeProfits: [candle.close - distance * risk.tpMult],
           });
         }
       }

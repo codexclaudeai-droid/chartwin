@@ -10,6 +10,7 @@ export const mtf1mScalperJs = {
     filterEma: 50,
     atrPeriod: 14,
     atrMult: 1.5,
+    tpMult: 1.5,
     htfFactor: 5,
   },
   sourceCode: `(
@@ -25,6 +26,7 @@ export const mtf1mScalperJs = {
       var filterPeriod = Math.max(1, Math.round(Number(rawParams.filterEma) || 50));
       var atrPeriod = Math.max(1, Math.round(Number(rawParams.atrPeriod) || 14));
       var atrMult = Math.max(0.01, Number(rawParams.atrMult) || 1.5);
+      var tpMult = Math.max(0.01, Number(rawParams.tpMult) || 1.5);
       var htfFactor = Math.max(2, Math.round(Number(rawParams.htfFactor) || 5));
       var n = close.length;
       var firstKey = Math.round((close[0] || 0) * 1e6);
@@ -35,6 +37,7 @@ export const mtf1mScalperJs = {
         filterPeriod: filterPeriod,
         atrPeriod: atrPeriod,
         atrMult: atrMult,
+        tpMult: tpMult,
         htfFactor: htfFactor,
         n: n,
         firstKey: firstKey,

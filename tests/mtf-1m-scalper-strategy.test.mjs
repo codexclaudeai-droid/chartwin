@@ -8,6 +8,7 @@ import { getStrategyMinimumHistory } from '../src/strategy/strategy-history.ts';
 const strategyIndexSource = fs.readFileSync(new URL('../src/strategy/strategies/index.ts', import.meta.url), 'utf8');
 const signalPanelSource = fs.readFileSync(new URL('../app/signal/signal-admin-panel.tsx', import.meta.url), 'utf8');
 const strategyServiceSource = fs.readFileSync(new URL('../src/strategy/strategy-service.ts', import.meta.url), 'utf8');
+const simpleChartSource = fs.readFileSync(new URL('../src/chart/SimpleChart.ts', import.meta.url), 'utf8');
 
 test('mtf 1m scalper strategy is registered in strategy and signal admin catalogs', () => {
   assert.equal(mtf1mScalperJs.id, 'strategy_js_mtf_1m_scalper');
@@ -15,6 +16,14 @@ test('mtf 1m scalper strategy is registered in strategy and signal admin catalog
   assert.match(signalPanelSource, /strategy_js_mtf_1m_scalper/);
   assert.match(strategyServiceSource, /strategy_js_mtf_1m_scalper/);
   assert.equal(getStrategyMinimumHistory('strategy_js_mtf_1m_scalper'), 260);
+});
+
+test('mtf 1m scalper is wired to strategy SL/TP risk lines and report output', () => {
+  assert.match(simpleChartSource, /MTF_1M_SCALPER_STRATEGY_ID = 'strategy_js_mtf_1m_scalper'/);
+  assert.match(simpleChartSource, /getMtf1mScalperRiskConfig/);
+  assert.match(simpleChartSource, /buildMtf1mScalperReport/);
+  assert.match(simpleChartSource, /stopLoss: candle\.close - distance/);
+  assert.match(simpleChartSource, /takeProfits: \[candle\.close \+ distance \* risk\.tpMult\]/);
 });
 
 test('mtf 1m scalper emits cross signals with derived higher timeframe filter', () => {
