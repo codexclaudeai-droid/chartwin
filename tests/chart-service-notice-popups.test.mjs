@@ -187,8 +187,12 @@ test('notice popup admin screen uses Tiptap and icon actions', () => {
   assert.match(publicBoardSource, /NumberStepper/);
   assert.match(numberStepperSource, /ChevronUpIcon/);
   assert.match(numberStepperSource, /ChevronDownIcon/);
-  assert.match(panelSource, /Pencil/);
-  assert.match(panelSource, /Trash2/);
+  assert.match(panelSource, /EditActionIcon/);
+  assert.match(panelSource, /DeleteActionIcon/);
+  assert.match(panelSource, /action-icon-button edit/);
+  assert.match(panelSource, /action-icon-button delete/);
+  assert.doesNotMatch(panelSource, /Pencil/);
+  assert.doesNotMatch(panelSource, /Trash2/);
   assert.match(webInfoSource, /공지팝업/);
   assert.match(webInfoSource, /AdminNoticePopupPanel/);
   assert.match(routeSource, /upsertAsyncNoticePopup/);

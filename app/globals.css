@@ -987,6 +987,43 @@ a {
   stroke-width: 2;
 }
 
+.action-icon-button {
+  color: rgba(216, 236, 255, 0.8);
+  height: 32px;
+  width: 32px;
+}
+
+.action-icon-button svg {
+  height: 19px;
+  width: 19px;
+}
+
+.action-icon-button.edit:hover:not(:disabled),
+.action-icon-button.edit:focus-visible:not(:disabled) {
+  background: rgba(125, 183, 255, 0.12);
+  color: #ffffff;
+}
+
+.action-icon-button.add {
+  color: rgba(159, 240, 215, 0.88);
+}
+
+.action-icon-button.add:hover:not(:disabled),
+.action-icon-button.add:focus-visible:not(:disabled) {
+  background: rgba(22, 163, 124, 0.12);
+  color: #c8ffed;
+}
+
+.action-icon-button.delete {
+  color: rgba(255, 143, 160, 0.88);
+}
+
+.action-icon-button.delete:hover:not(:disabled),
+.action-icon-button.delete:focus-visible:not(:disabled) {
+  background: rgba(255, 95, 124, 0.12);
+  color: #ffcad2;
+}
+
 .landing-page {
   background:
     radial-gradient(circle at 14% 8%, rgba(183, 255, 42, 0.22), transparent 28vw),
@@ -3133,6 +3170,7 @@ a {
   color: rgba(255, 255, 255, 0.74);
   grid-row: 1 / span 2;
   height: 18px;
+  transition: color 160ms ease;
   width: 18px;
 }
 
@@ -3149,19 +3187,39 @@ a {
     0 12px 28px rgba(0, 0, 0, 0.18);
 }
 
+.admin-dashboard-menu-item.active .admin-dashboard-menu-icon {
+  color: #fff;
+}
+
 .admin-dashboard-menu-group {
   display: grid;
   gap: 6px;
 }
 
+.admin-dashboard-menu-group:has(.admin-dashboard-submenu) .admin-dashboard-menu-item {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
 .admin-dashboard-menu-group:has(.admin-dashboard-submenu) .admin-dashboard-menu-item::after {
+  align-self: center;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
   color: rgba(255, 255, 255, 0.48);
-  content: "Sub menu";
-  font-size: 10px;
-  font-weight: 850;
-  grid-column: 2;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  content: "";
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  height: 7px;
+  justify-self: end;
+  transform: rotate(45deg);
+  transition: color 160ms ease, transform 180ms ease;
+  width: 7px;
+}
+
+.admin-dashboard-menu-group:hover .admin-dashboard-menu-item::after,
+.admin-dashboard-menu-group:focus-within .admin-dashboard-menu-item::after,
+.admin-dashboard-menu-group:has(.admin-dashboard-menu-item.active) .admin-dashboard-menu-item::after {
+  color: #fff;
+  transform: rotate(-135deg);
 }
 
 .admin-dashboard-menu-item span,
@@ -3197,11 +3255,23 @@ a {
 }
 
 .admin-dashboard-submenu a {
-  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  align-items: center;
   color: rgba(255, 255, 255, 0.7);
+  display: grid;
   font-size: 13px;
-  padding: 5px 0 5px 12px;
-  transition: border-color 160ms ease, color 160ms ease, transform 160ms ease;
+  gap: 8px;
+  grid-template-columns: 7px minmax(0, 1fr);
+  padding: 5px 0 5px 4px;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.admin-dashboard-submenu a::before {
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  content: "";
+  height: 5px;
+  transition: background 160ms ease, transform 160ms ease;
+  width: 5px;
 }
 
 .admin-dashboard-submenu a:hover,
@@ -3213,8 +3283,14 @@ a {
 
 .admin-dashboard-submenu a.active,
 .admin-dashboard-submenu a[aria-current="page"] {
-  border-left-color: var(--accent);
   font-weight: 850;
+}
+
+.admin-dashboard-submenu a:hover::before,
+.admin-dashboard-submenu a.active::before,
+.admin-dashboard-submenu a[aria-current="page"]::before {
+  background: #fff;
+  transform: scale(1.08);
 }
 
 .admin-dashboard-workspace {
@@ -3379,6 +3455,11 @@ a {
   min-width: 220px;
 }
 
+.admin-symbols-table th:nth-child(2),
+.admin-symbols-table td:nth-child(2) {
+  width: 82px;
+}
+
 .admin-symbols-item {
   align-items: center;
   display: grid;
@@ -3449,15 +3530,16 @@ a {
 
 .admin-symbols-apply-switch {
   align-items: center;
-  background: rgba(2, 7, 19, 0.46);
-  border: 1px solid rgba(125, 183, 255, 0.18);
+  background: transparent;
+  border: 0;
   border-radius: 999px;
   color: rgba(216, 236, 255, 0.68);
   cursor: pointer;
-  display: inline-flex;
-  gap: 8px;
+  display: inline-grid;
+  gap: 4px;
+  justify-items: center;
   min-height: 30px;
-  padding: 4px 10px 4px 5px;
+  padding: 4px;
   transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
   white-space: nowrap;
 }
@@ -3492,8 +3574,7 @@ a {
 }
 
 .admin-symbols-apply-switch.active {
-  background: rgba(22, 163, 124, 0.18);
-  border-color: rgba(22, 163, 124, 0.38);
+  background: transparent;
   color: #9ff0d7;
 }
 
@@ -4287,10 +4368,74 @@ a {
   width: 110px;
 }
 
+.bank-logo-upload-field {
+  align-content: start;
+}
+
+.bank-logo-upload-control {
+  background: rgba(3, 11, 24, 0.86);
+  border: 1px solid rgba(125, 183, 255, 0.18);
+  border-radius: 12px;
+  cursor: pointer;
+  display: grid;
+  min-height: 72px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bank-logo-upload-control input[type="file"] {
+  cursor: pointer;
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+  z-index: 1;
+}
+
+.bank-logo-upload-content {
+  align-content: center;
+  color: rgba(125, 183, 255, 0.95);
+  display: grid;
+  gap: 7px;
+  justify-items: center;
+  min-height: 72px;
+  padding: 12px;
+  text-align: center;
+}
+
+.bank-logo-upload-icon {
+  background: rgba(2, 7, 19, 0.96);
+  border-radius: 12px;
+  box-sizing: content-box;
+  color: rgba(255, 255, 255, 0.74);
+  display: block;
+  height: 24px;
+  padding: 5px;
+  width: 24px;
+}
+
+.bank-logo-upload-copy {
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  line-height: 1.2;
+}
+
+.bank-logo-upload-copy strong {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.bank-logo-upload-copy small {
+  color: rgba(216, 236, 255, 0.68);
+  font-size: 11px;
+  font-weight: 750;
+}
+
 .bank-logo-preview {
   align-items: center;
-  background: rgba(255, 253, 247, 0.75);
-  border: 1px dashed var(--line);
+  background: rgba(3, 11, 24, 0.86);
+  border: 1px solid rgba(125, 183, 255, 0.18);
   border-radius: 12px;
   display: flex;
   gap: 12px;
@@ -4299,7 +4444,7 @@ a {
 }
 
 .bank-logo-preview span {
-  color: var(--muted);
+  color: rgba(216, 236, 255, 0.68);
   font-size: 13px;
   font-weight: 750;
 }
@@ -9974,7 +10119,7 @@ body:not(:has(.landing-page)) .admin-dashboard-shell[data-sidebar-collapsed="tru
 
 @media (max-width: 1180px) {
   body:not(:has(.landing-page)) .admin-page {
-    padding-inline: 22px;
+    padding-inline: 18px;
   }
 }
 
@@ -10120,7 +10265,8 @@ body:not(:has(.landing-page)) .admin-dashboard-shell[data-sidebar-collapsed="tru
   }
 
   body:not(:has(.landing-page)) .admin-dashboard-menu-group:has(.admin-dashboard-submenu) .admin-dashboard-menu-item::after {
-    font-size: 9px;
+    height: 6px;
+    width: 6px;
   }
 
   body:not(:has(.landing-page)) .admin-dashboard-menu-item strong {
@@ -10146,7 +10292,14 @@ body:not(:has(.landing-page)) .admin-dashboard-shell[data-sidebar-collapsed="tru
 
   body:not(:has(.landing-page)) .admin-dashboard-submenu a {
     font-size: 12px;
-    padding: 3px 0 3px 10px;
+    gap: 7px;
+    grid-template-columns: 6px minmax(0, 1fr);
+    padding: 3px 0 3px 4px;
+  }
+
+  body:not(:has(.landing-page)) .admin-dashboard-submenu a::before {
+    height: 4px;
+    width: 4px;
   }
 
   body:not(:has(.landing-page)) .admin-dashboard-shell[data-sidebar-collapsed="true"] .admin-dashboard-menu {
@@ -12106,6 +12259,30 @@ body:not(:has(.landing-page)) #admin-overview .dashboard-summary-card span {
   letter-spacing: 0.02em;
 }
 
+body:not(:has(.landing-page)) #admin-overview .dashboard-card-label {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+body:not(:has(.landing-page)) #admin-overview .dashboard-card-label svg {
+  color: rgba(125, 183, 255, 0.92);
+  flex: 0 0 auto;
+  height: 18px;
+  stroke-width: 2.1;
+  width: 18px;
+}
+
+body:not(:has(.landing-page)) #admin-overview .dashboard-priority.urgent .dashboard-card-label svg,
+body:not(:has(.landing-page)) #admin-overview .dashboard-queue-card.urgent .dashboard-card-label svg {
+  color: #ff8fa0;
+}
+
+body:not(:has(.landing-page)) #admin-overview .dashboard-priority.warning .dashboard-card-label svg,
+body:not(:has(.landing-page)) #admin-overview .dashboard-queue-card.warning .dashboard-card-label svg {
+  color: #ffd08a;
+}
+
 body:not(:has(.landing-page)) #admin-overview .dashboard-priority strong {
   color: #ffffff;
   font-size: clamp(1.35rem, 1.2vw + 1rem, 2rem);
@@ -13101,7 +13278,7 @@ body:not(:has(.landing-page)) #admin-payments .table td:nth-child(1) {
 
 body:not(:has(.landing-page)) #admin-payments .table th:nth-child(2),
 body:not(:has(.landing-page)) #admin-payments .table td:nth-child(2) {
-  width: 18%;
+  width: 19%;
 }
 
 body:not(:has(.landing-page)) #admin-payments .table th:nth-child(3),
@@ -13111,7 +13288,7 @@ body:not(:has(.landing-page)) #admin-payments .table td:nth-child(3) {
 
 body:not(:has(.landing-page)) #admin-payments .table th:nth-child(4),
 body:not(:has(.landing-page)) #admin-payments .table td:nth-child(4) {
-  width: 8%;
+  width: 9%;
 }
 
 body:not(:has(.landing-page)) #admin-payments .table th:nth-child(5),
@@ -13121,7 +13298,7 @@ body:not(:has(.landing-page)) #admin-payments .table td:nth-child(5) {
 
 body:not(:has(.landing-page)) #admin-payments .table th:nth-child(6),
 body:not(:has(.landing-page)) #admin-payments .table td:nth-child(6) {
-  width: 38%;
+  width: 36%;
 }
 
 body:not(:has(.landing-page)) #admin-payments .table td {
@@ -13224,12 +13401,25 @@ body:not(:has(.landing-page)) #admin-payments .badge.manual-flow-badge.done {
   color: #ffffff;
 }
 
+body:not(:has(.landing-page)) #admin-payments .manual-flow-cell {
+  display: grid;
+  justify-items: start;
+  max-width: 100%;
+  min-width: 0;
+}
+
 body:not(:has(.landing-page)) #admin-payments .manual-flow-description,
 body:not(:has(.landing-page)) #admin-payments .manual-flow-raw-status {
   color: rgba(216, 236, 255, 0.62);
+  display: block;
   font-size: 0.68rem;
   line-height: 1.18;
   margin-top: 4px;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: keep-all;
 }
 
 body:not(:has(.landing-page)) .admin-payment-txid-box small {
@@ -13416,13 +13606,46 @@ body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-em
     grid-template-columns: repeat(3, minmax(96px, 1fr));
   }
 
-  body:not(:has(.landing-page)) #admin-payments > .table {
+  body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-list {
     display: none;
   }
 
-  body:not(:has(.landing-page)) #admin-payments .admin-payment-mobile-list {
-    display: grid;
-    gap: 12px;
+  body:not(:has(.landing-page)) #admin-payments .table th {
+    padding: 10px 8px;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .table td {
+    padding: 10px 8px;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .table th:nth-child(1),
+  body:not(:has(.landing-page)) #admin-payments .table td:nth-child(1) {
+    width: 15%;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .table th:nth-child(2),
+  body:not(:has(.landing-page)) #admin-payments .table td:nth-child(2) {
+    width: 19%;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .table th:nth-child(3),
+  body:not(:has(.landing-page)) #admin-payments .table td:nth-child(3) {
+    width: 7%;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .table th:nth-child(4),
+  body:not(:has(.landing-page)) #admin-payments .table td:nth-child(4) {
+    width: 9%;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .table th:nth-child(5),
+  body:not(:has(.landing-page)) #admin-payments .table td:nth-child(5) {
+    width: 16%;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .table th:nth-child(6),
+  body:not(:has(.landing-page)) #admin-payments .table td:nth-child(6) {
+    width: 34%;
   }
 }
 
@@ -13432,21 +13655,55 @@ body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-em
   }
 
   body:not(:has(.landing-page)) #admin-payments .table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
+    display: table;
+    table-layout: fixed;
+    width: 100%;
   }
 
   body:not(:has(.landing-page)) #admin-payments .table th,
   body:not(:has(.landing-page)) #admin-payments .table td {
-    min-width: 150px;
+    min-width: 0;
+    padding: 8px 7px;
   }
 
-  body:not(:has(.landing-page)) #admin-payments .table td:nth-child(2),
-  body:not(:has(.landing-page)) #admin-payments .table td:nth-child(5),
-  body:not(:has(.landing-page)) #admin-payments .table td:nth-child(6) {
-    min-width: 260px;
+  body:not(:has(.landing-page)) #admin-payments .table td {
     white-space: normal;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .table th {
+    font-size: 0.72rem;
+  }
+
+  body:not(:has(.landing-page)) .admin-payment-id-cell strong,
+  body:not(:has(.landing-page)) .admin-payment-member-cell strong,
+  body:not(:has(.landing-page)) .admin-payment-plan-cell strong {
+    font-size: 0.8rem;
+  }
+
+  body:not(:has(.landing-page)) .admin-payment-id-cell span,
+  body:not(:has(.landing-page)) .admin-payment-member-cell span {
+    font-size: 0.68rem;
+    line-height: 1.18;
+  }
+
+  body:not(:has(.landing-page)) .admin-payment-amount-cell {
+    font-size: 0.86rem;
+  }
+
+  body:not(:has(.landing-page)) #admin-payments .manual-flow-description,
+  body:not(:has(.landing-page)) #admin-payments .manual-flow-raw-status {
+    font-size: 0.62rem;
+    line-height: 1.12;
+  }
+
+  body:not(:has(.landing-page)) .admin-payment-action-cell .actions.compact {
+    gap: 5px;
+  }
+
+  body:not(:has(.landing-page)) .admin-payment-action-cell .button {
+    font-size: 0.7rem;
+    min-height: 30px;
+    padding-inline: 4px;
   }
 }
 
@@ -13598,22 +13855,22 @@ body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(2) {
 
 body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(3),
 body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(3) {
-  width: 10%;
+  width: 7%;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(4),
 body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(4) {
-  width: 14%;
+  width: 13%;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(5),
 body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(5) {
-  width: 11%;
+  width: 12%;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(6),
 body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(6) {
-  width: 35%;
+  width: 38%;
 }
 
 body:not(:has(.landing-page)) .admin-subscription-id-cell,
@@ -13658,6 +13915,12 @@ body:not(:has(.landing-page)) .admin-subscription-payment-cell .admin-subscripti
   margin-top: 0;
 }
 
+body:not(:has(.landing-page)) .admin-subscription-date-stack {
+  display: grid;
+  gap: 1px;
+  line-height: 1.14;
+}
+
 body:not(:has(.landing-page)) .admin-subscription-member-cell,
 body:not(:has(.landing-page)) .admin-subscription-plan-cell,
 body:not(:has(.landing-page)) .admin-subscription-payment-cell {
@@ -13688,12 +13951,25 @@ body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-badge span {
   white-space: nowrap;
 }
 
+body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-cell {
+  display: grid;
+  justify-items: start;
+  max-width: 100%;
+  min-width: 0;
+}
+
 body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-description,
 body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-raw-status {
   color: rgba(216, 236, 255, 0.62);
+  display: block;
   font-size: 0.68rem;
   line-height: 1.18;
   margin-top: 4px;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: keep-all;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-payment-cell {
@@ -13710,9 +13986,11 @@ body:not(:has(.landing-page)) .admin-subscription-empty-text {
 
 body:not(:has(.landing-page)) .admin-subscription-action-cell .admin-note-input {
   font-size: 0.74rem;
+  max-width: 100%;
   min-height: 32px;
   min-width: 0;
   padding: 7px 9px;
+  width: 100%;
 }
 
 body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-action-cell .admin-note-input {
@@ -13786,13 +14064,46 @@ body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-li
     grid-template-columns: repeat(3, minmax(96px, 1fr));
   }
 
-  body:not(:has(.landing-page)) #admin-subscriptions > .table {
+  body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-list {
     display: none;
   }
 
-  body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-list {
-    display: grid;
-    gap: 12px;
+  body:not(:has(.landing-page)) #admin-subscriptions .table th {
+    padding: 10px 8px;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .table td {
+    padding: 10px 8px;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(1),
+  body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(1) {
+    width: 15%;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(2),
+  body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(2) {
+    width: 18%;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(3),
+  body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(3) {
+    width: 6%;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(4),
+  body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(4) {
+    width: 16%;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(5),
+  body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(5) {
+    width: 15%;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .table th:nth-child(6),
+  body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(6) {
+    width: 30%;
   }
 }
 
@@ -13802,21 +14113,60 @@ body:not(:has(.landing-page)) #admin-subscriptions .admin-subscription-mobile-li
   }
 
   body:not(:has(.landing-page)) #admin-subscriptions .table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
+    display: table;
+    table-layout: fixed;
+    width: 100%;
   }
 
   body:not(:has(.landing-page)) #admin-subscriptions .table th,
   body:not(:has(.landing-page)) #admin-subscriptions .table td {
-    min-width: 150px;
+    min-width: 0;
+    padding: 8px 7px;
   }
 
-  body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(2),
-  body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(5),
-  body:not(:has(.landing-page)) #admin-subscriptions .table td:nth-child(6) {
-    min-width: 260px;
+  body:not(:has(.landing-page)) #admin-subscriptions .table td {
     white-space: normal;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .table th {
+    font-size: 0.72rem;
+  }
+
+  body:not(:has(.landing-page)) .admin-subscription-id-cell strong,
+  body:not(:has(.landing-page)) .admin-subscription-member-cell strong,
+  body:not(:has(.landing-page)) .admin-subscription-plan-cell strong,
+  body:not(:has(.landing-page)) .admin-subscription-payment-cell strong {
+    font-size: 0.8rem;
+  }
+
+  body:not(:has(.landing-page)) .admin-subscription-id-cell span,
+  body:not(:has(.landing-page)) .admin-subscription-member-cell span,
+  body:not(:has(.landing-page)) .admin-subscription-plan-cell span,
+  body:not(:has(.landing-page)) .admin-subscription-payment-cell span {
+    font-size: 0.68rem;
+    line-height: 1.18;
+  }
+
+  body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-description,
+  body:not(:has(.landing-page)) #admin-subscriptions .manual-flow-raw-status {
+    font-size: 0.62rem;
+    line-height: 1.12;
+  }
+
+  body:not(:has(.landing-page)) .admin-subscription-action-cell .actions.compact {
+    gap: 5px;
+  }
+
+  body:not(:has(.landing-page)) .admin-subscription-action-cell .button {
+    font-size: 0.7rem;
+    min-height: 30px;
+    padding-inline: 4px;
+  }
+
+  body:not(:has(.landing-page)) .admin-subscription-action-cell .admin-note-input {
+    font-size: 0.7rem;
+    min-height: 30px;
+    padding: 6px 8px;
   }
 }
 
@@ -14639,9 +14989,7 @@ body:not(:has(.landing-page)) .admin-page input[type="datetime-local"]::-webkit-
   opacity: 1;
 }
 
-body:not(:has(.landing-page)) .admin-page .button.compact,
-body:not(:has(.landing-page)) .admin-symbols-row-actions .button,
-body:not(:has(.landing-page)) #admin-support .admin-support-thread-actions .button {
+body:not(:has(.landing-page)) .admin-page .button.compact {
   box-shadow: none;
   font-size: 0.72rem;
   font-weight: 850;
@@ -14650,9 +14998,7 @@ body:not(:has(.landing-page)) #admin-support .admin-support-thread-actions .butt
   padding: 0 10px;
 }
 
-body:not(:has(.landing-page)) .admin-page .button.compact:hover:not(:disabled),
-body:not(:has(.landing-page)) .admin-symbols-row-actions .button:hover:not(:disabled),
-body:not(:has(.landing-page)) #admin-support .admin-support-thread-actions .button:hover:not(:disabled) {
+body:not(:has(.landing-page)) .admin-page .button.compact:hover:not(:disabled) {
   box-shadow: none;
   transform: none;
 }

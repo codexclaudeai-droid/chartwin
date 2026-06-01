@@ -86,7 +86,9 @@ type AdminUserDirectoryItem = {
   };
   latestPayment: {
     id: string;
+    adminNote?: string | null;
     status: PaymentStatus;
+    subscriptionId?: string;
     amountUsd: number;
     updatedAt: string;
   } | null;
@@ -129,7 +131,9 @@ type ReferralSummary = {
     } | null;
     latestPayment: {
       id: string;
+      adminNote?: string | null;
       status: PaymentStatus;
+      subscriptionId?: string;
       amountUsd: number;
       updatedAt: string;
     } | null;
@@ -139,7 +143,9 @@ type ReferralSummary = {
 type AdminUserDetail = AdminUserDirectoryItem & {
   payments: Array<{
     id: string;
+    adminNote?: string | null;
     status: PaymentStatus;
+    subscriptionId?: string;
     amountUsd: number;
     updatedAt: string;
   }>;
@@ -778,7 +784,7 @@ export function UserAdminPanel() {
                   {item.subscription ? (
                     <>
                       <span className="badge admin-user-plan-badge">{formatAdminPlanTierLabel(item.subscription)}</span>
-                      <strong>{formatSubscriptionStatusLabel(item.subscription.status)}</strong>
+                      <strong>{formatAdminUserSubscriptionStatusLabel(item.subscription, item.latestPayment)}</strong>
                       {item.subscription.endsAt && <small>만료 {formatCompactDate(item.subscription.endsAt)}</small>}
                     </>
                   ) : (
@@ -857,7 +863,7 @@ export function UserAdminPanel() {
               </div>
               <div>
                 <dt>구독여부</dt>
-                <dd>{item.subscription ? formatSubscriptionStatusLabel(item.subscription.status) : '구독 없음'}</dd>
+                <dd>{formatAdminUserSubscriptionStatusLabel(item.subscription, item.latestPayment)}</dd>
               </div>
               <div>
                 <dt>차트접근</dt>
@@ -1016,7 +1022,7 @@ export function UserAdminPanel() {
                 {detail.subscription && (
                   <span className="badge admin-user-plan-badge">{formatAdminPlanTierLabel(detail.subscription)}</span>
                 )}
-                <strong>{detail.subscription ? formatSubscriptionStatusLabel(detail.subscription.status) : '구독 없음'}</strong>
+                <strong>{formatAdminUserSubscriptionStatusLabel(detail.subscription, detail.latestPayment)}</strong>
                 <p>{formatChartAccessLabel(detail.access)}</p>
                 {detail.subscription && isAdminSubscriptionQueueStatus(detail.subscription.status) && (
                   <a className="text-link compact" href={createAdminSubscriptionUrl(detail.subscription.id)}>
@@ -1218,6 +1224,30 @@ function renderCompactChartAccess(access: AdminUserDirectoryItem['access']) {
       <span>시그널 {access.paidSignals ? 'O' : 'X'}</span>
     </>
   );
+}
+
+function formatAdminUserSubscriptionStatusLabel(
+  subscription: AdminUserDirectoryItem['subscription'],
+  latestPayment: AdminUserDirectoryItem['latestPayment'],
+): string {
+  if (!subscription) return '구독 없음';
+  const statusLabel = formatSubscriptionStatusLabel(subscription.status);
+  if (!isProvisionalSalePaymentForSubscription(latestPayment, subscription.id)) return statusLabel;
+  return `${statusLabel} (가매출)`;
+}
+
+function isProvisionalSalePaymentForSubscription(
+  payment: AdminUserDirectoryItem['latestPayment'],
+  subscriptionId: string,
+): boolean {
+  return payment?.status === 'confirmed' &&
+    payment.subscriptionId === subscriptionId &&
+    isProvisionalSaleAdminNote(payment.adminNote);
+}
+
+function isProvisionalSaleAdminNote(adminNote: string | null | undefined): boolean {
+  return typeof adminNote === 'string' &&
+    (adminNote.includes('가매출') || adminNote.includes('媛留ㅼ텧'));
 }
 
 function getAccountStatusClassName(accountStatus: UserAccountStatus): string {

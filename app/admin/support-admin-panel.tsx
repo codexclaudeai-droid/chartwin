@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { DeleteActionIcon, EditActionIcon } from '../shared/action-icons';
+import { IconButton } from '../shared/icon-button';
 import { dispatchAdminAuditLogPresetEvent } from './admin-audit-log-preset-events';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
 import { formatAdminDisplayId, getAdminDisplaySequence } from './admin-display-id';
@@ -410,12 +412,12 @@ export function SupportAdminPanel() {
                 </h3>
               </div>
               <div className="admin-support-thread-actions">
-                <button className="button secondary compact" type="button" onClick={() => startThreadEdit(item)} disabled={isBusy}>
-                  게시글 수정
-                </button>
-                <button className="button danger compact" type="button" onClick={() => void deleteThread(item.thread.id)} disabled={isBusy}>
-                  게시글 삭제
-                </button>
+                <IconButton className="action-icon-button edit" label="게시글 수정" onClick={() => startThreadEdit(item)} disabled={isBusy}>
+                  <EditActionIcon />
+                </IconButton>
+                <IconButton className="action-icon-button delete" label="게시글 삭제" onClick={() => void deleteThread(item.thread.id)} disabled={isBusy}>
+                  <DeleteActionIcon />
+                </IconButton>
               </div>
               <a className="text-link compact admin-support-detail-link" href={createAdminSupportThreadUrl(item.thread.id)}>
                 상세 답변 링크
@@ -482,26 +484,22 @@ export function SupportAdminPanel() {
                       <strong>{threadMessage.isAdminReply ? '관리자' : '문의'}</strong>
                       {threadMessage.isAdminReply ? (
                         <div className="admin-support-reply-icon-actions" role="group" aria-label="관리자 답변 관리">
-                          <button
-                            aria-label="관리자 답변 수정"
-                            className="admin-support-reply-icon-button"
-                            disabled={isBusy}
+                          <IconButton
+                            className="admin-support-reply-icon-button action-icon-button edit"
+                            label="관리자 답변 수정"
                             onClick={() => startReplyEdit(threadMessage)}
-                            title="관리자 답변 수정"
-                            type="button"
-                          >
-                            <span aria-hidden="true">✎</span>
-                          </button>
-                          <button
-                            aria-label="관리자 답변 삭제"
-                            className="admin-support-reply-icon-button danger"
                             disabled={isBusy}
-                            onClick={() => void deleteReply(threadMessage.id, item.thread.id)}
-                            title="관리자 답변 삭제"
-                            type="button"
                           >
-                            <span aria-hidden="true">×</span>
-                          </button>
+                            <EditActionIcon />
+                          </IconButton>
+                          <IconButton
+                            className="admin-support-reply-icon-button action-icon-button delete"
+                            label="관리자 답변 삭제"
+                            onClick={() => void deleteReply(threadMessage.id, item.thread.id)}
+                            disabled={isBusy}
+                          >
+                            <DeleteActionIcon />
+                          </IconButton>
                         </div>
                       ) : null}
                     </div>

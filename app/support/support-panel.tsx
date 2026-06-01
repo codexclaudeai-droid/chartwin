@@ -3,6 +3,8 @@
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getAuthSession } from '../auth-session-client';
+import { DeleteActionIcon, EditActionIcon } from '../shared/action-icons';
+import { IconButton } from '../shared/icon-button';
 import { RefreshIconButton } from '../shared/refresh-icon-button';
 import { AuthPromptModal } from '../shared/auth-prompt-modal';
 import {
@@ -457,12 +459,12 @@ export function SupportPanel() {
                 </h3>
                 {canEditThread ? (
                   <div className="support-thread-actions">
-                    <button className="button secondary compact" type="button" onClick={() => startThreadEdit(item)} disabled={isBusy}>
-                      수정
-                    </button>
-                    <button className="button danger compact" type="button" onClick={() => void deleteThread(item.thread.id)} disabled={isBusy}>
-                      삭제
-                    </button>
+                    <IconButton className="action-icon-button edit" label="문의글 수정" onClick={() => startThreadEdit(item)} disabled={isBusy}>
+                      <EditActionIcon />
+                    </IconButton>
+                    <IconButton className="action-icon-button delete" label="문의글 삭제" onClick={() => void deleteThread(item.thread.id)} disabled={isBusy}>
+                      <DeleteActionIcon />
+                    </IconButton>
                   </div>
                 ) : null}
                 {isEditingThread ? (

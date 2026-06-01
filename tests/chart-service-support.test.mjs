@@ -574,6 +574,14 @@ test('support panels expose edit and delete controls for threads and admin repli
   assert.match(replyRouteSource, /deleteAsyncSupportMessageAsAdmin/);
   assert.match(styleSource, /support-thread-actions/);
   assert.match(styleSource, /admin-support-reply-icon-actions/);
+  assert.match(supportSource, /EditActionIcon/);
+  assert.match(supportSource, /DeleteActionIcon/);
+  assert.match(adminSource, /EditActionIcon/);
+  assert.match(adminSource, /DeleteActionIcon/);
+  assert.match(supportSource, /action-icon-button edit/);
+  assert.match(adminSource, /action-icon-button delete/);
+  assert.doesNotMatch(supportSource, /button secondary compact" type="button" onClick=\{\(\) => startThreadEdit/);
+  assert.doesNotMatch(adminSource, /button danger compact" type="button" onClick=\{\(\) => void deleteThread/);
 });
 
 test('admin support reply edit and delete controls move into top-right icon buttons', () => {
@@ -583,6 +591,10 @@ test('admin support reply edit and delete controls move into top-right icon butt
   assert.match(adminSource, /admin-support-message-heading/);
   assert.match(adminSource, /admin-support-reply-icon-actions/);
   assert.match(adminSource, /admin-support-reply-icon-button/);
+  assert.match(adminSource, /action-icon-button edit/);
+  assert.match(adminSource, /action-icon-button delete/);
+  assert.match(adminSource, /<EditActionIcon \/>/);
+  assert.match(adminSource, /<DeleteActionIcon \/>/);
   assert.match(adminSource, /role="group"/);
   assert.match(adminSource, /관리자 답변/);
   assert.match(adminSource, /onClick=\{\(\) => startReplyEdit\(threadMessage\)\}/);
@@ -591,6 +603,8 @@ test('admin support reply edit and delete controls move into top-right icon butt
   assert.match(adminSource, /JSON\.stringify\(\{ messageId, threadId, body \}\)/);
   assert.match(adminSource, /JSON\.stringify\(\{ messageId, threadId \}\)/);
   assert.doesNotMatch(adminSource, /isThreadAuthorMessage/);
+  assert.doesNotMatch(adminSource, /<span aria-hidden="true">✎<\/span>/);
+  assert.doesNotMatch(adminSource, /<span aria-hidden="true">×<\/span>/);
   assert.doesNotMatch(adminSource, /admin-support-message-actions-list/);
   assert.doesNotMatch(adminSource, /admin-support-message-action-card/);
   assert.match(styleSource, /#admin-support \.admin-support-message-heading\s*\{[\s\S]*?justify-content: space-between/);
@@ -719,7 +733,7 @@ test('member support panel supports trial request presets from landing links', (
   assert.match(panelSource, /presetCategory !== 'trial' && presetCategory !== 'partnership'/);
   assert.match(panelSource, /authSession/);
   assert.match(panelSource, /canSubmitTrialRequest/);
-  assert.match(panelSource, /\/api\/auth\/me/);
+  assert.match(panelSource, /getAuthSession/);
   assert.match(panelSource, /trial-auth-gate/);
   assert.match(panelSource, /무료체험 신청은 일반회원 로그인이 필요합니다/);
   assert.match(panelSource, /\/signup\?redirect=\/support%3Fcategory%3Dtrial%23support-inquiry-form/);

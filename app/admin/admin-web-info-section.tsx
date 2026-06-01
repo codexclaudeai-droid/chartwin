@@ -10,7 +10,6 @@ import { AdminWebInfoPanel } from './admin-web-info-panel';
 type WebInfoPageKey =
   | 'terms'
   | 'privacy'
-  | 'planServices'
   | 'publicBoard'
   | 'noticePopup'
   | 'payments'
@@ -23,7 +22,6 @@ const WEB_INFO_SUBMENU: Array<{
 }> = [
   { key: 'terms', label: '가입약관', href: '#admin-web-info-terms' },
   { key: 'privacy', label: '개인정보보호정책', href: '#admin-web-info-privacy' },
-  { key: 'planServices', label: '플랜 제공서비스', href: '#admin-plan-services' },
   { key: 'publicBoard', label: '공개게시판', href: '#admin-public-board' },
   { key: 'noticePopup', label: '공지팝업', href: '#admin-notice-popup' },
   { key: 'payments', label: '입금정보관리', href: '#admin-payment-settings' },
@@ -60,7 +58,6 @@ export function AdminWebInfoSection() {
 
       {activePage === 'terms' && <AdminWebInfoPanel mode="terms" />}
       {activePage === 'privacy' && <AdminWebInfoPanel mode="privacy" />}
-      {activePage === 'planServices' && <AdminWebInfoPanel mode="planServices" />}
       {activePage === 'publicBoard' && <AdminPublicBoardPanel />}
       {activePage === 'noticePopup' && <AdminNoticePopupPanel />}
       {activePage === 'payments' && <AdminPaymentSettingsPanel />}
@@ -72,7 +69,6 @@ export function AdminWebInfoSection() {
 function getWebInfoPageFromHash(hash: string): WebInfoPageKey {
   const targetId = hash.startsWith('#') ? hash.slice(1) : hash;
   if (targetId === 'admin-web-info-privacy') return 'privacy';
-  if (targetId === 'admin-plan-services') return 'planServices';
   if (targetId === 'admin-public-board') return 'publicBoard';
   if (targetId === 'admin-notice-popup') return 'noticePopup';
   if (targetId === 'admin-payment-settings') return 'payments';

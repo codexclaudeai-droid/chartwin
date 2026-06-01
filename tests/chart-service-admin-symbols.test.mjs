@@ -39,7 +39,14 @@ test('admin symbol list shows registered symbol images before the symbol text', 
   assert.match(panelSource, /src=\{iconUrl\}/);
   assert.match(panelSource, /alt=\{symbol\.item\.label\}/);
   assert.match(panelSource, /className="admin-symbols-icon-fallback"/);
+  assert.match(panelSource, /EditActionIcon/);
+  assert.match(panelSource, /DeleteActionIcon/);
+  assert.match(panelSource, /action-icon-button edit/);
+  assert.match(panelSource, /action-icon-button delete/);
+  assert.doesNotMatch(panelSource, /className="button secondary" type="button" onClick=\{\(\) => startEdit\(symbol\)\}/);
+  assert.doesNotMatch(panelSource, /className="button danger" type="button" onClick=\{\(\) => deleteSymbol\(symbol\)\}/);
   assert.match(cssSource, /\.admin-symbols-item\s*\{[\s\S]*?grid-template-columns: 38px minmax\(0, 1fr\)/);
+  assert.match(cssSource, /\.admin-symbols-table th:nth-child\(2\),[\s\S]*?\.admin-symbols-table td:nth-child\(2\)\s*\{[\s\S]*?width:\s*82px/);
   assert.match(cssSource, /\.admin-symbols-icon\s*\{[\s\S]*?height: 38px/);
   assert.match(cssSource, /\.admin-symbols-icon img\s*\{[\s\S]*?object-fit: cover/);
 });
@@ -54,9 +61,14 @@ test('admin symbol list exposes a chart apply toggle per symbol', () => {
   assert.match(panelSource, /aria-pressed=\{isApplied\}/);
   assert.match(panelSource, /admin-symbols-apply-switch/);
   assert.match(panelSource, /차트 적용/);
-  assert.match(panelSource, /isApplied \? '적용' : '미적용'/);
+  assert.match(panelSource, /isApplied \? 'ON' : 'OFF'/);
   assert.match(cssSource, /\.admin-symbols-apply-switch\s*\{/);
   assert.match(cssSource, /\.admin-symbols-apply-switch\.active/);
+  assert.match(cssSource, /\.admin-symbols-apply-switch\s*\{[\s\S]*?background:\s*transparent/);
+  assert.match(cssSource, /\.admin-symbols-apply-switch\s*\{[\s\S]*?border:\s*0/);
+  assert.match(cssSource, /\.admin-symbols-apply-switch\s*\{[\s\S]*?display:\s*inline-grid/);
+  assert.match(cssSource, /\.admin-symbols-apply-switch\s*\{[\s\S]*?justify-items:\s*center/);
+  assert.match(cssSource, /\.admin-symbols-apply-switch\.active\s*\{[\s\S]*?background:\s*transparent/);
 });
 
 test('symbol registry persists chart application state for hidden symbols', () => {

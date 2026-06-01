@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CalendarClock, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarClock, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import type { NoticePopupRecord } from '../../src/server/chart-service/repository.ts';
+import { DeleteActionIcon, EditActionIcon } from '../shared/action-icons';
 import { IconButton } from '../shared/icon-button';
 import { NumberStepper } from '../shared/number-stepper';
 import { RichTextEditor } from '../shared/rich-text-editor';
@@ -168,11 +169,11 @@ export function AdminNoticePopupPanel() {
                   <td>{formatNoticePopupDate(popup.updatedAt)}</td>
                   <td>
                     <div className="admin-notice-popup-actions">
-                      <IconButton label="공지팝업 수정" onClick={() => editPopup(popup)} disabled={isBusy}>
-                        <Pencil />
+                      <IconButton className="action-icon-button edit" label="공지팝업 수정" onClick={() => editPopup(popup)} disabled={isBusy}>
+                        <EditActionIcon />
                       </IconButton>
-                      <IconButton label="공지팝업 삭제" onClick={() => void deletePopup(popup.id)} disabled={isBusy}>
-                        <Trash2 />
+                      <IconButton className="action-icon-button delete" label="공지팝업 삭제" onClick={() => void deletePopup(popup.id)} disabled={isBusy}>
+                        <DeleteActionIcon />
                       </IconButton>
                     </div>
                   </td>

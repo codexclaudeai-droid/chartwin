@@ -366,6 +366,7 @@ export function SubscriptionAdminPanel() {
                   ),
                 )
                 : undefined;
+              const [updatedDateLabel, updatedTimeLabel] = formatSubscriptionDateTimeParts(item.subscription.updatedAt);
 
               return (
                 <tr
@@ -377,7 +378,10 @@ export function SubscriptionAdminPanel() {
                     <strong title={item.subscription.id}>{subscriptionDisplayId}</strong>
                     <span className="admin-subscription-id-meta">
                       <span>갱신</span>
-                      <span>{formatSubscriptionDateTime(item.subscription.updatedAt)}</span>
+                      <time dateTime={item.subscription.updatedAt} className="admin-subscription-date-stack">
+                        <span>{updatedDateLabel}</span>
+                        <span>{updatedTimeLabel}</span>
+                      </time>
                     </span>
                   </td>
                   <td className="admin-subscription-member-cell">
@@ -499,4 +503,16 @@ function formatSubscriptionDateTime(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function formatSubscriptionDateTimeParts(value: string): [string, string] {
+  const date = new Date(value);
+  return [
+    new Intl.DateTimeFormat('ko-KR', {
+      dateStyle: 'medium',
+    }).format(date),
+    new Intl.DateTimeFormat('ko-KR', {
+      timeStyle: 'short',
+    }).format(date),
+  ];
 }

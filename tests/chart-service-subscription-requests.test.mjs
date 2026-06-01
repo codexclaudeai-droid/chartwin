@@ -288,6 +288,8 @@ test('admin subscription panel groups queue details for readability', () => {
   assert.match(source, /formatPaymentAmountUsd/);
   assert.match(source, /admin-subscription-id-cell/);
   assert.match(source, /admin-subscription-id-meta/);
+  assert.match(source, /formatSubscriptionDateTimeParts/);
+  assert.match(source, /admin-subscription-date-stack/);
   assert.match(source, /admin-subscription-member-cell/);
   assert.match(source, /admin-subscription-plan-cell/);
   assert.match(source, /admin-subscription-payment-meta/);
@@ -318,9 +320,13 @@ test('admin subscription summary filters and table columns stay compact responsi
 
   assert.match(quickFilterRule, /grid-template-columns:\s*repeat\(5, minmax\(96px, 1fr\)\)/);
   assert.match(quickFilterRule, /gap:\s*8px/);
-  assert.match(statusColumnRule, /width:\s*14%/);
-  assert.match(planColumnRule, /width:\s*10%/);
-  assert.match(actionColumnRule, /width:\s*35%/);
+  assert.match(statusColumnRule, /width:\s*13%/);
+  assert.match(planColumnRule, /width:\s*7%/);
+  assert.match(actionColumnRule, /width:\s*38%/);
+  assert.match(cssSource, /\.admin-subscription-date-stack\s*\{[\s\S]*?display:\s*grid/s);
+  assert.match(cssSource, /#admin-subscriptions \.manual-flow-cell\s*\{[\s\S]*?max-width:\s*100%[\s\S]*?min-width:\s*0/s);
+  assert.match(cssSource, /#admin-subscriptions \.manual-flow-description,[\s\S]*?#admin-subscriptions \.manual-flow-raw-status\s*\{[\s\S]*?overflow-wrap:\s*anywhere[\s\S]*?white-space:\s*normal/s);
+  assert.match(cssSource, /\.admin-subscription-action-cell \.admin-note-input\s*\{[\s\S]*?max-width:\s*100%[\s\S]*?width:\s*100%/s);
   assert.match(cssSource, /#admin-subscriptions \.quick-filter-row \.button span\s*\{[\s\S]*?text-overflow:\s*ellipsis/s);
   assert.match(cssSource, /#admin-subscriptions \.manual-flow-badge\s*\{[\s\S]*?display: grid[\s\S]*?width: fit-content/s);
   assert.match(cssSource, /#admin-subscriptions \.admin-subscription-action-cell \.admin-note-input::placeholder\s*\{[\s\S]*?font-size:\s*0\.7rem/s);
@@ -332,15 +338,19 @@ test('admin subscription summary filters and table columns stay compact responsi
   );
   assert.match(
     cssSource,
-    /@media \(max-width: 1280px\)[\s\S]*?#admin-subscriptions > \.table\s*\{[\s\S]*?display:\s*none/,
+    /@media \(max-width: 1280px\)[\s\S]*?#admin-subscriptions \.admin-subscription-mobile-list\s*\{[\s\S]*?display:\s*none/,
   );
   assert.match(
     cssSource,
-    /@media \(max-width: 1280px\)[\s\S]*?#admin-subscriptions \.admin-subscription-mobile-list\s*\{[\s\S]*?display:\s*grid/,
+    /@media \(max-width: 1280px\)[\s\S]*?#admin-subscriptions \.table th:nth-child\(6\),[\s\S]*?#admin-subscriptions \.table td:nth-child\(6\)\s*\{[\s\S]*?width:\s*30%/,
   );
   assert.match(
     cssSource,
     /@media \(max-width: 1180px\)[\s\S]*?#admin-subscriptions \.quick-filter-row\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(96px, 1fr\)\)/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 1180px\)[\s\S]*?#admin-subscriptions \.table\s*\{[\s\S]*?display:\s*table[\s\S]*?table-layout:\s*fixed[\s\S]*?width:\s*100%/,
   );
   assert.match(
     cssSource,
@@ -390,8 +400,7 @@ test('admin subscription panel renders a mobile card list instead of the table',
   assert.match(source, /admin-subscription-mobile-card-info-grid/);
   assert.match(source, /admin-subscription-mobile-card-actions/);
   assert.match(cssSource, /#admin-subscriptions \.admin-subscription-mobile-list\s*\{[\s\S]*?display: none/);
-  assert.match(cssSource, /@media \(max-width: 1280px\)\s*\{[\s\S]*?#admin-subscriptions > \.table\s*\{[\s\S]*?display: none/);
-  assert.match(cssSource, /@media \(max-width: 1280px\)\s*\{[\s\S]*?#admin-subscriptions \.admin-subscription-mobile-list\s*\{[\s\S]*?display: grid/);
+  assert.match(cssSource, /@media \(max-width: 1280px\)\s*\{[\s\S]*?#admin-subscriptions \.admin-subscription-mobile-list\s*\{[\s\S]*?display: none/);
   assert.match(cssSource, /@media \(max-width: 960px\)\s*\{[\s\S]*?#admin-subscriptions > \.table\s*\{[\s\S]*?display: none/);
   assert.match(cssSource, /@media \(max-width: 960px\)\s*\{[\s\S]*?#admin-subscriptions \.admin-subscription-mobile-list\s*\{[\s\S]*?display: grid/);
   assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?#admin-subscriptions > \.table\s*\{[\s\S]*?display: none/);

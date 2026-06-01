@@ -279,14 +279,18 @@ test('admin payment panel exposes quick memo buttons for required admin notes', 
   assert.match(source, /PAYMENT_QUICK_MEMOS/);
   assert.match(source, /applyQuickMemo/);
   assert.match(source, /quick-memo-row/);
-  assert.match(source, /입금자명\/금액 일치 확인/);
-  assert.match(source, /TXID 수신주소\/금액 일치 확인/);
+  assert.match(source, /key: 'deposit-confirmed'/);
+  assert.match(source, /label: '입금확인'/);
+  assert.match(source, /note: '입금 확인'/);
+  assert.match(source, /key: 'deposit-rejected'/);
+  assert.match(source, /label: '미입금\/반려'/);
+  assert.match(source, /note: '미입금\/반려'/);
   assert.match(source, /key: 'provisional-sale'/);
   assert.match(source, /label: '가매출'/);
   assert.match(source, /note: '가매출 구독승인'/);
   assert.match(source, /provisionalSale: operation === 'confirm' && isProvisionalSaleNote\(adminNote\)/);
-  assert.match(source, /입금 내역 확인 불가/);
-  assert.match(source, /환불 사유 확인 후 처리/);
+  assert.doesNotMatch(source, /TXID 수신주소\/금액 일치 확인/);
+  assert.doesNotMatch(source, /환불 사유 확인 후 처리/);
   assert.match(cssSource, /\.quick-memo-row/);
 });
 
@@ -329,10 +333,12 @@ test('admin payment desktop table compacts narrow columns and wraps flow labels'
   assert.match(source, /placeholder="메모"/);
   assert.match(statusColumnRule, /width:\s*14%/);
   assert.match(planColumnRule, /width:\s*8%/);
-  assert.match(memberColumnRule, /width:\s*18%/);
-  assert.match(actionColumnRule, /width:\s*38%/);
+  assert.match(memberColumnRule, /width:\s*19%/);
+  assert.match(actionColumnRule, /width:\s*36%/);
   assert.match(cssSource, /#admin-payments \.manual-flow-badge\s*\{[\s\S]*?display: grid[\s\S]*?width: fit-content/s);
   assert.match(cssSource, /#admin-payments \.manual-flow-badge span\s*\{[\s\S]*?white-space: nowrap/s);
+  assert.match(cssSource, /#admin-payments \.manual-flow-cell\s*\{[\s\S]*?max-width:\s*100%[\s\S]*?min-width:\s*0/s);
+  assert.match(cssSource, /#admin-payments \.manual-flow-description,[\s\S]*?#admin-payments \.manual-flow-raw-status\s*\{[\s\S]*?overflow-wrap:\s*anywhere[\s\S]*?white-space:\s*normal/s);
   assert.match(cssSource, /#admin-payments \.admin-payment-action-cell \.admin-note-input::placeholder\s*\{[\s\S]*?font-size:\s*0\.7rem/s);
   assert.match(cssSource, /#admin-payments \.admin-payment-action-cell \.quick-memo-button\s*\{[\s\S]*?font-size:\s*0\.68rem/s);
   assert.match(cssSource, /\.admin-payment-action-cell \.button\s*\{[\s\S]*?min-height:\s*32px[\s\S]*?white-space:\s*nowrap/s);
@@ -354,15 +360,19 @@ test('admin payment summary filters wrap like compact responsive cards', () => {
   );
   assert.match(
     cssSource,
-    /@media \(max-width: 1280px\)[\s\S]*?#admin-payments > \.table\s*\{[\s\S]*?display:\s*none/,
+    /@media \(max-width: 1280px\)[\s\S]*?#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display:\s*none/,
   );
   assert.match(
     cssSource,
-    /@media \(max-width: 1280px\)[\s\S]*?#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display:\s*grid/,
+    /@media \(max-width: 1280px\)[\s\S]*?#admin-payments \.table th:nth-child\(6\),[\s\S]*?#admin-payments \.table td:nth-child\(6\)\s*\{[\s\S]*?width:\s*34%/,
   );
   assert.match(
     cssSource,
     /@media \(max-width: 1180px\)[\s\S]*?#admin-payments \.quick-filter-row\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(96px, 1fr\)\)/,
+  );
+  assert.match(
+    cssSource,
+    /@media \(max-width: 1180px\)[\s\S]*?#admin-payments \.table\s*\{[\s\S]*?display:\s*table[\s\S]*?table-layout:\s*fixed[\s\S]*?width:\s*100%/,
   );
   assert.match(
     cssSource,
@@ -426,8 +436,7 @@ test('admin payment panel renders a mobile card list instead of the table', () =
   assert.match(source, /admin-payment-mobile-card-info-grid/);
   assert.match(source, /admin-payment-mobile-card-actions/);
   assert.match(cssSource, /#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display: none/);
-  assert.match(cssSource, /@media \(max-width: 1280px\)\s*\{[\s\S]*?#admin-payments > \.table\s*\{[\s\S]*?display: none/);
-  assert.match(cssSource, /@media \(max-width: 1280px\)\s*\{[\s\S]*?#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display: grid/);
+  assert.match(cssSource, /@media \(max-width: 1280px\)\s*\{[\s\S]*?#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display: none/);
   assert.match(cssSource, /@media \(max-width: 960px\)\s*\{[\s\S]*?#admin-payments > \.table\s*\{[\s\S]*?display: none/);
   assert.match(cssSource, /@media \(max-width: 960px\)\s*\{[\s\S]*?#admin-payments \.admin-payment-mobile-list\s*\{[\s\S]*?display: grid/);
   assert.match(cssSource, /@media \(max-width: 720px\)\s*\{[\s\S]*?#admin-payments > \.table\s*\{[\s\S]*?display: none/);
@@ -1581,7 +1590,11 @@ test('admin payment settings panel and route are wired into operations UI', () =
   assert.match(panelSource, /admin-payment-settings/);
   assert.match(panelSource, /handleBankLogoUpload/);
   assert.match(panelSource, /readBankLogoFileAsDataUrl/);
+  assert.match(panelSource, /BankLogoUploadIcon/);
+  assert.match(panelSource, /lucide-image-up/);
+  assert.match(panelSource, /M10\.3 21H5a2 2 0 0 1-2-2V5/);
   assert.match(panelSource, /type="file"/);
+  assert.match(panelSource, /bank-logo-upload-content/);
   assert.match(panelSource, /accept=\{BANK_LOGO_UPLOAD_ACCEPT\}/);
   assert.match(panelSource, /bank-logo-preview/);
   assert.match(panelSource, /bankAccountNumber/);

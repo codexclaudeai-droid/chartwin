@@ -67,34 +67,22 @@ type PaymentQuickMemo = {
 
 const PAYMENT_QUICK_MEMOS: PaymentQuickMemo[] = [
   {
-    key: 'bank-confirmed',
-    label: '은행 입금 확인',
-    note: '입금자명/금액 일치 확인',
-    supports: (item) => (item.payment.status === 'pending' || item.payment.status === 'requested') && item.payment.method !== 'usdt',
+    key: 'deposit-confirmed',
+    label: '입금확인',
+    note: '입금 확인',
+    supports: (item) => item.payment.status === 'pending' || item.payment.status === 'requested',
   },
   {
-    key: 'txid-confirmed',
-    label: 'TXID 확인',
-    note: 'TXID 수신주소/금액 일치 확인',
-    supports: (item) => (item.payment.status === 'pending' || item.payment.status === 'requested') && item.payment.method === 'usdt',
+    key: 'deposit-rejected',
+    label: '미입금/반려',
+    note: '미입금/반려',
+    supports: (item) => item.payment.status === 'pending' || item.payment.status === 'requested',
   },
   {
     key: 'provisional-sale',
     label: '가매출',
     note: '가매출 구독승인',
     supports: (item) => item.payment.status === 'pending' || item.payment.status === 'requested',
-  },
-  {
-    key: 'deposit-rejected',
-    label: '입금 반려',
-    note: '입금 내역 확인 불가',
-    supports: (item) => item.payment.status === 'pending' || item.payment.status === 'requested',
-  },
-  {
-    key: 'refund-processed',
-    label: '환불 처리',
-    note: '환불 사유 확인 후 처리',
-    supports: (item) => item.payment.status === 'confirmed',
   },
 ];
 
@@ -356,7 +344,7 @@ export function AdminPanel() {
     <>
     <section className="card wide" id="admin-payments">
       <div className="toolbar">
-        <h2>결제 요청 관리</h2>
+        <h2>입금관리</h2>
         <AdminRefreshButton onClick={() => void refresh()} disabled={isBusy} />
       </div>
       <p className="notice">{message}</p>

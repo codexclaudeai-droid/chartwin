@@ -46,7 +46,6 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
     children: [
       { label: '가입약관', href: '#admin-web-info-terms' },
       { label: '개인정보보호정책', href: '#admin-web-info-privacy' },
-      { label: '플랜 제공서비스', href: '#admin-plan-services' },
       { label: '공개게시판', href: '#admin-public-board' },
       { label: '공지팝업', href: '#admin-notice-popup' },
       { label: '입금정보관리', href: '#admin-payment-settings' },
@@ -70,7 +69,7 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
   payments: {
     key: 'payments',
     eyebrow: 'Deposits',
-    label: '입금확인',
+    label: '입금관리',
     description: '입금확인 요청과 결제 반려를 수동 처리합니다.',
     href: '#admin-payments',
   },
@@ -82,6 +81,7 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
     href: '#admin-subscriptions',
     children: [
       { label: '구독요청', href: '#admin-subscriptions' },
+      { label: '플랜 제공서비스', href: '#admin-plan-services' },
       { label: '무료체험정책', href: '#admin-trial-policy' },
     ],
   },
@@ -171,7 +171,6 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
   if (
     targetId === 'admin-web-info'
     || targetId.startsWith('admin-web-info-')
-    || targetId === 'admin-plan-services'
     || targetId === 'admin-public-board'
     || targetId === 'admin-notice-popup'
     || targetId === 'admin-payment-settings'
@@ -203,6 +202,7 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
   if (
     targetId === 'admin-subscriptions'
     || targetId.startsWith('admin-subscription-')
+    || targetId === 'admin-plan-services'
     || targetId === 'admin-trial-policy'
   ) {
     return 'subscriptions';

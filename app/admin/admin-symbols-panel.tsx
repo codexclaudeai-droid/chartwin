@@ -9,6 +9,8 @@ import {
   persistSymbolRegistry,
   setSymbolChartApplied,
 } from '../../src/catalog/symbols.ts';
+import { DeleteActionIcon, EditActionIcon } from '../shared/action-icons';
+import { IconButton } from '../shared/icon-button';
 import { AdminRefreshButton } from './admin-refresh-button';
 
 type ManagedSymbolSource = 'builtin' | 'custom';
@@ -306,7 +308,7 @@ export function AdminSymbolsPanel() {
                           onClick={() => toggleChartApplied(symbol)}
                         >
                           <span aria-hidden="true" />
-                          <strong>{isApplied ? '적용' : '미적용'}</strong>
+                          <strong>{isApplied ? 'ON' : 'OFF'}</strong>
                         </button>
                       </td>
                       <td>
@@ -316,12 +318,12 @@ export function AdminSymbolsPanel() {
                       </td>
                       <td>
                         <div className="admin-symbols-row-actions">
-                          <button className="button secondary" type="button" onClick={() => startEdit(symbol)}>
-                            수정
-                          </button>
-                          <button className="button danger" type="button" onClick={() => deleteSymbol(symbol)}>
-                            삭제
-                          </button>
+                          <IconButton className="action-icon-button edit" label={`${symbol.item.id} 종목 수정`} onClick={() => startEdit(symbol)}>
+                            <EditActionIcon />
+                          </IconButton>
+                          <IconButton className="action-icon-button delete" label={`${symbol.item.id} 종목 삭제`} onClick={() => deleteSymbol(symbol)}>
+                            <DeleteActionIcon />
+                          </IconButton>
                         </div>
                       </td>
                     </tr>

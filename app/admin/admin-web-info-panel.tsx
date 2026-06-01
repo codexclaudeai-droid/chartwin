@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AddRowActionIcon, DeleteActionIcon } from '../shared/action-icons';
+import { IconButton } from '../shared/icon-button';
 import { AdminRefreshButton } from './admin-refresh-button';
 import { dispatchAdminRefreshEvent } from './admin-refresh-events';
 
@@ -133,13 +135,13 @@ export function AdminWebInfoPanel({ mode }: Readonly<{ mode: 'terms' | 'privacy'
                   <section className="plan-services-editor-card" key={plan.id}>
                     <div className="plan-services-editor-header">
                       <strong>{plan.label} 제공서비스</strong>
-                      <button
-                        className="button secondary compact"
+                      <IconButton
+                        className="action-icon-button add"
+                        label="행추가"
                         onClick={() => addPlanServiceItem(plan.id)}
-                        type="button"
                       >
-                        행 추가
-                      </button>
+                        <AddRowActionIcon />
+                      </IconButton>
                     </div>
                     <div className="plan-services-row-list">
                       {services.map((service, index) => (
@@ -151,15 +153,14 @@ export function AdminWebInfoPanel({ mode }: Readonly<{ mode: 'terms' | 'privacy'
                             placeholder="제공서비스 입력"
                             required
                           />
-                          <button
-                            aria-label={`${plan.label} 제공서비스 ${index + 1} 삭제`}
-                            className="button danger compact"
+                          <IconButton
+                            className="action-icon-button delete"
                             disabled={services.length <= 1}
+                            label={`${plan.label} 제공서비스 ${index + 1} 삭제`}
                             onClick={() => removePlanServiceItem(plan.id, index)}
-                            type="button"
                           >
-                            삭제
-                          </button>
+                            <DeleteActionIcon />
+                          </IconButton>
                         </div>
                       ))}
                     </div>

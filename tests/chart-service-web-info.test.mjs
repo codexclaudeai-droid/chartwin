@@ -88,6 +88,7 @@ test('web info settings reject blank plan service items', () => {
 test('admin web info panel and routes are wired into operations UI', () => {
   const pageSource = fs.readFileSync(new URL('../app/admin/page.tsx', import.meta.url), 'utf8');
   const sectionSource = fs.readFileSync(new URL('../app/admin/admin-web-info-section.tsx', import.meta.url), 'utf8');
+  const subscriptionSectionSource = fs.readFileSync(new URL('../app/admin/admin-subscription-section.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/admin/admin-web-info-panel.tsx', import.meta.url), 'utf8');
   const adminRouteSource = fs.readFileSync(new URL('../app/api/admin/web-info/route.ts', import.meta.url), 'utf8');
   const publicRouteSource = fs.readFileSync(new URL('../app/api/web-info/route.ts', import.meta.url), 'utf8');
@@ -104,8 +105,12 @@ test('admin web info panel and routes are wired into operations UI', () => {
   assert.match(sectionSource, /개인정보보호정책/);
   assert.match(sectionSource, /입금정보관리/);
   assert.match(sectionSource, /포인트관리/);
-  assert.match(sectionSource, /플랜 제공서비스/);
-  assert.match(sectionSource, /href: '#admin-plan-services'/);
+  assert.doesNotMatch(sectionSource, /href: '#admin-plan-services'/);
+  assert.doesNotMatch(sectionSource, /activePage === 'planServices'/);
+  assert.match(subscriptionSectionSource, /플랜 제공서비스/);
+  assert.match(subscriptionSectionSource, /href: '#admin-plan-services'/);
+  assert.match(subscriptionSectionSource, /activePage === 'planServices'/);
+  assert.match(subscriptionSectionSource, /AdminWebInfoPanel mode="planServices"/);
   assert.match(sectionSource, /href: '#admin-point-settings'/);
   assert.match(sectionSource, /getWebInfoPageFromHash/);
   assert.match(sectionSource, /hashchange/);
@@ -113,7 +118,6 @@ test('admin web info panel and routes are wired into operations UI', () => {
   assert.match(sectionSource, /activePage === 'privacy'/);
   assert.match(sectionSource, /activePage === 'payments'/);
   assert.match(sectionSource, /activePage === 'points'/);
-  assert.match(sectionSource, /activePage === 'planServices'/);
   assert.match(panelSource, /admin-web-info/);
   assert.match(panelSource, /mode: 'terms' \| 'privacy' \| 'planServices'/);
   assert.match(panelSource, /mode === 'terms'/);
@@ -129,7 +133,14 @@ test('admin web info panel and routes are wired into operations UI', () => {
   assert.match(panelSource, /updatePlanServiceItem/);
   assert.match(panelSource, /addPlanServiceItem/);
   assert.match(panelSource, /removePlanServiceItem/);
-  assert.match(panelSource, /행 추가/);
+  assert.match(panelSource, /AddRowActionIcon/);
+  assert.match(panelSource, /label="행추가"/);
+  assert.match(panelSource, /className="action-icon-button add"/);
+  assert.match(panelSource, /DeleteActionIcon/);
+  assert.match(panelSource, /IconButton/);
+  assert.match(panelSource, /className="action-icon-button delete"/);
+  assert.doesNotMatch(panelSource, /className="button danger compact"[\s\S]*removePlanServiceItem/);
+  assert.doesNotMatch(panelSource, />행 추가</);
   assert.match(panelSource, /web-info-policy-editor/);
   assert.match(panelSource, /web-info-html-option/);
   assert.match(panelSource, /HTML 입력 가능/);
@@ -220,6 +231,30 @@ test('admin payment settings save button keeps full width while using global lab
   )?.groups?.body ?? '';
 
   assert.match(saveButtonRule, /width:\s*100%/);
+});
+
+test('admin payment bank logo upload keeps icon and help text centered in the picker box', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const panelSource = fs.readFileSync(new URL('../app/admin/admin-payment-settings-panel.tsx', import.meta.url), 'utf8');
+  const controlRule = cssSource.match(/\.bank-logo-upload-control\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? '';
+  const contentRule = cssSource.match(/\.bank-logo-upload-content\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? '';
+  const iconRule = cssSource.match(/\.bank-logo-upload-icon\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? '';
+  const previewRule = cssSource.match(/\.bank-logo-preview\s*\{(?<body>[^}]*)\}/)?.groups?.body ?? '';
+
+  assert.match(panelSource, /bank-logo-upload-control/);
+  assert.match(panelSource, /bank-logo-upload-icon/);
+  assert.doesNotMatch(panelSource, /<strong>파일 선택<\/strong>/);
+  assert.match(controlRule, /display:\s*grid/);
+  assert.match(controlRule, /position:\s*relative/);
+  assert.match(controlRule, /background:\s*rgba\(3, 11, 24, 0\.86\)/);
+  assert.match(iconRule, /background:\s*rgba\(2, 7, 19, 0\.96\)/);
+  assert.match(iconRule, /color:\s*rgba\(255, 255, 255, 0\.74\)/);
+  assert.doesNotMatch(iconRule, /border:/);
+  assert.match(iconRule, /padding:\s*5px/);
+  assert.match(previewRule, /background:\s*rgba\(3, 11, 24, 0\.86\)/);
+  assert.match(contentRule, /align-content:\s*center/);
+  assert.match(contentRule, /justify-items:\s*center/);
+  assert.match(contentRule, /text-align:\s*center/);
 });
 
 test('admin point settings save button keeps full width while using global label centering', () => {

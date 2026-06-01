@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AdminWebInfoPanel } from './admin-web-info-panel';
 import { AdminTrialPolicyPanel } from './admin-trial-policy-panel';
 import { SubscriptionAdminPanel } from './subscription-admin-panel';
 
-type SubscriptionPageKey = 'queue' | 'trialPolicy';
+type SubscriptionPageKey = 'queue' | 'planServices' | 'trialPolicy';
 
 const SUBSCRIPTION_SUBMENU: Array<{
   key: SubscriptionPageKey;
@@ -12,6 +13,7 @@ const SUBSCRIPTION_SUBMENU: Array<{
   href: string;
 }> = [
   { key: 'queue', label: '구독요청', href: '#admin-subscriptions' },
+  { key: 'planServices', label: '플랜 제공서비스', href: '#admin-plan-services' },
   { key: 'trialPolicy', label: '무료체험정책', href: '#admin-trial-policy' },
 ];
 
@@ -44,6 +46,7 @@ export function AdminSubscriptionSection() {
       </nav>
 
       {activePage === 'queue' && <SubscriptionAdminPanel />}
+      {activePage === 'planServices' && <AdminWebInfoPanel mode="planServices" />}
       {activePage === 'trialPolicy' && <AdminTrialPolicyPanel />}
     </div>
   );
@@ -51,6 +54,7 @@ export function AdminSubscriptionSection() {
 
 function getSubscriptionPageFromHash(hash: string): SubscriptionPageKey {
   const targetId = hash.startsWith('#') ? hash.slice(1) : hash;
+  if (targetId === 'admin-plan-services') return 'planServices';
   if (targetId === 'admin-trial-policy') return 'trialPolicy';
   return 'queue';
 }

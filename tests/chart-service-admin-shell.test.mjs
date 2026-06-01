@@ -30,7 +30,6 @@ test('admin dashboard sections define the professional sidebar order', () => {
   assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.find((section) => section.key === 'webInfo')?.children, [
     { label: '가입약관', href: '#admin-web-info-terms' },
     { label: '개인정보보호정책', href: '#admin-web-info-privacy' },
-    { label: '플랜 제공서비스', href: '#admin-plan-services' },
     { label: '공개게시판', href: '#admin-public-board' },
     { label: '공지팝업', href: '#admin-notice-popup' },
     { label: '입금정보관리', href: '#admin-payment-settings' },
@@ -38,6 +37,7 @@ test('admin dashboard sections define the professional sidebar order', () => {
   ]);
   assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.find((section) => section.key === 'subscriptions')?.children, [
     { label: '구독요청', href: '#admin-subscriptions' },
+    { label: '플랜 제공서비스', href: '#admin-plan-services' },
     { label: '무료체험정책', href: '#admin-trial-policy' },
   ]);
   assert.deepEqual(ADMIN_DASHBOARD_SECTIONS.find((section) => section.key === 'sales')?.children, [
@@ -54,7 +54,7 @@ test('admin dashboard shell maps legacy anchors and deep links to sidebar sectio
   assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info-terms'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-web-info-privacy'), 'webInfo');
-  assert.equal(getAdminDashboardSectionFromLocation('#admin-plan-services'), 'webInfo');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-plan-services'), 'subscriptions');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-notice-popup'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-trial-policy'), 'subscriptions');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-symbols'), 'symbols');
@@ -81,6 +81,7 @@ test('admin dashboard shell maps legacy anchors and deep links to sidebar sectio
 test('admin page wraps operation panels in the dashboard shell sections', () => {
   const pageSource = fs.readFileSync(new URL('../app/admin/page.tsx', import.meta.url), 'utf8');
   const shellSource = fs.readFileSync(new URL('../app/admin/admin-dashboard-shell.tsx', import.meta.url), 'utf8');
+  const dashboardSource = fs.readFileSync(new URL('../app/admin/admin-dashboard-panel.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(pageSource, /AdminDashboardShell/);
@@ -98,6 +99,17 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.match(shellSource, /data-sidebar-collapsed=\{isSidebarCollapsed\}/);
   assert.match(shellSource, /ADMIN_DASHBOARD_SECTION_ICONS/);
   assert.match(shellSource, /from 'lucide-react'/);
+  assert.match(dashboardSource, /from 'lucide-react'/);
+  assert.match(dashboardSource, /ADMIN_OVERVIEW_CARD_ICONS/);
+  assert.match(dashboardSource, /payments: CreditCard/);
+  assert.match(dashboardSource, /subscriptions: Repeat/);
+  assert.match(dashboardSource, /support: MessageCircle/);
+  assert.match(dashboardSource, /users: Users/);
+  assert.match(dashboardSource, /audit: ClipboardList/);
+  assert.match(dashboardSource, /clear: CheckCircle2/);
+  assert.match(dashboardSource, /DashboardCardLabel/);
+  assert.match(dashboardSource, /className="dashboard-card-label"/);
+  assert.match(dashboardSource, /DashboardQueueCard/);
   assert.match(shellSource, /admin-dashboard-mobile-menu-toggle/);
   assert.match(shellSource, /admin-dashboard-mobile-menu-backdrop/);
   assert.match(shellSource, /aria-controls="admin-dashboard-sidebar"/);
@@ -123,6 +135,8 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.match(cssSource, /\.admin-dashboard-shell/);
   assert.match(cssSource, /\.admin-dashboard-sidebar/);
   assert.match(cssSource, /\.admin-dashboard-section\[hidden\]/);
+  assert.match(cssSource, /#admin-overview \.dashboard-card-label/);
+  assert.match(cssSource, /#admin-overview \.dashboard-card-label svg/);
 });
 
 test('admin sidebar can collapse into an icon rail', () => {
@@ -143,6 +157,7 @@ test('admin sidebar can collapse into an icon rail', () => {
   assert.match(cssSource, /\.admin-dashboard-sidebar-toggle:hover\s*\{[\s\S]*?background:\s*rgba\(255, 255, 255, 0\.14\)/);
   assert.match(cssSource, /\.admin-dashboard-sidebar-toggle:focus-visible\s*\{[\s\S]*?outline:\s*0/);
   assert.match(cssSource, /\.admin-dashboard-menu-icon/);
+  assert.match(cssSource, /\.admin-dashboard-menu-item\.active \.admin-dashboard-menu-icon\s*\{[\s\S]*?color:\s*#fff/);
   assert.match(
     cssSource,
     /body:not\(:has\(\.landing-page\)\) \.admin-dashboard-shell\[data-sidebar-collapsed="true"\]\s*\{[\s\S]*?grid-template-columns:\s*76px minmax\(0, 1fr\)/,
@@ -163,8 +178,18 @@ test('admin sidebar can collapse into an icon rail', () => {
 
 test('admin sidebar submenus roll out on hover and keyboard focus', () => {
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const submenuLinkRule = cssSource.match(
+    /\.admin-dashboard-submenu a\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const submenuDotActiveRule = cssSource.match(
+    /\.admin-dashboard-submenu a:hover::before,[\s\S]*?\.admin-dashboard-submenu a\[aria-current="page"\]::before\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
 
   assert.match(cssSource, /\.admin-dashboard-menu-group:has\(\.admin-dashboard-submenu\)/);
+  assert.match(cssSource, /\.admin-dashboard-menu-group:has\(\.admin-dashboard-submenu\) \.admin-dashboard-menu-item\s*\{[\s\S]*?grid-template-columns:\s*auto minmax\(0, 1fr\) auto/);
+  assert.match(cssSource, /\.admin-dashboard-menu-group:has\(\.admin-dashboard-submenu\) \.admin-dashboard-menu-item::after\s*\{[\s\S]*?border-width:\s*0 2px 2px 0[\s\S]*?content:\s*""[\s\S]*?transform:\s*rotate\(45deg\)/);
+  assert.match(cssSource, /\.admin-dashboard-menu-group:hover \.admin-dashboard-menu-item::after,[\s\S]*?\.admin-dashboard-menu-group:has\(\.admin-dashboard-menu-item\.active\) \.admin-dashboard-menu-item::after\s*\{[\s\S]*?transform:\s*rotate\(-135deg\)/);
+  assert.doesNotMatch(cssSource, /content:\s*"Sub menu"/);
   assert.match(cssSource, /\.admin-dashboard-submenu/);
   assert.match(cssSource, /max-height: 0/);
   assert.match(cssSource, /overflow: hidden/);
@@ -176,6 +201,11 @@ test('admin sidebar submenus roll out on hover and keyboard focus', () => {
   assert.match(cssSource, /pointer-events: auto/);
   assert.match(cssSource, /\.admin-dashboard-submenu a\.active/);
   assert.match(cssSource, /\.admin-dashboard-submenu a\[aria-current="page"\]/);
+  assert.match(cssSource, /\.admin-dashboard-submenu a\s*\{[\s\S]*?grid-template-columns:\s*7px minmax\(0, 1fr\)[\s\S]*?padding:\s*5px 0 5px 4px/);
+  assert.match(cssSource, /\.admin-dashboard-submenu a::before\s*\{[\s\S]*?border-radius:\s*999px[\s\S]*?height:\s*5px[\s\S]*?width:\s*5px/);
+  assert.match(cssSource, /\.admin-dashboard-submenu a:hover::before,[\s\S]*?\.admin-dashboard-submenu a\[aria-current="page"\]::before\s*\{[\s\S]*?background:\s*#fff/);
+  assert.doesNotMatch(submenuDotActiveRule, /box-shadow/);
+  assert.doesNotMatch(submenuLinkRule, /border-left/);
 });
 
 test('admin sidebar slides in from a floating mobile menu button', () => {
@@ -226,7 +256,7 @@ test('admin sidebar slides in from a floating mobile menu button', () => {
   );
   assert.match(
     cssSource,
-    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-submenu a\s*\{[\s\S]*?font-size:\s*12px[\s\S]*?padding:\s*3px 0 3px 10px/,
+    /@media \(max-width: 960px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-dashboard-submenu a\s*\{[\s\S]*?font-size:\s*12px[\s\S]*?padding:\s*3px 0 3px 4px/,
   );
 });
 
@@ -245,7 +275,7 @@ test('admin dashboard compacts sidebar and page gutters on tablet widths', () =>
   );
   assert.match(
     cssSource,
-    /@media \(max-width: 1180px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-page\s*\{[\s\S]*?padding-inline:\s*22px/,
+    /@media \(max-width: 1180px\)[\s\S]*?body:not\(:has\(\.landing-page\)\) \.admin-page\s*\{[\s\S]*?padding-inline:\s*18px/,
   );
 });
 

@@ -108,14 +108,22 @@ export function AdminPaymentSettingsPanel() {
               required
             />
           </label>
-          <label>
+          <label className="bank-logo-upload-field">
             은행 로고 이미지 업로드
-            <input
-              accept={BANK_LOGO_UPLOAD_ACCEPT}
-              onChange={(event) => void handleBankLogoUpload(event)}
-              type="file"
-            />
-            <small>PNG, JPG, WEBP / 최대 300KB</small>
+            <span className="bank-logo-upload-control">
+              <input
+                accept={BANK_LOGO_UPLOAD_ACCEPT}
+                aria-label="은행 로고 이미지 파일 선택"
+                onChange={(event) => void handleBankLogoUpload(event)}
+                type="file"
+              />
+              <span className="bank-logo-upload-content" aria-hidden="true">
+                <BankLogoUploadIcon />
+                <span className="bank-logo-upload-copy">
+                  <small>PNG, JPG, WEBP / 최대 300KB</small>
+                </span>
+              </span>
+            </span>
           </label>
           <div className="bank-logo-preview" aria-label="은행 로고 미리보기">
             <img alt={`${settings.bankName || '은행'} 로고`} src={settings.bankLogoUrl} />
@@ -167,6 +175,30 @@ export function AdminPaymentSettingsPanel() {
         <p className="notice compact">마지막 수정: {new Date(settings.updatedAt).toLocaleString('ko-KR')}</p>
       )}
     </section>
+  );
+}
+
+function BankLogoUploadIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="lucide lucide-image-up-icon lucide-image-up bank-logo-upload-icon"
+      fill="none"
+      focusable="false"
+      height="24"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M10.3 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10l-3.1-3.1a2 2 0 0 0-2.814.014L6 21" />
+      <path d="m14 19.5 3-3 3 3" />
+      <path d="M17 22v-5.5" />
+      <circle cx="9" cy="9" r="2" />
+    </svg>
   );
 }
 

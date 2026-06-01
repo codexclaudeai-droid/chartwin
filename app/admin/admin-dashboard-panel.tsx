@@ -1,7 +1,17 @@
 'use client';
 
+import {
+  CheckCircle2,
+  ClipboardList,
+  CreditCard,
+  MessageCircle,
+  Repeat,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
+  type AdminDashboardPriority,
   getAdminDashboardPriority,
   getAdminDashboardQueueItems,
 } from './admin-dashboard-priority';
@@ -51,6 +61,15 @@ type AdminDashboardResponse = {
   summary?: AdminDashboardSummary;
 };
 
+const ADMIN_OVERVIEW_CARD_ICONS: Record<AdminDashboardPriority['key'] | 'audit', LucideIcon> = {
+  payments: CreditCard,
+  subscriptions: Repeat,
+  support: MessageCircle,
+  users: Users,
+  audit: ClipboardList,
+  clear: CheckCircle2,
+};
+
 export function AdminDashboardPanel() {
   const [summary, setSummary] = useState<AdminDashboardSummary | null>(null);
   const [message, setMessage] = useState('관리자 운영 요약을 불러오는 중입니다.');
@@ -90,6 +109,7 @@ export function AdminDashboardPanel() {
 
   const priority = summary ? getAdminDashboardPriority(summary) : null;
   const queueItems = summary ? getAdminDashboardQueueItems(summary) : [];
+  const PriorityIcon = priority ? ADMIN_OVERVIEW_CARD_ICONS[priority.key] : CheckCircle2;
 
   return (
     <section className="card wide admin-overview-card">
@@ -109,7 +129,10 @@ export function AdminDashboardPanel() {
               href={priority.href}
               onClick={() => dispatchPriorityQueuePreset(priority)}
             >
-              <span>다음 작업</span>
+              <span className="dashboard-card-label">
+                <PriorityIcon aria-hidden="true" />
+                <span>다음 작업</span>
+              </span>
               <strong>{priority.title}</strong>
               <p>{priority.description}</p>
             </a>
@@ -122,23 +145,14 @@ export function AdminDashboardPanel() {
             {queueItems.length > 0 ? (
               <div className="dashboard-queue-grid">
                 {queueItems.map((item) => (
-                  <a
-                    className={`dashboard-queue-card ${item.tone}`}
-                    href={item.href}
+                  <DashboardQueueCard
+                    item={item}
                     key={item.key}
                     onClick={() => dispatchAdminQueuePresetEvent({
                       panel: item.panel,
                       presetKey: item.presetKey,
                     })}
-                  >
-                    <span>{item.title}</span>
-                    <strong>{item.countLabel}</strong>
-                    <div className="dashboard-queue-meta">
-                      <small>처리: {item.actionLabel}</small>
-                      <small>필터: {item.filterLabel}</small>
-                    </div>
-                    <p>{item.description}</p>
-                  </a>
+                  />
                 ))}
               </div>
             ) : (
@@ -154,7 +168,7 @@ export function AdminDashboardPanel() {
                 presetKey: 'pending',
               })}
             >
-              <span>입금 확인</span>
+              <DashboardCardLabel icon={CreditCard} label="입금 확인" />
               <strong>대기 {summary.payments.pendingCount}건</strong>
               <p>전체 결제 {summary.payments.totalCount}건, 확인 완료 {summary.payments.confirmedCount}건</p>
             </a>
@@ -166,7 +180,7 @@ export function AdminDashboardPanel() {
                 presetKey: 'all',
               })}
             >
-              <span>구독 승인/변경</span>
+              <DashboardCardLabel icon={Repeat} label="구독 승인/변경" />
               <strong>처리 대기 {summary.subscriptions.queueCount}건</strong>
               <p>
                 입금 대기 {summary.subscriptions.paymentPendingCount}건, 환불 대기{' '}
@@ -181,7 +195,7 @@ export function AdminDashboardPanel() {
                 presetKey: 'waiting',
               })}
             >
-              <span>고객센터</span>
+              <DashboardCardLabel icon={MessageCircle} label="고객센터" />
               <strong>답변 대기 {summary.support.waitingCount}건</strong>
               <p>전체 문의 {summary.support.totalCount}건, 비공개 {summary.support.privateCount}건</p>
             </a>
@@ -193,7 +207,7 @@ export function AdminDashboardPanel() {
                 presetKey: 'suspended',
               })}
             >
-              <span>회원 상태</span>
+              <DashboardCardLabel icon={Users} label="회원 상태" />
               <strong>정지 {summary.users.suspendedCount}건</strong>
               <p>
                 전체 회원 {summary.users.totalCount}명, 정상 {summary.users.activeCount}명,
@@ -205,7 +219,7 @@ export function AdminDashboardPanel() {
               href="#admin-audit-logs"
               onClick={() => dispatchAdminAuditLogPresetEvent({ presetKey: 'all' })}
             >
-              <span>감사 로그</span>
+              <DashboardCardLabel icon={ClipboardList} label="감사 로그" />
               <strong>{summary.audit.totalCount}건</strong>
               <p>관리자 승인, 반려, 환불, 답변 처리 기록입니다.</p>
             </a>
@@ -213,5 +227,46 @@ export function AdminDashboardPanel() {
         </>
       )}
     </section>
+  );
+}
+
+function DashboardQueueCard({
+  item,
+  onClick,
+}: Readonly<{
+  item: ReturnType<typeof getAdminDashboardQueueItems>[number];
+  onClick: () => void;
+}>) {
+  const QueueIcon = ADMIN_OVERVIEW_CARD_ICONS[item.key];
+
+  return (
+    <a
+      className={`dashboard-queue-card ${item.tone}`}
+      href={item.href}
+      onClick={onClick}
+    >
+      <DashboardCardLabel icon={QueueIcon} label={item.title} />
+      <strong>{item.countLabel}</strong>
+      <div className="dashboard-queue-meta">
+        <small>처리: {item.actionLabel}</small>
+        <small>필터: {item.filterLabel}</small>
+      </div>
+      <p>{item.description}</p>
+    </a>
+  );
+}
+
+function DashboardCardLabel({
+  icon: Icon,
+  label,
+}: Readonly<{
+  icon: LucideIcon;
+  label: string;
+}>) {
+  return (
+    <span className="dashboard-card-label">
+      <Icon aria-hidden="true" />
+      <span>{label}</span>
+    </span>
   );
 }

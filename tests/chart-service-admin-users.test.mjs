@@ -328,6 +328,20 @@ test('admin user panel shows the subscription plan tier beside subscription stat
   assert.match(source, /admin-user-plan-badge/);
 });
 
+test('admin user panel marks subscription status when the latest confirmed payment is provisional sales', () => {
+  const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /formatAdminUserSubscriptionStatusLabel/);
+  assert.match(source, /isProvisionalSalePaymentForSubscription/);
+  assert.match(source, /isProvisionalSaleAdminNote/);
+  assert.match(source, /adminNote\?: string \| null/);
+  assert.match(source, /payment\.subscriptionId === subscriptionId/);
+  assert.match(source, /payment\?\.status === 'confirmed'/);
+  assert.match(source, /가매출/);
+  assert.match(source, /媛留ㅼ텧/);
+  assert.match(source, /\(가매출\)/);
+});
+
 test('admin user panel renders member contact referral and signup metadata in the member column', () => {
   const source = readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
 
