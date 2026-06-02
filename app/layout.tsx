@@ -7,11 +7,34 @@ import { NoticePopupViewer } from './notice-popup-viewer';
 import { SessionNav } from './session-nav';
 import './globals.css';
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.CF_PAGES_URL || 'http://localhost:3000';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'TradingCore',
   description: 'TC Chart 기반 실시간 알고리즘 트레이딩 시그널 서비스',
   applicationName: 'TradingCore',
   manifest: '/site.webmanifest',
+  openGraph: {
+    title: 'TradingCore',
+    description: 'TC Chart 기반 실시간 알고리즘 트레이딩 시그널 서비스',
+    siteName: 'TradingCore',
+    type: 'website',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'TradingCore',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'TradingCore',
+    description: 'TC Chart 기반 실시간 알고리즘 트레이딩 시그널 서비스',
+    images: ['/og-image.png'],
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
