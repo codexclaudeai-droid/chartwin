@@ -27,7 +27,7 @@ function readVisiblePngPixelCount(path) {
   const bitDepth = buffer[24];
   const colorType = buffer[25];
   assert.equal(bitDepth, 8, `${path} must use 8-bit PNG channels`);
-  assert.equal(colorType, 6, `${path} must use RGBA PNG pixels`);
+  assert.ok(colorType === 2 || colorType === 6, `${path} must use RGB or RGBA PNG pixels`);
 
   const idatChunks = [];
   let offset = 8;
@@ -40,7 +40,7 @@ function readVisiblePngPixelCount(path) {
   }
 
   const inflated = zlib.inflateSync(Buffer.concat(idatChunks));
-  const bytesPerPixel = 4;
+  const bytesPerPixel = colorType === 6 ? 4 : 3;
   const stride = width * bytesPerPixel;
   const previous = Buffer.alloc(stride);
   const current = Buffer.alloc(stride);
@@ -75,8 +75,12 @@ function readVisiblePngPixelCount(path) {
       current[x] = value & 0xff;
     }
 
-    for (let x = 3; x < stride; x += bytesPerPixel) {
-      if (current[x] > 0) visible += 1;
+    if (colorType === 6) {
+      for (let x = 3; x < stride; x += bytesPerPixel) {
+        if (current[x] > 0) visible += 1;
+      }
+    } else {
+      visible += width;
     }
 
     previous.set(current);
