@@ -9673,6 +9673,16 @@ body:not(:has(.landing-page)) textarea {
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
+body:not(:has(.landing-page)) input:-webkit-autofill,
+body:not(:has(.landing-page)) input:-webkit-autofill:hover,
+body:not(:has(.landing-page)) input:-webkit-autofill:focus,
+body:not(:has(.landing-page)) input:autofill {
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  box-shadow: 0 0 0 1000px rgb(2, 7, 19) inset;
+  transition: background-color 9999s ease-in-out 0s, border-color 160ms ease, box-shadow 160ms ease;
+}
+
 body:not(:has(.landing-page)) input::placeholder,
 body:not(:has(.landing-page)) textarea::placeholder {
   color: rgba(216, 236, 255, 0.48);
@@ -11102,6 +11112,11 @@ body:not(:has(.landing-page)) .signup-form-card > .form > .signup-referral-note 
 
 body:not(:has(.landing-page)) .password-visibility-toggle {
   color: rgba(216, 236, 255, 0.72);
+}
+
+body:not(:has(.landing-page)) .password-input-shell:has(input:-webkit-autofill) .password-visibility-toggle,
+body:not(:has(.landing-page)) .password-input-shell:has(input:autofill) .password-visibility-toggle {
+  color: rgba(255, 255, 255, 0.88);
 }
 
 body:not(:has(.landing-page)) .password-visibility-toggle:is(:hover, :focus-visible, :active) {
