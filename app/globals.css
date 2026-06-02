@@ -14557,13 +14557,19 @@ body:not(:has(.landing-page)) #admin-support .admin-support-message strong {
   margin: 0;
 }
 
-body:not(:has(.landing-page)) #admin-support .admin-support-admin-reply {
+body:not(:has(.landing-page)) #admin-support .admin-support-admin-reply,
+body:not(:has(.landing-page)) #admin-support .admin-support-customer-reply {
   align-items: start;
   border-top-color: rgba(98, 166, 255, 0.24);
   background: transparent;
   color: #ffffff;
   grid-template-columns: 20px minmax(0, 1fr);
   padding-left: 16px;
+}
+
+body:not(:has(.landing-page)) #admin-support .admin-support-customer-reply {
+  border-top-color: rgba(125, 183, 255, 0.16);
+  color: rgba(232, 242, 255, 0.86);
 }
 
 body:not(:has(.landing-page)) #admin-support .admin-support-message-heading {

@@ -848,6 +848,11 @@ test('landing page applies scroll fade in and out motion to sections and cards',
   assert.match(fadeSource, /landing-scroll-fade/);
   assert.match(fadeSource, /is-visible/);
   assert.match(fadeSource, /is-exiting/);
+  assert.match(fadeSource, /matchMedia\('\(max-width: 760px\)'\)/);
+  assert.match(fadeSource, /filter\(\(element\) => !\(isMobileViewport && element\.classList\.contains\('landing-section'\)\)\)/);
+  assert.match(fadeSource, /isMobileViewport && element\.classList\.contains\('is-visible'\)/);
+  assert.match(fadeSource, /rootMargin: isMobileViewport \? '28% 0px 28% 0px' : '-12% 0px -16% 0px'/);
+  assert.match(fadeSource, /threshold: isMobileViewport \? \[0, 0\.01\] : \[0, 0\.18, 0\.36\]/);
   assert.match(fadeSource, /landing-section/);
   assert.match(fadeSource, /tc-chart-feature-card/);
   assert.match(cssSource, /\.landing-page \.landing-scroll-fade\s*\{[^}]*opacity: 0/s);

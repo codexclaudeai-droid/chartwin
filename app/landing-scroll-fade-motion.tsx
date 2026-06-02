@@ -14,7 +14,9 @@ const scrollFadeSelector = [
 
 export default function LandingScrollFadeMotion() {
   useEffect(() => {
-    const elements = Array.from(document.querySelectorAll<HTMLElement>(scrollFadeSelector));
+    const isMobileViewport = window.matchMedia('(max-width: 760px)').matches;
+    const elements = Array.from(document.querySelectorAll<HTMLElement>(scrollFadeSelector))
+      .filter((element) => !(isMobileViewport && element.classList.contains('landing-section')));
     if (!elements.length) return;
 
     elements.forEach((element) => {
@@ -36,6 +38,11 @@ export default function LandingScrollFadeMotion() {
             return;
           }
 
+          if (isMobileViewport && element.classList.contains('is-visible')) {
+            element.classList.remove('is-exiting');
+            return;
+          }
+
           element.classList.remove('is-visible');
           if (entry.boundingClientRect.top < 0) {
             element.classList.add('is-exiting');
@@ -46,8 +53,8 @@ export default function LandingScrollFadeMotion() {
       },
       {
         root: null,
-        rootMargin: '-12% 0px -16% 0px',
-        threshold: [0, 0.18, 0.36],
+        rootMargin: isMobileViewport ? '28% 0px 28% 0px' : '-12% 0px -16% 0px',
+        threshold: isMobileViewport ? [0, 0.01] : [0, 0.18, 0.36],
       },
     );
 

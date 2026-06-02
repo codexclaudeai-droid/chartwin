@@ -484,7 +484,7 @@ test('admin support panel groups thread details for readable operations', () => 
   assert.match(source, /admin-support-meta-bar/);
   assert.match(source, /admin-support-author-cell/);
   assert.match(source, /admin-support-message-list/);
-  assert.match(source, /admin-support-message admin-support-admin-reply/);
+  assert.match(source, /admin-support-admin-reply/);
   assert.match(source, /admin-support-reply-actions/);
   assert.match(source, /aria-label=\{`\$\{item\.thread\.id\} 문의 답변 입력`\}/);
 });
@@ -621,10 +621,13 @@ test('support panels indent admin replies with a return arrow marker', () => {
   assert.match(supportSource, /support-admin-reply-copy/);
   assert.match(adminSource, /admin-support-reply-enter-icon/);
   assert.match(adminSource, /admin-support-message-content/);
+  assert.match(adminSource, /messageIndex > 0/);
+  assert.match(adminSource, /admin-support-customer-reply/);
   assert.match(supportSource, /M15 10l4 4-4 4/);
   assert.match(adminSource, /M15 10l4 4-4 4/);
   assert.match(styleSource, /\.support-message-list \.support-admin-reply-line\s*\{[\s\S]*?grid-template-columns: 20px minmax\(0, 1fr\)/);
-  assert.match(styleSource, /#admin-support \.admin-support-admin-reply\s*\{[\s\S]*?grid-template-columns: 20px minmax\(0, 1fr\)/);
+  assert.match(styleSource, /#admin-support \.admin-support-admin-reply,[\s\S]*?#admin-support \.admin-support-customer-reply\s*\{[\s\S]*?grid-template-columns: 20px minmax\(0, 1fr\)/);
+  assert.match(styleSource, /#admin-support \.admin-support-customer-reply\s*\{[\s\S]*?border-top-color: rgba\(125, 183, 255, 0\.16\)/);
   assert.match(styleSource, /\.support-admin-reply-enter-icon svg,[\s\S]*?#admin-support \.admin-support-reply-enter-icon svg\s*\{[\s\S]*?stroke-linejoin: round/);
 });
 

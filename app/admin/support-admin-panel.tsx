@@ -471,16 +471,21 @@ export function SupportAdminPanel() {
               <strong>{item.author?.email ?? 'system'}</strong>
             </div>
             <div className="admin-support-message-list">
-              {item.messages.map((threadMessage) => {
+              {item.messages.map((threadMessage, messageIndex) => {
                 const isEditingReply = editingReplyId === threadMessage.id;
                 const replyEditDraft = replyEditById[threadMessage.id] ?? threadMessage.body;
+                const isCustomerFollowUp = !threadMessage.isAdminReply && messageIndex > 0;
 
                 return (
                   <article
-                    className={threadMessage.isAdminReply ? 'admin-support-message admin-support-admin-reply' : 'admin-support-message'}
+                    className={[
+                      'admin-support-message',
+                      threadMessage.isAdminReply ? 'admin-support-admin-reply' : '',
+                      isCustomerFollowUp ? 'admin-support-customer-reply' : '',
+                    ].filter(Boolean).join(' ')}
                     key={threadMessage.id}
                   >
-                    {threadMessage.isAdminReply ? <SupportReplyReturnIcon className="admin-support-reply-enter-icon" /> : null}
+                    {threadMessage.isAdminReply || isCustomerFollowUp ? <SupportReplyReturnIcon className="admin-support-reply-enter-icon" /> : null}
                     <div className="admin-support-message-content">
                       <div className="admin-support-message-heading">
                         <strong>{threadMessage.isAdminReply ? '관리자' : '문의'}</strong>
