@@ -46,10 +46,9 @@ export function SessionNav() {
   async function logout() {
     setIsBusy(true);
     await fetch('/api/auth/logout', { method: 'POST' });
-    setIsBusy(false);
     clearAuthSessionCache();
     dispatchAuthSessionChangedEvent();
-    await refreshSession();
+    window.location.assign('/login');
   }
 
   if (isLoading) {
