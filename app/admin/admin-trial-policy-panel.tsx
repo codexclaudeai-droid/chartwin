@@ -80,7 +80,7 @@ export function AdminTrialPolicyPanel() {
       <div className="toolbar">
         <div>
           <h2>무료체험 정책</h2>
-          <p className="notice compact">무료체험 1회 제한은 유지하고, 이벤트 기간이나 회원별 예외만 별도로 열어둡니다.</p>
+          <p className="notice compact">무료체험 1회 제한은 유지하고, 이벤트 기간이나 회원별 예외가 있을 때만 재신청 또는 기간 연장을 허용합니다.</p>
         </div>
         <AdminRefreshButton onClick={() => void refresh()} disabled={isBusy} />
       </div>
@@ -145,7 +145,7 @@ export function AdminTrialPolicyPanel() {
               onChange={(event) => updateSetting('eventAllowReapply', event.target.checked)}
               type="checkbox"
             />
-            <span>이벤트 기간 동안 만료 회원 재신청 허용</span>
+            <span>이벤트 기간 동안 만료 회원 재신청 및 이용 중 회원 기간 연장 허용</span>
           </label>
         </div>
         <button className="button" type="submit" disabled={isBusy}>

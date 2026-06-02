@@ -917,7 +917,11 @@ export function ProfilePanel() {
               {dashboard.subscription?.startsAt && (
                 <p>시작일 {formatDateTime(dashboard.subscription.startsAt)}</p>
               )}
-              <p>{dashboard.subscription?.endsAt ? `만료일 ${formatDateTime(dashboard.subscription.endsAt)}` : '승인 전 구독은 관리자 확인 후 활성화됩니다.'}</p>
+              <p>
+                {dashboard.subscription?.endsAt
+                  ? `만료일 ${formatDateTime(dashboard.subscription.endsAt)} · 서비스종료 ${formatServiceEndCountdown(dashboard.subscription.endsAt)}`
+                  : '승인 전 구독은 관리자 확인 후 활성화됩니다.'}
+              </p>
             </article>
             <article className="mini-card">
               <span>차트 접근</span>
@@ -1068,6 +1072,19 @@ function formatDateTime(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function formatServiceEndCountdown(value: string): string {
+  const endDate = new Date(value);
+  if (Number.isNaN(endDate.getTime())) return 'D-?';
+
+  const today = new Date();
+  const todayStart = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const endStart = Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+  const diffDays = Math.ceil((endStart - todayStart) / 86_400_000);
+
+  if (diffDays === 0) return 'D-Day';
+  return diffDays > 0 ? `D-${diffDays}` : `D+${Math.abs(diffDays)}`;
 }
 
 function formatProfileSubscriptionPlanLabel(planId: string | null): string {

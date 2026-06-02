@@ -38,6 +38,7 @@ import type { AsyncChartServiceRepository } from './async-repository.ts';
 import type {
   AuthSessionRecord,
   FreeTrialPolicySettingsRecord,
+  FreeTrialUsageRecord,
   FreeTrialUsageSource,
   FreeTrialUserAllowanceRecord,
   PublicServiceUserRecord,
@@ -84,6 +85,7 @@ export type FreeTrialRequestResult = {
   subscription: SubscriptionRecord | null;
   supportThread: SupportThreadRecord | null;
   endsAt: string | null;
+  durationDays: number | null;
 };
 
 type EffectiveFreeTrialPolicy = FreeTrialPolicySettingsRecord & {
@@ -209,12 +211,44 @@ export async function requestAsyncFreeTrial(
     repository.getFreeTrialUserAllowanceByUserId(user.id),
   ]);
   const subscriptionStatus = existingSubscription?.status ?? SUBSCRIPTION_STATUSES.none;
-  if (canUseFullChart({ role: user.role, subscriptionStatus })) {
+  const activeTrialHasEnded = existingSubscription?.status === SUBSCRIPTION_STATUSES.trialActive &&
+    !hasFreeTrialTimeRemaining(existingSubscription.endsAt, input.requestedAt);
+  if (existingSubscription?.status === SUBSCRIPTION_STATUSES.trialActive) {
+    const extensionEligibility = tryResolveFreeTrialEligibility({
+      existingSubscription,
+      usageCount: usageRecords.length,
+      policy,
+      allowance,
+    });
+    if (extensionEligibility) {
+      return extendAsyncFreeTrial(repository, {
+        actor: input.actor,
+        existingSubscription,
+        eligibility: extensionEligibility,
+        requestedAt: input.requestedAt,
+      });
+    }
+
+    if (!activeTrialHasEnded) {
+      return {
+        status: 'already_active',
+        subscription: existingSubscription,
+        supportThread: null,
+        endsAt: existingSubscription.endsAt,
+        durationDays: resolveExistingFreeTrialDurationDays(existingSubscription, usageRecords, policy.effectiveDurationDays),
+      };
+    }
+  }
+
+  if (!activeTrialHasEnded && canUseFullChart({ role: user.role, subscriptionStatus })) {
     return {
       status: 'already_active',
       subscription: existingSubscription,
       supportThread: null,
       endsAt: existingSubscription?.endsAt ?? null,
+      durationDays: existingSubscription
+        ? resolveExistingFreeTrialDurationDays(existingSubscription, usageRecords, policy.effectiveDurationDays)
+        : policy.effectiveDurationDays,
     };
   }
 
@@ -286,6 +320,71 @@ export async function requestAsyncFreeTrial(
     subscription,
     supportThread: supportResult.thread,
     endsAt,
+    durationDays: eligibility.durationDays,
+  };
+}
+
+async function extendAsyncFreeTrial(
+  repository: AsyncChartServiceRepository,
+  input: {
+    actor: Actor;
+    existingSubscription: SubscriptionRecord;
+    eligibility: FreeTrialEligibility;
+    requestedAt: string;
+  },
+): Promise<FreeTrialRequestResult> {
+  const extensionBase = getFreeTrialExtensionBaseDate(input.existingSubscription.endsAt, input.requestedAt);
+  const endsAt = addUtcDays(extensionBase, input.eligibility.durationDays);
+  const subscription: SubscriptionRecord = {
+    ...input.existingSubscription,
+    status: SUBSCRIPTION_STATUSES.trialActive,
+    endsAt,
+    updatedAt: input.requestedAt,
+  };
+
+  await repository.saveSubscription(subscription);
+  if (input.eligibility.source === 'user_allowance' && input.eligibility.allowance) {
+    await repository.saveFreeTrialUserAllowance({
+      ...input.eligibility.allowance,
+      remainingCount: Math.max(0, input.eligibility.allowance.remainingCount - 1),
+      updatedAt: input.requestedAt,
+    });
+  }
+  await repository.saveFreeTrialUsageRecord({
+    id: await repository.nextId('trial_usage'),
+    userId: subscription.userId,
+    subscriptionId: subscription.id,
+    source: input.eligibility.source,
+    startedAt: input.requestedAt,
+    endsAt,
+    durationDays: input.eligibility.durationDays,
+    policySnapshot: createFreeTrialPolicySnapshot(input.eligibility.policy),
+    createdAt: input.requestedAt,
+  });
+  await createAsyncUserNotification(repository, {
+    userId: subscription.userId,
+    category: 'subscription',
+    title: '무료체험 기간이 연장되었습니다',
+    body: `무료체험 기간이 ${input.eligibility.durationDays}일 연장되었습니다. 종료 예정일: ${endsAt}`,
+    linkUrl: '/chart',
+    createdAt: input.requestedAt,
+  });
+
+  const supportResult = await createAsyncSupportThread(repository, {
+    actor: input.actor,
+    category: 'trial',
+    title: '무료체험 연장',
+    body: `무료체험 기간이 ${input.eligibility.durationDays}일 연장되었습니다. 종료 예정일: ${endsAt}`,
+    visibility: 'private',
+    createdAt: input.requestedAt,
+  });
+
+  return {
+    status: 'started',
+    subscription,
+    supportThread: supportResult.thread,
+    endsAt,
+    durationDays: input.eligibility.durationDays,
   };
 }
 
@@ -363,6 +462,19 @@ function resolveFreeTrialEligibility(input: {
   }
 
   throw new Error('무료체험은 계정당 1회만 신청할 수 있습니다.');
+}
+
+function tryResolveFreeTrialEligibility(input: {
+  existingSubscription: SubscriptionRecord | null;
+  usageCount: number;
+  policy: EffectiveFreeTrialPolicy;
+  allowance: FreeTrialUserAllowanceRecord | null;
+}): FreeTrialEligibility | null {
+  try {
+    return resolveFreeTrialEligibility(input);
+  } catch {
+    return null;
+  }
 }
 
 function isFreeTrialPolicyEventActive(policy: FreeTrialPolicySettingsRecord, nowIso: string): boolean {
@@ -1972,6 +2084,33 @@ function addUtcDays(isoDate: string, days: number): string {
   const next = new Date(isoDate);
   next.setUTCDate(next.getUTCDate() + days);
   return next.toISOString();
+}
+
+function getFreeTrialExtensionBaseDate(existingEndsAt: string | null, requestedAt: string): string {
+  if (!existingEndsAt) return requestedAt;
+  return new Date(existingEndsAt).getTime() > new Date(requestedAt).getTime() ? existingEndsAt : requestedAt;
+}
+
+function hasFreeTrialTimeRemaining(endsAt: string | null, requestedAt: string): boolean {
+  if (!endsAt) return true;
+  return new Date(endsAt).getTime() > new Date(requestedAt).getTime();
+}
+
+function resolveExistingFreeTrialDurationDays(
+  subscription: SubscriptionRecord,
+  usageRecords: FreeTrialUsageRecord[],
+  fallbackDurationDays: number,
+): number {
+  const matchingRecord = usageRecords
+    .filter((record) => record.subscriptionId === subscription.id)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  if (matchingRecord?.durationDays) return matchingRecord.durationDays;
+  if (subscription.startsAt && subscription.endsAt) {
+    const durationMs = new Date(subscription.endsAt).getTime() - new Date(subscription.startsAt).getTime();
+    const durationDays = Math.round(durationMs / 86_400_000);
+    if (Number.isFinite(durationDays) && durationDays > 0) return durationDays;
+  }
+  return fallbackDurationDays;
 }
 
 async function createAsyncUserNotification(

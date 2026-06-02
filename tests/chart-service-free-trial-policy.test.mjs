@@ -43,6 +43,8 @@ test('admin free trial policy panel is reachable from subscription management', 
   assert.doesNotMatch(webInfoSource, /AdminTrialPolicyPanel/);
   assert.match(panelSource, /\/api\/admin\/trial-policy/);
   assert.match(panelSource, /eventAllowReapply/);
+  assert.match(panelSource, /재신청 또는 기간 연장/);
+  assert.match(panelSource, /만료 회원 재신청 및 이용 중 회원 기간 연장 허용/);
   assert.match(cssSource, /input\[type="datetime-local"\]::-webkit-calendar-picker-indicator/);
   assert.match(
     cssSource,

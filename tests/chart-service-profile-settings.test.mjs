@@ -103,6 +103,15 @@ test('profile image upload policy converts browser files to bounded webp assets'
   assert.match(panelSource, /dataUrl: compressedImage\.dataUrl/);
 });
 
+test('profile service summary shows a service end D-day counter', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /서비스종료/);
+  assert.match(panelSource, /formatServiceEndCountdown/);
+  assert.match(panelSource, /D-Day/);
+  assert.match(panelSource, /D-\$\{diffDays\}/);
+});
+
 test('profile image upload route stores the avatar data url on the dashboard user', async () => {
   const repository = getChartServiceRepository();
   const { session } = createSessionForUser(repository, {

@@ -23,6 +23,7 @@ type TrialRequestPayload = {
   ok?: boolean;
   status?: 'started' | 'already_active';
   endsAt?: string | null;
+  durationDays?: number | null;
   message?: string;
 };
 
@@ -91,17 +92,22 @@ export function FreeTrialRequestButton({
         return;
       }
 
-      if (redirectOnSuccess) {
+      if (redirectOnSuccess && payload.status !== 'already_active') {
         window.location.assign(returnHref);
         return;
       }
 
       const endDateText = payload.endsAt ? formatKoreanDateTime(payload.endsAt) : null;
+      const durationText = formatTrialDuration(payload.durationDays);
       setResultModal({
         title: payload.status === 'already_active' ? '무료체험 이용 중입니다' : '무료체험 신청이 접수되었습니다',
-        description: endDateText
-          ? `TC Chart 무료체험이 활성화되었습니다. 종료 예정일은 ${endDateText}입니다.`
-          : 'TC Chart 이용 권한이 곧 활성화됩니다.',
+        description: payload.status === 'already_active'
+          ? endDateText
+            ? `이미 ${durationText} 무료체험이 적용 중입니다. 종료 예정일은 ${endDateText}입니다.`
+            : `이미 ${durationText} 무료체험이 적용 중입니다. 마이프로필에서 종료 예정일을 확인해 주세요.`
+          : endDateText
+            ? `TC Chart ${durationText} 무료체험이 활성화되었습니다. 종료 예정일은 ${endDateText}입니다.`
+            : 'TC Chart 이용 권한이 곧 활성화됩니다.',
       });
     } finally {
       setIsSubmitting(false);
@@ -182,4 +188,8 @@ function formatKoreanDateTime(value: string): string {
     timeStyle: 'short',
     timeZone: 'Asia/Seoul',
   }).format(date);
+}
+
+function formatTrialDuration(value?: number | null): string {
+  return Number.isFinite(value) && value && value > 0 ? `${Math.round(value)}일` : '설정된 기간의';
 }

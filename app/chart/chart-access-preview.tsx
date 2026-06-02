@@ -67,11 +67,11 @@ export function ChartAccessPreview({
       <div className="chart-preview-actions" aria-label="Chart preview actions">
         <FreeTrialRequestButton
           className="button chart-preview-primary"
-          confirmTitle={isMember ? '7일 무료체험을 시작할까요?' : '무료체험 신청을 진행할까요?'}
+          confirmTitle={isMember ? '무료체험을 시작할까요?' : '무료체험 신청을 진행할까요?'}
           confirmDescription={isMember
-            ? '무료체험 신청 즉시 7일간 TC Chart 이용 권한이 열립니다. 확인 후 바로 차트 화면으로 이동합니다.'
+            ? '무료체험 신청 즉시 설정된 기간 동안 TC Chart 이용 권한이 열립니다. 확인 후 바로 차트 화면으로 이동합니다.'
             : '회원가입후 바로 무료체험신청 접수진행됩니다.'}
-          confirmActionLabel={isMember ? '7일 무료체험 시작' : '다음'}
+          confirmActionLabel={isMember ? '무료체험 시작' : '다음'}
           confirmCancelLabel="나중에"
           confirmRedirectHref={isMember ? undefined : guestTrialSignupHref}
           loginHref={loginHref}

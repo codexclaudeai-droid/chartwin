@@ -12,6 +12,8 @@
 - 결제와 구독 활성화는 관리자 수동 확인을 기준으로 한다.
 - 보안 검사는 클라이언트 표시 제어가 아니라 서버 권한 검사로 강제한다.
 
+내부 운영정책 규정은 `chart-service-policy-rules.md`를 기준으로 한다.
+
 ## 2. Target Architecture
 
 ```text
