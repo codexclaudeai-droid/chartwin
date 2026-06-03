@@ -2,13 +2,15 @@ create table if not exists users (
   id text primary key,
   email text not null,
   name text not null,
-  password_hash text not null,
+  password_hash text,
   role text not null,
   account_status text not null default 'active',
   phone_number text,
+  profile_image_data_url text,
   referral_code text not null,
   referred_by_user_id text,
   created_at timestamptz not null default now(),
+  email_verified_at timestamptz,
   constraint chk_users_role check (role in ('guest', 'member', 'trial', 'subscriber', 'salesperson', 'admin', 'super_admin')),
   constraint chk_users_account_status check (account_status in ('active', 'suspended')),
   foreign key (referred_by_user_id) references users(id)
@@ -34,6 +36,22 @@ create index if not exists idx_auth_sessions_user_id on auth_sessions (user_id);
 
 create index if not exists idx_auth_sessions_expires_at on auth_sessions (expires_at);
 
+create table if not exists social_auth_accounts (
+  id text primary key,
+  provider text not null,
+  provider_user_id text not null,
+  user_id text not null,
+  email text not null,
+  created_at timestamptz not null,
+  updated_at timestamptz not null,
+  constraint chk_social_auth_accounts_provider check (provider in ('google', 'naver', 'kakao')),
+  foreign key (user_id) references users(id)
+);
+
+create index if not exists idx_social_auth_accounts_provider_user on social_auth_accounts (provider, provider_user_id);
+
+create index if not exists idx_social_auth_accounts_user_id on social_auth_accounts (user_id);
+
 create table if not exists password_reset_tokens (
   id text primary key,
   user_id text not null,
@@ -47,6 +65,20 @@ create table if not exists password_reset_tokens (
 create index if not exists idx_password_reset_tokens_token_hash on password_reset_tokens (token_hash);
 
 create index if not exists idx_password_reset_tokens_user_id on password_reset_tokens (user_id);
+
+create table if not exists email_verification_tokens (
+  id text primary key,
+  user_id text not null,
+  token_hash text not null,
+  created_at timestamptz not null,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  foreign key (user_id) references users(id)
+);
+
+create index if not exists idx_email_verification_tokens_token_hash on email_verification_tokens (token_hash);
+
+create index if not exists idx_email_verification_tokens_user_id on email_verification_tokens (user_id);
 
 create table if not exists subscription_plans (
   id text primary key,
@@ -98,6 +130,28 @@ create index if not exists idx_public_board_posts_category on public_board_posts
 create index if not exists idx_public_board_posts_is_published on public_board_posts (is_published);
 
 create index if not exists idx_public_board_posts_updated_by_admin_id on public_board_posts (updated_by_admin_id);
+
+create table if not exists notice_popups (
+  id text primary key,
+  title text not null,
+  body_html text not null,
+  is_active boolean not null default true,
+  sort_order integer not null default 0,
+  start_at timestamptz,
+  end_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by_admin_id text,
+  foreign key (updated_by_admin_id) references users(id)
+);
+
+create index if not exists idx_notice_popups_is_active on notice_popups (is_active);
+
+create index if not exists idx_notice_popups_start_at on notice_popups (start_at);
+
+create index if not exists idx_notice_popups_end_at on notice_popups (end_at);
+
+create index if not exists idx_notice_popups_updated_by_admin_id on notice_popups (updated_by_admin_id);
 
 create table if not exists support_threads (
   id text primary key,
@@ -191,11 +245,13 @@ create table if not exists referral_program_settings (
   subscriber_cashback_percent numeric(5,2) not null default 3,
   reward_percent numeric(5,2) not null default 10,
   salesperson_reward_percent numeric(5,2) not null default 30,
+  sales_team_reward_percent numeric(5,2) not null default 50,
   updated_by_admin_id text,
   updated_at timestamptz not null default now(),
   constraint chk_referral_program_settings_subscriber_cashback_percent check (subscriber_cashback_percent >= 0 and subscriber_cashback_percent <= 100),
   constraint chk_referral_program_settings_reward_percent check (reward_percent >= 0 and reward_percent <= 100),
   constraint chk_referral_program_settings_salesperson_reward_percent check (salesperson_reward_percent >= 0 and salesperson_reward_percent <= 100),
+  constraint chk_referral_program_settings_sales_team_reward_percent check (sales_team_reward_percent >= 0 and sales_team_reward_percent <= 100),
   foreign key (updated_by_admin_id) references users(id)
 );
 
@@ -212,6 +268,57 @@ create table if not exists sales_teams (
 );
 
 create index if not exists idx_sales_teams_updated_by_admin_id on sales_teams (updated_by_admin_id);
+
+create table if not exists free_trial_policy_settings (
+  id text primary key,
+  base_duration_days integer not null default 7,
+  event_enabled boolean not null default false,
+  event_starts_at timestamptz,
+  event_ends_at timestamptz,
+  event_duration_days integer,
+  event_allow_reapply boolean not null default false,
+  updated_by_admin_id text,
+  updated_at timestamptz not null default now(),
+  constraint chk_free_trial_policy_settings_base_duration_days check (base_duration_days > 0 and base_duration_days <= 365),
+  constraint chk_free_trial_policy_settings_event_duration_days check (event_duration_days is null or (event_duration_days > 0 and event_duration_days <= 365)),
+  foreign key (updated_by_admin_id) references users(id)
+);
+
+create index if not exists idx_free_trial_policy_settings_updated_by_admin_id on free_trial_policy_settings (updated_by_admin_id);
+
+create table if not exists free_trial_user_allowances (
+  user_id text primary key,
+  remaining_count integer not null default 0,
+  note text,
+  updated_by_admin_id text,
+  updated_at timestamptz not null default now(),
+  constraint chk_free_trial_user_allowances_remaining_count check (remaining_count >= 0 and remaining_count <= 999),
+  foreign key (user_id) references users(id),
+  foreign key (updated_by_admin_id) references users(id)
+);
+
+create index if not exists idx_free_trial_user_allowances_updated_by_admin_id on free_trial_user_allowances (updated_by_admin_id);
+
+create table if not exists free_trial_usage_records (
+  id text primary key,
+  user_id text not null,
+  subscription_id text not null,
+  source text not null,
+  started_at timestamptz not null,
+  ends_at timestamptz not null,
+  duration_days integer not null,
+  policy_snapshot_json jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  constraint chk_free_trial_usage_records_source check (source in ('standard', 'global_event', 'user_allowance')),
+  foreign key (user_id) references users(id),
+  foreign key (subscription_id) references subscriptions(id)
+);
+
+create index if not exists idx_free_trial_usage_records_user_id on free_trial_usage_records (user_id);
+
+create index if not exists idx_free_trial_usage_records_subscription_id on free_trial_usage_records (subscription_id);
+
+create index if not exists idx_free_trial_usage_records_created_at on free_trial_usage_records (created_at);
 
 create table if not exists payment_transfer_settings (
   id text primary key,
@@ -295,6 +402,7 @@ create index if not exists idx_notifications_user_id_archived_at on notification
 
 create table if not exists email_outbox (
   id text primary key,
+  sender_email text not null,
   recipient_email text not null,
   template text not null,
   subject text not null,
@@ -314,8 +422,8 @@ create table if not exists audit_logs (
   action text not null,
   target_type text not null,
   target_id text not null,
-  before_json jsonb not null,
-  after_json jsonb not null,
+  before_json jsonb,
+  after_json jsonb,
   created_at timestamptz not null default now(),
   foreign key (actor_admin_id) references users(id)
 );
@@ -342,27 +450,57 @@ create index if not exists idx_payment_requests_support_thread_id on payment_req
 
 alter table if exists users add column if not exists phone_number text;
 
+alter table if exists users add column if not exists profile_image_data_url text;
+
 alter table if exists users add column if not exists referral_code text;
 
 alter table if exists users add column if not exists referred_by_user_id text;
 
 alter table if exists users add column if not exists created_at timestamptz;
 
+alter table if exists users add column if not exists email_verified_at timestamptz;
+
+alter table if exists users alter column password_hash drop not null;
+
 update users set referral_code = upper(substr(md5(id), 1, 6)) where referral_code is null or referral_code = '' or referral_code !~ '^[A-Z0-9]{6}$';
 
 update users set created_at = now() where created_at is null;
+
+update users set email_verified_at = created_at where email_verified_at is null;
 
 create index if not exists idx_users_referral_code on users (referral_code);
 
 create index if not exists idx_users_referred_by_user_id on users (referred_by_user_id);
 
-create table if not exists referral_program_settings (id text primary key, subscriber_cashback_percent numeric(5,2) not null default 3, reward_percent numeric(5,2) not null default 10, salesperson_reward_percent numeric(5,2) not null default 30, updated_by_admin_id text, updated_at timestamptz not null default now());
+create table if not exists social_auth_accounts (id text primary key, provider text not null, provider_user_id text not null, user_id text not null references users(id), email text not null, created_at timestamptz not null, updated_at timestamptz not null, constraint chk_social_auth_accounts_provider check (provider in ('google', 'naver', 'kakao')));
+
+create unique index if not exists idx_social_auth_accounts_provider_user on social_auth_accounts (provider, provider_user_id);
+
+create index if not exists idx_social_auth_accounts_user_id on social_auth_accounts (user_id);
+
+create table if not exists email_verification_tokens (id text primary key, user_id text not null references users(id), token_hash text not null, created_at timestamptz not null, expires_at timestamptz not null, used_at timestamptz);
+
+create index if not exists idx_email_verification_tokens_token_hash on email_verification_tokens (token_hash);
+
+create index if not exists idx_email_verification_tokens_user_id on email_verification_tokens (user_id);
+
+alter table if exists email_outbox add column if not exists sender_email text;
+
+update email_outbox set sender_email = 'noreply@tradingcore.co' where sender_email is null or sender_email = '';
+
+alter table if exists audit_logs alter column before_json drop not null;
+
+alter table if exists audit_logs alter column after_json drop not null;
+
+create table if not exists referral_program_settings (id text primary key, subscriber_cashback_percent numeric(5,2) not null default 3, reward_percent numeric(5,2) not null default 10, salesperson_reward_percent numeric(5,2) not null default 30, sales_team_reward_percent numeric(5,2) not null default 50, updated_by_admin_id text, updated_at timestamptz not null default now());
 
 alter table if exists referral_program_settings add column if not exists subscriber_cashback_percent numeric(5,2);
 
 alter table if exists referral_program_settings add column if not exists reward_percent numeric(5,2);
 
 alter table if exists referral_program_settings add column if not exists salesperson_reward_percent numeric(5,2);
+
+alter table if exists referral_program_settings add column if not exists sales_team_reward_percent numeric(5,2);
 
 alter table if exists referral_program_settings add column if not exists updated_by_admin_id text;
 
@@ -374,7 +512,9 @@ update referral_program_settings set reward_percent = 10 where reward_percent is
 
 update referral_program_settings set salesperson_reward_percent = 30 where salesperson_reward_percent is null;
 
-insert into referral_program_settings (id, subscriber_cashback_percent, reward_percent, salesperson_reward_percent, updated_at) values ('default', 3, 10, 30, now()) on conflict (id) do nothing;
+update referral_program_settings set sales_team_reward_percent = 50 where sales_team_reward_percent is null;
+
+insert into referral_program_settings (id, subscriber_cashback_percent, reward_percent, salesperson_reward_percent, sales_team_reward_percent, updated_at) values ('default', 3, 10, 30, 50, now()) on conflict (id) do nothing;
 
 create table if not exists sales_teams (id text primary key, name text not null, commission_percent numeric(5,2) not null default 30, salesperson_ids jsonb not null default '[]'::jsonb, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), updated_by_admin_id text);
 
@@ -393,6 +533,80 @@ alter table if exists sales_teams add column if not exists updated_by_admin_id t
 update sales_teams set salesperson_ids = '[]'::jsonb where salesperson_ids is null;
 
 create index if not exists idx_sales_teams_updated_by_admin_id on sales_teams (updated_by_admin_id);
+
+create table if not exists free_trial_policy_settings (id text primary key, base_duration_days integer not null default 7, event_enabled boolean not null default false, event_starts_at timestamptz, event_ends_at timestamptz, event_duration_days integer, event_allow_reapply boolean not null default false, updated_by_admin_id text, updated_at timestamptz not null default now());
+
+alter table if exists free_trial_policy_settings add column if not exists base_duration_days integer;
+
+alter table if exists free_trial_policy_settings add column if not exists event_enabled boolean;
+
+alter table if exists free_trial_policy_settings add column if not exists event_starts_at timestamptz;
+
+alter table if exists free_trial_policy_settings add column if not exists event_ends_at timestamptz;
+
+alter table if exists free_trial_policy_settings add column if not exists event_duration_days integer;
+
+alter table if exists free_trial_policy_settings add column if not exists event_allow_reapply boolean;
+
+alter table if exists free_trial_policy_settings add column if not exists updated_by_admin_id text;
+
+alter table if exists free_trial_policy_settings add column if not exists updated_at timestamptz;
+
+update free_trial_policy_settings set base_duration_days = 7 where base_duration_days is null;
+
+update free_trial_policy_settings set event_enabled = false where event_enabled is null;
+
+update free_trial_policy_settings set event_allow_reapply = false where event_allow_reapply is null;
+
+update free_trial_policy_settings set updated_at = now() where updated_at is null;
+
+insert into free_trial_policy_settings (id, base_duration_days, event_enabled, event_allow_reapply, updated_at) values ('default', 7, false, false, now()) on conflict (id) do nothing;
+
+create index if not exists idx_free_trial_policy_settings_updated_by_admin_id on free_trial_policy_settings (updated_by_admin_id);
+
+create table if not exists free_trial_user_allowances (user_id text primary key, remaining_count integer not null default 0, note text, updated_by_admin_id text, updated_at timestamptz not null default now());
+
+alter table if exists free_trial_user_allowances add column if not exists remaining_count integer;
+
+alter table if exists free_trial_user_allowances add column if not exists note text;
+
+alter table if exists free_trial_user_allowances add column if not exists updated_by_admin_id text;
+
+alter table if exists free_trial_user_allowances add column if not exists updated_at timestamptz;
+
+update free_trial_user_allowances set remaining_count = 0 where remaining_count is null;
+
+update free_trial_user_allowances set updated_at = now() where updated_at is null;
+
+create index if not exists idx_free_trial_user_allowances_updated_by_admin_id on free_trial_user_allowances (updated_by_admin_id);
+
+create table if not exists free_trial_usage_records (id text primary key, user_id text not null, subscription_id text not null, source text not null, started_at timestamptz not null, ends_at timestamptz not null, duration_days integer not null, policy_snapshot_json jsonb not null default '{}'::jsonb, created_at timestamptz not null default now());
+
+alter table if exists free_trial_usage_records add column if not exists user_id text;
+
+alter table if exists free_trial_usage_records add column if not exists subscription_id text;
+
+alter table if exists free_trial_usage_records add column if not exists source text;
+
+alter table if exists free_trial_usage_records add column if not exists started_at timestamptz;
+
+alter table if exists free_trial_usage_records add column if not exists ends_at timestamptz;
+
+alter table if exists free_trial_usage_records add column if not exists duration_days integer;
+
+alter table if exists free_trial_usage_records add column if not exists policy_snapshot_json jsonb;
+
+alter table if exists free_trial_usage_records add column if not exists created_at timestamptz;
+
+update free_trial_usage_records set policy_snapshot_json = '{}'::jsonb where policy_snapshot_json is null;
+
+update free_trial_usage_records set created_at = now() where created_at is null;
+
+create index if not exists idx_free_trial_usage_records_user_id on free_trial_usage_records (user_id);
+
+create index if not exists idx_free_trial_usage_records_subscription_id on free_trial_usage_records (subscription_id);
+
+create index if not exists idx_free_trial_usage_records_created_at on free_trial_usage_records (created_at);
 
 create table if not exists payment_transfer_settings (id text primary key, bank_name text not null, bank_account_number text not null, bank_account_holder text not null, bank_logo_url text not null default '/bank-logos/generic-bank.svg', usdt_address text not null, usdt_network text not null, updated_by_admin_id text, updated_at timestamptz not null default now());
 
@@ -453,6 +667,42 @@ create index if not exists idx_public_board_posts_category on public_board_posts
 create index if not exists idx_public_board_posts_is_published on public_board_posts (is_published);
 
 create index if not exists idx_public_board_posts_updated_by_admin_id on public_board_posts (updated_by_admin_id);
+
+create table if not exists notice_popups (id text primary key, title text not null, body_html text not null, is_active boolean not null default true, sort_order integer not null default 0, start_at timestamptz, end_at timestamptz, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), updated_by_admin_id text);
+
+alter table if exists notice_popups add column if not exists title text;
+
+alter table if exists notice_popups add column if not exists body_html text;
+
+alter table if exists notice_popups add column if not exists is_active boolean;
+
+alter table if exists notice_popups add column if not exists sort_order integer;
+
+alter table if exists notice_popups add column if not exists start_at timestamptz;
+
+alter table if exists notice_popups add column if not exists end_at timestamptz;
+
+alter table if exists notice_popups add column if not exists created_at timestamptz;
+
+alter table if exists notice_popups add column if not exists updated_at timestamptz;
+
+alter table if exists notice_popups add column if not exists updated_by_admin_id text;
+
+update notice_popups set is_active = true where is_active is null;
+
+update notice_popups set sort_order = 0 where sort_order is null;
+
+update notice_popups set created_at = now() where created_at is null;
+
+update notice_popups set updated_at = now() where updated_at is null;
+
+create index if not exists idx_notice_popups_is_active on notice_popups (is_active);
+
+create index if not exists idx_notice_popups_start_at on notice_popups (start_at);
+
+create index if not exists idx_notice_popups_end_at on notice_popups (end_at);
+
+create index if not exists idx_notice_popups_updated_by_admin_id on notice_popups (updated_by_admin_id);
 
 create table if not exists web_info_settings (id text primary key, terms_content text not null, privacy_content text not null, plan_services_json jsonb not null default '{}'::jsonb, updated_by_admin_id text, updated_at timestamptz not null default now());
 

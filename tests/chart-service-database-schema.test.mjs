@@ -40,6 +40,7 @@ test('chart service database schema covers repository-backed core tables', () =>
   ]);
   assert.equal(tables.find((table) => table.name === 'users')?.columns.account_status.type, 'text');
   assert.equal(tables.find((table) => table.name === 'users')?.columns.password_hash.type, 'text');
+  assert.equal(tables.find((table) => table.name === 'users')?.columns.password_hash.nullable, true);
   assert.equal(tables.find((table) => table.name === 'users')?.columns.phone_number.nullable, true);
   assert.equal(tables.find((table) => table.name === 'users')?.columns.profile_image_data_url.nullable, true);
   assert.equal(tables.find((table) => table.name === 'users')?.columns.referral_code.type, 'text');
@@ -106,7 +107,8 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   const sql = renderChartServicePostgresSchema();
 
   assert.match(sql, /create table if not exists users/i);
-  assert.match(sql, /password_hash text not null/i);
+  assert.match(sql, /password_hash text/i);
+  assert.doesNotMatch(sql, /password_hash text not null/i);
   assert.match(sql, /phone_number text/i);
   assert.match(sql, /profile_image_data_url text/i);
   assert.match(sql, /referral_code text not null/i);
@@ -193,6 +195,7 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.doesNotMatch(sql, /after_json jsonb not null/i);
   assert.match(sql, /alter table if exists audit_logs alter column before_json drop not null/i);
   assert.match(sql, /alter table if exists audit_logs alter column after_json drop not null/i);
+  assert.match(sql, /alter table if exists users alter column password_hash drop not null/i);
 });
 
 test('database schema export harness is available for production migration prep', () => {

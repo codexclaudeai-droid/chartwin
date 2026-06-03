@@ -24,7 +24,7 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
         id: { type: 'text', primaryKey: true },
         email: { type: 'text' },
         name: { type: 'text' },
-        password_hash: { type: 'text' },
+        password_hash: { type: 'text', nullable: true },
         role: { type: 'text', check: "role in ('guest', 'member', 'trial', 'subscriber', 'salesperson', 'admin', 'super_admin')" },
         account_status: {
           type: 'text',
@@ -546,6 +546,7 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     'alter table if exists users add column if not exists referred_by_user_id text;',
     'alter table if exists users add column if not exists created_at timestamptz;',
     'alter table if exists users add column if not exists email_verified_at timestamptz;',
+    'alter table if exists users alter column password_hash drop not null;',
     "update users set referral_code = upper(substr(md5(id), 1, 6)) where referral_code is null or referral_code = '' or referral_code !~ '^[A-Z0-9]{6}$';",
     'update users set created_at = now() where created_at is null;',
     'update users set email_verified_at = created_at where email_verified_at is null;',
