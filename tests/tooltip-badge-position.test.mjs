@@ -11,7 +11,7 @@ test('right-placed tooltip badges compensate for the arrow width so the tip can 
   );
   assert.match(
     tooltipBadgeSource,
-    /left = placement === 'right'[\s\S]*rect\.right \+ resolvedOffset \+ 4/,
+    /left = resolvedPlacement === 'right'[\s\S]*rect\.right \+ resolvedOffset \+ 4/,
   );
 });
 
@@ -23,5 +23,24 @@ test('tooltip arrows center on the hovered icon for every placement axis', () =>
   assert.match(
     tooltipBadgeSource,
     /rect\.left \+ \(rect\.width \/ 2\)\) - left - 4/,
+  );
+});
+
+test('tooltip badges close when a button is used or fullscreen changes', () => {
+  assert.match(
+    tooltipBadgeSource,
+    /target\.addEventListener\('pointerdown', hide\)/,
+  );
+  assert.match(
+    tooltipBadgeSource,
+    /target\.addEventListener\('click', hide\)/,
+  );
+  assert.match(
+    tooltipBadgeSource,
+    /target\.addEventListener\('touchstart', hide, \{ passive: true \}\)/,
+  );
+  assert.match(
+    tooltipBadgeSource,
+    /document\.addEventListener\('fullscreenchange', hide\)/,
   );
 });

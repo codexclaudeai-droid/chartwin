@@ -23,5 +23,7 @@ test('pane and report function icons use one centered badge placement per area',
   assert.match(paneChromeSource, /bindTooltipBadge\(strategyBtn,[\s\S]*\.\.\.HEADER_ICON_TOOLTIP/);
   assert.match(indicatorOverlaySource, /const OVERLAY_ICON_TOOLTIP = \{ placement: 'top' as const, align: 'center' as const, offset: 8 \}/);
   assert.match(indicatorOverlaySource, /bindTooltipBadge\(reportBtn,[\s\S]*\.\.\.OVERLAY_ICON_TOOLTIP/);
-  assert.match(strategyReportSource, /const REPORT_ICON_TOOLTIP = \{ placement: 'top' as const, align: 'center' as const, offset: 8 \}/);
+  assert.match(strategyReportSource, /const REPORT_ICON_TOOLTIP = \{ align: 'center' as const, offset: 8 \}/);
+  assert.match(strategyReportSource, /const getHeaderTooltipPlacement = \(\): 'top' \| 'bottom' => \(panelMode === 'expanded' \? 'bottom' : 'top'\)/);
+  assert.match(strategyReportSource, /bindTooltipBadge\(timeframeBtn,[\s\S]*placement: getHeaderTooltipPlacement/);
 });

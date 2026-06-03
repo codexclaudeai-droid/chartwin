@@ -3,8 +3,9 @@ import type { TimeframeKey } from '../../catalog/time';
 import { isBetaAppVariant } from '../../app/runtime';
 import { getSymbolPricePrecision } from '../../data/market-data-sources';
 import type { DisplayCurrency } from '../../types/market';
+import { bindTooltipBadge } from './tooltip-badge';
 
-const REPORT_ICON_TOOLTIP = { placement: 'top' as const, align: 'center' as const, offset: 8 };
+const REPORT_ICON_TOOLTIP = { align: 'center' as const, offset: 8 };
 
 type CandleLike = {
   time?: number;
@@ -383,7 +384,11 @@ function createReportWorker(): Worker {
   return new Worker(url);
 }
 
-function mkIconBtn(title: string, svg: string): HTMLButtonElement {
+function mkIconBtn(
+  title: string,
+  svg: string,
+  tooltipPlacement: 'top' | 'bottom' | (() => 'top' | 'bottom') = 'top',
+): HTMLButtonElement {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.title = title;
@@ -399,6 +404,7 @@ function mkIconBtn(title: string, svg: string): HTMLButtonElement {
     btn.style.color = '#dce4f5';
   });
   bindTooltipBadge(btn, {
+    placement: tooltipPlacement,
     ...REPORT_ICON_TOOLTIP,
     getContent: () => ({ title: btn.dataset.tooltipTitle ?? title }),
   });
@@ -519,7 +525,7 @@ const icon = {
   menu: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>`,
   refresh: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>`,
   maximize: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="9 3 3 3 3 9"></polyline><polyline points="15 3 21 3 21 9"></polyline><polyline points="21 15 21 21 15 21"></polyline><polyline points="9 21 3 21 3 15"></polyline></svg>`,
-  restore: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="10 4 10 10 4 10"></polyline><polyline points="14 4 14 10 20 10"></polyline><polyline points="10 20 10 14 4 14"></polyline><polyline points="14 20 14 14 20 14"></polyline></svg>`,
+  restore: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="10" y1="14" x2="3" y2="21"></line><line x1="21" y1="3" x2="14" y2="10"></line></svg>`,
   fold: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
   unfold: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 15 12 9 18 15"></polyline></svg>`,
   settings: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,8a4,4,0,1,0,4,4A4,4,0,0,0,12,8Zm0,6a2,2,0,1,1,2-2A2,2,0,0,1,12,14Z"/><path d="M21.294,13.9l-.444-.256a9.1,9.1,0,0,0,0-3.29l.444-.256a3,3,0,1,0-3-5.2l-.445.257A8.977,8.977,0,0,0,15,3.513V3A3,3,0,0,0,9,3v.513A8.977,8.977,0,0,0,6.152,5.159L5.705,4.9a3,3,0,0,0-3,5.2l.444.256a9.1,9.1,0,0,0,0,3.29l-.444.256a3,3,0,1,0,3,5.2l.445-.257A8.977,8.977,0,0,0,9,20.487V21a3,3,0,0,0,6,0v-.513a8.977,8.977,0,0,0,2.848-1.646l.447.258a3,3,0,0,0,3-5.2Zm-2.548-3.776a7.048,7.048,0,0,1,0,3.75,1,1,0,0,0,.464,1.133l1.084.626a1,1,0,0,1-1,1.733l-1.086-.628a1,1,0,0,0-1.215.165,6.984,6.984,0,0,1-3.243,1.875,1,1,0,0,0-.751.969V21a1,1,0,0,1-2,0V19.748a1,1,0,0,0-.751-.969A6.984,6.984,0,0,1,7.006,16.9a1,1,0,0,0-1.215-.165l-1.084.627a1,1,0,1,1-1-1.732l1.084-.626a1,1,0,0,0,.464-1.133,7.048,7.048,0,0,1,0-3.75A1,1,0,0,0,4.79,8.992L3.706,8.366a1,1,0,0,1,1-1.733l1.086.628A1,1,0,0,0,7.006,7.1a6.984,6.984,0,0,1,3.243-1.875A1,1,0,0,0,11,4.252V3a1,1,0,0,1,2,0V4.252a1,1,0,0,0,.751.969A6.984,6.984,0,0,1,16.994,7.1a1,1,0,0,0,1.215.165l1.084-.627a1,1,0,1,1,1,1.732l-1.084.626A1,1,0,0,0,18.746,10.125Z"/></svg>`,
@@ -609,6 +615,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let lastRenderedTradesPriceDigits = -1;
   let reportStale = false;
   let lastRefreshSignature = '';
+  const getHeaderTooltipPlacement = (): 'top' | 'bottom' => (panelMode === 'expanded' ? 'bottom' : 'top');
   const sectionOpen: Record<Exclude<WidgetKey, 'equity'>, boolean> = {
     performance: true,
     tradeAnalysis: true,
@@ -693,7 +700,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   titleControls.style.cssText = 'display:flex;align-items:center;gap:6px;position:absolute;right:8px;top:50%;transform:translateY(-50%);';
   header.appendChild(titleControls);
 
-  const manualRefreshBtn = mkIconBtn('리포트 새로고침', icon.refresh);
+  const manualRefreshBtn = mkIconBtn('리포트 새로고침', icon.refresh, getHeaderTooltipPlacement);
   titleControls.appendChild(manualRefreshBtn);
   const applyRefreshButtonStyle = (hovered = false) => {
     manualRefreshBtn.title = reportStale ? '리포트 새로고침 (데이터 변경됨)' : '리포트 새로고침';
@@ -706,9 +713,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   };
   manualRefreshBtn.addEventListener('mouseenter', () => applyRefreshButtonStyle(true));
   manualRefreshBtn.addEventListener('mouseleave', () => applyRefreshButtonStyle(false));
-  const expandBtn = mkIconBtn('전체화면', icon.maximize);
+  const expandBtn = mkIconBtn('전체화면', icon.maximize, getHeaderTooltipPlacement);
   titleControls.appendChild(expandBtn);
-  const collapseBtn = mkIconBtn('접기', icon.fold);
+  const collapseBtn = mkIconBtn('접기', icon.fold, getHeaderTooltipPlacement);
   titleControls.appendChild(collapseBtn);
 
   const tabRow = document.createElement('div');
@@ -731,6 +738,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   timeframeBtn.dataset.tooltipTitle = '시간프레임 선택';
   timeframeBtn.style.cssText = 'height:22px;background:#1f2e4a;color:#d1d4dc;border:1px solid #38507b;border-radius:4px;padding:0 8px;font-size:11px;cursor:pointer;white-space:nowrap;line-height:1;min-width:32px;flex:0 0 auto;';
   bindTooltipBadge(timeframeBtn, {
+    placement: getHeaderTooltipPlacement,
     ...REPORT_ICON_TOOLTIP,
     getContent: () => ({ title: timeframeBtn.dataset.tooltipTitle ?? '시간프레임 선택' }),
   });
@@ -739,7 +747,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   tabRow.appendChild(tabRight);
   tabRight.appendChild(timeframeBtn);
 
-  const periodBtn = mkIconBtn('기간 설정', icon.calendar);
+  const periodBtn = mkIconBtn('기간 설정', icon.calendar, getHeaderTooltipPlacement);
   const periodText = document.createElement('span');
   periodText.textContent = '전체';
   periodText.style.cssText = 'font-size:11px;color:#aab8d2;margin-right:4px;white-space:nowrap;overflow:visible;text-overflow:clip;';
@@ -750,13 +758,13 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   periodBtn.style.flex = '0 1 auto';
   tabRight.appendChild(periodBtn);
 
-  const detailsBtn = mkIconBtn('거래내역 전환', icon.details);
+  const detailsBtn = mkIconBtn('거래내역 전환', icon.details, getHeaderTooltipPlacement);
   tabRight.appendChild(detailsBtn);
-  const exportCsvBtn = mkIconBtn('Trade CSV Download', icon.download);
+  const exportCsvBtn = mkIconBtn('Trade CSV Download', icon.download, getHeaderTooltipPlacement);
   tabRight.appendChild(exportCsvBtn);
-  const widgetBtn = mkIconBtn('리포트 항목', icon.menu);
+  const widgetBtn = mkIconBtn('리포트 항목', icon.menu, getHeaderTooltipPlacement);
   tabRight.appendChild(widgetBtn);
-  const settingsBtn = mkIconBtn('리포트 설정', icon.settings);
+  const settingsBtn = mkIconBtn('리포트 설정', icon.settings, getHeaderTooltipPlacement);
   tabRight.appendChild(settingsBtn);
 
   const body = document.createElement('div');
@@ -2445,4 +2453,3 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     },
   };
 }
-import { bindTooltipBadge } from './tooltip-badge';

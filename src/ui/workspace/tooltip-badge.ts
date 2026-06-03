@@ -8,7 +8,7 @@ export type TooltipBadgeContent = {
 };
 
 type TooltipBadgeOptions = {
-  placement?: TooltipPlacement;
+  placement?: TooltipPlacement | (() => TooltipPlacement);
   align?: TooltipAlign;
   offset?: number | ((targetRect: DOMRect) => number);
   getContent: () => TooltipBadgeContent | null;
@@ -218,19 +218,20 @@ export const bindTooltipBadge = (
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
     const margin = 8;
+    const resolvedPlacement = typeof placement === 'function' ? placement() : placement;
     const resolvedOffset = typeof offset === 'function' ? offset(rect) : offset;
     let left = 0;
     let top = 0;
     let arrowInset = 18;
 
-    if (placement === 'right' || placement === 'left') {
+    if (resolvedPlacement === 'right' || resolvedPlacement === 'left') {
       top = align === 'start'
         ? rect.top
         : align === 'end'
           ? rect.bottom - tipRect.height
           : rect.top + ((rect.height - tipRect.height) / 2);
       top = clamp(top, margin, viewportH - tipRect.height - margin);
-      left = placement === 'right'
+      left = resolvedPlacement === 'right'
         ? rect.right + resolvedOffset + 4
         : rect.left - tipRect.width - resolvedOffset - 4;
       left = clamp(left, margin, viewportW - tipRect.width - margin);
@@ -242,7 +243,7 @@ export const bindTooltipBadge = (
           ? rect.right - tipRect.width
           : rect.left + ((rect.width - tipRect.width) / 2);
       left = clamp(left, margin, viewportW - tipRect.width - margin);
-      top = placement === 'bottom'
+      top = resolvedPlacement === 'bottom'
         ? rect.bottom + resolvedOffset
         : rect.top - tipRect.height - resolvedOffset;
       top = clamp(top, margin, viewportH - tipRect.height - margin);
@@ -251,7 +252,7 @@ export const bindTooltipBadge = (
 
     els.root.style.left = `${Math.round(left)}px`;
     els.root.style.top = `${Math.round(top)}px`;
-    els.root.dataset.placement = placement;
+    els.root.dataset.placement = resolvedPlacement;
     els.card.style.setProperty('--tc-tooltip-arrow-inset', `${Math.round(arrowInset)}px`);
   };
 
@@ -303,6 +304,10 @@ export const bindTooltipBadge = (
   target.addEventListener('mouseleave', hide);
   target.addEventListener('focus', show);
   target.addEventListener('blur', hide);
+  target.addEventListener('pointerdown', hide);
+  target.addEventListener('click', hide);
+  target.addEventListener('touchstart', hide, { passive: true });
   window.addEventListener('scroll', hide, true);
   window.addEventListener('resize', hide);
+  document.addEventListener('fullscreenchange', hide);
 };
