@@ -63,7 +63,7 @@ test('session navigation source renders avatar name and role badge together', ()
   assert.doesNotMatch(cssSource, /\.session-button:disabled\s*\{[^}]*cursor: not-allowed/);
   assert.match(cssSource, /\.mobile-nav-panel \.session \.session-logout-button/);
   assert.match(cssSource, /\.mobile-nav-panel \.session \.session-logout-button\s*\{[\s\S]*?width: 100%/);
-  assert.match(cssSource, /\.session-nav-link-icon\s*\{[\s\S]*?display: none/);
+  assert.match(cssSource, /\.session \.session-nav-link-icon\s*\{[\s\S]*?display: none/);
   assert.match(cssSource, /\.mobile-nav-panel \.session \.session-nav-link-icon\s*\{[\s\S]*?display: inline-flex/);
   assert.match(cssSource, /\.mobile-nav-panel \.tc-header-eclipse\s*\{[\s\S]*?animation: none/);
   assert.match(cssSource, /\.mobile-nav-panel \.tc-header-signup-pill::before\s*\{[\s\S]*?border: 0/);

@@ -419,7 +419,7 @@ a {
   z-index: 3;
 }
 
-.session-nav-link-icon {
+.session .session-nav-link-icon {
   display: none;
 }
 
