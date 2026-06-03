@@ -10,6 +10,7 @@ import { createAdminSupportThreadPath } from './support-links.ts';
 
 const SUPPORT_REQUEST_ADMIN_EMAIL_TEMPLATE = 'support_request_admin';
 const ADMIN_SUPPORT_REQUEST_SUBJECT_PREFIX = '[Chart Service] New support request';
+const SUPPORT_EMAIL_SENDER = 'support@tradingcore.co';
 
 export function notifyAdminsAboutSupportRequest(
   repository: ChartServiceRepository,
@@ -104,6 +105,7 @@ function createSupportRequestAdminEmail(
 ): EmailOutboxRecord {
   return {
     id: repository.nextId('email'),
+    senderEmail: SUPPORT_EMAIL_SENDER,
     recipientEmail: admin.email,
     template: SUPPORT_REQUEST_ADMIN_EMAIL_TEMPLATE,
     subject: `${ADMIN_SUPPORT_REQUEST_SUBJECT_PREFIX}: ${input.thread.title}`,
@@ -127,6 +129,7 @@ async function createAsyncSupportRequestAdminEmail(
 ): Promise<EmailOutboxRecord> {
   return {
     id: await repository.nextId('email'),
+    senderEmail: SUPPORT_EMAIL_SENDER,
     recipientEmail: admin.email,
     template: SUPPORT_REQUEST_ADMIN_EMAIL_TEMPLATE,
     subject: `${ADMIN_SUPPORT_REQUEST_SUBJECT_PREFIX}: ${input.thread.title}`,

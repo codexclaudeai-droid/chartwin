@@ -70,6 +70,7 @@ export type EmailOutboxStatus = 'queued' | 'sent' | 'failed';
 
 export type EmailOutboxRecord = {
   id: string;
+  senderEmail: string;
   recipientEmail: string;
   template: string;
   subject: string;

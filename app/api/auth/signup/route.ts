@@ -2,9 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server.js';
 import {
   assertSameOriginMutationRequest,
   createAsyncSessionForUser,
+  createEmailDeliveryProviderFromEnv,
   getAsyncChartServicePersistence,
   getAsyncWebInfoSettingsForDisplay,
   guardMutationRequest,
+  deliverQueuedEmailOutbox,
   registerAsyncMockUserAccount,
   requestAsyncFreeTrial,
   saveAsyncSignupAgreementEvidence,
@@ -106,6 +108,18 @@ export async function POST(request: NextRequest) {
     });
     if (session) {
       response.headers.set('Set-Cookie', session.cookie);
+    }
+    if (!autoStartTrial) {
+      const provider = createEmailDeliveryProviderFromEnv(process.env);
+      const emailDelivery = await persistence.runMutation((repository) => (
+        deliverQueuedEmailOutbox(repository, provider, {
+          deliveredAt: new Date().toISOString(),
+          limit: 1,
+          recordIds: [result.verification.emailOutboxId],
+        })
+      ));
+      response.headers.set('X-Email-Delivery-Sent', String(emailDelivery.sent));
+      response.headers.set('X-Email-Delivery-Failed', String(emailDelivery.failed));
     }
     return response;
   } catch (error) {

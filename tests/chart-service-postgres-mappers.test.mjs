@@ -7,6 +7,8 @@ import {
   mapAuditLogDraftToPostgresRow,
   mapAuthSessionFromPostgresRow,
   mapAuthSessionToPostgresRow,
+  mapEmailOutboxFromPostgresRow,
+  mapEmailOutboxToPostgresRow,
   mapNotificationFromPostgresRow,
   mapNotificationToPostgresRow,
   mapNoticePopupFromPostgresRow,
@@ -181,6 +183,35 @@ test('postgres social auth mapper preserves provider account links', () => {
     email: 'member@example.com',
     created_at: '2026-06-01T10:00:00.000Z',
     updated_at: '2026-06-01T10:01:00.000Z',
+  });
+});
+
+test('postgres email outbox mapper preserves sender and recipient addresses', () => {
+  const record = mapEmailOutboxFromPostgresRow({
+    id: 'email_1',
+    sender_email: 'verify@tradingcore.co',
+    recipient_email: 'member@example.com',
+    template: 'email_verification',
+    subject: 'Verify your TradingCore email',
+    body: 'Body',
+    status: 'queued',
+    created_at: '2026-06-04T00:00:00.000Z',
+    sent_at: null,
+    last_error: null,
+  });
+
+  assert.equal(record.senderEmail, 'verify@tradingcore.co');
+  assert.deepEqual(mapEmailOutboxToPostgresRow(record), {
+    id: 'email_1',
+    sender_email: 'verify@tradingcore.co',
+    recipient_email: 'member@example.com',
+    template: 'email_verification',
+    subject: 'Verify your TradingCore email',
+    body: 'Body',
+    status: 'queued',
+    created_at: '2026-06-04T00:00:00.000Z',
+    sent_at: null,
+    last_error: null,
   });
 });
 

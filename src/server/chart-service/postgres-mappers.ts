@@ -184,6 +184,7 @@ export function mapEmailVerificationTokenToPostgresRow(record: EmailVerification
 export function mapEmailOutboxFromPostgresRow(row: PostgresRow): EmailOutboxRecord {
   return {
     id: readString(row.id),
+    senderEmail: readString(row.sender_email) || 'noreply@tradingcore.co',
     recipientEmail: readString(row.recipient_email),
     template: readString(row.template),
     subject: readString(row.subject),
@@ -198,6 +199,7 @@ export function mapEmailOutboxFromPostgresRow(row: PostgresRow): EmailOutboxReco
 export function mapEmailOutboxToPostgresRow(record: EmailOutboxRecord): PostgresRow {
   return {
     id: record.id,
+    sender_email: record.senderEmail,
     recipient_email: record.recipientEmail,
     template: record.template,
     subject: record.subject,

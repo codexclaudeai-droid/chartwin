@@ -470,6 +470,7 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       name: 'email_outbox',
       columns: {
         id: { type: 'text', primaryKey: true },
+        sender_email: { type: 'text' },
         recipient_email: { type: 'text' },
         template: { type: 'text' },
         subject: { type: 'text' },
@@ -556,6 +557,8 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     'create table if not exists email_verification_tokens (id text primary key, user_id text not null references users(id), token_hash text not null, created_at timestamptz not null, expires_at timestamptz not null, used_at timestamptz);',
     'create index if not exists idx_email_verification_tokens_token_hash on email_verification_tokens (token_hash);',
     'create index if not exists idx_email_verification_tokens_user_id on email_verification_tokens (user_id);',
+    'alter table if exists email_outbox add column if not exists sender_email text;',
+    "update email_outbox set sender_email = 'noreply@tradingcore.co' where sender_email is null or sender_email = '';",
     'alter table if exists audit_logs alter column before_json drop not null;',
     'alter table if exists audit_logs alter column after_json drop not null;',
     'create table if not exists referral_program_settings (id text primary key, subscriber_cashback_percent numeric(5,2) not null default 3, reward_percent numeric(5,2) not null default 10, salesperson_reward_percent numeric(5,2) not null default 30, sales_team_reward_percent numeric(5,2) not null default 50, updated_by_admin_id text, updated_at timestamptz not null default now());',

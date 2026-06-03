@@ -5,6 +5,7 @@ import { createPasswordHash } from './passwords.ts';
 import type { EmailOutboxRecord, PasswordResetTokenRecord, ServiceUserRecord } from './repository.ts';
 
 const DEFAULT_PASSWORD_RESET_TTL_SECONDS = 60 * 60;
+const DEFAULT_AUTH_EMAIL_SENDER = 'auth@tradingcore.co';
 
 export type PasswordResetRequestResult = {
   accepted: true;
@@ -59,6 +60,7 @@ export async function requestAsyncPasswordReset(
   const emailOutboxId = await repository.nextId('email');
   const emailRecord: EmailOutboxRecord = {
     id: emailOutboxId,
+    senderEmail: DEFAULT_AUTH_EMAIL_SENDER,
     recipientEmail: user.email,
     template: 'password_reset',
     subject: 'Reset your TradingCore password',

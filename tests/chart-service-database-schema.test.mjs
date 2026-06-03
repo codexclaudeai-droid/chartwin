@@ -95,6 +95,7 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'signup_agreements')?.columns.ip_address.nullable, true);
   assert.equal(tables.find((table) => table.name === 'signup_agreements')?.columns.user_agent.nullable, true);
   assert.equal(tables.find((table) => table.name === 'notifications')?.columns.archived_at.nullable, true);
+  assert.equal(tables.find((table) => table.name === 'email_outbox')?.columns.sender_email.type, 'text');
   assert.equal(tables.find((table) => table.name === 'email_outbox')?.columns.recipient_email.type, 'text');
   assert.equal(tables.find((table) => table.name === 'audit_logs')?.columns.actor_admin_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'audit_logs')?.columns.before_json.nullable, true);

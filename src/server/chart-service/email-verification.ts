@@ -3,6 +3,7 @@ import type { AsyncChartServiceRepository } from './async-repository.ts';
 import type { EmailOutboxRecord, EmailVerificationTokenRecord, ServiceUserRecord } from './repository.ts';
 
 const DEFAULT_EMAIL_VERIFICATION_TTL_SECONDS = 60 * 60 * 24;
+export const EMAIL_VERIFICATION_SENDER_EMAIL = 'verify@tradingcore.co';
 
 export type EmailVerificationRequestResult = {
   token: string;
@@ -45,6 +46,7 @@ export async function queueAsyncEmailVerification(
   const emailOutboxId = await repository.nextId('email');
   const emailRecord: EmailOutboxRecord = {
     id: emailOutboxId,
+    senderEmail: EMAIL_VERIFICATION_SENDER_EMAIL,
     recipientEmail: input.user.email,
     template: 'email_verification',
     subject: 'Verify your TradingCore email',
@@ -102,22 +104,22 @@ export async function resendAsyncEmailVerification(
     email: string;
     requestedAt: string;
   },
-): Promise<{ accepted: true; queued: boolean }> {
+): Promise<{ accepted: true; queued: boolean; emailOutboxId: string | null }> {
   const email = input.email.trim().toLowerCase();
   if (!email.includes('@')) {
-    return { accepted: true, queued: false };
+    return { accepted: true, queued: false, emailOutboxId: null };
   }
 
   const user = await repository.getUserByEmail(email);
   if (!user || user.emailVerifiedAt) {
-    return { accepted: true, queued: false };
+    return { accepted: true, queued: false, emailOutboxId: null };
   }
 
-  await queueAsyncEmailVerification(repository, {
+  const verification = await queueAsyncEmailVerification(repository, {
     user,
     requestedAt: input.requestedAt,
   });
-  return { accepted: true, queued: true };
+  return { accepted: true, queued: true, emailOutboxId: verification.emailOutboxId };
 }
 
 function createEmailVerificationUrl(token: string, verifyUrlBase?: string): string {

@@ -10,6 +10,8 @@ const sslMode = requireValue('CHART_SERVICE_DATABASE_SSL_MODE');
 const sessionSecret = requireValue('CHART_SERVICE_SESSION_SECRET');
 const emailProvider = requireValue('CHART_SERVICE_EMAIL_PROVIDER');
 const emailLimit = requireValue('CHART_SERVICE_EMAIL_DELIVERY_LIMIT');
+const cloudflareAccountId = String(env.CLOUDFLARE_ACCOUNT_ID ?? '').trim();
+const cloudflareApiToken = String(env.CLOUDFLARE_API_TOKEN ?? '').trim();
 const adminEmail = requireValue('CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL');
 const adminPassword = requireValue('CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD');
 const adminName = requireValue('CHART_SERVICE_BOOTSTRAP_ADMIN_NAME');
@@ -17,7 +19,7 @@ const adminName = requireValue('CHART_SERVICE_BOOTSTRAP_ADMIN_NAME');
 const redactedDatabaseUrl = validateDatabaseUrl(databaseUrl);
 validateSslMode(sslMode);
 validateSessionSecret(sessionSecret);
-validateEmailDelivery(emailProvider, emailLimit);
+validateEmailDelivery(emailProvider, emailLimit, cloudflareAccountId, cloudflareApiToken);
 validateBootstrapAdmin(adminEmail, adminPassword, adminName);
 
 if (failures.length > 0) {
@@ -83,14 +85,23 @@ function validateSessionSecret(value) {
   }
 }
 
-function validateEmailDelivery(provider, limitValue) {
-  if (provider !== 'log') {
-    failures.push('CHART_SERVICE_EMAIL_PROVIDER must be log until an external provider is wired.');
+function validateEmailDelivery(provider, limitValue, cloudflareAccountId, cloudflareApiToken) {
+  if (!['log', 'cloudflare'].includes(provider)) {
+    failures.push('CHART_SERVICE_EMAIL_PROVIDER must be log or cloudflare.');
   }
 
   const limit = Number(limitValue);
   if (!Number.isInteger(limit) || limit < 0) {
     failures.push('CHART_SERVICE_EMAIL_DELIVERY_LIMIT must be a non-negative integer.');
+  }
+
+  if (provider === 'cloudflare') {
+    if (!cloudflareAccountId || isPlaceholder(cloudflareAccountId)) {
+      failures.push('CLOUDFLARE_ACCOUNT_ID is required when CHART_SERVICE_EMAIL_PROVIDER=cloudflare.');
+    }
+    if (!cloudflareApiToken || isPlaceholder(cloudflareApiToken)) {
+      failures.push('CLOUDFLARE_API_TOKEN is required when CHART_SERVICE_EMAIL_PROVIDER=cloudflare.');
+    }
   }
 }
 

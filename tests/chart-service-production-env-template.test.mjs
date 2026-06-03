@@ -17,9 +17,13 @@ test('production env template documents required runtime settings without commit
     'CHART_SERVICE_SESSION_SECRET',
     'CHART_SERVICE_EMAIL_PROVIDER',
     'CHART_SERVICE_EMAIL_DELIVERY_LIMIT',
+    'CLOUDFLARE_ACCOUNT_ID',
+    'CLOUDFLARE_API_TOKEN',
     'CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL',
     'CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD',
     'CHART_SERVICE_BOOTSTRAP_ADMIN_NAME',
+    'CLOUDFLARE_ACCOUNT_ID',
+    'CLOUDFLARE_API_TOKEN',
   ]) {
     assert.match(envExample, new RegExp(`^${key}=`, 'm'), `${key} should be present`);
   }
@@ -39,7 +43,7 @@ test('production env template documents required runtime settings without commit
 
   assert.match(envExample, /Do not commit real production values/);
   assert.match(envExample, /npm\.cmd run service:postgres:gate/);
-  assert.match(envExample, /^CHART_SERVICE_EMAIL_PROVIDER=log$/m);
+  assert.match(envExample, /^CHART_SERVICE_EMAIL_PROVIDER=cloudflare$/m);
   assert.match(envExample, /^CHART_SERVICE_EMAIL_DELIVERY_LIMIT=50$/m);
   assert.match(envExample, /^CLOUDFLARE_HYPERDRIVE_NAME=tradingcore-hyperdrive$/m);
   assert.match(envExample, /^CLOUDFLARE_HYPERDRIVE_BINDING=HYPERDRIVE$/m);

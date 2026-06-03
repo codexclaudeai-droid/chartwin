@@ -28,6 +28,7 @@ test('password reset request queues a transactional email without exposing unkno
   assert.equal(unknown.emailOutboxId, null);
   assert.equal(emails.length, 1);
   assert.equal(emails[0].recipientEmail, 'member@example.com');
+  assert.equal(emails[0].senderEmail, 'auth@tradingcore.co');
   assert.equal(emails[0].template, 'password_reset');
   assert.equal(emails[0].status, 'queued');
   assert.match(emails[0].subject, /password/i);
@@ -40,6 +41,7 @@ test('email outbox repository can list queued records and update delivery status
 
   await repository.saveEmailOutboxRecord({
     id: 'email_1',
+    senderEmail: 'noreply@tradingcore.co',
     recipientEmail: 'member@example.com',
     template: 'password_reset',
     subject: 'Reset password',
@@ -51,6 +53,7 @@ test('email outbox repository can list queued records and update delivery status
   });
   await repository.saveEmailOutboxRecord({
     id: 'email_2',
+    senderEmail: 'support@tradingcore.co',
     recipientEmail: 'admin@example.com',
     template: 'admin_notice',
     subject: 'Notice',
@@ -62,6 +65,7 @@ test('email outbox repository can list queued records and update delivery status
   });
   await repository.saveEmailOutboxRecord({
     id: 'email_1',
+    senderEmail: 'noreply@tradingcore.co',
     recipientEmail: 'member@example.com',
     template: 'password_reset',
     subject: 'Reset password',
@@ -79,4 +83,3 @@ test('email outbox repository can list queued records and update delivery status
   assert.deepEqual(sent.map((email) => email.id).sort(), ['email_1', 'email_2']);
   assert.equal(sent.find((email) => email.id === 'email_1')?.sentAt, '2026-05-24T13:01:00.000Z');
 });
-

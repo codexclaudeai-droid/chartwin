@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server.js';
 import {
   assertSameOriginMutationRequest,
+  createEmailDeliveryProviderFromEnv,
+  deliverQueuedEmailOutbox,
   getAsyncChartServicePersistence,
   guardMutationRequest,
   resendAsyncEmailVerification,
@@ -21,10 +23,18 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const persistence = getAsyncChartServicePersistence();
-  await persistence.runMutation((repository) => resendAsyncEmailVerification(repository, {
+  const result = await persistence.runMutation((repository) => resendAsyncEmailVerification(repository, {
     email: String(body.email || ''),
     requestedAt: new Date().toISOString(),
   }));
+  if (result.emailOutboxId) {
+    const provider = createEmailDeliveryProviderFromEnv(process.env);
+    await persistence.runMutation((repository) => deliverQueuedEmailOutbox(repository, provider, {
+      deliveredAt: new Date().toISOString(),
+      limit: 1,
+      recordIds: [result.emailOutboxId],
+    }));
+  }
 
   return NextResponse.json({
     ok: true,

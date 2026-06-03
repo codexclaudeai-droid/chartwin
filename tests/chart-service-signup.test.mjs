@@ -210,15 +210,18 @@ test('signup API queues email verification and login requires verified email', a
   }));
   const signupPayload = await signupResponse.json();
   const verificationEmail = repository
-    .listEmailOutboxRecords({ status: 'queued' })
+    .listEmailOutboxRecords({ status: 'sent' })
     .find((record) => record.recipientEmail === email);
   const token = verificationEmail?.body.match(/token=([A-Za-z0-9_-]+)/)?.[1] ?? '';
 
   assert.equal(signupResponse.status, 200);
+  assert.equal(signupResponse.headers.get('X-Email-Delivery-Sent'), '1');
+  assert.equal(signupResponse.headers.get('X-Email-Delivery-Failed'), '0');
   assert.equal(signupPayload.verificationRequired, true);
   assert.equal(signupResponse.headers.get('set-cookie'), null);
   assert.equal(repository.getUserByEmail(email)?.emailVerifiedAt, null);
   assert.equal(verificationEmail?.template, 'email_verification');
+  assert.equal(verificationEmail?.senderEmail, 'verify@tradingcore.co');
   assert.match(verificationEmail?.subject ?? '', /Verify/);
   assert.match(verificationEmail?.body ?? '', /\/verify-email\?token=/);
   assert.doesNotMatch(verificationEmail?.body ?? '', /\/api\/auth\/verify-email\?token=/);
@@ -314,7 +317,7 @@ test('email verification resend API queues a fresh verification email for unveri
   }));
   assert.equal(signupResponse.status, 200);
   const beforeCount = repository
-    .listEmailOutboxRecords({ status: 'queued' })
+    .listEmailOutboxRecords({ status: 'sent' })
     .filter((record) => record.recipientEmail === email && record.template === 'email_verification')
     .length;
 
@@ -329,7 +332,7 @@ test('email verification resend API queues a fresh verification email for unveri
   }));
   const payload = await response.json();
   const verificationEmails = repository
-    .listEmailOutboxRecords({ status: 'queued' })
+    .listEmailOutboxRecords({ status: 'sent' })
     .filter((record) => record.recipientEmail === email && record.template === 'email_verification');
 
   assert.equal(response.status, 200);

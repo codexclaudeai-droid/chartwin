@@ -3,6 +3,7 @@ import type { EmailOutboxRecord } from './repository.ts';
 
 export type EmailDeliveryMessage = {
   id: string;
+  from: string;
   to: string;
   template: string;
   subject: string;
@@ -31,11 +32,14 @@ export type EmailOutboxDeliverySummary = {
 export type EmailOutboxDeliveryOptions = {
   deliveredAt: string;
   limit?: number;
+  recordIds?: string[];
 };
 
 export type EmailDeliveryRuntimeEnv = {
   NODE_ENV?: string;
   CHART_SERVICE_EMAIL_PROVIDER?: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_API_TOKEN?: string;
 };
 
 export async function deliverQueuedEmailOutbox(
@@ -44,7 +48,10 @@ export async function deliverQueuedEmailOutbox(
   options: EmailOutboxDeliveryOptions,
 ): Promise<EmailOutboxDeliverySummary> {
   const queued = await repository.listEmailOutboxRecords({ status: 'queued' });
-  const batch = typeof options.limit === 'number' ? queued.slice(0, Math.max(0, options.limit)) : queued;
+  const eligible = options.recordIds
+    ? queued.filter((record) => options.recordIds?.includes(record.id))
+    : queued;
+  const batch = typeof options.limit === 'number' ? eligible.slice(0, Math.max(0, options.limit)) : eligible;
   let sent = 0;
   let failed = 0;
 
@@ -86,6 +93,7 @@ export function createLogEmailDeliveryProvider(
       write(JSON.stringify({
         type: 'chart-service.email.delivery',
         id: message.id,
+        from: message.from,
         to: message.to,
         template: message.template,
         subject: message.subject,
@@ -106,8 +114,54 @@ export function createEmailDeliveryProviderFromEnv(
   if (provider === 'log') {
     return createLogEmailDeliveryProvider(write);
   }
+  if (provider === 'cloudflare') {
+    return createCloudflareEmailDeliveryProvider({
+      accountId: requireEmailProviderEnv(env, 'CLOUDFLARE_ACCOUNT_ID'),
+      apiToken: requireEmailProviderEnv(env, 'CLOUDFLARE_API_TOKEN'),
+    });
+  }
 
-  throw new Error('Unsupported or missing CHART_SERVICE_EMAIL_PROVIDER. Use "log" for the current delivery harness.');
+  throw new Error('Unsupported or missing CHART_SERVICE_EMAIL_PROVIDER. Use "log" or "cloudflare".');
+}
+
+export function createCloudflareEmailDeliveryProvider(input: {
+  accountId: string;
+  apiToken: string;
+  fetchImpl?: typeof fetch;
+}): EmailDeliveryProvider {
+  const fetchImpl = input.fetchImpl ?? fetch;
+  return {
+    async sendEmail(message) {
+      const response = await fetchImpl(
+        `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(input.accountId)}/email/sending/send`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${input.apiToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: message.to,
+            from: message.from,
+            subject: message.subject,
+            text: message.body,
+          }),
+        },
+      );
+      const payload = await readCloudflareEmailPayload(response);
+      if (!response.ok || payload.success !== true) {
+        return {
+          ok: false,
+          error: formatCloudflareEmailError(payload, response.status),
+        };
+      }
+
+      return {
+        ok: true,
+        providerMessageId: readCloudflareProviderMessageId(payload),
+      };
+    },
+  };
 }
 
 async function sendEmailSafely(
@@ -117,6 +171,7 @@ async function sendEmailSafely(
   try {
     return await provider.sendEmail({
       id: record.id,
+      from: record.senderEmail,
       to: record.recipientEmail,
       template: record.template,
       subject: record.subject,
@@ -128,4 +183,46 @@ async function sendEmailSafely(
       error: error instanceof Error ? error.message : 'Unknown email delivery error',
     };
   }
+}
+
+async function readCloudflareEmailPayload(response: Response): Promise<Record<string, unknown>> {
+  try {
+    const payload = await response.json();
+    return payload && typeof payload === 'object' ? payload as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+}
+
+function formatCloudflareEmailError(payload: Record<string, unknown>, status: number): string {
+  const errors = Array.isArray(payload.errors) ? payload.errors : [];
+  const messages = errors
+    .map((error) => {
+      if (!error || typeof error !== 'object') return '';
+      const record = error as Record<string, unknown>;
+      return typeof record.message === 'string' ? record.message : '';
+    })
+    .filter(Boolean);
+  return messages.length > 0
+    ? `Cloudflare Email Sending failed: ${messages.join('; ')}`
+    : `Cloudflare Email Sending failed with HTTP ${status}`;
+}
+
+function readCloudflareProviderMessageId(payload: Record<string, unknown>): string | null {
+  const result = payload.result;
+  if (!result || typeof result !== 'object') return null;
+  const resultRecord = result as Record<string, unknown>;
+  for (const key of ['delivered', 'queued']) {
+    const values = resultRecord[key];
+    if (Array.isArray(values) && values.length > 0) {
+      return `cloudflare:${key}:${String(values[0])}`;
+    }
+  }
+  return null;
+}
+
+function requireEmailProviderEnv(env: EmailDeliveryRuntimeEnv, key: keyof EmailDeliveryRuntimeEnv): string {
+  const value = env[key]?.trim();
+  if (!value) throw new Error(`${key} is required for Cloudflare email delivery.`);
+  return value;
 }
