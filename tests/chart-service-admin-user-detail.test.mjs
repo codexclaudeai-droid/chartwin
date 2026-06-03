@@ -187,7 +187,7 @@ test('super admin can delete a member through the admin user detail API', async 
   assert.equal(response.status, 200);
   assert.equal(payload.ok, true);
   assert.equal(payload.deletedUserId, 'user_subscriber');
-  assert.equal(repository.getUserById('user_subscriber')?.passwordHash, null);
+  assert.equal(repository.getUserById('user_subscriber'), null);
 });
 
 test('super admin can purge an unverified signup account by email', async () => {

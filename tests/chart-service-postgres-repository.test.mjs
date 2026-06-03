@@ -56,7 +56,7 @@ test('postgres async repository uses parameterized statements for user reads and
   assert.deepEqual(calls[2].values, ['session_1']);
 });
 
-test('postgres async repository purges unverified signup user dependencies before deleting the user', async () => {
+test('postgres async repository purges user dependencies before deleting the user', async () => {
   const { createPostgresAsyncChartServiceRepository } = await import('../src/server/chart-service/index.ts');
   const calls = [];
   const executor = {
@@ -66,13 +66,13 @@ test('postgres async repository purges unverified signup user dependencies befor
         return {
           rows: [{
             id: 'user_unverified',
-            email: 'unverified@example.com',
-            name: 'Unverified',
+            email: 'verified@example.com',
+            name: 'Verified Member',
             role: 'member',
             account_status: 'active',
             password_hash: 'hash',
             referral_code: 'UNVER1',
-            email_verified_at: null,
+            email_verified_at: '2026-06-01T00:00:00.000Z',
           }],
         };
       }
@@ -91,7 +91,7 @@ test('postgres async repository purges unverified signup user dependencies befor
           rows: [{
             id: 'email_1',
             sender_email: 'verify@tradingcore.co',
-            recipient_email: 'unverified@example.com',
+            recipient_email: 'verified@example.com',
             template: 'email_verification',
             subject: 'Verify',
             body: 'body',
@@ -107,7 +107,7 @@ test('postgres async repository purges unverified signup user dependencies befor
   };
   const repository = createPostgresAsyncChartServiceRepository(executor);
 
-  const result = await repository.purgeUnverifiedUserByEmail('UNVERIFIED@example.com');
+  const result = await repository.purgeUnverifiedUserByEmail('VERIFIED@example.com');
 
   assert.equal(result?.user.id, 'user_unverified');
   assert.equal(result?.deletedSessionCount, 1);

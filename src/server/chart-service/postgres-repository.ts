@@ -174,7 +174,7 @@ export function createPostgresAsyncChartServiceRepository(
     async purgeUnverifiedUserByEmail(email: string): Promise<PurgedUnverifiedUserAccountRecord | null> {
       const normalizedEmail = email.trim().toLowerCase();
       const user = await selectOne('users', mapUserFromPostgresRow, { email: normalizedEmail });
-      if (!user || (user.emailVerifiedAt && (user.accountStatus !== 'suspended' || user.passwordHash))) return null;
+      if (!user) return null;
 
       const sessions = await selectMany('auth_sessions', mapAuthSessionFromPostgresRow, { user_id: user.id });
       const emailOutbox = (await selectMany('email_outbox', mapEmailOutboxFromPostgresRow))

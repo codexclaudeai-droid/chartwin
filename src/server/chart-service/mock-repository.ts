@@ -259,9 +259,7 @@ export function createMockChartServiceRepository(
     purgeUnverifiedUserByEmail(email): PurgedUnverifiedUserAccountRecord | null {
       const normalizedEmail = email.trim().toLowerCase();
       const user = state.users.find((item) => item.email.toLowerCase() === normalizedEmail);
-      if (!user || (user.emailVerifiedAt && (user.accountStatus !== USER_ACCOUNT_STATUSES.suspended || user.passwordHash))) {
-        return null;
-      }
+      if (!user) return null;
       const deletedSessionCount = state.sessions.filter((session) => session.userId === user.id).length;
       const deletedEmailOutboxCount = state.emailOutbox.filter((record) => (
         record.recipientEmail.toLowerCase() === normalizedEmail

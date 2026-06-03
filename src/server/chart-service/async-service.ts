@@ -1555,26 +1555,18 @@ export async function updateAsyncAdminUserFreeTrialAllowance(
 export async function deleteAsyncAdminUserAccount(
   repository: AsyncChartServiceRepository,
   input: { admin: Actor; userId: string; deletedAt: string },
-): Promise<{ user: ServiceUserRecord; deletedSessionCount: number }> {
+): Promise<PurgedUnverifiedUserAccountRecord> {
   assertSuperAdminActor(input.admin);
   const user = await requireAsyncUser(repository, input.userId);
   if (user.id === input.admin.id) {
     throw new Error('Cannot delete your own account');
   }
-  if (user.role === USER_ROLES.superAdmin) {
-    throw new Error('Cannot delete a super admin account');
+  if (requiresSuperAdmin(user.role)) {
+    throw new Error('Cannot delete an admin account');
   }
 
-  const sessions = await repository.listSessionsByUserId(user.id);
-  const deletedUser: ServiceUserRecord = {
-    ...user,
-    accountStatus: USER_ACCOUNT_STATUSES.suspended,
-    phoneNumber: null,
-    passwordHash: null,
-  };
-
-  await repository.saveUser(deletedUser);
-  await Promise.all(sessions.map((session) => repository.deleteSession(session.id)));
+  const result = await repository.purgeUnverifiedUserByEmail(user.email);
+  if (!result) throw new Error('User delete failed');
   await repository.appendAuditLog(createAuditLogDraft({
     actor: input.admin,
     action: 'admin.user.delete',
@@ -1582,13 +1574,14 @@ export async function deleteAsyncAdminUserAccount(
     targetId: user.id,
     beforeJson: { user },
     afterJson: {
-      user: deletedUser,
       deletedAt: input.deletedAt,
-      deletedSessionCount: sessions.length,
+      hardDeleted: true,
+      deletedSessionCount: result.deletedSessionCount,
+      deletedEmailOutboxCount: result.deletedEmailOutboxCount,
     },
   }));
 
-  return { user: deletedUser, deletedSessionCount: sessions.length };
+  return result;
 }
 
 export async function purgeAsyncUnverifiedUserAccount(

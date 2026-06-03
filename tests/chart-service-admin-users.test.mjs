@@ -155,7 +155,7 @@ test('only super admins can change a user login email and the change is audited'
   });
 });
 
-test('only super admins can delete member accounts by disabling login and clearing sessions', async () => {
+test('only super admins can delete member accounts and async deletion removes them from the directory', async () => {
   const repository = createMockChartServiceRepository();
   const session = createSessionForUser(repository, {
     userId: 'user_member',
@@ -192,7 +192,7 @@ test('only super admins can delete member accounts by disabling login and cleari
     deletedAt: '2026-05-31T01:10:00.000Z',
   });
   assert.equal(asyncResult.user.id, 'user_trial');
-  assert.equal(repository.getUserById('user_trial')?.passwordHash, null);
+  assert.equal(repository.getUserById('user_trial'), null);
 });
 
 test('admin user email changes reject invalid or duplicate addresses', () => {
