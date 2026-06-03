@@ -1599,7 +1599,7 @@ export async function purgeAsyncUnverifiedUserAccount(
   const email = normalizePurgeEmail(input.email);
   const user = await repository.getUserByEmail(email);
   if (!user) throw new Error('User not found');
-  if (user.emailVerifiedAt) {
+  if (!isPurgeableUnverifiedUserAccount(user)) {
     throw new Error('Cannot purge a verified email account');
   }
   if (user.role !== USER_ROLES.member) {
@@ -1625,6 +1625,11 @@ export async function purgeAsyncUnverifiedUserAccount(
     },
   }));
   return result;
+}
+
+function isPurgeableUnverifiedUserAccount(user: ServiceUserRecord): boolean {
+  if (!user.emailVerifiedAt) return true;
+  return user.accountStatus === USER_ACCOUNT_STATUSES.suspended && !user.passwordHash;
 }
 
 export async function confirmAsyncManualPaymentRequest(

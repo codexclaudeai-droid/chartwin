@@ -145,17 +145,23 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     const result = await persistence.runMutation(async (repository) => {
       const admin = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
       const user = await repository.getUserById(id);
-      if (user && !user.emailVerifiedAt) {
-        const purgeResult = await purgeAsyncUnverifiedUserAccount(repository, {
-          admin,
-          email: user.email,
-          purgedAt: new Date().toISOString(),
-        });
-        return {
-          user: purgeResult.user,
-          deletedSessionCount: purgeResult.deletedSessionCount,
-          purged: true,
-        };
+      if (user) {
+        try {
+          const purgeResult = await purgeAsyncUnverifiedUserAccount(repository, {
+            admin,
+            email: user.email,
+            purgedAt: new Date().toISOString(),
+          });
+          return {
+            user: purgeResult.user,
+            deletedSessionCount: purgeResult.deletedSessionCount,
+            purged: true,
+          };
+        } catch (error) {
+          if (!String(error instanceof Error ? error.message : error).includes('verified')) {
+            throw error;
+          }
+        }
       }
       return deleteAsyncAdminUserAccount(repository, {
         admin,

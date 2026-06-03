@@ -295,6 +295,49 @@ test('admin user detail delete API hard purges unverified accounts', async () =>
   assert.equal(repository.getUserByEmail(email), null);
 });
 
+test('admin user detail delete API can purge a previously disabled unverified test account', async () => {
+  const repository = getChartServiceRepository();
+  const email = `purge-disabled-${Date.now()}@example.com`;
+  const userId = repository.nextId('user');
+  const superSession = createSessionForUser(repository, {
+    userId: 'super_1',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  }).session;
+  const member = repository.getUserById('user_member');
+  assert.ok(member);
+  repository.saveUser({
+    ...member,
+    id: userId,
+    email,
+    name: 'Disabled Unverified Purge',
+    role: 'member',
+    accountStatus: 'suspended',
+    passwordHash: null,
+    referralCode: 'PURGD3',
+    referredByUserId: null,
+    emailVerifiedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  });
+  const { DELETE } = await import('../app/api/admin/users/[id]/route.ts');
+
+  const response = await DELETE(new Request(`http://localhost/api/admin/users/${userId}`, {
+    method: 'DELETE',
+    headers: {
+      origin: 'http://localhost',
+      cookie: `${SESSION_COOKIE_NAME}=${superSession.id}`,
+    },
+  }), {
+    params: Promise.resolve({ id: userId }),
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.purged, true);
+  assert.equal(repository.getUserByEmail(email), null);
+});
+
 test('unverified purge API refuses verified accounts', async () => {
   const repository = getChartServiceRepository();
   const superSession = createSessionForUser(repository, {

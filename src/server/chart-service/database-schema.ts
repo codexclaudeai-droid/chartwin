@@ -549,7 +549,6 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     'alter table if exists users alter column password_hash drop not null;',
     "update users set referral_code = upper(substr(md5(id), 1, 6)) where referral_code is null or referral_code = '' or referral_code !~ '^[A-Z0-9]{6}$';",
     'update users set created_at = now() where created_at is null;',
-    'update users set email_verified_at = created_at where email_verified_at is null;',
     'create index if not exists idx_users_referral_code on users (referral_code);',
     'create index if not exists idx_users_referred_by_user_id on users (referred_by_user_id);',
     "create table if not exists social_auth_accounts (id text primary key, provider text not null, provider_user_id text not null, user_id text not null references users(id), email text not null, created_at timestamptz not null, updated_at timestamptz not null, constraint chk_social_auth_accounts_provider check (provider in ('google', 'naver', 'kakao')));",

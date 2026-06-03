@@ -196,6 +196,7 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /alter table if exists audit_logs alter column before_json drop not null/i);
   assert.match(sql, /alter table if exists audit_logs alter column after_json drop not null/i);
   assert.match(sql, /alter table if exists users alter column password_hash drop not null/i);
+  assert.doesNotMatch(sql, /update users set email_verified_at = created_at/i);
 });
 
 test('database schema export harness is available for production migration prep', () => {

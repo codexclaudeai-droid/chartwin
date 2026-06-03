@@ -466,8 +466,6 @@ update users set referral_code = upper(substr(md5(id), 1, 6)) where referral_cod
 
 update users set created_at = now() where created_at is null;
 
-update users set email_verified_at = created_at where email_verified_at is null;
-
 create index if not exists idx_users_referral_code on users (referral_code);
 
 create index if not exists idx_users_referred_by_user_id on users (referred_by_user_id);
