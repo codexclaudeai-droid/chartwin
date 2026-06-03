@@ -119,6 +119,13 @@ a {
   letter-spacing: 0;
 }
 
+.brand-logo-image {
+  display: block;
+  height: 34px;
+  object-fit: contain;
+  width: auto;
+}
+
 .brand-mark {
   align-items: center;
   background:
@@ -410,6 +417,14 @@ a {
   padding: 6px 14px;
   position: relative;
   z-index: 3;
+}
+
+.session-nav-link-icon {
+  display: none;
+}
+
+.session-logout-label {
+  display: none;
 }
 
 .tc-header-eclipse {
@@ -9281,30 +9296,76 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   display: flex;
   font-size: 14px;
   font-weight: 760;
-  justify-content: space-between;
+  justify-content: flex-start;
   min-height: 38px;
   padding: 0 13px;
 }
 
 .mobile-nav-panel .session .session-logout-button {
-  aspect-ratio: 1 / 1;
-  border-radius: 999px;
-  height: 38px;
-  justify-content: center;
-  justify-self: start;
+  aspect-ratio: auto;
+  border-radius: 14px;
+  gap: 10px;
+  height: auto;
+  justify-content: flex-start;
+  justify-self: stretch;
   min-height: 38px;
-  padding: 0;
-  width: 38px;
+  padding: 0 13px;
+  width: 100%;
 }
 
 .mobile-nav-panel .session .session-logout-button svg {
-  height: 21px;
-  width: 21px;
+  color: rgba(125, 183, 255, 0.92);
+  height: 18px;
+  width: 18px;
 }
 
-.mobile-nav-panel .session .session-signup-cta {
-  min-height: 36px;
+.mobile-nav-panel .session .session-logout-label {
+  display: inline;
+}
+
+.mobile-nav-panel .session .tc-header-signup-wrap,
+.mobile-nav-panel .session .tc-header-signup-pill {
+  display: flex;
+  width: 100%;
+}
+
+.mobile-nav-panel .session .tc-header-signup-glow,
+.mobile-nav-panel .session .tc-header-eclipse {
+  display: none;
+}
+
+.mobile-nav-panel .tc-header-eclipse {
+  animation: none;
+}
+
+.mobile-nav-panel .session .tc-header-signup-pill {
+  background: transparent;
+  border: 0;
+  border-radius: 14px;
+  box-shadow: none;
+  color: rgba(216, 236, 255, 0.88) !important;
+  gap: 10px;
+  min-height: 38px;
+  overflow: visible;
   padding: 0 13px;
+}
+
+.mobile-nav-panel .tc-header-signup-pill::before {
+  border: 0;
+  content: none;
+}
+
+.mobile-nav-panel .session .tc-header-signup-label {
+  margin: 0;
+  padding: 0;
+}
+
+.mobile-nav-panel .session .session-nav-link-icon {
+  display: inline-flex;
+}
+
+.mobile-nav-panel .session .session-nav-link-label {
+  min-width: 0;
 }
 
 .mobile-nav-links a:hover,
@@ -9315,7 +9376,8 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   color: #ffffff;
 }
 
-.mobile-nav-links a {
+.mobile-nav-links a,
+.mobile-nav-panel .session a {
   gap: 10px;
   justify-content: flex-start;
 }
@@ -9395,6 +9457,10 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
     grid-template-columns: auto auto;
     min-height: 58px;
     padding: 8px 14px;
+  }
+
+  .brand-logo-image {
+    height: 30px;
   }
 
   .topbar > .nav,

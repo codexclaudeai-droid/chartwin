@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut } from 'lucide-react';
+import { LogIn, LogOut, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   dispatchAuthSessionChangedEvent,
@@ -78,6 +78,7 @@ export function SessionNav() {
           disabled={isBusy}
         >
           <LogOut aria-hidden="true" />
+          <span className="session-logout-label">로그아웃</span>
         </button>
       </div>
     );
@@ -85,7 +86,10 @@ export function SessionNav() {
 
   return (
     <div className="session">
-      <Link href="/login">로그인</Link>
+      <Link href="/login">
+        <span className="mobile-nav-link-icon session-nav-link-icon" aria-hidden="true"><LogIn aria-hidden="true" /></span>
+        <span className="mobile-nav-link-label session-nav-link-label">로그인</span>
+      </Link>
       <HeaderSignupEclipseButton />
     </div>
   );
@@ -108,7 +112,8 @@ function HeaderSignupEclipseButton() {
       </span>
       <Link className="tc-header-signup-pill" href="/signup" aria-label="회원가입">
         <span className="tc-header-eclipse" aria-hidden="true" />
-        <span className="tc-header-signup-label">회원가입</span>
+        <span className="mobile-nav-link-icon session-nav-link-icon" aria-hidden="true"><UserPlus aria-hidden="true" /></span>
+        <span className="tc-header-signup-label mobile-nav-link-label session-nav-link-label">회원가입</span>
       </Link>
     </span>
   );

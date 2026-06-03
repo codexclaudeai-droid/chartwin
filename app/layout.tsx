@@ -72,9 +72,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               </span>
               */}
               <img
+                className="brand-logo-image"
                 src="/images/TC-main-logo.png"
                 alt="TradingCore"
-                style={{ height: '34px', width: 'auto', display: 'block', objectFit: 'contain' }}
               />
             </Link>
             <nav className="nav" aria-label="Primary">
