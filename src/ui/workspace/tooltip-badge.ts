@@ -190,6 +190,14 @@ const getSharedTooltipElements = (): TooltipElements => {
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
+const shouldSuppressTooltipBadge = (): boolean => {
+  if (window.matchMedia) {
+    if (window.matchMedia('(pointer: coarse)').matches) return true;
+    if (window.matchMedia('(hover: hover)').matches === false) return true;
+  }
+  return navigator.maxTouchPoints > 0;
+};
+
 export const bindTooltipBadge = (
   target: HTMLElement,
   {
@@ -257,7 +265,10 @@ export const bindTooltipBadge = (
   };
 
   const show = () => {
-    if (window.matchMedia && window.matchMedia('(hover: hover)').matches === false) return;
+    if (shouldSuppressTooltipBadge()) {
+      hide();
+      return;
+    }
     if (activeTooltipHide && activeTooltipHide !== hide) {
       activeTooltipHide();
     }

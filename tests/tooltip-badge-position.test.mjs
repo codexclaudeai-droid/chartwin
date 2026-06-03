@@ -44,3 +44,22 @@ test('tooltip badges close when a button is used or fullscreen changes', () => {
     /document\.addEventListener\('fullscreenchange', hide\)/,
   );
 });
+
+test('tooltip badges are suppressed on mobile touch pointers', () => {
+  assert.match(
+    tooltipBadgeSource,
+    /const shouldSuppressTooltipBadge = \(\): boolean => \{/,
+  );
+  assert.match(
+    tooltipBadgeSource,
+    /window\.matchMedia\('\(pointer: coarse\)'\)\.matches/,
+  );
+  assert.match(
+    tooltipBadgeSource,
+    /navigator\.maxTouchPoints > 0/,
+  );
+  assert.match(
+    tooltipBadgeSource,
+    /if \(shouldSuppressTooltipBadge\(\)\) \{/,
+  );
+});
