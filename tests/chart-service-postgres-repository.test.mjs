@@ -56,6 +56,68 @@ test('postgres async repository uses parameterized statements for user reads and
   assert.deepEqual(calls[2].values, ['session_1']);
 });
 
+test('postgres async repository purges unverified signup user dependencies before deleting the user', async () => {
+  const { createPostgresAsyncChartServiceRepository } = await import('../src/server/chart-service/index.ts');
+  const calls = [];
+  const executor = {
+    async query(statement) {
+      calls.push(statement);
+      if (statement.sql === 'select * from users where email = $1') {
+        return {
+          rows: [{
+            id: 'user_unverified',
+            email: 'unverified@example.com',
+            name: 'Unverified',
+            role: 'member',
+            account_status: 'active',
+            password_hash: 'hash',
+            referral_code: 'UNVER1',
+            email_verified_at: null,
+          }],
+        };
+      }
+      if (statement.sql === 'select * from auth_sessions where user_id = $1') {
+        return {
+          rows: [{
+            id: 'session_1',
+            user_id: 'user_unverified',
+            created_at: '2026-06-01T00:00:00.000Z',
+            expires_at: '2026-06-02T00:00:00.000Z',
+          }],
+        };
+      }
+      if (statement.sql === 'select * from email_outbox') {
+        return {
+          rows: [{
+            id: 'email_1',
+            sender_email: 'verify@tradingcore.co',
+            recipient_email: 'unverified@example.com',
+            template: 'email_verification',
+            subject: 'Verify',
+            body: 'body',
+            status: 'queued',
+            created_at: '2026-06-01T00:00:00.000Z',
+            sent_at: null,
+            last_error: null,
+          }],
+        };
+      }
+      return { rows: [] };
+    },
+  };
+  const repository = createPostgresAsyncChartServiceRepository(executor);
+
+  const result = await repository.purgeUnverifiedUserByEmail('UNVERIFIED@example.com');
+
+  assert.equal(result?.user.id, 'user_unverified');
+  assert.equal(result?.deletedSessionCount, 1);
+  assert.equal(result?.deletedEmailOutboxCount, 1);
+  assert.ok(calls.some((call) => call.sql === 'delete from email_verification_tokens where user_id = $1'));
+  assert.ok(calls.some((call) => call.sql === 'delete from email_outbox where recipient_email = $1'));
+  assert.equal(calls.at(-1)?.sql, 'delete from users where id = $1');
+  assert.deepEqual(calls.at(-1)?.values, ['user_unverified']);
+});
+
 test('postgres async repository appends audit logs with insert-only SQL', async () => {
   const { createPostgresAsyncChartServiceRepository } = await import('../src/server/chart-service/index.ts');
   const calls = [];

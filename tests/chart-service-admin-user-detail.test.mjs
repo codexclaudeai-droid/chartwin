@@ -189,3 +189,134 @@ test('super admin can delete a member through the admin user detail API', async 
   assert.equal(payload.deletedUserId, 'user_subscriber');
   assert.equal(repository.getUserById('user_subscriber')?.passwordHash, null);
 });
+
+test('super admin can purge an unverified signup account by email', async () => {
+  const repository = getChartServiceRepository();
+  const email = `purge-unverified-${Date.now()}@example.com`;
+  const userId = repository.nextId('user');
+  const superSession = createSessionForUser(repository, {
+    userId: 'super_1',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  }).session;
+  const member = repository.getUserById('user_member');
+  assert.ok(member);
+  repository.saveUser({
+    ...member,
+    id: userId,
+    email,
+    name: 'Unverified Purge',
+    role: 'member',
+    referralCode: 'PURGE1',
+    referredByUserId: null,
+    emailVerifiedAt: null,
+    createdAt: new Date().toISOString(),
+  });
+  repository.saveSession({
+    id: repository.nextId('session'),
+    userId,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+  });
+  repository.saveEmailOutboxRecord({
+    id: repository.nextId('email'),
+    senderEmail: 'verify@tradingcore.co',
+    recipientEmail: email,
+    template: 'email_verification',
+    subject: 'Verify your TradingCore email',
+    body: '/verify-email?token=test',
+    status: 'queued',
+    createdAt: new Date().toISOString(),
+    sentAt: null,
+    lastError: null,
+  });
+  const { DELETE } = await import('../app/api/admin/users/unverified/route.ts');
+
+  const response = await DELETE(new Request('http://localhost/api/admin/users/unverified', {
+    method: 'DELETE',
+    headers: {
+      origin: 'http://localhost',
+      cookie: `${SESSION_COOKIE_NAME}=${superSession.id}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.email, email);
+  assert.equal(payload.deletedSessionCount, 1);
+  assert.equal(payload.deletedEmailOutboxCount, 1);
+  assert.equal(repository.getUserByEmail(email), null);
+  assert.equal(repository.listSessionsByUserId(userId).length, 0);
+  assert.equal(repository.listEmailOutboxRecords().some((record) => record.recipientEmail === email), false);
+  assert.equal(repository.listAuditLogs().at(-1)?.action, 'admin.user.unverified.purge');
+});
+
+test('admin user detail delete API hard purges unverified accounts', async () => {
+  const repository = getChartServiceRepository();
+  const email = `purge-detail-${Date.now()}@example.com`;
+  const userId = repository.nextId('user');
+  const superSession = createSessionForUser(repository, {
+    userId: 'super_1',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  }).session;
+  const member = repository.getUserById('user_member');
+  assert.ok(member);
+  repository.saveUser({
+    ...member,
+    id: userId,
+    email,
+    name: 'Unverified Detail Purge',
+    role: 'member',
+    referralCode: 'PURGD2',
+    referredByUserId: null,
+    emailVerifiedAt: null,
+    createdAt: new Date().toISOString(),
+  });
+  const { DELETE } = await import('../app/api/admin/users/[id]/route.ts');
+
+  const response = await DELETE(new Request(`http://localhost/api/admin/users/${userId}`, {
+    method: 'DELETE',
+    headers: {
+      origin: 'http://localhost',
+      cookie: `${SESSION_COOKIE_NAME}=${superSession.id}`,
+    },
+  }), {
+    params: Promise.resolve({ id: userId }),
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.purged, true);
+  assert.equal(repository.getUserByEmail(email), null);
+});
+
+test('unverified purge API refuses verified accounts', async () => {
+  const repository = getChartServiceRepository();
+  const superSession = createSessionForUser(repository, {
+    userId: 'super_1',
+    createdAt: new Date().toISOString(),
+    ttlSeconds: 60 * 60,
+  }).session;
+  const { DELETE } = await import('../app/api/admin/users/unverified/route.ts');
+
+  const response = await DELETE(new Request('http://localhost/api/admin/users/unverified', {
+    method: 'DELETE',
+    headers: {
+      origin: 'http://localhost',
+      cookie: `${SESSION_COOKIE_NAME}=${superSession.id}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ email: 'member@example.com' }),
+  }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.ok, false);
+  assert.match(payload.message, /verified/);
+  assert.ok(repository.getUserByEmail('member@example.com'));
+});

@@ -26,6 +26,7 @@ import type {
   PasswordResetTokenRecord,
   PaymentTransferSettingsRecord,
   NoticePopupRecord,
+  PurgedUnverifiedUserAccountRecord,
   PublicBoardPostRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
@@ -254,6 +255,50 @@ export function createMockChartServiceRepository(
     getUserByEmail: (email) => cloneOrNull(state.users.find((user) => user.email.toLowerCase() === email.toLowerCase())),
     saveUser(user) {
       upsertById(state.users, user);
+    },
+    purgeUnverifiedUserByEmail(email): PurgedUnverifiedUserAccountRecord | null {
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = state.users.find((item) => item.email.toLowerCase() === normalizedEmail);
+      if (!user || user.emailVerifiedAt) return null;
+      const deletedSessionCount = state.sessions.filter((session) => session.userId === user.id).length;
+      const deletedEmailOutboxCount = state.emailOutbox.filter((record) => (
+        record.recipientEmail.toLowerCase() === normalizedEmail
+      )).length;
+      const supportThreadIds = new Set(state.supportThreads
+        .filter((thread) => thread.authorUserId === user.id)
+        .map((thread) => thread.id));
+      const paymentIds = new Set(state.payments
+        .filter((payment) => payment.userId === user.id)
+        .map((payment) => payment.id));
+
+      state.sessions = state.sessions.filter((session) => session.userId !== user.id);
+      state.socialAuthAccounts = state.socialAuthAccounts.filter((account) => account.userId !== user.id);
+      state.passwordResetTokens = state.passwordResetTokens.filter((token) => token.userId !== user.id);
+      state.emailVerificationTokens = state.emailVerificationTokens.filter((token) => token.userId !== user.id);
+      state.emailOutbox = state.emailOutbox.filter((record) => record.recipientEmail.toLowerCase() !== normalizedEmail);
+      state.signupAgreements = state.signupAgreements.filter((agreement) => agreement.userId !== user.id);
+      state.chartUserSettings = state.chartUserSettings.filter((settings) => settings.userId !== user.id);
+      state.notifications = state.notifications.filter((notification) => notification.userId !== user.id);
+      state.referralLedgers = state.referralLedgers.filter((ledger) => (
+        ledger.referrerUserId !== user.id &&
+        ledger.referredUserId !== user.id &&
+        !paymentIds.has(ledger.paymentRequestId)
+      ));
+      state.payments = state.payments.filter((payment) => payment.userId !== user.id);
+      state.freeTrialUsageRecords = state.freeTrialUsageRecords.filter((record) => record.userId !== user.id);
+      state.freeTrialUserAllowances = state.freeTrialUserAllowances.filter((allowance) => allowance.userId !== user.id);
+      state.subscriptions = state.subscriptions.filter((subscription) => subscription.userId !== user.id);
+      state.supportMessages = state.supportMessages.filter((message) => (
+        message.authorUserId !== user.id && !supportThreadIds.has(message.threadId)
+      ));
+      state.supportThreads = state.supportThreads.filter((thread) => thread.authorUserId !== user.id);
+      state.users = state.users.filter((item) => item.id !== user.id);
+
+      return {
+        user: { ...user },
+        deletedSessionCount,
+        deletedEmailOutboxCount,
+      };
     },
     getSocialAuthAccount(provider: SocialAuthProvider, providerUserId: string) {
       return cloneOrNull(state.socialAuthAccounts.find((account) => (

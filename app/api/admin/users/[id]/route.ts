@@ -9,6 +9,7 @@ import {
   getAdminMutationErrorStatus,
   guardMutationRequest,
   deleteAsyncAdminUserAccount,
+  purgeAsyncUnverifiedUserAccount,
   updateAsyncAdminUserAccountStatus,
   updateAsyncAdminUserEmail,
   updateAsyncAdminUserFreeTrialAllowance,
@@ -143,6 +144,19 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const result = await persistence.runMutation(async (repository) => {
       const admin = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
+      const user = await repository.getUserById(id);
+      if (user && !user.emailVerifiedAt) {
+        const purgeResult = await purgeAsyncUnverifiedUserAccount(repository, {
+          admin,
+          email: user.email,
+          purgedAt: new Date().toISOString(),
+        });
+        return {
+          user: purgeResult.user,
+          deletedSessionCount: purgeResult.deletedSessionCount,
+          purged: true,
+        };
+      }
       return deleteAsyncAdminUserAccount(repository, {
         admin,
         userId: id,
@@ -153,6 +167,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       ok: true,
       deletedUserId: result.user.id,
       deletedSessionCount: result.deletedSessionCount,
+      purged: Boolean('purged' in result && result.purged),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'user delete failed';

@@ -81,6 +81,12 @@ export type EmailOutboxRecord = {
   lastError: string | null;
 };
 
+export type PurgedUnverifiedUserAccountRecord = {
+  user: ServiceUserRecord;
+  deletedSessionCount: number;
+  deletedEmailOutboxCount: number;
+};
+
 export type ReferralProgramSettingsRecord = {
   id: string;
   subscriberCashbackPercent: number;
@@ -226,6 +232,7 @@ export type ChartServiceRepository = {
   getUserById(id: string): ServiceUserRecord | null;
   getUserByEmail(email: string): ServiceUserRecord | null;
   saveUser(user: ServiceUserRecord): void;
+  purgeUnverifiedUserByEmail(email: string): PurgedUnverifiedUserAccountRecord | null;
   getSocialAuthAccount(provider: SocialAuthProvider, providerUserId: string): SocialAuthAccountRecord | null;
   listSocialAuthAccountsByUserId(userId: string): SocialAuthAccountRecord[];
   saveSocialAuthAccount(account: SocialAuthAccountRecord): void;

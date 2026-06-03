@@ -14,6 +14,7 @@ const adminMutationRoutes = [
   '../app/api/admin/support/reply/route.ts',
   '../app/api/admin/sales/route.ts',
   '../app/api/admin/users/[id]/route.ts',
+  '../app/api/admin/users/unverified/route.ts',
 ];
 
 test('admin mutation routes use the async persistence boundary', () => {
@@ -79,11 +80,23 @@ test('admin mutation routes return 401 when the admin session is missing', async
       }),
       context: { params: Promise.resolve({ id: 'user_member' }) },
     },
+    {
+      routePath: '../app/api/admin/users/unverified/route.ts',
+      request: new Request('http://localhost/api/admin/users/unverified', {
+        method: 'DELETE',
+        headers: { origin: 'http://localhost', 'content-type': 'application/json' },
+        body: JSON.stringify({ email: 'unverified@example.com' }),
+      }),
+      method: 'DELETE',
+    },
   ];
 
   for (const routeCase of routeCases) {
     const route = await import(routeCase.routePath);
-    const response = await route[routeCase.context ? 'PATCH' : 'POST'](routeCase.request, routeCase.context);
+    const response = await route[routeCase.method ?? (routeCase.context ? 'PATCH' : 'POST')](
+      routeCase.request,
+      routeCase.context,
+    );
     const payload = await response.json();
 
     assert.equal(response.status, 401, routeCase.routePath);

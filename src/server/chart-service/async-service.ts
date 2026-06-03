@@ -41,6 +41,7 @@ import type {
   FreeTrialUsageRecord,
   FreeTrialUsageSource,
   FreeTrialUserAllowanceRecord,
+  PurgedUnverifiedUserAccountRecord,
   PublicServiceUserRecord,
   ServiceUserRecord,
 } from './repository.ts';
@@ -1590,6 +1591,42 @@ export async function deleteAsyncAdminUserAccount(
   return { user: deletedUser, deletedSessionCount: sessions.length };
 }
 
+export async function purgeAsyncUnverifiedUserAccount(
+  repository: AsyncChartServiceRepository,
+  input: { admin: Actor; email: string; purgedAt: string },
+): Promise<PurgedUnverifiedUserAccountRecord> {
+  assertSuperAdminActor(input.admin);
+  const email = normalizePurgeEmail(input.email);
+  const user = await repository.getUserByEmail(email);
+  if (!user) throw new Error('User not found');
+  if (user.emailVerifiedAt) {
+    throw new Error('Cannot purge a verified email account');
+  }
+  if (user.role !== USER_ROLES.member) {
+    throw new Error('Only unverified member accounts can be purged');
+  }
+  if (user.id === input.admin.id) {
+    throw new Error('Cannot purge your own account');
+  }
+
+  const result = await repository.purgeUnverifiedUserByEmail(email);
+  if (!result) throw new Error('Unverified user purge failed');
+  await repository.appendAuditLog(createAuditLogDraft({
+    actor: input.admin,
+    action: 'admin.user.unverified.purge',
+    targetType: 'user',
+    targetId: result.user.id,
+    beforeJson: { user },
+    afterJson: {
+      purgedAt: input.purgedAt,
+      email,
+      deletedSessionCount: result.deletedSessionCount,
+      deletedEmailOutboxCount: result.deletedEmailOutboxCount,
+    },
+  }));
+  return result;
+}
+
 export async function confirmAsyncManualPaymentRequest(
   repository: AsyncChartServiceRepository,
   input: { paymentId: string; admin: Actor; confirmedAt: string; adminNote?: string; provisionalSale?: boolean },
@@ -2385,6 +2422,10 @@ function normalizeAdminUserEmail(value: string): string {
     throw new Error('Valid email required');
   }
   return email;
+}
+
+function normalizePurgeEmail(value: string): string {
+  return normalizeAdminUserEmail(value);
 }
 
 function normalizeFreeTrialAllowanceCount(value: number): number {

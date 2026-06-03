@@ -82,6 +82,7 @@ import type {
   PasswordResetTokenRecord,
   PaymentTransferSettingsRecord,
   NoticePopupRecord,
+  PurgedUnverifiedUserAccountRecord,
   PublicBoardPostRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
@@ -169,6 +170,49 @@ export function createPostgresAsyncChartServiceRepository(
     },
     async saveUser(user: ServiceUserRecord): Promise<void> {
       await execute(createPostgresUpsertStatement('users', mapUserToPostgresRow(user), ['id']));
+    },
+    async purgeUnverifiedUserByEmail(email: string): Promise<PurgedUnverifiedUserAccountRecord | null> {
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = await selectOne('users', mapUserFromPostgresRow, { email: normalizedEmail });
+      if (!user || user.emailVerifiedAt) return null;
+
+      const sessions = await selectMany('auth_sessions', mapAuthSessionFromPostgresRow, { user_id: user.id });
+      const emailOutbox = (await selectMany('email_outbox', mapEmailOutboxFromPostgresRow))
+        .filter((record) => record.recipientEmail.toLowerCase() === normalizedEmail);
+      const supportThreads = await selectMany('support_threads', mapSupportThreadFromPostgresRow, {
+        author_user_id: user.id,
+      });
+      const payments = await selectMany('payment_requests', mapPaymentFromPostgresRow, { user_id: user.id });
+
+      await execute(createPostgresDeleteStatement('auth_sessions', { user_id: user.id }));
+      await execute(createPostgresDeleteStatement('social_auth_accounts', { user_id: user.id }));
+      await execute(createPostgresDeleteStatement('password_reset_tokens', { user_id: user.id }));
+      await execute(createPostgresDeleteStatement('email_verification_tokens', { user_id: user.id }));
+      await execute(createPostgresDeleteStatement('email_outbox', { recipient_email: normalizedEmail }));
+      await execute(createPostgresDeleteStatement('signup_agreements', { user_id: user.id }));
+      await execute(createPostgresDeleteStatement('chart_user_settings', { user_id: user.id }));
+      await execute(createPostgresDeleteStatement('notifications', { user_id: user.id }));
+      await execute(createPostgresDeleteStatement('referral_ledgers', { referrer_user_id: user.id }));
+      await execute(createPostgresDeleteStatement('referral_ledgers', { referred_user_id: user.id }));
+      for (const payment of payments) {
+        await execute(createPostgresDeleteStatement('referral_ledgers', { payment_request_id: payment.id }));
+      }
+      await execute(createPostgresDeleteStatement('payment_requests', { user_id: user.id }));
+      await execute(createPostgresDeleteStatement('free_trial_usage_records', { user_id: user.id }));
+      await execute(createPostgresDeleteStatement('free_trial_user_allowances', { user_id: user.id }));
+      await execute(createPostgresDeleteStatement('subscriptions', { user_id: user.id }));
+      await execute(createPostgresDeleteStatement('support_messages', { author_user_id: user.id }));
+      for (const thread of supportThreads) {
+        await execute(createPostgresDeleteStatement('support_messages', { thread_id: thread.id }));
+      }
+      await execute(createPostgresDeleteStatement('support_threads', { author_user_id: user.id }));
+      await execute(createPostgresDeleteStatement('users', { id: user.id }));
+
+      return {
+        user,
+        deletedSessionCount: sessions.length,
+        deletedEmailOutboxCount: emailOutbox.length,
+      };
     },
     async getSocialAuthAccount(
       provider: SocialAuthProvider,
