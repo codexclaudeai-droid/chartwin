@@ -270,6 +270,58 @@ test('signup API queues email verification and login requires verified email', a
   assert.match(loginResponse.headers.get('set-cookie') ?? '', /tc_chart_session=/);
 });
 
+test('signup API does not create a session before email verification when trial is requested', async () => {
+  const {
+    getChartServiceRepository,
+    resetChartServiceRateLimits,
+  } = await import('../src/server/chart-service/index.ts');
+  const signupRoute = await import('../app/api/auth/signup/route.ts');
+  const loginRoute = await import('../app/api/auth/login/route.ts');
+  const repository = getChartServiceRepository();
+  const email = `verify-trial-signup-${Date.now()}@example.com`;
+
+  resetChartServiceRateLimits();
+  const signupResponse = await signupRoute.POST(new Request('http://localhost/api/auth/signup', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+      name: 'Verify Trial Signup User',
+      password: 'Aa1!aaaa',
+      passwordConfirm: 'Aa1!aaaa',
+      phoneNumber: '010-3333-5555',
+      acceptedTerms: true,
+      acceptedPrivacy: true,
+      autoStartTrial: true,
+    }),
+  }));
+  const signupPayload = await signupResponse.json();
+
+  assert.equal(signupResponse.status, 200);
+  assert.equal(signupPayload.verificationRequired, true);
+  assert.equal(signupPayload.redirectTo, null);
+  assert.equal(signupResponse.headers.get('set-cookie'), null);
+  assert.equal(signupResponse.headers.get('X-Email-Delivery-Sent'), '1');
+  assert.equal(repository.getUserByEmail(email)?.emailVerifiedAt, null);
+
+  resetChartServiceRateLimits();
+  const blockedLoginResponse = await loginRoute.POST(new Request('http://localhost/api/auth/login', {
+    method: 'POST',
+    headers: {
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ email, password: 'Aa1!aaaa' }),
+  }));
+  const blockedLoginPayload = await blockedLoginResponse.json();
+
+  assert.equal(blockedLoginResponse.status, 401);
+  assert.match(blockedLoginPayload.message, /Email verification required/);
+});
+
 test('email verification link opens a friendly page instead of raw JSON', async () => {
   const { GET } = await import('../app/api/auth/verify-email/route.ts');
   const pageSource = readFileSync(new URL('../app/verify-email/page.tsx', import.meta.url), 'utf8');

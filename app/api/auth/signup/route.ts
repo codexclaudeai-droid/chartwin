@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server.js';
 import {
   assertSameOriginMutationRequest,
-  createAsyncSessionForUser,
   createEmailDeliveryProviderFromEnv,
   getEmailDeliveryRuntimeEnv,
   getAsyncChartServicePersistence,
@@ -43,7 +42,7 @@ export async function POST(request: NextRequest) {
     const acceptedAt = new Date().toISOString();
     const ipAddress = getRequestIpAddress(request);
     const userAgent = request.headers.get('user-agent')?.trim() || null;
-    const { result, agreement, trial, session } = await persistence.runMutation(async (repository) => {
+    const { result, agreement, trial } = await persistence.runMutation(async (repository) => {
       const webInfoSettings = await getAsyncWebInfoSettingsForDisplay(repository);
       const signupResult = await registerAsyncMockUserAccount(repository, {
         email: String(body.email || ''),
@@ -65,7 +64,6 @@ export async function POST(request: NextRequest) {
           result: signupResult,
           agreement: signupAgreement,
           trial: null,
-          session: null,
         };
       }
 
@@ -76,21 +74,16 @@ export async function POST(request: NextRequest) {
         },
         requestedAt: acceptedAt,
       });
-      const sessionResult = await createAsyncSessionForUser(repository, {
-        userId: signupResult.user.id,
-        createdAt: acceptedAt,
-      });
       return {
         result: signupResult,
         agreement: signupAgreement,
         trial: trialResult,
-        session: sessionResult,
       };
     });
     const response = NextResponse.json({
       ok: true,
-      verificationRequired: !autoStartTrial,
-      redirectTo: autoStartTrial ? '/chart' : null,
+      verificationRequired: true,
+      redirectTo: null,
       user: toPublicServiceUserRecord(result.user),
       verification: {
         expiresAt: result.verification.expiresAt,
@@ -107,21 +100,16 @@ export async function POST(request: NextRequest) {
         privacyAcceptedAt: agreement.privacyAcceptedAt,
       },
     });
-    if (session) {
-      response.headers.set('Set-Cookie', session.cookie);
-    }
-    if (!autoStartTrial) {
-      const provider = createEmailDeliveryProviderFromEnv(getEmailDeliveryRuntimeEnv());
-      const emailDelivery = await persistence.runMutation((repository) => (
-        deliverQueuedEmailOutbox(repository, provider, {
-          deliveredAt: new Date().toISOString(),
-          limit: 1,
-          recordIds: [result.verification.emailOutboxId],
-        })
-      ));
-      response.headers.set('X-Email-Delivery-Sent', String(emailDelivery.sent));
-      response.headers.set('X-Email-Delivery-Failed', String(emailDelivery.failed));
-    }
+    const provider = createEmailDeliveryProviderFromEnv(getEmailDeliveryRuntimeEnv());
+    const emailDelivery = await persistence.runMutation((repository) => (
+      deliverQueuedEmailOutbox(repository, provider, {
+        deliveredAt: new Date().toISOString(),
+        limit: 1,
+        recordIds: [result.verification.emailOutboxId],
+      })
+    ));
+    response.headers.set('X-Email-Delivery-Sent', String(emailDelivery.sent));
+    response.headers.set('X-Email-Delivery-Failed', String(emailDelivery.failed));
     return response;
   } catch (error) {
     return NextResponse.json({
