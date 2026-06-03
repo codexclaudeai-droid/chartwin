@@ -28,6 +28,10 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(deployWorkflow, /npm run service:bootstrap/);
   assert.match(deployWorkflow, /npm run service:postgres:admin-check/);
   assert.match(deployWorkflow, /node scripts\/ensure-cloudflare-hyperdrive\.mjs/);
+  assert.ok(
+    deployWorkflow.indexOf('Upload runtime secrets') < deployWorkflow.indexOf('Deploy Worker'),
+    'runtime secrets must be uploaded before deploying the Worker',
+  );
   assert.match(deployWorkflow, /CHART_SERVICE_DATABASE_URL/);
   assert.match(deployWorkflow, /CHART_SERVICE_SESSION_SECRET/);
   assert.match(deployWorkflow, /CLOUDFLARE_HYPERDRIVE_NAME:\s+tradingcore-hyperdrive/);

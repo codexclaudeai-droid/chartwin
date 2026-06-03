@@ -72,9 +72,6 @@ jobs:
       - name: Build integrated Next.js Cloudflare worker
         run: npm run service:cloudflare:build
 
-      - name: Deploy Worker
-        run: npx wrangler deploy
-
       - name: Upload runtime secrets
         run: |
           set -euo pipefail
@@ -91,3 +88,6 @@ jobs:
           do
             printf '%s' "${!name}" | npx wrangler secret put "$name"
           done
+
+      - name: Deploy Worker
+        run: npx wrangler deploy
