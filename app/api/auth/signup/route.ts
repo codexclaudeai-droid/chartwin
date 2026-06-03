@@ -3,6 +3,7 @@ import {
   assertSameOriginMutationRequest,
   createAsyncSessionForUser,
   createEmailDeliveryProviderFromEnv,
+  getEmailDeliveryRuntimeEnv,
   getAsyncChartServicePersistence,
   getAsyncWebInfoSettingsForDisplay,
   guardMutationRequest,
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
       response.headers.set('Set-Cookie', session.cookie);
     }
     if (!autoStartTrial) {
-      const provider = createEmailDeliveryProviderFromEnv(process.env);
+      const provider = createEmailDeliveryProviderFromEnv(getEmailDeliveryRuntimeEnv());
       const emailDelivery = await persistence.runMutation((repository) => (
         deliverQueuedEmailOutbox(repository, provider, {
           deliveredAt: new Date().toISOString(),

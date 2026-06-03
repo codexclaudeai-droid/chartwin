@@ -3,6 +3,7 @@ import {
   assertSameOriginMutationRequest,
   createEmailDeliveryProviderFromEnv,
   deliverQueuedEmailOutbox,
+  getEmailDeliveryRuntimeEnv,
   getAsyncChartServicePersistence,
   guardMutationRequest,
   resendAsyncEmailVerification,
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     requestedAt: new Date().toISOString(),
   }));
   if (result.emailOutboxId) {
-    const provider = createEmailDeliveryProviderFromEnv(process.env);
+    const provider = createEmailDeliveryProviderFromEnv(getEmailDeliveryRuntimeEnv());
     await persistence.runMutation((repository) => deliverQueuedEmailOutbox(repository, provider, {
       deliveredAt: new Date().toISOString(),
       limit: 1,

@@ -37,6 +37,8 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(deployWorkflow, /CHART_SERVICE_DATABASE_SSL_MODE:\s+require/);
   assert.match(wranglerConfig, /CHART_SERVICE_RUNTIME_TARGET/);
   assert.match(wranglerConfig, /cloudflare-workers/);
+  assert.match(wranglerConfig, /"CHART_SERVICE_EMAIL_PROVIDER":\s*"cloudflare"/);
+  assert.doesNotMatch(wranglerConfig, /"CHART_SERVICE_EMAIL_PROVIDER":\s*"log"/);
   assert.match(deployWorkflow, /CHART_SERVICE_EMAIL_PROVIDER:\s+cloudflare/);
   assert.match(deployWorkflow, /CLOUDFLARE_ACCOUNT_ID/);
   assert.match(deployWorkflow, /CLOUDFLARE_API_TOKEN/);

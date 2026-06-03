@@ -1,5 +1,6 @@
 import type { AsyncChartServiceRepository } from './async-repository.ts';
 import type { EmailOutboxRecord } from './repository.ts';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 export type EmailDeliveryMessage = {
   id: string;
@@ -124,6 +125,16 @@ export function createEmailDeliveryProviderFromEnv(
   throw new Error('Unsupported or missing CHART_SERVICE_EMAIL_PROVIDER. Use "log" or "cloudflare".');
 }
 
+export function getEmailDeliveryRuntimeEnv(
+  env: EmailDeliveryRuntimeEnv = process.env,
+): EmailDeliveryRuntimeEnv {
+  const cloudflareEnv = getCloudflareEmailDeliveryEnv();
+  return {
+    ...env,
+    ...cloudflareEnv,
+  };
+}
+
 export function createCloudflareEmailDeliveryProvider(input: {
   accountId: string;
   apiToken: string;
@@ -225,4 +236,19 @@ function requireEmailProviderEnv(env: EmailDeliveryRuntimeEnv, key: keyof EmailD
   const value = env[key]?.trim();
   if (!value) throw new Error(`${key} is required for Cloudflare email delivery.`);
   return value;
+}
+
+function getCloudflareEmailDeliveryEnv(): EmailDeliveryRuntimeEnv {
+  try {
+    const context = getCloudflareContext();
+    const env = context.env as EmailDeliveryRuntimeEnv;
+    return {
+      NODE_ENV: env.NODE_ENV,
+      CHART_SERVICE_EMAIL_PROVIDER: env.CHART_SERVICE_EMAIL_PROVIDER,
+      CLOUDFLARE_ACCOUNT_ID: env.CLOUDFLARE_ACCOUNT_ID,
+      CLOUDFLARE_API_TOKEN: env.CLOUDFLARE_API_TOKEN,
+    };
+  } catch {
+    return {};
+  }
 }
