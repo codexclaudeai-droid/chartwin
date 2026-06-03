@@ -6189,6 +6189,7 @@ export class SimpleChart {
       downColor: this.config.candleStyle?.downColor ?? '#f23645',
     });
 
+    const isMobileIndicatorViewport = (window.matchMedia?.('(pointer: coarse)').matches ?? false) || window.innerWidth <= 768;
     const indicatorRenderInput: IndicatorRenderGroupedInput = {
       shared: {
         ctx,
@@ -6225,6 +6226,7 @@ export class SimpleChart {
         displayData,
         R,
         mainH,
+        isMobileViewport: isMobileIndicatorViewport,
       },
       volumeOverlay: {
         chartWidth: chartW,

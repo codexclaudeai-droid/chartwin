@@ -48,6 +48,7 @@ test('Statistical Trailing Stop renderer splits line values by bias', () => {
 test('Statistical Trailing Stop marker helpers calculate size and label text', () => {
   assert.deepEqual(getStatisticalTrailingStopMarkerGeometry(1), { markerSize: 6, markerOffset: 10 });
   assert.deepEqual(getStatisticalTrailingStopMarkerGeometry(3), { markerSize: 12, markerOffset: 20 });
+  assert.deepEqual(getStatisticalTrailingStopMarkerGeometry(3, true), { markerSize: 3, markerOffset: 5 });
 
   const label = getStatisticalTrailingStopPanelLabelText({
     level: [90],

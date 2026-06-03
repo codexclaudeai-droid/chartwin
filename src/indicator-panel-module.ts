@@ -113,11 +113,7 @@ export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: strin
     { key: 'volumeProfileDown', label: 'Bear Volume' },
     { key: 'volumeProfilePoc', label: 'POC' },
   ],
-  vpvr: [
-    { key: 'volumeProfileUp', label: 'Bull Volume' },
-    { key: 'volumeProfileDown', label: 'Bear Volume' },
-    { key: 'volumeProfilePoc', label: 'POC' },
-  ],
+  vpvr: [{ key: 'vpvr', label: 'Line' }],
   ichimoku: [
     { key: 'ichimokuTenkan', label: '전환선' },
     { key: 'ichimokuKijun', label: '기준선' },

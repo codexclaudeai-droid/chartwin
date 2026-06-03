@@ -102,6 +102,7 @@ export interface RenderMainIndicatorsParams {
   resolveStyle: ResolveIndicatorStyle;
   startIndex: number;
   pixelRatio: number;
+  isMobileViewport?: boolean;
   chartLeft: number;
   chartRight: number;
   effectiveChartLeft: number;
@@ -141,6 +142,7 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     resolveStyle,
     startIndex,
     pixelRatio,
+    isMobileViewport = false,
     chartLeft,
     chartRight,
     effectiveChartLeft,
@@ -267,7 +269,8 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     });
   }
 
-  if (indicatorLayerOn && ind.statisticalTrailingStop.show) {
+  const statisticalTrailingStopVisible = showLine('statisticalTrailingStopBull') || showLine('statisticalTrailingStopBear');
+  if (indicatorLayerOn && ind.statisticalTrailingStop.show && statisticalTrailingStopVisible) {
     const bullStyle = resolveStyle('statisticalTrailingStopBull', '#22ab94', 1.7);
     const bearStyle = resolveStyle('statisticalTrailingStopBear', '#f23645', 1.7);
     renderStatisticalTrailingStopBase({
@@ -290,7 +293,7 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     if (ind.statisticalTrailingStop.trailMarkEnabled !== false) {
       const markerStyle = String(ind.statisticalTrailingStop.trailMarkStyle || 'circle').toLowerCase();
       const markerLocation = String(ind.statisticalTrailingStop.trailMarkLocation || 'absolute').toLowerCase();
-      const markerGeometry = getStatisticalTrailingStopMarkerGeometry(pixelRatio);
+      const markerGeometry = getStatisticalTrailingStopMarkerGeometry(pixelRatio, isMobileViewport);
       renderStatisticalTrailingStopMarkers({
         ctx,
         data: statisticalTrailingStopD,

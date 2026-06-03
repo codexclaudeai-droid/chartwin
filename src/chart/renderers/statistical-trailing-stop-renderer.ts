@@ -90,14 +90,15 @@ export function renderStatisticalTrailingStopBase(params: {
   if (showBearLine) drawLine(bearLine, bearStyle.color, bearStyle.width, bearStyle.dash);
 }
 
-export function getStatisticalTrailingStopMarkerGeometry(pixelRatio: number): {
+export function getStatisticalTrailingStopMarkerGeometry(pixelRatio: number, isMobileViewport = false): {
   markerSize: number;
   markerOffset: number;
 } {
   const ratio = Math.max(1, pixelRatio / 1.5);
+  const mobileScale = isMobileViewport ? 0.25 : 1;
   return {
-    markerSize: Math.max(4, 6 * ratio),
-    markerOffset: Math.max(8, 10 * ratio),
+    markerSize: Math.max(4, 6 * ratio) * mobileScale,
+    markerOffset: Math.max(8, 10 * ratio) * mobileScale,
   };
 }
 

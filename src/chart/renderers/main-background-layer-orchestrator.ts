@@ -164,7 +164,7 @@ export function renderMainBackgroundLayers(params: RenderMainBackgroundLayersPar
 
   renderVpvrBackground({
     ctx,
-    enabled: indicatorLayerOn && indicators.vpvr.show,
+    enabled: indicatorLayerOn && indicators.vpvr.show && showLine('vpvr'),
     vp: indicators.vpvr,
     candles,
     minPrice,
