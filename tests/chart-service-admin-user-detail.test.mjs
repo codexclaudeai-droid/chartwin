@@ -311,7 +311,7 @@ test('admin user detail delete API can purge a previously disabled unverified te
     id: userId,
     email,
     name: 'Disabled Unverified Purge',
-    role: 'member',
+    role: 'trial',
     accountStatus: 'suspended',
     passwordHash: null,
     referralCode: 'PURGD3',

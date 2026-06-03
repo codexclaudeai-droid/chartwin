@@ -1602,8 +1602,8 @@ export async function purgeAsyncUnverifiedUserAccount(
   if (!isPurgeableUnverifiedUserAccount(user)) {
     throw new Error('Cannot purge a verified email account');
   }
-  if (user.role !== USER_ROLES.member) {
-    throw new Error('Only unverified member accounts can be purged');
+  if (requiresSuperAdmin(user.role)) {
+    throw new Error('Cannot purge an admin account');
   }
   if (user.id === input.admin.id) {
     throw new Error('Cannot purge your own account');
@@ -1628,7 +1628,7 @@ export async function purgeAsyncUnverifiedUserAccount(
 }
 
 function isPurgeableUnverifiedUserAccount(user: ServiceUserRecord): boolean {
-  if (!user.emailVerifiedAt) return true;
+  if (!user.emailVerifiedAt && user.role === USER_ROLES.member) return true;
   return user.accountStatus === USER_ACCOUNT_STATUSES.suspended && !user.passwordHash;
 }
 
