@@ -311,21 +311,9 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12"></path><circle cx="12" cy="12" r="2.8"></circle></svg>`
     );
     const eyeIconSvg = (visible: boolean): string => (
-      visible ? eyeOffSvg(actionIconSz) : eyeOnSvg(actionIconSz)
+      visible ? eyeOnSvg(actionIconSz) : eyeOffSvg(actionIconSz)
     );
     const isIndicatorGloballyHidden = (): boolean => chart.isIndicatorsVisible?.() === false;
-    const appendHiddenIndicatorMarker = (target: HTMLElement, hidden: boolean) => {
-      if (!hidden) return;
-      target.dataset.indicatorHidden = 'true';
-      const marker = document.createElement('span');
-      marker.className = 'indicator-overlay-hidden-marker';
-      marker.title = '감춘 지표';
-      marker.setAttribute('aria-label', '감춘 지표');
-      marker.innerHTML = eyeOffSvg(isMobileOverlay ? 14 : (compactOverlay ? 11 : 13));
-      marker.style.cssText = `display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
-        color:rgba(205,216,236,0.82);opacity:0.95;line-height:1;`;
-      target.appendChild(marker);
-    };
 
     const makeTagActionButton = (title: string, svg: string, onClick: () => void): HTMLButtonElement => {
       const btn = document.createElement('button');
@@ -356,7 +344,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       const defaultGap = isMobileOverlay ? mobileActionGapBase : (compactOverlay ? 3 : desktopActionGap);
       actions.style.cssText = `display:none;align-items:center;gap:${defaultGap}px;`;
       const currentlyHidden = isIndicatorGloballyHidden() || !isIndicatorLineVisible(key);
-      appendHiddenIndicatorMarker(tag, currentlyHidden);
+      actions.dataset.hiddenDefault = currentlyHidden ? '1' : '0';
       const currentlyVisible = isIndicatorLineVisible(key);
       const hideBtn = makeTagActionButton(
         currentlyVisible ? '감추기' : '표시',
@@ -368,11 +356,13 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         `<svg viewBox="0 0 24 24" width="${actionIconSz}" height="${actionIconSz}" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"></line><circle cx="9" cy="7" r="2"></circle><line x1="4" y1="12" x2="20" y2="12"></line><circle cx="15" cy="12" r="2"></circle><line x1="4" y1="17" x2="20" y2="17"></line><circle cx="11" cy="17" r="2"></circle></svg>`,
         openSettings,
       );
+      settingsBtn.dataset.secondaryAction = '1';
       const actionBtnSz = isMobileOverlay ? 19 : (compactOverlay ? 15 : desktopActionButtonSize);
       const trashBtn = document.createElement('button');
       trashBtn.type = 'button';
       trashBtn.title = '지표 삭제';
       trashBtn.className = 'ind-tag-trash-btn';
+      trashBtn.dataset.secondaryAction = '1';
       trashBtn.style.cssText = `width:${actionBtnSz}px;height:${actionBtnSz}px;
         display:inline-flex;align-items:center;justify-content:center;
         border:none;border-radius:4px;background:transparent;
@@ -398,6 +388,12 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       actions.appendChild(settingsBtn);
       actions.appendChild(trashBtn);
       tag.appendChild(actions);
+      const setTagActionsExpanded = (expanded: boolean) => {
+        actions.style.display = expanded || currentlyHidden ? 'inline-flex' : 'none';
+        settingsBtn.style.display = expanded ? 'inline-flex' : 'none';
+        trashBtn.style.display = expanded ? 'inline-flex' : 'none';
+      };
+      setTagActionsExpanded(false);
       const valueEls = Array.from(tag.querySelectorAll<HTMLElement>('.indicator-overlay-tag-value'));
       const setMobileActiveState = (active: boolean) => {
         tag.classList.toggle('indicator-overlay-main-tag-mobile-active', active);
@@ -409,17 +405,17 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         if (isMobileOverlay) {
           actions.style.gap = `${active ? mobileActionGapExpanded : mobileActionGapBase}px`;
         }
-        actions.style.display = active ? 'inline-flex' : 'none';
+        setTagActionsExpanded(active);
       };
       tag.addEventListener('mouseenter', () => {
         if (isMobileOverlay) return;
         hoverEnter();
-        actions.style.display = 'inline-flex';
+        setTagActionsExpanded(true);
       });
       tag.addEventListener('mouseleave', () => {
         if (isMobileOverlay) return;
         hoverLeave();
-        actions.style.display = 'none';
+        setTagActionsExpanded(false);
       });
       if (isMobileOverlay) {
         tag.addEventListener('click', (event) => {
@@ -436,7 +432,11 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
             Array.from(activeMobileMainTag.querySelectorAll<HTMLElement>('.indicator-overlay-tag-value'))
               .forEach((el) => { el.style.display = ''; });
             const prevActions = activeMobileMainTag.querySelector<HTMLElement>('.indicator-overlay-tag-actions');
-            if (prevActions) prevActions.style.display = 'none';
+            if (prevActions) {
+              prevActions.style.display = prevActions.dataset.hiddenDefault === '1' ? 'inline-flex' : 'none';
+              prevActions.querySelectorAll<HTMLElement>('[data-secondary-action="1"]')
+                .forEach((el) => { el.style.display = 'none'; });
+            }
           }
           if (nextActive) {
             activeMobileMainTag = tag;
@@ -951,10 +951,11 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     };
 
     const iconSvg = (
-      kind: 'eye' | 'settings' | 'delete' | 'up' | 'down' | 'collapse' | 'expand' | 'maximize' | 'restore' | 'menu',
+      kind: 'eye' | 'eyeOff' | 'settings' | 'delete' | 'up' | 'down' | 'collapse' | 'expand' | 'maximize' | 'restore' | 'menu',
     ) => {
       const map: Record<string, string> = {
         eye: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><path class="eye-lid-top" d="M3 12c2.6-3.4 5.5-5 9-5 3.5 0 6.4 1.6 9 5"></path><path class="eye-lid-bottom" d="M3 12c2.6 3.4 5.5 5 9 5 3.5 0 6.4-1.6 9-5"></path><circle class="eye-iris" cx="12" cy="12" r="2.8"></circle></svg>`,
+        eyeOff: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><path class="eye-lid-top" d="M3 12c2.6-3.4 5.5-5 9-5 3.5 0 6.4 1.6 9 5"></path><path class="eye-lid-bottom" d="M3 12c2.6 3.4 5.5 5 9 5 3.5 0 6.4-1.6 9-5"></path><circle class="eye-iris" cx="12" cy="12" r="2.8"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`,
         settings: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><circle class="settings-knob-left" cx="9" cy="7" r="2.2"></circle><line x1="4" y1="12" x2="20" y2="12"></line><circle class="settings-knob-right" cx="15" cy="12" r="2.2"></circle><line x1="4" y1="17" x2="20" y2="17"></line><circle class="settings-knob-left" cx="11" cy="17" r="2.2"></circle></svg>`,
         delete: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><polyline class="trash-lid" points="3 6 5 6 21 6"></polyline><path class="trash-body" d="M19 6l-1 14H6L5 6m3 0V4h8v2"></path><circle class="trash-dot-1" cx="9" cy="10.4" r="0.9" fill="currentColor" stroke="none" opacity="0"></circle><circle class="trash-dot-2" cx="12" cy="10.4" r="0.9" fill="currentColor" stroke="none" opacity="0"></circle><circle class="trash-dot-3" cx="15" cy="10.4" r="0.9" fill="currentColor" stroke="none" opacity="0"></circle></svg>`,
         up: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 15.2V4.8M10 4.8 6.8 8.2M10 4.8l3.2 3.4" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -1061,12 +1062,11 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
 
       const panelVisible = isIndicatorLineVisible(panelId);
       const panelHidden = isIndicatorGloballyHidden() || !panelVisible;
-      appendHiddenIndicatorMarker(infoWrap, panelHidden);
 
       const actionWrap = document.createElement('div');
       actionWrap.style.cssText = `display:none;align-items:center;gap:2px;height:${titleHeaderBoxHeight}px;overflow:hidden;`;
 
-      const eyeBtn = iconBtn(iconSvg('eye'), panelVisible ? '감추기' : '표시', () => {
+      const eyeBtn = iconBtn(iconSvg(panelVisible ? 'eye' : 'eyeOff'), panelVisible ? '감추기' : '표시', () => {
         setIndicatorLineVisible(panelId, !panelVisible);
         refreshAll();
       });
@@ -1089,9 +1089,15 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       actionWrap.appendChild(eyeBtn);
       actionWrap.appendChild(settingBtn);
       actionWrap.appendChild(trashBtn);
+      const setHeaderActionsExpanded = (expanded: boolean) => {
+        actionWrap.style.display = expanded || panelHidden ? 'flex' : 'none';
+        settingBtn.style.display = expanded ? 'flex' : 'none';
+        trashBtn.style.display = expanded ? 'flex' : 'none';
+      };
+      setHeaderActionsExpanded(false);
 
       header.addEventListener('mouseenter', () => {
-        actionWrap.style.display = 'flex';
+        setHeaderActionsExpanded(true);
         header.style.background = 'rgba(15,21,33,0.60)';
         header.style.borderColor = '#546a93';
         header.style.boxShadow = '0 4px 14px rgba(0,0,0,0.28)';
@@ -1102,7 +1108,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         }
       });
       header.addEventListener('mouseleave', () => {
-        actionWrap.style.display = 'none';
+        setHeaderActionsExpanded(false);
         header.style.background = 'rgba(0,0,0,0.0)';
         header.style.borderColor = 'transparent';
         header.style.boxShadow = 'none';
