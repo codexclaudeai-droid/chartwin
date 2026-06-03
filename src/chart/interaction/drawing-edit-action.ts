@@ -12,10 +12,10 @@ export type DrawingDoubleClickAction =
 
 export function resolveDrawingDoubleClickAction(
   hitDrawing: DrawingHitTarget | null,
-  isTrendlineShape: (shape: DrawingShape) => boolean,
+  isTextEditableDrawing: (shape: DrawingShape) => boolean,
 ): DrawingDoubleClickAction {
   if (!hitDrawing) return { type: 'none' };
-  if (isTrendlineShape(hitDrawing.shape)) {
+  if (isTextEditableDrawing(hitDrawing.shape)) {
     return {
       type: 'edit-trendline-text',
       shape: hitDrawing.shape,
@@ -42,8 +42,8 @@ export interface ResolveDrawingMouseDownEditActionParams {
   hitDrawing: DrawingHitTarget | null;
   clickDetail: number;
   drawingToolActive: boolean;
-  hoveredGuideTrendline: DrawingShape | null;
-  isTrendlineShape: (shape: DrawingShape) => boolean;
+  hoveredGuideShape: DrawingShape | null;
+  isTextEditableDrawing: (shape: DrawingShape) => boolean;
 }
 
 export function resolveDrawingMouseDownEditAction(
@@ -53,8 +53,8 @@ export function resolveDrawingMouseDownEditAction(
     hitDrawing,
     clickDetail,
     drawingToolActive,
-    hoveredGuideTrendline,
-    isTrendlineShape,
+    hoveredGuideShape,
+    isTextEditableDrawing,
   } = params;
 
   if (
@@ -76,16 +76,16 @@ export function resolveDrawingMouseDownEditAction(
   }
 
   if (
-    hoveredGuideTrendline
-    && (!hitDrawing || (isTrendlineShape(hitDrawing.shape) && hitDrawing.shape.id === hoveredGuideTrendline.id))
+    hoveredGuideShape
+    && (!hitDrawing || (isTextEditableDrawing(hitDrawing.shape) && hitDrawing.shape.id === hoveredGuideShape.id))
   ) {
-    return { type: 'edit-trendline-text', shape: hoveredGuideTrendline, part: 'trendline-text-guide' };
+    return { type: 'edit-trendline-text', shape: hoveredGuideShape, part: 'trendline-text-guide' };
   }
 
   if (
     !drawingToolActive
     && hitDrawing
-    && isTrendlineShape(hitDrawing.shape)
+    && isTextEditableDrawing(hitDrawing.shape)
     && hitDrawing.part === 'trendline-text-guide'
   ) {
     return { type: 'edit-trendline-text', shape: hitDrawing.shape, part: 'trendline-text-guide' };

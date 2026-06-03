@@ -38,6 +38,7 @@ import type {
   TrendlineDrawingToolId,
 } from '../ui/workspace/drawing-types';
 import {
+  canCopyDrawingShape,
   cloneDrawingShape,
   getChannelGeometry as getChannelGeometryUtil,
   getTrendlineScreenLine,
@@ -73,6 +74,7 @@ import {
   createFibTrendDrawing,
   createHlineDrawing,
   createPositionDrawing,
+  createSingleAnchorLineDrawing,
   createTextNoteDrawing,
   finishDrawingDraft,
   resolveMeasureDraftClick,
@@ -103,6 +105,7 @@ import {
   constrainPositionDrawingPointer,
   normalizePositionDrawingHitPart,
 } from './interaction/position-drawing-hit-normalizer.ts';
+import { shouldShowCrosshairGuides } from './interaction/crosshair-guide-visibility.ts';
 import { resolveSubIndicatorAlertMouseDown } from './interaction/sub-indicator-alert-interaction.ts';
 import { resolveWheelInteraction } from './interaction/wheel-interaction.ts';
 import { renderCandles } from './renderers/candle-renderer.ts';
@@ -1116,9 +1119,12 @@ export class SimpleChart {
       'trendline',
       'extended-trendline',
       'ray-trendline',
+      'vertical-line',
+      'cross-line',
       'draw-pencil',
       'draw-highlighter',
       'draw-box',
+      'draw-circle',
       'hline',
       'channel',
       'fib-retracement',
@@ -1192,9 +1198,12 @@ export class SimpleChart {
       'trendline':       ['① 시작점을 탭하세요', '② 끝점을 탭해 추세선을 완성하세요'],
       'extended-trendline': ['① 시작점을 탭하세요', '② 끝점을 탭하면 양방향으로 연장됩니다'],
       'ray-trendline':   ['① 시작점을 탭하세요', '② 끝점을 탭하면 그 방향으로 연장됩니다'],
+      'vertical-line':   ['탭한 위치에 수직선이 그려집니다'],
+      'cross-line':      ['탭한 위치에 교차선이 그려집니다'],
       'draw-pencil':     ['① 시작점을 탭하세요', '② 끝점을 탭해 연필선을 완성하세요'],
       'draw-highlighter':['① 시작점을 탭하세요', '② 끝점을 탭해 형광펜선을 완성하세요'],
       'draw-box':        ['① 첫 번째 꼭짓점 탭', '② 반대 꼭짓점 탭으로 박스를 완성하세요'],
+      'draw-circle':     ['① 중심점을 탭하세요', '② 크기를 정할 위치를 탭해 원을 완성하세요'],
       'hline':           ['탭한 위치에 수평선이 그려집니다'],
       'channel':         ['① 첫 번째 선의 시작점 탭', '② 끝점 탭', '③ 두 번째 선 위치 탭'],
       'fib-retracement': ['① 시작점을 탭하세요', '② 끝점을 탭해 피보나치를 완성하세요'],
@@ -1448,7 +1457,7 @@ export class SimpleChart {
 
   public copySelectedDrawing(): boolean {
     const selected = this.getSelectedDrawing();
-    if (!selected || !this.isTrendlineShape(selected)) return false;
+    if (!canCopyDrawingShape(selected)) return false;
     const cloned = this.cloneShape(selected);
     cloned.id = '';
     this.copiedDrawingTemplate = cloned;
@@ -7495,6 +7504,14 @@ export class SimpleChart {
     return isTrendlineKind(shape?.kind);
   }
 
+  private isCircleTextShape(shape: Pick<DrawingShape, 'kind'> | Pick<DrawingDraft, 'kind'> | null | undefined): boolean {
+    return shape?.kind === 'draw-circle';
+  }
+
+  private isTextEditableDrawingShape(shape: Pick<DrawingShape, 'kind'> | Pick<DrawingDraft, 'kind'> | null | undefined): boolean {
+    return this.isTrendlineShape(shape) || this.isCircleTextShape(shape);
+  }
+
   private getTrendlineRenderLine(
     shape: Pick<DrawingShape, 'kind' | 'a' | 'b'> | Pick<DrawingDraft, 'kind' | 'a' | 'b'>,
     metrics: NonNullable<ReturnType<SimpleChart['getMainViewportMetrics']>>,
@@ -7549,6 +7566,21 @@ export class SimpleChart {
     metrics: NonNullable<ReturnType<SimpleChart['getMainViewportMetrics']>>,
     placeholder = '',
   ): { text: string; angle: number; x: number; y: number; width: number; height: number; isPlaceholder: boolean } {
+    if (shape.kind === 'draw-circle') {
+      const rawText = (shape.text ?? '').trim();
+      const text = rawText || placeholder;
+      const isPlaceholder = rawText.length === 0 && text.length > 0;
+      if (text === '') {
+        return { text: '', angle: 0, x: 0, y: 0, width: 0, height: 0, isPlaceholder: true };
+      }
+      const x = this.xForIndex(shape.a.index, metrics.totalSp, metrics.candleW);
+      const y = metrics.getY(shape.a.price);
+      this.overlayCtx.save();
+      this.overlayCtx.font = `600 12px ${CHART_FONT_STACK}`;
+      const width = Math.ceil(this.overlayCtx.measureText(text).width);
+      this.overlayCtx.restore();
+      return { text, angle: 0, x, y, width, height: 14, isPlaceholder };
+    }
     const line = this.getTrendlineRenderLine(shape, metrics);
     const rawText = (shape.text ?? '').trim();
     const text = rawText || placeholder;
@@ -7569,7 +7601,7 @@ export class SimpleChart {
   }
 
   private applyTrendlineTextEdit(shapeId: string, rawValue: string): void {
-    const shape = this.drawings.find((s) => s.id === shapeId && this.isTrendlineShape(s));
+    const shape = this.drawings.find((s) => s.id === shapeId && this.isTextEditableDrawingShape(s));
     if (!shape) return;
     const trimmed = rawValue.trim();
     if (trimmed) {
@@ -7663,7 +7695,7 @@ export class SimpleChart {
 
   private tryOpenSelectedTrendlineGuideEditor(mx: number, my: number): boolean {
     if (this.drawingTool || !this.selectedDrawingId) return false;
-    const selected = this.drawings.find((shape) => shape.id === this.selectedDrawingId && this.isTrendlineShape(shape));
+    const selected = this.drawings.find((shape) => shape.id === this.selectedDrawingId && this.isTextEditableDrawingShape(shape));
     if (!selected) return false;
     if ((selected.text ?? '').trim()) return false;
     const metrics = this.getMainViewportMetrics();
@@ -7827,17 +7859,22 @@ export class SimpleChart {
   }
 
   private hitTestDrawing(shape: DrawingShape, mx: number, my: number, metrics: NonNullable<ReturnType<SimpleChart['getMainViewportMetrics']>>): DrawingHitPart | null {
+    const hitMetrics = {
+      ...metrics,
+      chartTop: metrics.top,
+      chartBottom: metrics.mainH,
+    };
     return hitTestDrawingShape({
       shape,
       mx,
       my,
-      metrics,
+      metrics: hitMetrics,
       hoveredDrawingId: this.hoveredDrawingId,
       hoveredDrawingPart: this.hoveredDrawingPart,
       adapters: {
         xForIndex: (index, totalSp, candleW) => this.xForIndex(index, totalSp, candleW),
-        getTrendlineRenderLine: (item, drawingMetrics) => this.getTrendlineRenderLine(item, drawingMetrics as typeof metrics),
-        getTrendlineTextLayout: (item, drawingMetrics, placeholder) => this.getTrendlineTextLayout(item, drawingMetrics as typeof metrics, placeholder),
+        getTrendlineRenderLine: (item) => this.getTrendlineRenderLine(item, metrics),
+        getTrendlineTextLayout: (item, _drawingMetrics, placeholder) => this.getTrendlineTextLayout(item, metrics, placeholder),
         getAnchoredVwapPlot: (item) => this.getAnchoredVwapPlot(item),
         isCoarsePointer: () => window.matchMedia?.('(pointer: coarse)').matches ?? false,
       },
@@ -7846,19 +7883,41 @@ export class SimpleChart {
 
   private findDrawingAt(mx: number, my: number): { shape: DrawingShape; part: DrawingHitPart } | null {
     const metrics = this.getMainViewportMetrics();
+    const hitMetrics = metrics ? {
+      ...metrics,
+      chartTop: metrics.top,
+      chartBottom: metrics.mainH,
+    } : null;
     return findDrawingAtPoint({
       drawings: this.drawings,
       drawingsVisible: this.drawingsVisible,
       selectedDrawingId: this.selectedDrawingId,
       mx,
       my,
-      metrics,
+      metrics: hitMetrics,
       hoveredDrawingId: this.hoveredDrawingId,
       hoveredDrawingPart: this.hoveredDrawingPart,
       adapters: {
         xForIndex: (index, totalSp, candleW) => this.xForIndex(index, totalSp, candleW),
-        getTrendlineRenderLine: (item, drawingMetrics) => this.getTrendlineRenderLine(item, drawingMetrics as NonNullable<ReturnType<SimpleChart['getMainViewportMetrics']>>),
-        getTrendlineTextLayout: (item, drawingMetrics, placeholder) => this.getTrendlineTextLayout(item, drawingMetrics as NonNullable<ReturnType<SimpleChart['getMainViewportMetrics']>>, placeholder),
+        getTrendlineRenderLine: (item) => metrics ? this.getTrendlineRenderLine(item, metrics) : {
+          anchorStartX: 0,
+          anchorStartY: 0,
+          anchorEndX: 0,
+          anchorEndY: 0,
+          lineStartX: 0,
+          lineStartY: 0,
+          lineEndX: 0,
+          lineEndY: 0,
+        },
+        getTrendlineTextLayout: (item, _drawingMetrics, placeholder) => metrics ? this.getTrendlineTextLayout(item, metrics, placeholder) : {
+          text: '',
+          angle: 0,
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0,
+          isPlaceholder: true,
+        },
         getAnchoredVwapPlot: (item) => this.getAnchoredVwapPlot(item),
         isCoarsePointer: () => window.matchMedia?.('(pointer: coarse)').matches ?? false,
       },
@@ -8089,35 +8148,29 @@ export class SimpleChart {
 
     const solidX = snapX;
     const selectedShape = this.getSelectedDrawing();
-    const isTrendlineEditMode = !this.drawingTool && (
-      this.isTrendlineShape(selectedShape) || this.trendlineTextEditorEl != null
-    );
-    const isTextNoteEditMode = !this.drawingTool && (
-      selectedShape?.kind === 'text-note' || this.textNoteEditorEl != null
-    );
-    const isChannelEditMode = !this.drawingTool && selectedShape?.kind === 'channel';
-    const isPositionEditMode = !this.drawingTool && (
-      selectedShape?.kind === 'long-position' || selectedShape?.kind === 'short-position'
-    );
-    const isFibEditMode = !this.drawingTool && (
-      selectedShape?.kind === 'fib-retracement' || selectedShape?.kind === 'fib-trend'
-    );
-    const isFreeDrawEditMode = !this.drawingTool && (
-      selectedShape?.kind === 'draw-pencil' || selectedShape?.kind === 'draw-highlighter' || selectedShape?.kind === 'draw-box'
-    );
-    const isHorizontalLineEditMode = !this.drawingTool && selectedShape?.kind === 'hline';
     const noDrawingInteraction = !this.drawingTool && !this.selectedDrawingId;
     const isDrawingEditMode = Boolean(this.drawingTool && this.drawingTool !== 'eraser');
+    const selectedDrawingActive = !this.drawingTool && (
+      Boolean(this.selectedDrawingId)
+      || this.trendlineTextEditorEl != null
+      || this.textNoteEditorEl != null
+    );
     const onYAxis = this.isOnMainYAxis(this.mouseX, this.mouseY)
       || Boolean(this.getSubYAxisPanel(this.mouseX, this.mouseY));
     const onXAxis = this.isOnXAxis(this.mouseX, this.mouseY);
-    const shouldDrawCrosshairGuides = !onYAxis && !onXAxis && (
-      (!_isTouchDevice && (noDrawingInteraction || isTrendlineEditMode || isTextNoteEditMode || isChannelEditMode || isPositionEditMode || isFibEditMode || isFreeDrawEditMode || isHorizontalLineEditMode || isDrawingEditMode || Boolean(this.drawingMoveState)))
-      || (_isTouchDevice && this.isCrosshairMode && noDrawingInteraction)
-    );
+    const shouldDrawCrosshairGuides = shouldShowCrosshairGuides({
+      isTouchDevice: _isTouchDevice,
+      noDrawingInteraction,
+      selectedDrawingActive,
+      drawingToolActive: isDrawingEditMode,
+      drawingMoveActive: Boolean(this.drawingMoveState),
+      isCrosshairMode: this.isCrosshairMode,
+      onYAxis,
+      onXAxis,
+    });
 
     if (shouldDrawCrosshairGuides) {
-      const useBlueEditGuide = isDrawingEditMode || isChannelEditMode || isHorizontalLineEditMode;
+      const useBlueEditGuide = !noDrawingInteraction;
       renderCrosshairGuide({
         ctx,
         width,
@@ -8601,14 +8654,14 @@ export class SimpleChart {
       && this.hoveredDrawingPart === 'trendline-text-guide'
       && this.hoveredDrawingId
     )
-      ? this.drawings.find((shape) => shape.id === this.hoveredDrawingId && this.isTrendlineShape(shape)) ?? null
+      ? this.drawings.find((shape) => shape.id === this.hoveredDrawingId && this.isTextEditableDrawingShape(shape)) ?? null
       : null;
     const editAction = resolveDrawingMouseDownEditAction({
       hitDrawing,
       clickDetail: e.detail,
       drawingToolActive: Boolean(this.drawingTool),
-      hoveredGuideTrendline,
-      isTrendlineShape: (shape) => this.isTrendlineShape(shape),
+      hoveredGuideShape: hoveredGuideTrendline,
+      isTextEditableDrawing: (shape) => this.isTextEditableDrawingShape(shape),
     });
     if (editAction.type === 'edit-anchored-vwap') {
       this.selectedDrawingId = editAction.shape.id;
@@ -8826,6 +8879,23 @@ export class SimpleChart {
         if (this.shouldAutoDisarmAfterCreate(created.kind)) this.setDrawingTool(null);
         return;
       }
+      if (this.drawingTool === 'vertical-line' || this.drawingTool === 'cross-line') {
+        const created = createSingleAnchorLineDrawing({
+          kind: this.drawingTool,
+          anchor,
+          fallbackIndex: this.startIndex,
+          fallbackPrice: anchor.price,
+          color: '#2f6cff',
+          width: HLINE_DEFAULT_WIDTH,
+        });
+        this.upsertDrawing(created);
+        this.selectedDrawingId = created.id;
+        this.selectedDrawingPart = 'line';
+        this.syncDrawingToolbar();
+        this.requestOverlayDraw();
+        if (this.shouldAutoDisarmAfterCreate(created.kind)) this.setDrawingTool(null);
+        return;
+      }
       if (this.drawingTool === 'anchored-vwap') {
         const created = this.createAnchoredVwapDrawing(anchor);
         this.upsertDrawing(created);
@@ -8881,7 +8951,7 @@ export class SimpleChart {
       return;
     }
     const hitDrawing = this.findDrawingAt(mx, my);
-    const drawingAction = resolveDrawingDoubleClickAction(hitDrawing, (shape) => this.isTrendlineShape(shape));
+    const drawingAction = resolveDrawingDoubleClickAction(hitDrawing, (shape) => this.isTextEditableDrawingShape(shape));
     if (drawingAction.type === 'edit-trendline-text') {
       this.selectedDrawingId = drawingAction.shape.id;
       this.selectedDrawingPart = drawingAction.part;
@@ -9105,6 +9175,9 @@ export class SimpleChart {
         this.pendingChannelId = null;
         if (this.shouldAutoDisarmAfterCreate(created.kind)) this.setDrawingTool(null);
         this.syncDrawingToolbar();
+        if (created.kind === 'draw-circle') {
+          this.openTrendlineTextEditor(created);
+        }
       }
       this.drawingDraft = null;
       this.drawingDragActive = false;
@@ -9159,6 +9232,9 @@ export class SimpleChart {
       if (this.shouldAutoDisarmAfterCreate(created.kind)) this.setDrawingTool(null);
       
       this.syncDrawingToolbar();
+      if (created.kind === 'draw-circle') {
+        this.openTrendlineTextEditor(created);
+      }
     }
     
     this.drawingDraft = null;
@@ -9274,9 +9350,17 @@ export class SimpleChart {
         this.updateChartCursor();
         return;
       }
-      if (!this.drawingTool && hitDrawing && this.isTrendlineShape(hitDrawing.shape) && hitDrawing.part === 'trendline-text-guide') {
+      if (
+        !this.drawingTool
+        && hitDrawing
+        && this.isTextEditableDrawingShape(hitDrawing.shape)
+        && (
+          hitDrawing.part === 'trendline-text-guide'
+          || (hitDrawing.part === 'body' && this.selectedDrawingId === hitDrawing.shape.id)
+        )
+      ) {
         this.selectedDrawingId = hitDrawing.shape.id;
-        this.selectedDrawingPart = 'trendline-text-guide';
+        this.selectedDrawingPart = hitDrawing.part === 'trendline-text-guide' ? 'trendline-text-guide' : 'body';
         this.drawingMoveState = null;
         this.syncDrawingToolbar();
         this.openTrendlineTextEditor(hitDrawing.shape);
@@ -9866,6 +9950,29 @@ export class SimpleChart {
         this.upsertDrawing(created);
         this.selectedDrawingId = created.id;
         this.selectedDrawingPart = 'start';
+        this.syncDrawingToolbar();
+        this.drawingDraft = null;
+        this.isCrosshairMode = false;
+        this.setDrawingTool(null);
+        this.requestOverlayDraw();
+        return;
+      }
+      if (this.drawingTool === 'vertical-line' || this.drawingTool === 'cross-line') {
+        const useX = this.touchDrawingCrosshairX || tx;
+        const useY = this.touchDrawingCrosshairY || ty;
+        const anchor = this.getMouseAnchor(useX, useY);
+        if (!anchor) { this.requestOverlayDraw(); return; }
+        const created = createSingleAnchorLineDrawing({
+          kind: this.drawingTool,
+          anchor,
+          fallbackIndex: this.startIndex,
+          fallbackPrice: anchor.price,
+          color: '#2f6cff',
+          width: HLINE_DEFAULT_WIDTH,
+        });
+        this.upsertDrawing(created);
+        this.selectedDrawingId = created.id;
+        this.selectedDrawingPart = 'line';
         this.syncDrawingToolbar();
         this.drawingDraft = null;
         this.isCrosshairMode = false;

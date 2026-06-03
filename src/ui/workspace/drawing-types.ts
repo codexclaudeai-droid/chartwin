@@ -3,8 +3,13 @@ export type TrendlineDrawingToolId =
   | 'extended-trendline'
   | 'ray-trendline';
 
+export type SingleAnchorLineDrawingToolId =
+  | 'vertical-line'
+  | 'cross-line';
+
 export type DrawingToolId =
   | TrendlineDrawingToolId
+  | SingleAnchorLineDrawingToolId
   | 'hline'
   | 'channel'
   | 'fib-retracement'
@@ -13,6 +18,7 @@ export type DrawingToolId =
   | 'draw-pencil'
   | 'draw-highlighter'
   | 'draw-box'
+  | 'draw-circle'
   | 'long-position'
   | 'short-position'
   | 'measure'

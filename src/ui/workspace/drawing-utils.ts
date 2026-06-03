@@ -2,6 +2,7 @@ import type {
   DrawingAnchor,
   DrawingDraft,
   DrawingShape,
+  SingleAnchorLineDrawingToolId,
   TrendlineDrawingToolId,
 } from './drawing-types';
 
@@ -19,6 +20,15 @@ type ScreenBounds = {
 
 export function isTrendlineKind(kind: string | null | undefined): kind is TrendlineDrawingToolId {
   return kind === 'trendline' || kind === 'extended-trendline' || kind === 'ray-trendline';
+}
+
+export function isSingleAnchorLineKind(kind: string | null | undefined): kind is SingleAnchorLineDrawingToolId {
+  return kind === 'vertical-line' || kind === 'cross-line';
+}
+
+export function canCopyDrawingShape(shape: Pick<DrawingShape, 'kind'> | null | undefined): boolean {
+  if (!shape) return false;
+  return isTrendlineKind(shape.kind) || shape.kind === 'draw-circle';
 }
 
 export function cloneDrawingShape(shape: DrawingShape): DrawingShape {
@@ -150,4 +160,30 @@ export function getTrendlineScreenLine(
     return { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
   }
   return { x1: a.x, y1: a.y, x2: forward.x, y2: forward.y };
+}
+
+export function getSingleAnchorLineSegments(
+  anchor: ScreenPoint,
+  bounds: ScreenBounds,
+  kind: SingleAnchorLineDrawingToolId,
+): Array<{ x1: number; y1: number; x2: number; y2: number }> {
+  const segments = [
+    { x1: anchor.x, y1: bounds.top, x2: anchor.x, y2: bounds.bottom },
+  ];
+  if (kind === 'cross-line') {
+    segments.push({ x1: bounds.left, y1: anchor.y, x2: bounds.right, y2: anchor.y });
+  }
+  return segments;
+}
+
+export function getCircleScreenGeometry(
+  center: ScreenPoint,
+  radiusAnchor: ScreenPoint,
+): { centerX: number; centerY: number; radiusX: number; radiusY: number } {
+  return {
+    centerX: center.x,
+    centerY: center.y,
+    radiusX: Math.abs(radiusAnchor.x - center.x),
+    radiusY: Math.abs(radiusAnchor.y - center.y),
+  };
 }

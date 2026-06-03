@@ -87,6 +87,18 @@ const tools: ToolboxTool[] = [
               icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5.2" y1="16.8" x2="11.7" y2="10.3"></line><line x1="13.9" y1="8.1" x2="21.2" y2="0.8"></line><circle cx="4" cy="18" r="1.7" fill="none"></circle><circle cx="12.8" cy="9.2" r="1.5" fill="none"></circle></svg>`,
             },
             {
+              id: 'vertical-line',
+              label: '수직선',
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="9.8"></line><line x1="12" y1="14.2" x2="12" y2="21"></line><circle cx="12" cy="12" r="1.7" fill="none"></circle></svg>`,
+              shortcut: 'Alt + V',
+            },
+            {
+              id: 'cross-line',
+              label: '교차선',
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="9.8"></line><line x1="12" y1="14.2" x2="12" y2="21"></line><line x1="3" y1="12" x2="9.8" y2="12"></line><line x1="14.2" y1="12" x2="21" y2="12"></line><circle cx="12" cy="12" r="1.7" fill="none"></circle></svg>`,
+              shortcut: 'Alt + C',
+            },
+            {
               id: 'hline',
               label: '수평선',
               icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="10.3" y2="12"></line><line x1="13.7" y1="12" x2="21" y2="12"></line><circle cx="12" cy="12" r="1.7" fill="none"></circle></svg>`,
@@ -193,6 +205,11 @@ const tools: ToolboxTool[] = [
               label: '박스',
               icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="16.3" y2="6"></line><line x1="19.7" y1="6" x2="20" y2="6"></line><line x1="20" y1="6" x2="20" y2="16.3"></line><line x1="20" y1="19.7" x2="20" y2="20"></line><line x1="20" y1="20" x2="9.7" y2="20"></line><line x1="6.3" y1="20" x2="6" y2="20"></line><line x1="6" y1="20" x2="6" y2="9.7"></line><line x1="6" y1="6.3" x2="6" y2="6"></line><circle cx="6" cy="6" r="1.7" fill="none"></circle><circle cx="20" cy="6" r="1.7" fill="none"></circle><circle cx="20" cy="20" r="1.7" fill="none"></circle><circle cx="6" cy="20" r="1.7" fill="none"></circle></svg>`,
               shortcut: 'Alt + Shift + R',
+            },
+            {
+              id: 'draw-circle',
+              label: '원',
+              icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="12" r="6.5"></circle><circle cx="10.5" cy="12" r="1.7"></circle><circle cx="18.5" cy="12" r="1.5"></circle></svg>`,
             },
           ],
         },

@@ -22,6 +22,7 @@ function getDraftColor(kind: DrawingDraft['kind']): string {
   if (kind === 'draw-pencil') return '#6ea8ff';
   if (kind === 'draw-highlighter') return 'rgba(255,234,86,0.4)';
   if (kind === 'draw-box') return 'rgba(126,166,255,0.20)';
+  if (kind === 'draw-circle') return 'rgba(126,166,255,0.16)';
   return '#2f6cff';
 }
 

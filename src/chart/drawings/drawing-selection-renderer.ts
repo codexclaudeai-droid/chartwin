@@ -1,4 +1,4 @@
-import { isTrendlineKind } from '../../ui/workspace/drawing-utils.ts';
+import { isSingleAnchorLineKind, isTrendlineKind } from '../../ui/workspace/drawing-utils.ts';
 import type { DrawingShape } from '../../ui/workspace/drawing-types.ts';
 
 export interface DrawingSelectionMetrics {
@@ -17,6 +17,7 @@ export interface RenderDrawingSelectionOverlayParams {
 function shouldHideSelectionBox(shape: DrawingShape): boolean {
   return (
     shape.kind === 'hline'
+    || isSingleAnchorLineKind(shape.kind)
     || shape.kind === 'measure'
     || isTrendlineKind(shape.kind)
     || shape.kind === 'channel'
@@ -27,6 +28,7 @@ function shouldHideSelectionBox(shape: DrawingShape): boolean {
     || shape.kind === 'fib-trend'
     || shape.kind === 'anchored-vwap'
     || shape.kind === 'draw-box'
+    || shape.kind === 'draw-circle'
     || shape.kind === 'draw-pencil'
     || shape.kind === 'draw-highlighter'
   );

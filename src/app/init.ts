@@ -211,11 +211,17 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     'trendline',
     'extended-trendline',
     'ray-trendline',
+    'vertical-line',
+    'cross-line',
     'hline',
     'channel',
     'fib-retracement',
     'fib-trend',
     'anchored-vwap',
+    'draw-pencil',
+    'draw-highlighter',
+    'draw-box',
+    'draw-circle',
     'long-position',
     'short-position',
     'measure',
@@ -3225,6 +3231,16 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         const key = event.key.toLowerCase();
         if (key === 't') {
           pane.chart.setDrawingTool('trendline');
+          event.preventDefault();
+          return;
+        }
+        if (key === 'v') {
+          pane.chart.setDrawingTool('vertical-line');
+          event.preventDefault();
+          return;
+        }
+        if (key === 'c') {
+          pane.chart.setDrawingTool('cross-line');
           event.preventDefault();
           return;
         }

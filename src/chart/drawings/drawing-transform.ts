@@ -1,5 +1,5 @@
 import type { DrawingAnchor, DrawingHitPart, DrawingShape } from '../../ui/workspace/drawing-types.ts';
-import { cloneDrawingShape, isTrendlineKind } from '../../ui/workspace/drawing-utils.ts';
+import { cloneDrawingShape, isSingleAnchorLineKind, isTrendlineKind } from '../../ui/workspace/drawing-utils.ts';
 
 export interface DrawingTransformMetrics {
   totalSp: number;
@@ -42,6 +42,16 @@ export function moveDrawingByDelta(params: MoveDrawingByDeltaParams): DrawingSha
   });
 
   if (base.locked) return cloneShape(base);
+
+  if (isSingleAnchorLineKind(base.kind)) {
+    if (part === 'start' || part === 'line' || part === 'body') {
+      return {
+        ...cloneShape(base),
+        a: moveAnchor(base.a),
+        b: undefined,
+      };
+    }
+  }
 
   if (isTrendlineKind(base.kind)) {
     if (part === 'start') {
@@ -202,6 +212,24 @@ export function moveDrawingByDelta(params: MoveDrawingByDeltaParams): DrawingSha
     }
     if (part === 'start') {
       next.a = moveAnchor(base.a);
+      return next;
+    }
+    if (part === 'end' && base.b) {
+      next.b = moveAnchor(base.b);
+      return next;
+    }
+    if (part === 'line' || part === 'body') {
+      next.a = moveAnchor(base.a);
+      next.b = base.b ? moveAnchor(base.b) : base.b;
+      return next;
+    }
+  }
+
+  if (base.kind === 'draw-circle') {
+    const next = cloneShape(base);
+    if (part === 'start') {
+      next.a = moveAnchor(base.a);
+      next.b = base.b ? moveAnchor(base.b) : base.b;
       return next;
     }
     if (part === 'end' && base.b) {

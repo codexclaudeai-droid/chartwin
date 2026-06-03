@@ -7,12 +7,14 @@ import type {
 import type { TrendlineRenderLine, TrendlineTextLayout } from './drawing-hit-test.ts';
 import { renderDrawingAnchoredVwap, type AnchoredVwapPlotPoint } from './drawing-anchored-vwap-renderer.ts';
 import { renderDrawingBox } from './drawing-box-renderer.ts';
+import { renderDrawingCircle } from './drawing-circle-renderer.ts';
 import { renderDrawingChannel } from './drawing-channel-renderer.ts';
 import { renderDrawingFib } from './drawing-fib-renderer.ts';
 import { renderDrawingHline } from './drawing-hline-renderer.ts';
 import { renderDrawingLine } from './drawing-line-renderer.ts';
 import { renderDrawingMeasure } from './drawing-measure-renderer.ts';
 import { renderDrawingPosition } from './drawing-position-renderer.ts';
+import { renderSingleAnchorLine } from './drawing-single-anchor-line-renderer.ts';
 import { renderDrawingTextNote } from './drawing-text-note-renderer.ts';
 import type {
   DrawingAxisMetrics,
@@ -127,26 +129,44 @@ export function renderDrawingShape(params: RenderDrawingShapeParams): void {
     case 'trendline':
     case 'extended-trendline':
     case 'ray-trendline':
+    case 'vertical-line':
+    case 'cross-line':
     case 'draw-pencil':
     case 'draw-highlighter': {
-      renderDrawingLine({
-        ctx,
-        shape,
-        isDraft,
-        metrics,
-        alpha,
-        strokeColor: style.alphaColor,
-        strokeWidth: style.width,
-        lineStyle: style.lineStyle,
-        selectedDrawingId,
-        hoveredDrawingId,
-        hoveredDrawingPart,
-        editingTextShapeId,
-        fontStack,
-        xForIndex,
-        getTrendlineRenderLine,
-        getTrendlineTextLayout,
-      });
+      if (shape.kind === 'vertical-line' || shape.kind === 'cross-line') {
+        renderSingleAnchorLine({
+          ctx,
+          shape,
+          isDraft,
+          metrics,
+          alpha,
+          strokeColor: style.alphaColor,
+          strokeWidth: style.width,
+          lineStyle: style.lineStyle,
+          selectedDrawingId,
+          hoveredDrawingId,
+          xForIndex,
+        });
+      } else {
+        renderDrawingLine({
+          ctx,
+          shape,
+          isDraft,
+          metrics,
+          alpha,
+          strokeColor: style.alphaColor,
+          strokeWidth: style.width,
+          lineStyle: style.lineStyle,
+          selectedDrawingId,
+          hoveredDrawingId,
+          hoveredDrawingPart,
+          editingTextShapeId,
+          fontStack,
+          xForIndex,
+          getTrendlineRenderLine,
+          getTrendlineTextLayout,
+        });
+      }
       break;
     }
     case 'draw-box': {
@@ -162,6 +182,26 @@ export function renderDrawingShape(params: RenderDrawingShapeParams): void {
         selectedDrawingId,
         hoveredDrawingId,
         xForIndex,
+      });
+      break;
+    }
+    case 'draw-circle': {
+      renderDrawingCircle({
+        ctx,
+        shape,
+        isDraft,
+        metrics,
+        alpha,
+        strokeColor: style.alphaColor,
+        strokeWidth: style.width,
+        lineStyle: style.lineStyle,
+        selectedDrawingId,
+        hoveredDrawingId,
+        hoveredDrawingPart,
+        editingTextShapeId,
+        fontStack,
+        xForIndex,
+        getTrendlineTextLayout,
       });
       break;
     }

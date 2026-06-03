@@ -1,9 +1,11 @@
 import type { DrawingHitPart, DrawingShape } from '../../ui/workspace/drawing-types.ts';
-import { isTrendlineKind, pointToSegmentDistance } from '../../ui/workspace/drawing-utils.ts';
+import { getCircleScreenGeometry, getSingleAnchorLineSegments, isSingleAnchorLineKind, isTrendlineKind, pointToSegmentDistance } from '../../ui/workspace/drawing-utils.ts';
 
 export interface DrawingHitTestMetrics {
   chartLeft: number;
   chartRight: number;
+  chartTop: number;
+  chartBottom: number;
   totalSp: number;
   candleW: number;
   getY: (price: number) => number;
@@ -94,6 +96,24 @@ export function hitTestDrawing(params: HitTestDrawingParams): DrawingHitPart | n
   const isCoarsePointer = adapters.isCoarsePointer();
   const anchorHitPad = isCoarsePointer ? 25 : 8;
 
+  if (isSingleAnchorLineKind(shape.kind)) {
+    const lineHitPad = isCoarsePointer ? 22 : 16;
+    if (Math.hypot(mx - ax, my - ay) <= anchorHitPad) return 'start';
+    const segments = getSingleAnchorLineSegments(
+      { x: ax, y: ay },
+      {
+        left: metrics.chartLeft,
+        right: metrics.chartRight,
+        top: metrics.chartTop,
+        bottom: metrics.chartBottom,
+      },
+      shape.kind,
+    );
+    return segments.some((segment) => (
+      pointToSegmentDistance(mx, my, segment.x1, segment.y1, segment.x2, segment.y2) <= lineHitPad
+    )) ? 'line' : null;
+  }
+
   if (isTrendlineKind(shape.kind)) {
     const trendline = adapters.getTrendlineRenderLine(shape, metrics);
     const lineHitPad = isCoarsePointer ? 22 : 16;
@@ -125,10 +145,11 @@ export function hitTestDrawing(params: HitTestDrawingParams): DrawingHitPart | n
     }
 
     if (pointToSegmentDistance(mx, my, trendline.lineStartX, trendline.lineStartY, trendline.lineEndX, trendline.lineEndY) <= lineHitPad) return 'line';
-    const left = Math.min(trendline.lineStartX, trendline.lineEndX) - lineHitPad;
-    const right = Math.max(trendline.lineStartX, trendline.lineEndX) + lineHitPad;
-    const top = Math.min(trendline.lineStartY, trendline.lineEndY) - lineHitPad;
-    const bottom = Math.max(trendline.lineStartY, trendline.lineEndY) + lineHitPad;
+    if (shape.kind !== 'trendline') return null;
+    const left = Math.min(trendline.anchorStartX, trendline.anchorEndX) - lineHitPad;
+    const right = Math.max(trendline.anchorStartX, trendline.anchorEndX) + lineHitPad;
+    const top = Math.min(trendline.anchorStartY, trendline.anchorEndY) - lineHitPad;
+    const bottom = Math.max(trendline.anchorStartY, trendline.anchorEndY) + lineHitPad;
     return (mx >= left && mx <= right && my >= top && my <= bottom) ? 'body' : null;
   }
 
@@ -195,6 +216,39 @@ export function hitTestDrawing(params: HitTestDrawingParams): DrawingHitPart | n
     );
     if (onEdge) return 'line';
     return (mx >= left - pad && mx <= right + pad && my >= top - pad && my <= bottom + pad) ? 'body' : null;
+  }
+
+  if (shape.kind === 'draw-circle') {
+    const geometry = getCircleScreenGeometry({ x: ax, y: ay }, { x: bx, y: by });
+    const hasText = (shape.text ?? '').trim().length > 0;
+    const isHoveredGuide = shape.id === hoveredDrawingId
+      && (hoveredDrawingPart === 'line' || hoveredDrawingPart === 'body' || hoveredDrawingPart === 'trendline-text-guide');
+    const placeholder = !hasText && isHoveredGuide ? '텍스트 입력' : '';
+    const label = adapters.getTrendlineTextLayout(shape, metrics, placeholder);
+    if (label.text) {
+      const relX = mx - label.x;
+      const relY = my - label.y;
+      const labelPadX = label.isPlaceholder ? 42 : 10;
+      const labelPadY = label.isPlaceholder ? 24 : 10;
+      if (
+        relX >= -label.width / 2 - labelPadX
+        && relX <= label.width / 2 + labelPadX
+        && relY >= -label.height / 2 - labelPadY
+        && relY <= label.height / 2 + labelPadY
+      ) {
+        return label.isPlaceholder ? 'trendline-text-guide' : 'body';
+      }
+    }
+    if (Math.hypot(mx - ax, my - ay) <= anchorHitPad) return 'start';
+    if (Math.hypot(mx - bx, my - by) <= anchorHitPad) return 'end';
+    const radiusX = Math.max(1, geometry.radiusX);
+    const radiusY = Math.max(1, geometry.radiusY);
+    const dxNorm = (mx - geometry.centerX) / radiusX;
+    const dyNorm = (my - geometry.centerY) / radiusY;
+    const distance = Math.hypot(dxNorm, dyNorm);
+    const edgePad = isCoarsePointer ? 0.26 : 0.18;
+    if (Math.abs(distance - 1) <= edgePad) return 'line';
+    return distance < 1 ? 'body' : null;
   }
 
   if (shape.kind === 'channel') {
