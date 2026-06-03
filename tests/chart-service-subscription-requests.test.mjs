@@ -73,6 +73,8 @@ test('admin can approve a payment-requested subscription from the subscription q
   assert.equal(queueItem?.subscription.status, 'payment_requested');
   assert.equal(queueItem?.payment?.status, 'confirmed');
   assert.equal(result.status, 'active');
+  assert.equal(result.startsAt, '2026-05-23T12:05:00.000Z');
+  assert.equal(result.endsAt, '2026-06-22T12:05:00.000Z');
   assert.equal(repository.listAuditLogs().at(-1)?.action, 'subscription.activate.approve');
 });
 

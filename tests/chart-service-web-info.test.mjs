@@ -178,6 +178,22 @@ test('admin web info submenu uses dark admin tab styling', () => {
   assert.match(activeRule, /background:\s*linear-gradient\(135deg, rgba\(55, 125, 255, 0\.96\), rgba\(98, 166, 255, 0\.86\)\)/);
   assert.match(activeRule, /color:\s*#ffffff/);
   assert.match(activeRule, /box-shadow:\s*none/);
+  assert.match(activeRule, /transform:\s*translateY\(-1px\) scale\(1\.015\)/);
+});
+
+test('admin submenu tabs animate smoothly on hover', () => {
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const motionRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-sales \.admin-web-info-tabs a,[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-statistics \.statistics-submenu-tabs a\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+  const salesActiveRule = cssSource.match(
+    /body:not\(:has\(\.landing-page\)\) #admin-sales \.admin-web-info-tabs a:hover,[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-sales \.sales-submenu-tabs a\.active\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
+
+  assert.match(motionRule, /transition:[\s\S]*background 220ms ease/);
+  assert.match(motionRule, /transform 240ms cubic-bezier\(0\.2, 0\.8, 0\.2, 1\)/);
+  assert.match(motionRule, /will-change:\s*transform/);
+  assert.match(salesActiveRule, /transform:\s*translateY\(-1px\) scale\(1\.015\)/);
 });
 
 test('global button style centers labels by default', () => {

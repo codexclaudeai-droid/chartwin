@@ -296,6 +296,7 @@ test('admin can approve a confirmed payment subscription separately', async () =
   assert.equal(approved.status, 'active');
   assert.equal(approved.approvedByAdminId, 'admin_1');
   assert.equal(approved.startsAt, '2026-05-23T11:05:00.000Z');
+  assert.equal(approved.endsAt, '2026-06-22T11:05:00.000Z');
   assert.equal(repository.listAuditLogs().at(-1)?.action, 'subscription.activate.approve');
 });
 

@@ -11863,6 +11863,7 @@ body:not(:has(.landing-page)) #admin-sales .sales-submenu-tabs a.active {
   background: linear-gradient(135deg, rgba(55, 125, 255, 0.96), rgba(98, 166, 255, 0.86));
   color: #ffffff;
   box-shadow: 0 14px 34px rgba(55, 125, 255, 0.24);
+  transform: translateY(-1px) scale(1.015);
 }
 
 body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs,
@@ -11887,6 +11888,21 @@ body:not(:has(.landing-page)) #admin-section-subscriptions .subscription-submenu
   padding: 0 16px;
 }
 
+body:not(:has(.landing-page)) #admin-sales .admin-web-info-tabs a,
+body:not(:has(.landing-page)) #admin-sales .sales-submenu-tabs a,
+body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a,
+body:not(:has(.landing-page)) #admin-section-subscriptions .subscription-submenu-tabs a,
+body:not(:has(.landing-page)) #admin-statistics .statistics-submenu-tabs a {
+  position: relative;
+  transform: translateY(0) scale(1);
+  transition:
+    background 220ms ease,
+    box-shadow 220ms ease,
+    color 180ms ease,
+    transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+
 body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a:hover,
 body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a:focus-visible,
 body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-tabs a.active,
@@ -11898,7 +11914,7 @@ body:not(:has(.landing-page)) #admin-section-subscriptions .subscription-submenu
   background: linear-gradient(135deg, rgba(55, 125, 255, 0.96), rgba(98, 166, 255, 0.86));
   color: #ffffff;
   box-shadow: none;
-  transform: none;
+  transform: translateY(-1px) scale(1.015);
 }
 
 body:not(:has(.landing-page)) #admin-section-webInfo .admin-web-info-form > .button {
@@ -11940,7 +11956,7 @@ body:not(:has(.landing-page)) #admin-statistics .statistics-submenu-tabs a[aria-
   background: linear-gradient(135deg, rgba(55, 125, 255, 0.96), rgba(98, 166, 255, 0.86));
   color: #ffffff;
   box-shadow: none;
-  transform: none;
+  transform: translateY(-1px) scale(1.015);
 }
 
 body:not(:has(.landing-page)) #admin-sales .sales-filter-grid,
