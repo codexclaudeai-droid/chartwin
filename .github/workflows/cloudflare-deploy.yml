@@ -82,12 +82,12 @@ jobs:
             CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD \
             CHART_SERVICE_BOOTSTRAP_ADMIN_NAME \
             CHART_SERVICE_EMAIL_PROVIDER \
-            CHART_SERVICE_EMAIL_DELIVERY_LIMIT \
-            CLOUDFLARE_ACCOUNT_ID \
-            CLOUDFLARE_API_TOKEN
+            CHART_SERVICE_EMAIL_DELIVERY_LIMIT
           do
             printf '%s' "${!name}" | npx wrangler secret put "$name"
           done
+          printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | npx wrangler secret put CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID
+          printf '%s' "$CLOUDFLARE_API_TOKEN" | npx wrangler secret put CHART_SERVICE_CLOUDFLARE_API_TOKEN
 
       - name: Deploy Worker
         run: npx wrangler deploy

@@ -10,8 +10,8 @@ const sslMode = requireValue('CHART_SERVICE_DATABASE_SSL_MODE');
 const sessionSecret = requireValue('CHART_SERVICE_SESSION_SECRET');
 const emailProvider = requireValue('CHART_SERVICE_EMAIL_PROVIDER');
 const emailLimit = requireValue('CHART_SERVICE_EMAIL_DELIVERY_LIMIT');
-const cloudflareAccountId = String(env.CLOUDFLARE_ACCOUNT_ID ?? '').trim();
-const cloudflareApiToken = String(env.CLOUDFLARE_API_TOKEN ?? '').trim();
+const cloudflareAccountId = readCloudflareRuntimeValue('CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID');
+const cloudflareApiToken = readCloudflareRuntimeValue('CHART_SERVICE_CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_API_TOKEN');
 const adminEmail = requireValue('CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL');
 const adminPassword = requireValue('CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD');
 const adminName = requireValue('CHART_SERVICE_BOOTSTRAP_ADMIN_NAME');
@@ -97,12 +97,16 @@ function validateEmailDelivery(provider, limitValue, cloudflareAccountId, cloudf
 
   if (provider === 'cloudflare') {
     if (!cloudflareAccountId || isPlaceholder(cloudflareAccountId)) {
-      failures.push('CLOUDFLARE_ACCOUNT_ID is required when CHART_SERVICE_EMAIL_PROVIDER=cloudflare.');
+      failures.push('CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID is required when CHART_SERVICE_EMAIL_PROVIDER=cloudflare.');
     }
     if (!cloudflareApiToken || isPlaceholder(cloudflareApiToken)) {
-      failures.push('CLOUDFLARE_API_TOKEN is required when CHART_SERVICE_EMAIL_PROVIDER=cloudflare.');
+      failures.push('CHART_SERVICE_CLOUDFLARE_API_TOKEN is required when CHART_SERVICE_EMAIL_PROVIDER=cloudflare.');
     }
   }
+}
+
+function readCloudflareRuntimeValue(primaryKey, fallbackKey) {
+  return String(env[primaryKey] ?? env[fallbackKey] ?? '').trim();
 }
 
 function validateBootstrapAdmin(email, password, name) {

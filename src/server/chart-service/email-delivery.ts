@@ -39,6 +39,8 @@ export type EmailOutboxDeliveryOptions = {
 export type EmailDeliveryRuntimeEnv = {
   NODE_ENV?: string;
   CHART_SERVICE_EMAIL_PROVIDER?: string;
+  CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID?: string;
+  CHART_SERVICE_CLOUDFLARE_API_TOKEN?: string;
   CLOUDFLARE_ACCOUNT_ID?: string;
   CLOUDFLARE_API_TOKEN?: string;
 };
@@ -117,8 +119,8 @@ export function createEmailDeliveryProviderFromEnv(
   }
   if (provider === 'cloudflare') {
     return createCloudflareEmailDeliveryProvider({
-      accountId: requireEmailProviderEnv(env, 'CLOUDFLARE_ACCOUNT_ID'),
-      apiToken: requireEmailProviderEnv(env, 'CLOUDFLARE_API_TOKEN'),
+      accountId: requireEmailProviderEnv(env, 'CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID'),
+      apiToken: requireEmailProviderEnv(env, 'CHART_SERVICE_CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_API_TOKEN'),
     });
   }
 
@@ -129,10 +131,7 @@ export function getEmailDeliveryRuntimeEnv(
   env: EmailDeliveryRuntimeEnv = process.env,
 ): EmailDeliveryRuntimeEnv {
   const cloudflareEnv = getCloudflareEmailDeliveryEnv();
-  return {
-    ...env,
-    ...cloudflareEnv,
-  };
+  return mergeEmailDeliveryRuntimeEnv(env, cloudflareEnv);
 }
 
 export function createCloudflareEmailDeliveryProvider(input: {
@@ -232,9 +231,13 @@ function readCloudflareProviderMessageId(payload: Record<string, unknown>): stri
   return null;
 }
 
-function requireEmailProviderEnv(env: EmailDeliveryRuntimeEnv, key: keyof EmailDeliveryRuntimeEnv): string {
-  const value = env[key]?.trim();
-  if (!value) throw new Error(`${key} is required for Cloudflare email delivery.`);
+function requireEmailProviderEnv(
+  env: EmailDeliveryRuntimeEnv,
+  primaryKey: keyof EmailDeliveryRuntimeEnv,
+  fallbackKey: keyof EmailDeliveryRuntimeEnv,
+): string {
+  const value = env[primaryKey]?.trim() || env[fallbackKey]?.trim();
+  if (!value) throw new Error(`${primaryKey} is required for Cloudflare email delivery.`);
   return value;
 }
 
@@ -245,10 +248,33 @@ function getCloudflareEmailDeliveryEnv(): EmailDeliveryRuntimeEnv {
     return {
       NODE_ENV: env.NODE_ENV,
       CHART_SERVICE_EMAIL_PROVIDER: env.CHART_SERVICE_EMAIL_PROVIDER,
+      CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID: env.CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID,
+      CHART_SERVICE_CLOUDFLARE_API_TOKEN: env.CHART_SERVICE_CLOUDFLARE_API_TOKEN,
       CLOUDFLARE_ACCOUNT_ID: env.CLOUDFLARE_ACCOUNT_ID,
       CLOUDFLARE_API_TOKEN: env.CLOUDFLARE_API_TOKEN,
     };
   } catch {
     return {};
   }
+}
+
+function mergeEmailDeliveryRuntimeEnv(
+  baseEnv: EmailDeliveryRuntimeEnv,
+  overrideEnv: EmailDeliveryRuntimeEnv,
+): EmailDeliveryRuntimeEnv {
+  const merged: EmailDeliveryRuntimeEnv = { ...baseEnv };
+  for (const key of [
+    'NODE_ENV',
+    'CHART_SERVICE_EMAIL_PROVIDER',
+    'CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID',
+    'CHART_SERVICE_CLOUDFLARE_API_TOKEN',
+    'CLOUDFLARE_ACCOUNT_ID',
+    'CLOUDFLARE_API_TOKEN',
+  ] as const) {
+    const value = overrideEnv[key]?.trim();
+    if (value) {
+      merged[key] = value;
+    }
+  }
+  return merged;
 }

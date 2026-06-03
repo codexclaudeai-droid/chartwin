@@ -148,6 +148,33 @@ test('cloudflare email provider reports API errors to the outbox dispatcher', as
   });
 });
 
+test('email delivery runtime env keeps existing values when Cloudflare bindings are partial', async () => {
+  const { getEmailDeliveryRuntimeEnv } = await import('../src/server/chart-service/index.ts');
+
+  const env = getEmailDeliveryRuntimeEnv({
+    NODE_ENV: 'production',
+    CHART_SERVICE_EMAIL_PROVIDER: 'cloudflare',
+    CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID: 'account_123',
+    CHART_SERVICE_CLOUDFLARE_API_TOKEN: 'token_123',
+  });
+
+  assert.equal(env.CHART_SERVICE_EMAIL_PROVIDER, 'cloudflare');
+  assert.equal(env.CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID, 'account_123');
+  assert.equal(env.CHART_SERVICE_CLOUDFLARE_API_TOKEN, 'token_123');
+});
+
+test('cloudflare email provider env accepts legacy deployment variable names as fallback', async () => {
+  const { createEmailDeliveryProviderFromEnv } = await import('../src/server/chart-service/index.ts');
+
+  const provider = createEmailDeliveryProviderFromEnv({
+    CHART_SERVICE_EMAIL_PROVIDER: 'cloudflare',
+    CLOUDFLARE_ACCOUNT_ID: 'account_123',
+    CLOUDFLARE_API_TOKEN: 'token_123',
+  });
+
+  assert.equal(typeof provider.sendEmail, 'function');
+});
+
 test('email delivery harness is wired into package scripts', () => {
   const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   const script = fs.readFileSync(new URL('../scripts/deliver-email-outbox.mjs', import.meta.url), 'utf8');
