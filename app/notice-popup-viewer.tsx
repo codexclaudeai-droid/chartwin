@@ -20,10 +20,14 @@ export function NoticePopupViewer() {
     }
     let cancelled = false;
     async function loadPopups() {
-      const response = await fetch('/api/notice-popups', { cache: 'no-store' });
-      const payload = await response.json().catch(() => ({}));
-      if (cancelled || !response.ok || !Array.isArray(payload.popups)) return;
-      setPopups(payload.popups);
+      try {
+        const response = await fetch('/api/notice-popups', { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        if (cancelled || !response.ok || !Array.isArray(payload.popups)) return;
+        setPopups(payload.popups);
+      } catch {
+        return;
+      }
     }
 
     function handleVisibilityChange() {

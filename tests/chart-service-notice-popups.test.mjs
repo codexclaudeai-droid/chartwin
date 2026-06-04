@@ -210,6 +210,8 @@ test('notice popup admin screen uses Tiptap and icon actions', () => {
   assert.match(viewerSource, /window\.setInterval/);
   assert.match(viewerSource, /visibilitychange/);
   assert.match(viewerSource, /document\.visibilityState === 'visible'/);
+  assert.match(viewerSource, /try\s*\{/);
+  assert.match(viewerSource, /catch\s*\{/);
   assert.match(cssSource, /\.rich-text-editor/);
   assert.match(cssSource, /\.notice-body-style-info/);
   assert.match(cssSource, /\.notice-body-style-warning/);
