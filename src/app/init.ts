@@ -869,6 +869,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   let setTopBarSignalNotification = (_count: number) => {};
   let onSignalNotificationClick = () => {};
   let notifyLiveSignalsForPane = (_paneId: number) => {};
+  let suppressSignalNoticesUntilNextReadyCompute = (_paneId: number) => {};
   let notifyInsufficientStrategyHistory = (_args: {
     symbol: string;
     strategyName: string;
@@ -1734,6 +1735,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       void refreshExchange24hPercent(true);
       const useBinance = shouldUseBinanceDirect(chart.config.symbol);
       const selectedFeed = useBinance ? binanceFeed : gatewayFeed;
+      suppressSignalNoticesUntilNextReadyCompute(paneId);
       const ok = await selectedFeed.reload();
       if (!ok) {
         binanceFeed.stop();
@@ -2620,6 +2622,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     forceRefreshStrategyReport = () => strategyReport.refresh();
     const announcedSignalKeys = new Set<string>();
     const signalNoticeBaselineKeyByPane = new Map<number, string>();
+    const signalNoticeSuppressNextReadyComputeByPane = new Set<number>();
     const getSignalNoticeHost = (): HTMLDivElement => {
       const w = window as typeof window & { __signalNoticeHost__?: HTMLDivElement };
       const existing = w.__signalNoticeHost__;
@@ -2776,6 +2779,14 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (!strategyName) return '';
       return `${pane.chart.config.symbol}:${pane.chart.config.timeframe}:${strategyName}`;
     };
+    const isSignalNoticeSnapshotReady = (paneId: number): boolean => {
+      const pane = paneControllers.get(paneId) ?? ensurePane(paneId);
+      if (!pane.chart.getActiveStrategyName()) return false;
+      const candles = pane.chart.getCandles();
+      const series = pane.chart.getStrategySignalSeries();
+      if (!candles.length || !Array.isArray(series) || !series.length) return false;
+      return series.length >= candles.length;
+    };
     const collectTodaySignalNotices = (paneId: number): Array<{
       key: string;
       side: 'LONG' | 'SHORT';
@@ -2834,10 +2845,16 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         signalNoticeBaselineKeyByPane.delete(paneId);
         return;
       }
+      if (!isSignalNoticeSnapshotReady(paneId)) return;
       collectTodaySignalNotices(paneId).forEach((item) => {
         announcedSignalKeys.add(item.key);
       });
       signalNoticeBaselineKeyByPane.set(paneId, baselineKey);
+      signalNoticeSuppressNextReadyComputeByPane.delete(paneId);
+    };
+    suppressSignalNoticesUntilNextReadyCompute = (paneId: number) => {
+      signalNoticeSuppressNextReadyComputeByPane.add(paneId);
+      signalNoticeBaselineKeyByPane.delete(paneId);
     };
     const findUnannouncedTodaySignals = (paneId: number): Array<{
       key: string;
@@ -2849,7 +2866,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     }> => {
       const baselineKey = getSignalNoticeBaselineKey(paneId);
       if (!baselineKey) return [];
-      if (signalNoticeBaselineKeyByPane.get(paneId) !== baselineKey) {
+      if (!isSignalNoticeSnapshotReady(paneId)) return [];
+      if (signalNoticeSuppressNextReadyComputeByPane.has(paneId) || signalNoticeBaselineKeyByPane.get(paneId) !== baselineKey) {
         markExistingTodaySignalsAnnounced(paneId);
         return [];
       }
@@ -2862,12 +2880,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     notifyLiveSignalsForPane = (paneId: number) => {
       const detected = findUnannouncedTodaySignals(paneId);
       if (!detected.length) return;
-      detected
+      if (document.visibilityState !== 'visible') return;
+      const latestSignal = detected
         .sort((a, b) => a.timeSec - b.timeSec)
-        .forEach((item) => {
-          showSignalNoticePopup(item);
-          speakSignalNotice(item.side);
-        });
+        .at(-1);
+      if (!latestSignal) return;
+      showSignalNoticePopup(latestSignal);
+      speakSignalNotice(latestSignal.side);
       if (paneId === paneState.activePaneId) {
         refreshStrategyReportOnNewSignal(paneId);
       }
