@@ -8335,6 +8335,9 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 .landing-page .landing-plan-card small,
 .landing-page .landing-faq-card summary,
 .landing-page .landing-faq-card p,
+.landing-page .landing-partnership-copy h2,
+.landing-page .landing-partnership-copy p,
+.landing-page .landing-partnership-highlight strong,
 .landing-page .landing-contact-card h3,
 .landing-page .landing-contact-card p,
 .landing-page .landing-footer-copy,
@@ -8393,6 +8396,191 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   box-shadow: 0 18px 48px rgba(76, 141, 255, 0.22);
 }
 
+/* Strategic partnership section: premium institutional bridge before contact. */
+.landing-page .landing-strategic-partnership {
+  background:
+    radial-gradient(circle at 10% 16%, rgba(125, 183, 255, 0.16), transparent 31%),
+    radial-gradient(circle at 82% 24%, rgba(255, 253, 247, 0.1), transparent 30%),
+    linear-gradient(145deg, rgba(2, 7, 19, 0.96), rgba(7, 21, 47, 0.92));
+  border: 1px solid rgba(125, 183, 255, 0.16);
+  border-radius: 34px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 28px 76px rgba(0, 0, 0, 0.31);
+  margin: 38px 7vw 0;
+  overflow: hidden;
+  padding: clamp(28px, 4vw, 48px);
+  position: relative;
+}
+
+.landing-page .landing-strategic-partnership::before {
+  background:
+    linear-gradient(90deg, transparent, rgba(255, 253, 247, 0.34), transparent),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent);
+  content: "";
+  height: 1px;
+  left: 28px;
+  position: absolute;
+  right: 28px;
+  top: 0;
+}
+
+.landing-page .landing-strategic-partnership::after {
+  background:
+    radial-gradient(circle, rgba(125, 183, 255, 0.24) 0 2px, transparent 3px),
+    linear-gradient(90deg, rgba(125, 183, 255, 0.09), transparent);
+  background-size: 42px 42px, auto;
+  content: "";
+  inset: 0;
+  opacity: 0.34;
+  pointer-events: none;
+  position: absolute;
+}
+
+.landing-page .landing-partnership-layout {
+  align-items: center;
+  display: grid;
+  gap: clamp(24px, 4vw, 52px);
+  grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+  position: relative;
+  z-index: 1;
+}
+
+.landing-page .landing-partnership-copy {
+  display: grid;
+  gap: 18px;
+}
+
+.landing-page .landing-partnership-copy .eyebrow,
+.landing-page .landing-partnership-highlight span {
+  color: var(--tradingcore-azure);
+}
+
+.landing-page .landing-partnership-copy h2 {
+  color: #ffffff;
+  font-size: clamp(30px, 4vw, 52px);
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+  margin: 0;
+}
+
+.landing-page .landing-partnership-copy p {
+  color: rgba(216, 236, 255, 0.76);
+  font-size: clamp(16px, 1.5vw, 18px);
+  line-height: 1.75;
+  margin: 0;
+  max-width: 760px;
+}
+
+.landing-page .landing-partnership-highlights {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 6px;
+}
+
+.landing-page .landing-partnership-highlight {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(19, 89, 255, 0.035)),
+    rgba(8, 17, 31, 0.9);
+  border: 1px solid rgba(125, 183, 255, 0.14);
+  border-radius: 18px;
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.landing-page .landing-partnership-highlight span {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.landing-page .landing-partnership-highlight strong {
+  color: rgba(247, 251, 255, 0.94);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.landing-page .landing-partnership-visual {
+  align-items: center;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  min-width: 0;
+}
+
+.landing-page .landing-partnership-brand-lockup {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  justify-items: center;
+  width: min(100%, 520px);
+}
+
+.landing-page .landing-partnership-brand-card {
+  align-items: center;
+  align-self: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  margin: 0;
+  min-height: 150px;
+  padding: 8px;
+}
+
+.landing-page .landing-partnership-brand-card.kyrios {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.landing-page .landing-partnership-tradingcore-logo {
+  display: block;
+  height: auto;
+  max-height: 70px;
+  object-fit: contain;
+  width: min(100%, 210px);
+}
+
+.landing-page .landing-partnership-logo {
+  display: block;
+  height: auto;
+  object-fit: contain;
+  width: min(100%, 246px);
+}
+
+.landing-page .landing-partnership-x {
+  align-self: center;
+  color: rgba(255, 253, 247, 0.88);
+  display: inline-flex;
+  filter: drop-shadow(0 0 16px rgba(125, 183, 255, 0.24));
+  height: 104px;
+  justify-content: center;
+  width: 104px;
+}
+
+.landing-page .landing-partnership-x svg {
+  display: block;
+  height: 100%;
+  overflow: visible;
+  width: 100%;
+}
+
+.landing-page .landing-partnership-x path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.02;
+}
+
 .landing-page .landing-footer {
   background:
     radial-gradient(circle at 10% 0%, rgba(125, 183, 255, 0.12), transparent 30%),
@@ -8426,6 +8614,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   .landing-page .section-heading h2,
   .landing-page .tc-chart-feature-card h3,
   .landing-page .landing-plan-card h3,
+  .landing-page .landing-partnership-copy h2,
   .landing-page .landing-contact-card h3 {
     text-wrap: balance;
   }
@@ -8433,6 +8622,56 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   .landing-page #landing-tc-chart-features .section-heading p {
     text-wrap: pretty;
   }
+
+  .landing-page .landing-strategic-partnership {
+    border-radius: 24px;
+    margin: 28px 18px 0;
+    padding: 22px;
+  }
+
+  .landing-page .landing-partnership-layout {
+    gap: 22px;
+    grid-template-columns: 1fr;
+  }
+
+  .landing-page .landing-partnership-visual {
+    order: -1;
+  }
+
+  .landing-page .landing-partnership-brand-lockup {
+    gap: 10px;
+    grid-template-columns: 1fr;
+    width: min(100%, 330px);
+  }
+
+  .landing-page .landing-partnership-brand-card {
+    border-radius: 0;
+    min-height: 118px;
+    padding: 4px;
+  }
+
+  .landing-page .landing-partnership-tradingcore-logo {
+    max-height: 54px;
+    width: min(100%, 190px);
+  }
+
+  .landing-page .landing-partnership-logo {
+    width: min(100%, 207px);
+  }
+
+  .landing-page .landing-partnership-x {
+    height: 80px;
+    width: 80px;
+  }
+
+  .landing-page .landing-partnership-x path {
+    stroke-width: 0.96;
+  }
+
+  .landing-page .landing-partnership-highlights {
+    grid-template-columns: 1fr;
+  }
+
 }
 
 .landing-page .landing-hero-copy {

@@ -112,6 +112,21 @@ const contactActionCards = [
   },
 ];
 
+const partnershipHighlights = [
+  {
+    label: 'Strategic Investment',
+    title: '서비스 고도화를 위한 성장 기반 확보',
+  },
+  {
+    label: 'Business Alliance',
+    title: '트레이딩 서비스 사업화와 시장 확장 협력',
+  },
+  {
+    label: 'Platform Growth',
+    title: 'TC Chart와 시그널 인프라의 안정적 확장',
+  },
+];
+
 const faqItems = [
   {
     question: 'TradingCore는 초보 투자자도 바로 사용할 수 있나요?',
@@ -264,6 +279,7 @@ export default async function HomePage() {
         <a href="#landing-tc-chart-features">TC Chart 기능</a>
         <a href="#landing-plans">플랜 비교</a>
         <a href="#landing-faq">FAQ</a>
+        <a href="#landing-strategic-partnership">파트너십</a>
         <a href="#landing-contact-actions">문의하기</a>
       </nav>
 
@@ -353,6 +369,55 @@ export default async function HomePage() {
               <p>{item.answer}</p>
             </details>
           ))}
+        </div>
+      </section>
+
+      <section
+        className="landing-section landing-strategic-partnership"
+        id="landing-strategic-partnership"
+        aria-label="전략적 파트너십"
+      >
+        <div className="landing-partnership-layout">
+          <div className="landing-partnership-copy">
+            <span className="eyebrow">Strategic Partnership</span>
+            <h2>키리오스인베스트먼트, 전략적 투자 및 사업 파트너로 합류</h2>
+            <p>
+              TradingCore는 Kyrios Investment와의 파트너십을 통해 알고리즘 시그널 기술,
+              구독형 서비스, 운영 인프라 고도화를 본격화합니다.
+            </p>
+            <div className="landing-partnership-highlights">
+              {partnershipHighlights.map((item) => (
+                <article className="landing-partnership-highlight" key={item.label}>
+                  <span>{item.label}</span>
+                  <strong>{item.title}</strong>
+                </article>
+              ))}
+            </div>
+          </div>
+          <div className="landing-partnership-visual" aria-label="TradingCore와 KYRIOS INVESTMENT 전략적 파트너십">
+            <div className="landing-partnership-brand-lockup">
+              <figure className="landing-partnership-brand-card tradingcore">
+                <img
+                  className="landing-partnership-tradingcore-logo"
+                  src="/images/TC-main-logo.png"
+                  alt="TradingCore"
+                />
+              </figure>
+              <span className="landing-partnership-x" aria-hidden="true">
+                <svg viewBox="0 0 48 48" focusable="false">
+                  <path d="M13 13L35 35" />
+                  <path d="M35 13L13 35" />
+                </svg>
+              </span>
+              <figure className="landing-partnership-brand-card kyrios">
+                <img
+                  className="landing-partnership-logo landing-partnership-kyrios-logo"
+                  src="/images/partners/kyrios-investment-white.png"
+                  alt="KYRIOS INVESTMENT"
+                />
+              </figure>
+            </div>
+          </div>
         </div>
       </section>
 

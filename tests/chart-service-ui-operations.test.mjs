@@ -1264,6 +1264,60 @@ test('landing bottom sections end with FAQ and contact actions', () => {
   assert.match(cssSource, /\.landing-footer::before/);
 });
 
+test('landing page presents Kyrios strategic partnership before contact actions', () => {
+  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const kyriosAssetUrl = new URL('../public/images/partners/kyrios-investment-white.png', import.meta.url);
+  const kyriosAssetExists = fs.existsSync(kyriosAssetUrl);
+  const kyriosPngSource = fs.readFileSync(kyriosAssetUrl);
+  const faqIndex = pageSource.indexOf('id="landing-faq"');
+  const partnershipIndex = pageSource.indexOf('id="landing-strategic-partnership"');
+  const contactIndex = pageSource.indexOf('id="landing-contact-actions"');
+
+  assert.notEqual(faqIndex, -1);
+  assert.notEqual(partnershipIndex, -1);
+  assert.notEqual(contactIndex, -1);
+  assert.ok(faqIndex < partnershipIndex);
+  assert.ok(partnershipIndex < contactIndex);
+  assert.equal(kyriosAssetExists, true);
+  assert.equal(kyriosPngSource.readUInt32BE(16), 709);
+  assert.equal(kyriosPngSource.readUInt32BE(20), 729);
+  assert.match(pageSource, /href="#landing-strategic-partnership"/);
+  assert.match(pageSource, /Strategic Partnership/);
+  assert.match(pageSource, /키리오스인베스트먼트, 전략적 투자 및 사업 파트너로 합류/);
+  assert.doesNotMatch(pageSource, /키리오스인베스트먼트, TradingCore의 전략적 투자 및 사업 파트너로 합류/);
+  assert.match(pageSource, /전략적 투자 및 사업 파트너/);
+  assert.match(pageSource, /구독형 서비스, 운영 인프라 고도화를 본격화합니다/);
+  assert.doesNotMatch(pageSource, /구독형 트레이딩 서비스, 운영 인프라 고도화를 본격화합니다/);
+  assert.doesNotMatch(pageSource, /기술은 TradingCore가, 성장 자본과 사업 확장은 Kyrios Investment가 함께합니다/);
+  assert.match(pageSource, /src="\/images\/TC-main-logo\.png"/);
+  assert.match(pageSource, /src="\/images\/partners\/kyrios-investment-white\.png"/);
+  assert.match(pageSource, /alt="TradingCore"/);
+  assert.match(pageSource, /alt="KYRIOS INVESTMENT"/);
+  assert.match(pageSource, /landing-partnership-x/);
+  assert.doesNotMatch(pageSource, /landing-partnership-plus/);
+  assert.doesNotMatch(pageSource, /Technology Platform/);
+  assert.doesNotMatch(pageSource, /Investment Partner/);
+  assert.doesNotMatch(pageSource, /Strategic Investment & Business Partner/);
+  assert.doesNotMatch(pageSource, /landing-partnership-alliance-graphic/);
+  assert.doesNotMatch(pageSource, /landing-partnership-node/);
+  assert.match(cssSource, /\.landing-page \.landing-strategic-partnership/);
+  assert.match(cssSource, /\.landing-page \.landing-partnership-layout/);
+  assert.match(cssSource, /\.landing-page \.landing-partnership-brand-lockup\s*\{[^}]*align-items: center/s);
+  assert.match(cssSource, /\.landing-page \.landing-partnership-brand-lockup\s*\{[^}]*justify-items: center/s);
+  assert.match(cssSource, /\.landing-page \.landing-partnership-brand-card\s*\{[^}]*background: transparent/s);
+  assert.match(cssSource, /\.landing-page \.landing-partnership-brand-card\s*\{[^}]*border: 0/s);
+  assert.match(cssSource, /\.landing-page \.landing-partnership-brand-card\s*\{[^}]*box-shadow: none/s);
+  assert.match(cssSource, /\.landing-page \.landing-partnership-x\s*\{[^}]*height: 104px/s);
+  assert.match(cssSource, /\.landing-page \.landing-partnership-x\s*\{[^}]*width: 104px/s);
+  assert.match(cssSource, /\.landing-page \.landing-partnership-x path\s*\{[^}]*stroke-width: 1\.02/s);
+  assert.match(cssSource, /\.landing-page \.landing-partnership-tradingcore-logo/);
+  assert.match(cssSource, /\.landing-page \.landing-partnership-logo\s*\{[^}]*width: min\(100%, 246px\)/s);
+  assert.match(cssSource, /@media \(max-width: 760px\)[\s\S]*?\.landing-page \.landing-partnership-logo\s*\{[^}]*width: min\(100%, 207px\)/s);
+  assert.match(cssSource, /\.landing-page \.landing-partnership-visual/);
+  assert.match(cssSource, /@media \(max-width: 760px\)[\s\S]*?\.landing-page \.landing-partnership-layout/);
+});
+
 test('landing page removes start route cards in favor of the TradingCore feature section', () => {
   const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
