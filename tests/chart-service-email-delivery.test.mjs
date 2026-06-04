@@ -148,6 +148,43 @@ test('cloudflare email provider reports API errors to the outbox dispatcher', as
   });
 });
 
+test('cloudflare email provider uses Worker email binding before REST credentials', async () => {
+  const { createEmailDeliveryProviderFromEnv } = await import('../src/server/chart-service/index.ts');
+  const sent = [];
+  const provider = createEmailDeliveryProviderFromEnv({
+    CHART_SERVICE_EMAIL_PROVIDER: 'cloudflare',
+    EMAIL: {
+      async send(message) {
+        sent.push(message);
+        return {
+          delivered: ['member@example.com'],
+          queued: [],
+        };
+      },
+    },
+  });
+
+  const result = await provider.sendEmail({
+    id: 'email_1',
+    from: 'verify@tradingcore.co',
+    to: 'member@example.com',
+    template: 'email_verification',
+    subject: 'Verify your TradingCore email',
+    body: 'Verify body',
+  });
+
+  assert.deepEqual(result, {
+    ok: true,
+    providerMessageId: 'cloudflare-worker:delivered:member@example.com',
+  });
+  assert.deepEqual(sent, [{
+    to: 'member@example.com',
+    from: 'verify@tradingcore.co',
+    subject: 'Verify your TradingCore email',
+    text: 'Verify body',
+  }]);
+});
+
 test('email delivery runtime env keeps existing values when Cloudflare bindings are partial', async () => {
   const { getEmailDeliveryRuntimeEnv, getEmailDeliveryRuntimeEnvAsync } = await import('../src/server/chart-service/index.ts');
 
@@ -191,6 +228,7 @@ test('email delivery harness is wired into package scripts', () => {
   assert.match(script, /deliverQueuedEmailOutbox/);
   assert.match(script, /createEmailDeliveryProviderFromEnv/);
   assert.match(providerSource, /createLogEmailDeliveryProvider/);
+  assert.match(providerSource, /createCloudflareWorkerEmailDeliveryProvider/);
   assert.match(providerSource, /createCloudflareEmailDeliveryProvider/);
   assert.match(providerSource, /getCloudflareContext\(\{ async: true \}\)/);
   assert.match(signupRouteSource, /getEmailDeliveryRuntimeEnvAsync/);

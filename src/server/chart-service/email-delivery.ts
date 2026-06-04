@@ -23,6 +23,16 @@ export type EmailDeliveryProvider = {
   sendEmail(message: EmailDeliveryMessage): Promise<EmailDeliveryResult>;
 };
 
+export type CloudflareWorkerEmailSender = {
+  send(message: {
+    to: string | string[];
+    from: string | { email: string; name?: string };
+    subject: string;
+    text?: string;
+    html?: string;
+  }): Promise<unknown>;
+};
+
 export type EmailOutboxDeliverySummary = {
   processed: number;
   sent: number;
@@ -43,6 +53,7 @@ export type EmailDeliveryRuntimeEnv = {
   CHART_SERVICE_CLOUDFLARE_API_TOKEN?: string;
   CLOUDFLARE_ACCOUNT_ID?: string;
   CLOUDFLARE_API_TOKEN?: string;
+  EMAIL?: CloudflareWorkerEmailSender;
 };
 
 export async function deliverQueuedEmailOutbox(
@@ -118,6 +129,9 @@ export function createEmailDeliveryProviderFromEnv(
     return createLogEmailDeliveryProvider(write);
   }
   if (provider === 'cloudflare') {
+    if (isCloudflareWorkerEmailSender(env.EMAIL)) {
+      return createCloudflareWorkerEmailDeliveryProvider(env.EMAIL);
+    }
     return createCloudflareEmailDeliveryProvider({
       accountId: requireEmailProviderEnv(env, 'CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID'),
       apiToken: requireEmailProviderEnv(env, 'CHART_SERVICE_CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_API_TOKEN'),
@@ -125,6 +139,25 @@ export function createEmailDeliveryProviderFromEnv(
   }
 
   throw new Error('Unsupported or missing CHART_SERVICE_EMAIL_PROVIDER. Use "log" or "cloudflare".');
+}
+
+export function createCloudflareWorkerEmailDeliveryProvider(
+  emailSender: CloudflareWorkerEmailSender,
+): EmailDeliveryProvider {
+  return {
+    async sendEmail(message) {
+      const result = await emailSender.send({
+        to: message.to,
+        from: message.from,
+        subject: message.subject,
+        text: message.body,
+      });
+      return {
+        ok: true,
+        providerMessageId: readCloudflareWorkerProviderMessageId(result),
+      };
+    },
+  };
 }
 
 export function getEmailDeliveryRuntimeEnv(
@@ -243,7 +276,7 @@ function requireEmailProviderEnv(
   primaryKey: keyof EmailDeliveryRuntimeEnv,
   fallbackKey: keyof EmailDeliveryRuntimeEnv,
 ): string {
-  const value = env[primaryKey]?.trim() || env[fallbackKey]?.trim();
+  const value = readEmailProviderEnvString(env[primaryKey]) || readEmailProviderEnvString(env[fallbackKey]);
   if (!value) throw new Error(`${primaryKey} is required for Cloudflare email delivery.`);
   return value;
 }
@@ -259,6 +292,7 @@ function getCloudflareEmailDeliveryEnv(): EmailDeliveryRuntimeEnv {
       CHART_SERVICE_CLOUDFLARE_API_TOKEN: env.CHART_SERVICE_CLOUDFLARE_API_TOKEN,
       CLOUDFLARE_ACCOUNT_ID: env.CLOUDFLARE_ACCOUNT_ID,
       CLOUDFLARE_API_TOKEN: env.CLOUDFLARE_API_TOKEN,
+      EMAIL: env.EMAIL,
     };
   } catch {
     return {};
@@ -276,6 +310,7 @@ async function getCloudflareEmailDeliveryEnvAsync(): Promise<EmailDeliveryRuntim
       CHART_SERVICE_CLOUDFLARE_API_TOKEN: env.CHART_SERVICE_CLOUDFLARE_API_TOKEN,
       CLOUDFLARE_ACCOUNT_ID: env.CLOUDFLARE_ACCOUNT_ID,
       CLOUDFLARE_API_TOKEN: env.CLOUDFLARE_API_TOKEN,
+      EMAIL: env.EMAIL,
     };
   } catch {
     return {};
@@ -300,5 +335,28 @@ function mergeEmailDeliveryRuntimeEnv(
       merged[key] = value;
     }
   }
+  if (isCloudflareWorkerEmailSender(overrideEnv.EMAIL)) {
+    merged.EMAIL = overrideEnv.EMAIL;
+  }
   return merged;
+}
+
+function isCloudflareWorkerEmailSender(value: unknown): value is CloudflareWorkerEmailSender {
+  return Boolean(value && typeof value === 'object' && typeof (value as { send?: unknown }).send === 'function');
+}
+
+function readEmailProviderEnvString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function readCloudflareWorkerProviderMessageId(result: unknown): string | null {
+  if (!result || typeof result !== 'object') return null;
+  const record = result as Record<string, unknown>;
+  for (const key of ['delivered', 'queued']) {
+    const values = record[key];
+    if (Array.isArray(values) && values.length > 0) {
+      return `cloudflare-worker:${key}:${String(values[0])}`;
+    }
+  }
+  return null;
 }

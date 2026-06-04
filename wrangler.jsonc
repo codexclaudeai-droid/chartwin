@@ -16,6 +16,17 @@
     "CHART_SERVICE_EMAIL_PROVIDER": "cloudflare",
     "CHART_SERVICE_EMAIL_DELIVERY_LIMIT": "50"
   },
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": [
+        "verify@tradingcore.co",
+        "auth@tradingcore.co",
+        "support@tradingcore.co",
+        "noreply@tradingcore.co"
+      ]
+    }
+  ],
   "observability": {
     "enabled": true
   }

@@ -43,6 +43,10 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(wranglerConfig, /cloudflare-workers/);
   assert.match(wranglerConfig, /"CHART_SERVICE_EMAIL_PROVIDER":\s*"cloudflare"/);
   assert.doesNotMatch(wranglerConfig, /"CHART_SERVICE_EMAIL_PROVIDER":\s*"log"/);
+  assert.match(wranglerConfig, /"send_email":\s*\[/);
+  assert.match(wranglerConfig, /"name":\s*"EMAIL"/);
+  assert.match(wranglerConfig, /"allowed_sender_addresses":\s*\[/);
+  assert.match(wranglerConfig, /"verify@tradingcore\.co"/);
   assert.match(deployWorkflow, /CHART_SERVICE_EMAIL_PROVIDER:\s+cloudflare/);
   assert.match(deployWorkflow, /CLOUDFLARE_ACCOUNT_ID/);
   assert.match(deployWorkflow, /CLOUDFLARE_API_TOKEN/);
