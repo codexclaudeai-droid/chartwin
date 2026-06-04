@@ -149,7 +149,7 @@ test('cloudflare email provider reports API errors to the outbox dispatcher', as
 });
 
 test('email delivery runtime env keeps existing values when Cloudflare bindings are partial', async () => {
-  const { getEmailDeliveryRuntimeEnv } = await import('../src/server/chart-service/index.ts');
+  const { getEmailDeliveryRuntimeEnv, getEmailDeliveryRuntimeEnvAsync } = await import('../src/server/chart-service/index.ts');
 
   const env = getEmailDeliveryRuntimeEnv({
     NODE_ENV: 'production',
@@ -161,6 +161,11 @@ test('email delivery runtime env keeps existing values when Cloudflare bindings 
   assert.equal(env.CHART_SERVICE_EMAIL_PROVIDER, 'cloudflare');
   assert.equal(env.CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID, 'account_123');
   assert.equal(env.CHART_SERVICE_CLOUDFLARE_API_TOKEN, 'token_123');
+
+  const asyncEnv = await getEmailDeliveryRuntimeEnvAsync(env);
+  assert.equal(asyncEnv.CHART_SERVICE_EMAIL_PROVIDER, 'cloudflare');
+  assert.equal(asyncEnv.CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID, 'account_123');
+  assert.equal(asyncEnv.CHART_SERVICE_CLOUDFLARE_API_TOKEN, 'token_123');
 });
 
 test('cloudflare email provider env accepts legacy deployment variable names as fallback', async () => {
@@ -179,12 +184,17 @@ test('email delivery harness is wired into package scripts', () => {
   const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   const script = fs.readFileSync(new URL('../scripts/deliver-email-outbox.mjs', import.meta.url), 'utf8');
   const providerSource = fs.readFileSync(new URL('../src/server/chart-service/email-delivery.ts', import.meta.url), 'utf8');
+  const signupRouteSource = fs.readFileSync(new URL('../app/api/auth/signup/route.ts', import.meta.url), 'utf8');
+  const resendRouteSource = fs.readFileSync(new URL('../app/api/auth/verify-email/resend/route.ts', import.meta.url), 'utf8');
 
   assert.equal(packageJson.scripts['service:email:deliver'], 'node scripts/deliver-email-outbox.mjs');
   assert.match(script, /deliverQueuedEmailOutbox/);
   assert.match(script, /createEmailDeliveryProviderFromEnv/);
   assert.match(providerSource, /createLogEmailDeliveryProvider/);
   assert.match(providerSource, /createCloudflareEmailDeliveryProvider/);
+  assert.match(providerSource, /getCloudflareContext\(\{ async: true \}\)/);
+  assert.match(signupRouteSource, /getEmailDeliveryRuntimeEnvAsync/);
+  assert.match(resendRouteSource, /getEmailDeliveryRuntimeEnvAsync/);
 });
 
 function createQueuedEmail(id, recipientEmail) {

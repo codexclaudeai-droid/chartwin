@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server.js';
 import {
   assertSameOriginMutationRequest,
   createEmailDeliveryProviderFromEnv,
-  getEmailDeliveryRuntimeEnv,
+  getEmailDeliveryRuntimeEnvAsync,
   getAsyncChartServicePersistence,
   getAsyncWebInfoSettingsForDisplay,
   guardMutationRequest,
@@ -124,7 +124,7 @@ async function deliverSignupVerificationEmail(
   emailOutboxId: string,
 ) {
   try {
-    const provider = createEmailDeliveryProviderFromEnv(getEmailDeliveryRuntimeEnv());
+    const provider = createEmailDeliveryProviderFromEnv(await getEmailDeliveryRuntimeEnvAsync());
     const delivery = await persistence.runMutation(async (repository) => {
       const summary = await deliverQueuedEmailOutbox(repository, provider, {
         deliveredAt: new Date().toISOString(),

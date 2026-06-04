@@ -134,6 +134,13 @@ export function getEmailDeliveryRuntimeEnv(
   return mergeEmailDeliveryRuntimeEnv(env, cloudflareEnv);
 }
 
+export async function getEmailDeliveryRuntimeEnvAsync(
+  env: EmailDeliveryRuntimeEnv = process.env,
+): Promise<EmailDeliveryRuntimeEnv> {
+  const cloudflareEnv = await getCloudflareEmailDeliveryEnvAsync();
+  return mergeEmailDeliveryRuntimeEnv(env, cloudflareEnv);
+}
+
 export function createCloudflareEmailDeliveryProvider(input: {
   accountId: string;
   apiToken: string;
@@ -244,6 +251,23 @@ function requireEmailProviderEnv(
 function getCloudflareEmailDeliveryEnv(): EmailDeliveryRuntimeEnv {
   try {
     const context = getCloudflareContext();
+    const env = context.env as EmailDeliveryRuntimeEnv;
+    return {
+      NODE_ENV: env.NODE_ENV,
+      CHART_SERVICE_EMAIL_PROVIDER: env.CHART_SERVICE_EMAIL_PROVIDER,
+      CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID: env.CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID,
+      CHART_SERVICE_CLOUDFLARE_API_TOKEN: env.CHART_SERVICE_CLOUDFLARE_API_TOKEN,
+      CLOUDFLARE_ACCOUNT_ID: env.CLOUDFLARE_ACCOUNT_ID,
+      CLOUDFLARE_API_TOKEN: env.CLOUDFLARE_API_TOKEN,
+    };
+  } catch {
+    return {};
+  }
+}
+
+async function getCloudflareEmailDeliveryEnvAsync(): Promise<EmailDeliveryRuntimeEnv> {
+  try {
+    const context = await getCloudflareContext({ async: true });
     const env = context.env as EmailDeliveryRuntimeEnv;
     return {
       NODE_ENV: env.NODE_ENV,
