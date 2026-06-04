@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { dispatchNotificationsRefreshEvent } from '../notification-events';
 
 type PushControlStatus = 'checking' | 'unsupported' | 'disabled' | 'available' | 'subscribed' | 'denied' | 'busy';
 
@@ -13,6 +14,7 @@ type PublicKeyResponse = {
 export function PushNotificationControl() {
   const [status, setStatus] = useState<PushControlStatus>('checking');
   const [publicKey, setPublicKey] = useState<string | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
   const [message, setMessage] = useState('푸시 알림 상태를 확인하고 있습니다.');
 
   useEffect(() => {
@@ -108,6 +110,32 @@ export function PushNotificationControl() {
     }
   }
 
+  async function testPush() {
+    setIsTesting(true);
+    setMessage('테스트 푸시 알림을 보내고 있습니다.');
+
+    try {
+      const response = await fetch('/api/push/test', { method: 'POST' });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.message || '테스트 푸시 발송에 실패했습니다.');
+
+      dispatchNotificationsRefreshEvent();
+      const attempted = Number(payload.delivery?.attempted ?? 0);
+      const delivered = Number(payload.delivery?.delivered ?? 0);
+      if (attempted === 0) {
+        setMessage('저장된 브라우저 푸시 구독이 없습니다. 푸시 알림을 다시 켜주세요.');
+      } else if (delivered > 0) {
+        setMessage('테스트 푸시 알림을 보냈습니다. PC 알림 영역을 확인해주세요.');
+      } else {
+        setMessage('테스트 알림은 생성됐지만 브라우저 푸시 발송은 확인되지 않았습니다.');
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '테스트 푸시 발송에 실패했습니다.');
+    } finally {
+      setIsTesting(false);
+    }
+  }
+
   if (status === 'unsupported') {
     return <span className="notice compact push-notification-status">{message}</span>;
   }
@@ -123,12 +151,22 @@ export function PushNotificationControl() {
     <div className="push-notification-control">
       <button
         className={`button secondary${isSubscribed ? ' active' : ''}`}
-        disabled={isBusy || status === 'denied'}
+        disabled={isBusy || isTesting || status === 'denied'}
         onClick={isSubscribed ? disablePush : enablePush}
         type="button"
       >
         {isSubscribed ? '푸시 알림 끄기' : '푸시 알림 켜기'}
       </button>
+      {isSubscribed && (
+        <button
+          className="button secondary"
+          disabled={isBusy || isTesting}
+          onClick={testPush}
+          type="button"
+        >
+          푸시 테스트
+        </button>
+      )}
       <span className="notice compact push-notification-status">{message}</span>
     </div>
   );

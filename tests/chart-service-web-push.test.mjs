@@ -87,18 +87,23 @@ test('web push routes service worker and notification panel are wired', () => {
   const publicKeyRoute = readFileSync(new URL('../app/api/push/public-key/route.ts', import.meta.url), 'utf8');
   const subscribeRoute = readFileSync(new URL('../app/api/push/subscribe/route.ts', import.meta.url), 'utf8');
   const unsubscribeRoute = readFileSync(new URL('../app/api/push/unsubscribe/route.ts', import.meta.url), 'utf8');
+  const testRoute = readFileSync(new URL('../app/api/push/test/route.ts', import.meta.url), 'utf8');
   const serviceWorkerSource = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
   const clientSource = readFileSync(new URL('../app/notifications/push-notification-control.tsx', import.meta.url), 'utf8');
 
   assert.match(publicKeyRoute, /getWebPushPublicKey/);
   assert.match(subscribeRoute, /registerPushSubscriptionForUser/);
   assert.match(unsubscribeRoute, /unregisterPushSubscriptionForUser/);
+  assert.match(testRoute, /notifyUserPushSubscriptions/);
+  assert.match(testRoute, /saveNotification/);
   assert.match(serviceWorkerSource, /self\.addEventListener\('push'/);
   assert.match(serviceWorkerSource, /\/api\/notifications\?summary=1/);
   assert.match(serviceWorkerSource, /self\.registration\.showNotification/);
   assert.match(clientSource, /navigator\.serviceWorker\.register\('\/sw\.js'\)/);
   assert.match(clientSource, /pushManager\.subscribe/);
   assert.match(clientSource, /\/api\/push\/subscribe/);
+  assert.match(clientSource, /\/api\/push\/test/);
+  assert.match(clientSource, /testPush/);
   assert.match(notificationPanelSource, /<PushNotificationControl \/>/);
 });
 
