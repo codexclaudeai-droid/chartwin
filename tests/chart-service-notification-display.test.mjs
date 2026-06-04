@@ -16,6 +16,7 @@ test('notification display helpers translate categories and action labels', asyn
     getNotificationFilterKeyFromSearch,
     getNotificationLinkLabel,
     getNotificationNavigationMessage,
+    getNewUnreadNotifications,
     getNotificationSummaryFromList,
     getNotificationsWithoutIds,
     getNotificationsWithReadState,
@@ -104,6 +105,21 @@ test('notification display helpers translate categories and action labels', asyn
     ['n2', 'n3', 'n4', 'n6'],
   );
   assert.deepEqual(getNotificationSummaryFromList(notifications), { totalCount: 6, unreadCount: 4 });
+  assert.deepEqual(
+    getNewUnreadNotifications(
+      [
+        { id: 'old_unread', readAt: null, createdAt: '2026-05-24T14:00:00.000Z' },
+        { id: 'old_read', readAt: '2026-05-24T14:01:00.000Z', createdAt: '2026-05-24T14:01:00.000Z' },
+      ],
+      [
+        { id: 'old_unread', readAt: null, createdAt: '2026-05-24T14:00:00.000Z' },
+        { id: 'new_later', readAt: null, createdAt: '2026-05-24T14:04:00.000Z' },
+        { id: 'new_read', readAt: '2026-05-24T14:03:00.000Z', createdAt: '2026-05-24T14:03:00.000Z' },
+        { id: 'new_earlier', readAt: null, createdAt: '2026-05-24T14:02:00.000Z' },
+      ],
+    ).map((item) => item.id),
+    ['new_earlier', 'new_later'],
+  );
 });
 
 test('notifications page and panel use readable Korean copy instead of raw notification values', () => {
@@ -169,12 +185,14 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /RefreshIconButton/);
   assert.match(panelSource, /subscribeNotificationsRefreshEvent/);
   assert.match(panelSource, /speakNewUnreadNotifications/);
+  assert.match(panelSource, /getNewUnreadNotifications/);
   assert.match(panelSource, /playNotificationVoice\(\{/);
   assert.match(panelSource, /모두 읽음/);
   assert.doesNotMatch(panelSource, /<span className="badge">\{notification\.category\}<\/span>/);
   assert.match(navSource, /getNotificationCenterHref/);
   assert.match(navSource, /href=\{notificationHref\}/);
   assert.match(navSource, /NOTIFICATION_BADGE_POLL_INTERVAL_MS/);
+  assert.match(navSource, /subscribeServiceWorkerNotificationsRefreshMessages/);
   assert.match(navSource, /window\.setInterval/);
   assert.match(navSource, /visibilitychange/);
   assert.match(navSource, /document\.visibilityState === 'visible'/);

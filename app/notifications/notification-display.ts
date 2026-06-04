@@ -22,6 +22,10 @@ type IdentifiableNotification = {
   id: string;
 };
 
+type NewUnreadNotification = IdentifiableNotification & ReadableNotification & {
+  createdAt: string;
+};
+
 export type NotificationFilterKey = 'all' | 'unread' | 'support' | 'payment' | 'subscription';
 
 export const NOTIFICATION_FILTER_TABS: Array<{ key: NotificationFilterKey; label: string }> = [
@@ -174,6 +178,17 @@ export function getNotificationsWithoutIds<T extends IdentifiableNotification>(
   const notificationIdSet = new Set(notificationIds);
 
   return notifications.filter((notification) => !notificationIdSet.has(notification.id));
+}
+
+export function getNewUnreadNotifications<T extends NewUnreadNotification>(
+  previousNotifications: T[],
+  nextNotifications: T[],
+): T[] {
+  const previousIds = new Set(previousNotifications.map((notification) => notification.id));
+
+  return nextNotifications
+    .filter((notification) => !notification.readAt && !previousIds.has(notification.id))
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 }
 
 export function getNotificationSummaryFromList<T extends ReadableNotification>(

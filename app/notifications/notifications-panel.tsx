@@ -24,6 +24,7 @@ import {
   getNotificationFilterKeyFromSearch,
   getNotificationLinkLabel,
   getNotificationNavigationMessage,
+  getNewUnreadNotifications,
   getNotificationSummaryFromList,
   getNotificationsWithoutIds,
   getNotificationsWithReadState,
@@ -150,25 +151,22 @@ export function NotificationsPanel() {
       return;
     }
     const nextNotifications = payload.notifications || [];
-    speakNewUnreadNotifications(notificationsRef.current, nextNotifications);
+    const newUnreadNotifications = getNewUnreadNotifications(notificationsRef.current, nextNotifications);
+    speakNewUnreadNotifications(newUnreadNotifications);
     setNotificationRecords(nextNotifications);
     setSummary(payload.summary || { totalCount: 0, unreadCount: 0 });
     setMessage(formatNotificationSummaryMessage(payload.summary || { totalCount: 0, unreadCount: 0 }));
+    if (newUnreadNotifications.length > 0) {
+      dispatchNotificationsRefreshEvent();
+    }
   }
 
-  function speakNewUnreadNotifications(
-    previousNotifications: NotificationRecord[],
-    nextNotifications: NotificationRecord[],
-  ) {
+  function speakNewUnreadNotifications(newUnreadNotifications: NotificationRecord[]) {
     if (!hasLoadedNotificationsRef.current) {
       hasLoadedNotificationsRef.current = true;
       return;
     }
 
-    const previousIds = new Set(previousNotifications.map((notification) => notification.id));
-    const newUnreadNotifications = nextNotifications
-      .filter((notification) => !notification.readAt && !previousIds.has(notification.id))
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     const latestNotification = newUnreadNotifications.at(-1);
     if (!latestNotification) return;
 

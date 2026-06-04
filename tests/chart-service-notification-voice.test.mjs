@@ -170,6 +170,65 @@ test('notification voice plays stored mp3 files for service notification categor
   ]);
 });
 
+test('notification voice never falls back to browser TTS when a stored mp3 is mapped', async () => {
+  const {
+    playNotificationVoice,
+  } = await import('../src/domain/chart-service/notification-voice.ts');
+
+  const calls = [];
+  class BlockedAudio {
+    constructor(src) {
+      this.src = src;
+      calls.push(['audio', src]);
+    }
+
+    async play() {
+      calls.push(['blocked-play', this.src]);
+      throw new Error('autoplay blocked');
+    }
+  }
+
+  class FakeUtterance {
+    constructor(text) {
+      this.text = text;
+    }
+  }
+
+  const didPlaySignal = await playNotificationVoice('매수신호발생', {
+    Audio: BlockedAudio,
+    Utterance: FakeUtterance,
+    fetch: async () => ({ ok: true }),
+    speechSynthesis: {
+      cancel() {
+        calls.push(['tts-cancel']);
+      },
+      speak() {
+        calls.push(['tts-speak']);
+      },
+    },
+  });
+  const didPlayServiceNotice = await playNotificationVoice({
+    category: 'support_reply',
+    title: '고객센터 답변이 등록되었습니다',
+  }, {
+    Audio: BlockedAudio,
+    Utterance: FakeUtterance,
+    fetch: async () => ({ ok: true }),
+    speechSynthesis: {
+      cancel() {
+        calls.push(['tts-cancel']);
+      },
+      speak() {
+        calls.push(['tts-speak']);
+      },
+    },
+  });
+
+  assert.equal(didPlaySignal, false);
+  assert.equal(didPlayServiceNotice, false);
+  assert.equal(calls.some(([kind]) => kind === 'tts-cancel' || kind === 'tts-speak'), false);
+});
+
 test('notification voice prefers Korean female-style voices and avoids empty speech', async () => {
   const {
     speakNotificationVoice,

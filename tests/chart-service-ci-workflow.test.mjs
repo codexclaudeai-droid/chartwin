@@ -48,12 +48,17 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(wranglerConfig, /"allowed_sender_addresses":\s*\[/);
   assert.match(wranglerConfig, /"verify@tradingcore\.co"/);
   assert.match(deployWorkflow, /CHART_SERVICE_EMAIL_PROVIDER:\s+cloudflare/);
+  assert.match(deployWorkflow, /WEB_PUSH_PUBLIC_KEY:\s+\$\{\{ secrets\.WEB_PUSH_PUBLIC_KEY \}\}/);
+  assert.match(deployWorkflow, /WEB_PUSH_PRIVATE_KEY:\s+\$\{\{ secrets\.WEB_PUSH_PRIVATE_KEY \}\}/);
+  assert.match(deployWorkflow, /WEB_PUSH_SUBJECT:\s+\$\{\{ secrets\.WEB_PUSH_SUBJECT \}\}/);
   assert.match(deployWorkflow, /CLOUDFLARE_ACCOUNT_ID/);
   assert.match(deployWorkflow, /CLOUDFLARE_API_TOKEN/);
   assert.match(deployWorkflow, /CLOUDFLARE_EMAIL_API_TOKEN:\s+\$\{\{ secrets\.CLOUDFLARE_EMAIL_API_TOKEN \}\}/);
   assert.match(deployWorkflow, /EMAIL_API_TOKEN="\$\{CLOUDFLARE_EMAIL_API_TOKEN:-\$CLOUDFLARE_API_TOKEN\}"/);
   assert.match(deployWorkflow, /wrangler secret put CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID/);
   assert.match(deployWorkflow, /wrangler secret put CHART_SERVICE_CLOUDFLARE_API_TOKEN/);
+  assert.match(deployWorkflow, /wrangler secret put "\$name"/);
+  assert.match(deployWorkflow, /WEB_PUSH_PRIVATE_KEY/);
   assert.match(openNextConfig, /buildCommand:\s*'npx next build'/);
   assert.match(nextConfig, /pg-cloudflare/);
   assert.match(nextConfig, /serverExternalPackages:\s*\['pg', 'pg-cloudflare'\]/);

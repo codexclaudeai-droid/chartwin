@@ -1,5 +1,16 @@
+self.addEventListener('install', (event) => {
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener('push', (event) => {
-  event.waitUntil(showLatestNotification());
+  event.waitUntil(Promise.all([
+    notifyOpenClientsAboutNotificationRefresh(),
+    showLatestNotification(),
+  ]));
 });
 
 self.addEventListener('notificationclick', (event) => {
@@ -36,6 +47,17 @@ async function showLatestNotification() {
       data: { url: '/notifications?tab=unread' },
     });
   }
+}
+
+async function notifyOpenClientsAboutNotificationRefresh() {
+  const windowClients = await self.clients.matchAll({
+    type: 'window',
+    includeUncontrolled: true,
+  });
+
+  windowClients.forEach((client) => {
+    client.postMessage({ type: 'chart-service-notifications-refresh' });
+  });
 }
 
 async function openNotificationsPage() {

@@ -107,8 +107,8 @@ export async function playNotificationVoice(target: NotificationVoiceTarget, opt
   const audioPath = typeof target === 'string'
     ? getStoredNotificationAudioPath(text)
     : resolveNotificationVoiceAudioPath(target) ?? getStoredNotificationAudioPath(text);
-  if (audioPath && await tryPlayStoredNotificationAudio(audioPath, options)) {
-    return true;
+  if (audioPath) {
+    return tryPlayStoredNotificationAudio(audioPath, options);
   }
 
   return speakNotificationVoice(text, options);

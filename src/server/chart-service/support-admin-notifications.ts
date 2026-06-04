@@ -7,6 +7,7 @@ import {
 import type { AsyncChartServiceRepository } from './async-repository.ts';
 import type { ChartServiceRepository, EmailOutboxRecord, ServiceUserRecord } from './repository.ts';
 import { createAdminSupportThreadPath } from './support-links.ts';
+import { notifyUserPushSubscriptions } from './web-push.ts';
 
 const SUPPORT_REQUEST_ADMIN_EMAIL_TEMPLATE = 'support_request_admin';
 const ADMIN_SUPPORT_REQUEST_SUBJECT_PREFIX = '[Chart Service] New support request';
@@ -38,7 +39,9 @@ export async function notifyAsyncAdminsAboutSupportRequest(
 ): Promise<void> {
   const admins = getSupportAdminUsers(await repository.listUsers());
   for (const admin of admins) {
-    await repository.saveNotification(await createAsyncSupportRequestAdminNotification(repository, admin, input));
+    const notification = await createAsyncSupportRequestAdminNotification(repository, admin, input);
+    await repository.saveNotification(notification);
+    void notifyUserPushSubscriptions(repository, notification).catch(() => {});
     await repository.saveEmailOutboxRecord(await createAsyncSupportRequestAdminEmail(repository, admin, input));
   }
 }

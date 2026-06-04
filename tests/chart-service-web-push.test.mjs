@@ -8,6 +8,7 @@ const repositorySource = readFileSync(new URL('../src/server/chart-service/repos
 const schemaSource = readFileSync(new URL('../src/server/chart-service/database-schema.ts', import.meta.url), 'utf8');
 const notificationSource = readFileSync(new URL('../src/server/chart-service/async-service.ts', import.meta.url), 'utf8');
 const notificationPanelSource = readFileSync(new URL('../app/notifications/notifications-panel.tsx', import.meta.url), 'utf8');
+const supportAdminNotificationSource = readFileSync(new URL('../src/server/chart-service/support-admin-notifications.ts', import.meta.url), 'utf8');
 
 test('web push subscriptions are stored per signed-in user and can be removed', async () => {
   const serviceExports = await import('../src/server/chart-service/index.ts');
@@ -97,6 +98,7 @@ test('web push routes service worker and notification panel are wired', () => {
   assert.match(testRoute, /notifyUserPushSubscriptions/);
   assert.match(testRoute, /saveNotification/);
   assert.match(serviceWorkerSource, /self\.addEventListener\('push'/);
+  assert.match(serviceWorkerSource, /postMessage\(\{ type: 'chart-service-notifications-refresh' \}\)/);
   assert.match(serviceWorkerSource, /\/api\/notifications\?summary=1/);
   assert.match(serviceWorkerSource, /self\.registration\.showNotification/);
   assert.match(clientSource, /navigator\.serviceWorker\.register\('\/sw\.js'\)/);
@@ -110,4 +112,5 @@ test('web push routes service worker and notification panel are wired', () => {
 test('new async notifications attempt web push delivery without blocking notification creation', () => {
   assert.match(notificationSource, /notifyUserPushSubscriptions\(repository, notification\)/);
   assert.match(notificationSource, /\.catch\(\(\) => \{\}\)/);
+  assert.match(supportAdminNotificationSource, /notifyUserPushSubscriptions\(repository, notification\)/);
 });

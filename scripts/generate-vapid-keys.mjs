@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const args = new Set(process.argv.slice(2));
-const subject = readArgValue('--subject') ?? 'mailto:admin@tradingcore.co';
+const subject = readArgValue('--subject') ?? 'mailto:support@tradingcore.co';
 const shouldWriteEnvLocal = args.has('--write-env-local');
 const envLocalPath = path.resolve('.env.local');
 

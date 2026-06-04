@@ -5,7 +5,10 @@ import { BellRing } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { formatNotificationBadgeCount } from '../src/domain/chart-service/index.ts';
 import { subscribeAuthSessionChangedEvent } from './auth-events';
-import { subscribeNotificationsRefreshEvent } from './notification-events';
+import {
+  subscribeNotificationsRefreshEvent,
+  subscribeServiceWorkerNotificationsRefreshMessages,
+} from './notification-events';
 import { getNotificationSummary } from './notification-summary-client';
 import { getNotificationCenterHref } from './notifications/notification-display';
 
@@ -41,6 +44,7 @@ export function NotificationNavLink() {
     const unsubscribeAuth = subscribeAuthSessionChangedEvent(() => {
       void refreshBadge({ force: true });
     });
+    const unsubscribeServiceWorker = subscribeServiceWorkerNotificationsRefreshMessages();
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible') {
         void refreshBadge({ force: true });
@@ -58,6 +62,7 @@ export function NotificationNavLink() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       unsubscribe();
       unsubscribeAuth();
+      unsubscribeServiceWorker();
     };
   }, []);
 
