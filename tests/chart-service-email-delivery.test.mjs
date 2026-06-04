@@ -113,7 +113,7 @@ test('cloudflare email provider sends queued mail through the Email Sending REST
   assert.equal(requests[0].init.method, 'POST');
   assert.equal(requests[0].init.headers.Authorization, 'Bearer token_123');
   assert.deepEqual(JSON.parse(requests[0].init.body), {
-    to: 'member@example.com',
+    to: ['member@example.com'],
     from: 'verify@tradingcore.co',
     subject: 'Verify your TradingCore email',
     text: 'Verify body',

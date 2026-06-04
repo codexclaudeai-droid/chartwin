@@ -151,7 +151,7 @@ export function createCloudflareEmailDeliveryProvider(input: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            to: message.to,
+            to: [message.to],
             from: message.from,
             subject: message.subject,
             text: message.body,
