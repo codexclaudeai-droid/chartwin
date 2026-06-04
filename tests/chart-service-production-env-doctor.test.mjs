@@ -14,6 +14,7 @@ test('production env doctor is wired into package scripts and postgres gate', ()
 
   assert.equal(packageJson.scripts['service:prod-env:check'], 'node scripts/check-production-env.mjs');
   assert.match(doctorScript, /validatePasswordPolicy/);
+  assert.match(doctorScript, /validateWebPush/);
   assert.match(doctorScript, /redactDatabaseUrl/);
   assert.match(gateScript, /service:prod-env:check/);
 });
@@ -34,6 +35,9 @@ test('production env doctor passes valid postgres launch env without leaking sec
       CHART_SERVICE_EMAIL_DELIVERY_LIMIT: '50',
       CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID: 'account_123',
       CHART_SERVICE_CLOUDFLARE_API_TOKEN: 'cloudflare-token',
+      WEB_PUSH_PUBLIC_KEY: 'B'.repeat(87),
+      WEB_PUSH_PRIVATE_KEY: 'C'.repeat(43),
+      WEB_PUSH_SUBJECT: 'mailto:admin@tradingcore.test',
       CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL: 'owner@tradingcore.test',
       CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD: 'ProdAdmin1234!',
       CHART_SERVICE_BOOTSTRAP_ADMIN_NAME: 'TradingCore Owner',
@@ -42,6 +46,7 @@ test('production env doctor passes valid postgres launch env without leaking sec
 
   assert.match(stdout, /\[PROD ENV PASS\] repository: postgres/);
   assert.match(stdout, /\[PROD ENV PASS\] database: postgresql:\/\/db\.example\.com\/chart_service/);
+  assert.match(stdout, /\[PROD ENV PASS\] web push: configured/);
   assert.match(stdout, /\[PROD ENV PASS\] bootstrap admin: owner@tradingcore\.test/);
   assert.match(stdout, /Production environment check passed/);
   assert.doesNotMatch(stdout, /super-secret/);

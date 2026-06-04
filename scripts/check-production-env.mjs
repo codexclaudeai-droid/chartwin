@@ -12,6 +12,9 @@ const emailProvider = requireValue('CHART_SERVICE_EMAIL_PROVIDER');
 const emailLimit = requireValue('CHART_SERVICE_EMAIL_DELIVERY_LIMIT');
 const cloudflareAccountId = readCloudflareRuntimeValue('CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID');
 const cloudflareApiToken = readCloudflareRuntimeValue('CHART_SERVICE_CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_API_TOKEN');
+const webPushPublicKey = requireValue('WEB_PUSH_PUBLIC_KEY');
+const webPushPrivateKey = requireValue('WEB_PUSH_PRIVATE_KEY');
+const webPushSubject = requireValue('WEB_PUSH_SUBJECT');
 const adminEmail = requireValue('CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL');
 const adminPassword = requireValue('CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD');
 const adminName = requireValue('CHART_SERVICE_BOOTSTRAP_ADMIN_NAME');
@@ -20,6 +23,7 @@ const redactedDatabaseUrl = validateDatabaseUrl(databaseUrl);
 validateSslMode(sslMode);
 validateSessionSecret(sessionSecret);
 validateEmailDelivery(emailProvider, emailLimit, cloudflareAccountId, cloudflareApiToken);
+validateWebPush(webPushPublicKey, webPushPrivateKey, webPushSubject);
 validateBootstrapAdmin(adminEmail, adminPassword, adminName);
 
 if (failures.length > 0) {
@@ -35,6 +39,7 @@ console.log(`[PROD ENV PASS] database: ${redactedDatabaseUrl}`);
 console.log(`[PROD ENV PASS] ssl mode: ${sslMode}`);
 console.log('[PROD ENV PASS] session secret: configured');
 console.log(`[PROD ENV PASS] email delivery: ${emailProvider} limit ${emailLimit}`);
+console.log('[PROD ENV PASS] web push: configured');
 console.log(`[PROD ENV PASS] bootstrap admin: ${adminEmail.trim().toLowerCase()}`);
 console.log('Production environment check passed.');
 
@@ -105,6 +110,18 @@ function validateEmailDelivery(provider, limitValue, cloudflareAccountId, cloudf
   }
 }
 
+function validateWebPush(publicKey, privateKey, subject) {
+  if (!isBase64Url(publicKey) || publicKey.length < 80) {
+    failures.push('WEB_PUSH_PUBLIC_KEY must be a base64url VAPID public key.');
+  }
+  if (!isBase64Url(privateKey) || privateKey.length < 40) {
+    failures.push('WEB_PUSH_PRIVATE_KEY must be a base64url VAPID private key.');
+  }
+  if (!subject.startsWith('mailto:') && !subject.startsWith('https://')) {
+    failures.push('WEB_PUSH_SUBJECT must start with mailto: or https://.');
+  }
+}
+
 function readCloudflareRuntimeValue(primaryKey, fallbackKey) {
   return String(env[primaryKey] ?? env[fallbackKey] ?? '').trim();
 }
@@ -128,6 +145,10 @@ function validateBootstrapAdmin(email, password, name) {
 
 function isPlaceholder(value) {
   return /^<[^>]+>$/.test(value) || value.includes('replace-with');
+}
+
+function isBase64Url(value) {
+  return /^[A-Za-z0-9_-]+$/.test(value);
 }
 
 function redactDatabaseUrl(url) {

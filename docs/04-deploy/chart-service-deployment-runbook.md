@@ -35,6 +35,9 @@ $env:CHART_SERVICE_EMAIL_PROVIDER='cloudflare'
 $env:CHART_SERVICE_EMAIL_DELIVERY_LIMIT='50'
 $env:CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID='<cloudflare-account-id>'
 $env:CHART_SERVICE_CLOUDFLARE_API_TOKEN='<cloudflare-email-sending-api-token>'
+$env:WEB_PUSH_PUBLIC_KEY='<vapid-public-key>'
+$env:WEB_PUSH_PRIVATE_KEY='<vapid-private-key>'
+$env:WEB_PUSH_SUBJECT='mailto:admin@tradingcore.co'
 $env:CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL='<first-admin-email>'
 $env:CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD='<first-admin-password>'
 $env:CHART_SERVICE_BOOTSTRAP_ADMIN_NAME='<first-admin-name>'
@@ -53,6 +56,9 @@ Required values:
 - `CHART_SERVICE_EMAIL_DELIVERY_LIMIT`
 - `CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID`
 - `CHART_SERVICE_CLOUDFLARE_API_TOKEN`
+- `WEB_PUSH_PUBLIC_KEY`
+- `WEB_PUSH_PRIVATE_KEY`
+- `WEB_PUSH_SUBJECT`
 - `CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL`
 - `CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD`
 - `CHART_SERVICE_BOOTSTRAP_ADMIN_NAME`
@@ -65,6 +71,8 @@ Cloudflare Hyperdrive can be resolved in two ways:
 - Manual fallback path: create Hyperdrive in the Cloudflare dashboard, then save its config ID as GitHub secret `CLOUDFLARE_HYPERDRIVE_ID`. In this mode the setup script binds that ID without calling the Hyperdrive create/list API.
 
 OpenNext/Wrangler also requires `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` while resolving the Hyperdrive binding during CI deploy. Reuse the same value as `CHART_SERVICE_DATABASE_URL` through the secret manager; do not commit the real URL.
+
+Generate Web Push VAPID keys with `node scripts/generate-vapid-keys.mjs`. For local development, use `node scripts/generate-vapid-keys.mjs --write-env-local` so `.env.local` is updated without committing secrets. For production, copy the printed `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, and `WEB_PUSH_SUBJECT` values into the hosting secret manager or Cloudflare Worker secrets.
 
 ## 3. Pre-Deployment
 
