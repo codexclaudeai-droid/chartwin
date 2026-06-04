@@ -311,27 +311,19 @@ export function updateAdminUserFreeTrialAllowance(
 export function deleteAdminUserAccount(
   repository: ChartServiceRepository,
   input: { admin: Actor; userId: string; deletedAt: string },
-): { user: ServiceUserRecord; deletedSessionCount: number } {
+): { user: ServiceUserRecord; deletedSessionCount: number; deletedEmailOutboxCount: number } {
   assertSuperAdminActor(input.admin);
   const user = repository.getUserById(input.userId);
   if (!user) throw new Error(`User not found: ${input.userId}`);
   if (user.id === input.admin.id) {
     throw new Error('Cannot delete your own account');
   }
-  if (user.role === 'super_admin') {
-    throw new Error('Cannot delete a super admin account');
+  if (requiresSuperAdmin(user.role)) {
+    throw new Error('Cannot delete an admin account');
   }
 
-  const sessions = repository.listSessionsByUserId(user.id);
-  const deletedUser: ServiceUserRecord = {
-    ...user,
-    accountStatus: USER_ACCOUNT_STATUSES.suspended,
-    phoneNumber: null,
-    passwordHash: null,
-  };
-
-  repository.saveUser(deletedUser);
-  sessions.forEach((session) => repository.deleteSession(session.id));
+  const result = repository.purgeUnverifiedUserByEmail(user.email);
+  if (!result) throw new Error('User delete failed');
   repository.appendAuditLog(createAuditLogDraft({
     actor: input.admin,
     action: 'admin.user.delete',
@@ -339,13 +331,14 @@ export function deleteAdminUserAccount(
     targetId: user.id,
     beforeJson: { user },
     afterJson: {
-      user: deletedUser,
       deletedAt: input.deletedAt,
-      deletedSessionCount: sessions.length,
+      hardDeleted: true,
+      deletedSessionCount: result.deletedSessionCount,
+      deletedEmailOutboxCount: result.deletedEmailOutboxCount,
     },
   }));
 
-  return { user: deletedUser, deletedSessionCount: sessions.length };
+  return result;
 }
 
 function requiresSuperAdmin(role: UserRole): boolean {

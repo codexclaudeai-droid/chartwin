@@ -155,7 +155,7 @@ test('only super admins can change a user login email and the change is audited'
   });
 });
 
-test('only super admins can delete member accounts and async deletion removes them from the directory', async () => {
+test('only super admins can hard delete member accounts from the directory', async () => {
   const repository = createMockChartServiceRepository();
   const session = createSessionForUser(repository, {
     userId: 'user_member',
@@ -174,14 +174,11 @@ test('only super admins can delete member accounts and async deletion removes th
     userId: 'user_member',
     deletedAt: '2026-05-31T01:00:00.000Z',
   });
-  const deletedUser = repository.getUserById('user_member');
   const auditLog = repository.listAuditLogs().at(-1);
 
   assert.equal(result.deletedSessionCount, 1);
   assert.equal(repository.getSessionById(session.id), null);
-  assert.equal(deletedUser?.accountStatus, 'suspended');
-  assert.equal(deletedUser?.phoneNumber, null);
-  assert.equal(deletedUser?.passwordHash, null);
+  assert.equal(repository.getUserById('user_member'), null);
   assert.equal(auditLog?.action, 'admin.user.delete');
   assert.equal(auditLog?.actorAdminId, 'super_1');
   assert.equal(auditLog?.targetId, 'user_member');
