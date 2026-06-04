@@ -80,9 +80,7 @@ jobs:
             CHART_SERVICE_SESSION_SECRET \
             CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL \
             CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD \
-            CHART_SERVICE_BOOTSTRAP_ADMIN_NAME \
-            CHART_SERVICE_EMAIL_PROVIDER \
-            CHART_SERVICE_EMAIL_DELIVERY_LIMIT
+            CHART_SERVICE_BOOTSTRAP_ADMIN_NAME
           do
             printf '%s' "${!name}" | npx wrangler secret put "$name"
           done
