@@ -20,6 +20,7 @@ import type {
   PaymentTransferSettingsRecord,
   NoticePopupRecord,
   PublicBoardPostRecord,
+  PushSubscriptionRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
@@ -710,6 +711,32 @@ export function mapNotificationToPostgresRow(record: NotificationRecord): Postgr
     read_at: record.readAt,
     archived_at: record.archivedAt,
     created_at: record.createdAt,
+  };
+}
+
+export function mapPushSubscriptionFromPostgresRow(row: PostgresRow): PushSubscriptionRecord {
+  return {
+    endpoint: readString(row.endpoint),
+    userId: readString(row.user_id),
+    p256dh: readString(row.p256dh),
+    auth: readString(row.auth),
+    expirationTime: readNullableNumber(row.expiration_time),
+    userAgent: readNullableString(row.user_agent),
+    createdAt: readIsoString(row.created_at),
+    updatedAt: readIsoString(row.updated_at),
+  };
+}
+
+export function mapPushSubscriptionToPostgresRow(record: PushSubscriptionRecord): PostgresRow {
+  return {
+    endpoint: record.endpoint,
+    user_id: record.userId,
+    p256dh: record.p256dh,
+    auth: record.auth,
+    expiration_time: record.expirationTime,
+    user_agent: record.userAgent,
+    created_at: record.createdAt,
+    updated_at: record.updatedAt,
   };
 }
 

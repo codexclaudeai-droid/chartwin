@@ -18,6 +18,7 @@ export * from './support.ts';
 export * from './support-links.ts';
 export * from './support-admin-notifications.ts';
 export * from './notifications.ts';
+export * from './web-push.ts';
 export * from './bootstrap.ts';
 export * from './dashboard.ts';
 export * from './admin-dashboard.ts';

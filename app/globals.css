@@ -16842,6 +16842,19 @@ input[type="checkbox"] {
   stroke-width: 2;
 }
 
+.push-notification-control {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.push-notification-status {
+  margin: 0;
+  max-width: 240px;
+}
+
 @media (max-width: 720px) {
   .admin-notice-popup-fields {
     grid-template-columns: 1fr;

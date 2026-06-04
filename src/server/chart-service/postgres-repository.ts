@@ -43,6 +43,8 @@ import {
   mapNoticePopupToPostgresRow,
   mapPlanFromPostgresRow,
   mapPlanToPostgresRow,
+  mapPushSubscriptionFromPostgresRow,
+  mapPushSubscriptionToPostgresRow,
   mapPublicBoardPostFromPostgresRow,
   mapPublicBoardPostToPostgresRow,
   mapReferralProgramSettingsFromPostgresRow,
@@ -84,6 +86,7 @@ import type {
   NoticePopupRecord,
   PurgedUnverifiedUserAccountRecord,
   PublicBoardPostRecord,
+  PushSubscriptionRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
@@ -187,6 +190,7 @@ export function createPostgresAsyncChartServiceRepository(
       await execute(createPostgresDeleteStatement('social_auth_accounts', { user_id: user.id }));
       await execute(createPostgresDeleteStatement('password_reset_tokens', { user_id: user.id }));
       await execute(createPostgresDeleteStatement('email_verification_tokens', { user_id: user.id }));
+      await execute(createPostgresDeleteStatement('push_subscriptions', { user_id: user.id }));
       await execute(createPostgresDeleteStatement('email_outbox', { recipient_email: normalizedEmail }));
       await execute(createPostgresDeleteStatement('signup_agreements', { user_id: user.id }));
       await execute(createPostgresDeleteStatement('chart_user_settings', { user_id: user.id }));
@@ -247,6 +251,22 @@ export function createPostgresAsyncChartServiceRepository(
     },
     async deleteSession(id: string): Promise<void> {
       await execute(createPostgresDeleteStatement('auth_sessions', { id }));
+    },
+    async listPushSubscriptionsByUserId(userId: string): Promise<PushSubscriptionRecord[]> {
+      return selectMany('push_subscriptions', mapPushSubscriptionFromPostgresRow, { user_id: userId });
+    },
+    async savePushSubscription(subscription: PushSubscriptionRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'push_subscriptions',
+        mapPushSubscriptionToPostgresRow(subscription),
+        ['endpoint'],
+      ));
+    },
+    async deletePushSubscription(userId: string, endpoint: string): Promise<void> {
+      await execute(createPostgresDeleteStatement('push_subscriptions', {
+        user_id: userId,
+        endpoint,
+      }));
     },
     async getPasswordResetTokenByTokenHash(tokenHash: string): Promise<PasswordResetTokenRecord | null> {
       return selectOne('password_reset_tokens', mapPasswordResetTokenFromPostgresRow, { token_hash: tokenHash });

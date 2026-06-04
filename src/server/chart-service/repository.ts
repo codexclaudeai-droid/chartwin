@@ -48,6 +48,17 @@ export type AuthSessionRecord = {
   expiresAt: string;
 };
 
+export type PushSubscriptionRecord = {
+  endpoint: string;
+  userId: string;
+  p256dh: string;
+  auth: string;
+  expirationTime: number | null;
+  userAgent: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type PasswordResetTokenRecord = {
   id: string;
   userId: string;
@@ -240,6 +251,9 @@ export type ChartServiceRepository = {
   listSessionsByUserId(userId: string): AuthSessionRecord[];
   saveSession(session: AuthSessionRecord): void;
   deleteSession(id: string): void;
+  listPushSubscriptionsByUserId(userId: string): PushSubscriptionRecord[];
+  savePushSubscription(subscription: PushSubscriptionRecord): void;
+  deletePushSubscription(userId: string, endpoint: string): void;
   getPasswordResetTokenByTokenHash(tokenHash: string): PasswordResetTokenRecord | null;
   savePasswordResetToken(token: PasswordResetTokenRecord): void;
   getEmailVerificationTokenByTokenHash(tokenHash: string): EmailVerificationTokenRecord | null;

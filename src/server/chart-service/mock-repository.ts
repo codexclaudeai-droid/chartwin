@@ -28,6 +28,7 @@ import type {
   NoticePopupRecord,
   PurgedUnverifiedUserAccountRecord,
   PublicBoardPostRecord,
+  PushSubscriptionRecord,
   ReferralProgramSettingsRecord,
   SalesTeamRecord,
   ServiceUserRecord,
@@ -47,6 +48,7 @@ export type MockChartServiceState = {
   users: ServiceUserRecord[];
   socialAuthAccounts: SocialAuthAccountRecord[];
   sessions: AuthSessionRecord[];
+  pushSubscriptions: PushSubscriptionRecord[];
   passwordResetTokens: PasswordResetTokenRecord[];
   emailVerificationTokens: EmailVerificationTokenRecord[];
   emailOutbox: EmailOutboxRecord[];
@@ -91,6 +93,7 @@ export function createMockChartServiceState(): MockChartServiceState {
     ],
     socialAuthAccounts: [],
     sessions: [],
+    pushSubscriptions: [],
     passwordResetTokens: [],
     emailVerificationTokens: [],
     emailOutbox: [],
@@ -225,6 +228,7 @@ export function createMockChartServiceRepository(
 ): ChartServiceRepository {
   state.passwordResetTokens ??= [];
   state.socialAuthAccounts ??= [];
+  state.pushSubscriptions ??= [];
   state.emailVerificationTokens ??= [];
   state.emailOutbox ??= [];
   state.referralProgramSettings ??= null;
@@ -272,6 +276,7 @@ export function createMockChartServiceRepository(
         .map((payment) => payment.id));
 
       state.sessions = state.sessions.filter((session) => session.userId !== user.id);
+      state.pushSubscriptions = state.pushSubscriptions.filter((subscription) => subscription.userId !== user.id);
       state.socialAuthAccounts = state.socialAuthAccounts.filter((account) => account.userId !== user.id);
       state.passwordResetTokens = state.passwordResetTokens.filter((token) => token.userId !== user.id);
       state.emailVerificationTokens = state.emailVerificationTokens.filter((token) => token.userId !== user.id);
@@ -324,6 +329,19 @@ export function createMockChartServiceRepository(
     },
     deleteSession(id) {
       state.sessions = state.sessions.filter((session) => session.id !== id);
+    },
+    listPushSubscriptionsByUserId(userId) {
+      return state.pushSubscriptions
+        .filter((subscription) => subscription.userId === userId)
+        .map((subscription) => ({ ...subscription }));
+    },
+    savePushSubscription(subscription) {
+      upsertByCompositeKey(state.pushSubscriptions, subscription, ['userId', 'endpoint']);
+    },
+    deletePushSubscription(userId, endpoint) {
+      state.pushSubscriptions = state.pushSubscriptions.filter((subscription) => (
+        subscription.userId !== userId || subscription.endpoint !== endpoint
+      ));
     },
     getPasswordResetTokenByTokenHash(tokenHash) {
       return cloneOrNull(state.passwordResetTokens.find((token) => token.tokenHash === tokenHash));

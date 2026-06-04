@@ -72,6 +72,7 @@ import {
 } from './referral-program.ts';
 import { notifyAsyncAdminsAboutSupportRequest } from './support-admin-notifications.ts';
 import { getAsyncPaymentTransferSettingsForDisplay } from './payment-settings.ts';
+import { notifyUserPushSubscriptions } from './web-push.ts';
 import {
   createFailedTransactionVerificationResult,
   fetchTronScanTransaction,
@@ -2176,6 +2177,7 @@ async function createAsyncUserNotification(
     createdAt: input.createdAt,
   };
   await repository.saveNotification(notification);
+  void notifyUserPushSubscriptions(repository, notification).catch(() => {});
   return notification;
 }
 
