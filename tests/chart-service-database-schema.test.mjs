@@ -189,6 +189,9 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /alter table if exists users add column if not exists created_at timestamptz/i);
   assert.match(sql, /create table if not exists email_outbox/i);
   assert.match(sql, /create index if not exists idx_email_outbox_status_created_at/i);
+  assert.match(sql, /create index if not exists idx_referral_ledgers_referrer_user_id/i);
+  assert.match(sql, /create index if not exists idx_referral_ledgers_referred_user_id/i);
+  assert.match(sql, /create index if not exists idx_support_messages_author_user_id/i);
   assert.match(sql, /before_json jsonb/i);
   assert.match(sql, /after_json jsonb/i);
   assert.doesNotMatch(sql, /before_json jsonb not null/i);

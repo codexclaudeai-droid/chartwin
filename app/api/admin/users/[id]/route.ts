@@ -142,33 +142,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   const persistence = getAsyncChartServicePersistence();
   try {
     const { id } = await context.params;
-    const result = await persistence.runMutation(async (repository) => {
-      const admin = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
-      const user = await repository.getUserById(id);
-      if (user) {
-        try {
-          const purgeResult = await purgeAsyncUnverifiedUserAccount(repository, {
-            admin,
-            email: user.email,
-            purgedAt: new Date().toISOString(),
-          });
-          return {
-            user: purgeResult.user,
-            deletedSessionCount: purgeResult.deletedSessionCount,
-            purged: true,
-          };
-        } catch (error) {
-          if (!String(error instanceof Error ? error.message : error).includes('verified')) {
-            throw error;
-          }
-        }
-      }
-      return deleteAsyncAdminUserAccount(repository, {
-        admin,
-        userId: id,
-        deletedAt: new Date().toISOString(),
-      });
-    });
+    const result = await runUserDeleteMutationWithDeadlockRetry(persistence, request, id);
     return NextResponse.json({
       ok: true,
       deletedUserId: result.user.id,
@@ -186,6 +160,62 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
 function normalizeRole(value: unknown): UserRole | null {
   return ALLOWED_ROLES.includes(value as UserRole) ? value as UserRole : null;
+}
+
+async function runUserDeleteMutationWithDeadlockRetry(
+  persistence: ReturnType<typeof getAsyncChartServicePersistence>,
+  request: NextRequest,
+  id: string,
+) {
+  try {
+    return await runUserDeleteMutation(persistence, request, id);
+  } catch (error) {
+    if (!isPostgresDeadlockError(error)) throw error;
+    return await runUserDeleteMutation(persistence, request, id);
+  }
+}
+
+async function runUserDeleteMutation(
+  persistence: ReturnType<typeof getAsyncChartServicePersistence>,
+  request: NextRequest,
+  id: string,
+) {
+  return await persistence.runMutation(async (repository) => {
+    const admin = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
+    const user = await repository.getUserById(id);
+    if (user) {
+      try {
+        const purgeResult = await purgeAsyncUnverifiedUserAccount(repository, {
+          admin,
+          email: user.email,
+          purgedAt: new Date().toISOString(),
+        });
+        return {
+          user: purgeResult.user,
+          deletedSessionCount: purgeResult.deletedSessionCount,
+          purged: true,
+        };
+      } catch (error) {
+        if (!String(error instanceof Error ? error.message : error).includes('verified')) {
+          throw error;
+        }
+      }
+    }
+    return deleteAsyncAdminUserAccount(repository, {
+      admin,
+      userId: id,
+      deletedAt: new Date().toISOString(),
+    });
+  });
+}
+
+function isPostgresDeadlockError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return String(error).toLowerCase().includes('deadlock detected');
+  }
+  const record = error as Record<string, unknown>;
+  return record.code === '40P01' ||
+    String(record.message ?? '').toLowerCase().includes('deadlock detected');
 }
 
 function normalizeAccountStatus(value: unknown): UserAccountStatus | null {

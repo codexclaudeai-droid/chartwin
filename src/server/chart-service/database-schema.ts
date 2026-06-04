@@ -208,6 +208,7 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       },
       indexes: [
         { name: 'idx_support_messages_thread_id', columns: ['thread_id'] },
+        { name: 'idx_support_messages_author_user_id', columns: ['author_user_id'] },
       ],
     },
     {
@@ -263,6 +264,8 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
         created_at: { type: 'timestamptz' },
       },
       indexes: [
+        { name: 'idx_referral_ledgers_referrer_user_id', columns: ['referrer_user_id'] },
+        { name: 'idx_referral_ledgers_referred_user_id', columns: ['referred_user_id'] },
         { name: 'idx_referral_ledgers_payment_request_id', columns: ['payment_request_id'] },
       ],
     },
@@ -557,6 +560,9 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     'create table if not exists email_verification_tokens (id text primary key, user_id text not null references users(id), token_hash text not null, created_at timestamptz not null, expires_at timestamptz not null, used_at timestamptz);',
     'create index if not exists idx_email_verification_tokens_token_hash on email_verification_tokens (token_hash);',
     'create index if not exists idx_email_verification_tokens_user_id on email_verification_tokens (user_id);',
+    'create index if not exists idx_referral_ledgers_referrer_user_id on referral_ledgers (referrer_user_id);',
+    'create index if not exists idx_referral_ledgers_referred_user_id on referral_ledgers (referred_user_id);',
+    'create index if not exists idx_support_messages_author_user_id on support_messages (author_user_id);',
     'alter table if exists email_outbox add column if not exists sender_email text;',
     "update email_outbox set sender_email = 'noreply@tradingcore.co' where sender_email is null or sender_email = '';",
     'alter table if exists audit_logs alter column before_json drop not null;',

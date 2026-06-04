@@ -182,7 +182,6 @@ export function createPostgresAsyncChartServiceRepository(
       const supportThreads = await selectMany('support_threads', mapSupportThreadFromPostgresRow, {
         author_user_id: user.id,
       });
-      const payments = await selectMany('payment_requests', mapPaymentFromPostgresRow, { user_id: user.id });
 
       await execute(createPostgresDeleteStatement('auth_sessions', { user_id: user.id }));
       await execute(createPostgresDeleteStatement('social_auth_accounts', { user_id: user.id }));
@@ -192,11 +191,15 @@ export function createPostgresAsyncChartServiceRepository(
       await execute(createPostgresDeleteStatement('signup_agreements', { user_id: user.id }));
       await execute(createPostgresDeleteStatement('chart_user_settings', { user_id: user.id }));
       await execute(createPostgresDeleteStatement('notifications', { user_id: user.id }));
-      await execute(createPostgresDeleteStatement('referral_ledgers', { referrer_user_id: user.id }));
-      await execute(createPostgresDeleteStatement('referral_ledgers', { referred_user_id: user.id }));
-      for (const payment of payments) {
-        await execute(createPostgresDeleteStatement('referral_ledgers', { payment_request_id: payment.id }));
-      }
+      await execute({
+        sql: [
+          'delete from referral_ledgers',
+          'where referrer_user_id = $1',
+          'or referred_user_id = $1',
+          'or payment_request_id in (select id from payment_requests where user_id = $1)',
+        ].join(' '),
+        values: [user.id],
+      });
       await execute(createPostgresDeleteStatement('payment_requests', { user_id: user.id }));
       await execute(createPostgresDeleteStatement('free_trial_usage_records', { user_id: user.id }));
       await execute(createPostgresDeleteStatement('free_trial_user_allowances', { user_id: user.id }));

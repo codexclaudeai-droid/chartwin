@@ -114,6 +114,10 @@ test('postgres async repository purges user dependencies before deleting the use
   assert.equal(result?.deletedEmailOutboxCount, 1);
   assert.ok(calls.some((call) => call.sql === 'delete from email_verification_tokens where user_id = $1'));
   assert.ok(calls.some((call) => call.sql === 'delete from email_outbox where recipient_email = $1'));
+  const referralDeleteCalls = calls.filter((call) => call.sql.includes('delete from referral_ledgers'));
+  assert.equal(referralDeleteCalls.length, 1);
+  assert.match(referralDeleteCalls[0].sql, /payment_request_id in \(select id from payment_requests where user_id = \$1\)/);
+  assert.deepEqual(referralDeleteCalls[0].values, ['user_unverified']);
   assert.equal(calls.at(-1)?.sql, 'delete from users where id = $1');
   assert.deepEqual(calls.at(-1)?.values, ['user_unverified']);
 });

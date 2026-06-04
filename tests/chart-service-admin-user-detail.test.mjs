@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { createAuditLogDraft } from '../src/domain/chart-service/index.ts';
 import {
@@ -362,4 +363,13 @@ test('unverified purge API refuses verified accounts', async () => {
   assert.equal(payload.ok, false);
   assert.match(payload.message, /verified/);
   assert.ok(repository.getUserByEmail('member@example.com'));
+});
+
+test('admin user detail delete API retries postgres deadlocks once', () => {
+  const routeSource = readFileSync(new URL('../app/api/admin/users/[id]/route.ts', import.meta.url), 'utf8');
+
+  assert.match(routeSource, /runUserDeleteMutationWithDeadlockRetry/);
+  assert.match(routeSource, /isPostgresDeadlockError/);
+  assert.match(routeSource, /40P01/);
+  assert.match(routeSource, /deadlock detected/);
 });
