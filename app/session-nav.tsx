@@ -8,6 +8,11 @@ import {
   subscribeAuthSessionChangedEvent,
 } from './auth-events';
 import { clearAuthSessionCache, getAuthSession, type AuthSessionUser } from './auth-session-client';
+import {
+  detachBrowserPushSubscriptionForCurrentUser,
+  disableBrowserPushSubscription,
+  syncExistingBrowserPushSubscriptionForCurrentUser,
+} from './push-subscription-client';
 import { formatSessionRoleLabel, formatSessionUserLabel, type SessionNavUser } from './session-nav-model';
 
 type SessionPayload = {
@@ -24,6 +29,9 @@ export function SessionNav() {
     const payload = await getAuthSession() as SessionPayload;
     setUser(payload.authenticated ? payload.user ?? null : null);
     setIsLoading(false);
+    if (payload.authenticated && payload.user?.id) {
+      void syncExistingBrowserPushSubscriptionForCurrentUser(payload.user.id).catch(() => {});
+    }
   }
 
   useEffect(() => {
@@ -45,6 +53,8 @@ export function SessionNav() {
 
   async function logout() {
     setIsBusy(true);
+    await detachBrowserPushSubscriptionForCurrentUser()
+      .catch(() => disableBrowserPushSubscription().catch(() => false));
     await fetch('/api/auth/logout', { method: 'POST' });
     clearAuthSessionCache();
     dispatchAuthSessionChangedEvent();

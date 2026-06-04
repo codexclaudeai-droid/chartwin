@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { dispatchNotificationsRefreshEvent } from '../notification-events';
+import {
+  createBrowserPushSubscription,
+  disableBrowserPushSubscription,
+  getCurrentBrowserPushSubscription,
+  isBrowserPushSupported,
+  syncCurrentBrowserPushSubscription,
+} from '../push-subscription-client';
 
 type PushControlStatus = 'checking' | 'unsupported' | 'disabled' | 'available' | 'subscribed' | 'denied' | 'busy';
 
@@ -22,7 +29,7 @@ export function PushNotificationControl() {
   }, []);
 
   async function refreshPushState() {
-    if (!isPushSupported()) {
+    if (!isBrowserPushSupported()) {
       setStatus('unsupported');
       setMessage('이 브라우저에서는 푸시 알림을 지원하지 않습니다.');
       return;
@@ -43,10 +50,21 @@ export function PushNotificationControl() {
       return;
     }
 
-    const registration = await navigator.serviceWorker.register('/sw.js');
-    const subscription = await registration.pushManager.getSubscription();
-    setStatus(subscription ? 'subscribed' : 'available');
-    setMessage(subscription ? '브라우저 푸시 알림이 켜져 있습니다.' : '브라우저 푸시 알림을 켤 수 있습니다.');
+    const subscription = await getCurrentBrowserPushSubscription();
+    if (subscription) {
+      try {
+        await syncCurrentBrowserPushSubscription(subscription);
+        setStatus('subscribed');
+        setMessage('브라우저 푸시 알림이 현재 계정에 연결되어 있습니다.');
+      } catch (error) {
+        setStatus('available');
+        setMessage(error instanceof Error ? error.message : '푸시 알림 연결 확인에 실패했습니다.');
+      }
+      return;
+    }
+
+    setStatus('available');
+    setMessage('브라우저 푸시 알림을 켤 수 있습니다.');
   }
 
   async function enablePush() {
@@ -64,19 +82,8 @@ export function PushNotificationControl() {
         return;
       }
 
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      const existingSubscription = await registration.pushManager.getSubscription();
-      const subscription = existingSubscription ?? await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: base64UrlToUint8Array(publicKey),
-      });
-      const response = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription: subscription.toJSON() }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.message || '푸시 알림 구독에 실패했습니다.');
+      const subscription = await createBrowserPushSubscription(publicKey);
+      await syncCurrentBrowserPushSubscription(subscription);
 
       setStatus('subscribed');
       setMessage('브라우저 푸시 알림이 켜졌습니다.');
@@ -91,16 +98,7 @@ export function PushNotificationControl() {
     setMessage('브라우저 푸시 알림을 해제하고 있습니다.');
 
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      const subscription = await registration.pushManager.getSubscription();
-      if (subscription) {
-        await fetch('/api/push/unsubscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ endpoint: subscription.endpoint }),
-        });
-        await subscription.unsubscribe();
-      }
+      await disableBrowserPushSubscription();
 
       setStatus('available');
       setMessage('브라우저 푸시 알림이 꺼졌습니다.');
@@ -170,26 +168,4 @@ export function PushNotificationControl() {
       <span className="notice compact push-notification-status">{message}</span>
     </div>
   );
-}
-
-function isPushSupported(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    'serviceWorker' in navigator &&
-    'PushManager' in window &&
-    'Notification' in window
-  );
-}
-
-function base64UrlToUint8Array(value: string): ArrayBuffer {
-  const padding = '='.repeat((4 - (value.length % 4)) % 4);
-  const base64 = `${value}${padding}`.replace(/-/g, '+').replace(/_/g, '/');
-  const raw = window.atob(base64);
-  const output = new Uint8Array(raw.length);
-
-  for (let index = 0; index < raw.length; index += 1) {
-    output[index] = raw.charCodeAt(index);
-  }
-
-  return output.buffer.slice(output.byteOffset, output.byteOffset + output.byteLength);
 }

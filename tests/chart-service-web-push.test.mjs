@@ -72,6 +72,47 @@ test('web push subscriptions are stored per signed-in user and can be removed', 
   assert.equal(repository.listPushSubscriptionsByUserId('user_member').length, 0);
 });
 
+test('web push endpoint ownership moves to the latest signed-in user', async () => {
+  const serviceExports = await import('../src/server/chart-service/index.ts');
+  const { registerPushSubscriptionForUser } = serviceExports;
+  const repository = createMockChartServiceRepository();
+  const subscription = {
+    endpoint: 'https://push.example.test/send/same-device',
+    expirationTime: null,
+    keys: {
+      p256dh: 'p256dh-key',
+      auth: 'auth-key',
+    },
+  };
+
+  registerPushSubscriptionForUser(repository, {
+    actor: { id: 'user_member', role: 'member' },
+    subscription,
+    userAgent: 'test-browser',
+    now: '2026-06-04T12:00:00.000Z',
+  });
+
+  const moved = registerPushSubscriptionForUser(repository, {
+    actor: { id: 'admin_1', role: 'admin' },
+    subscription: {
+      ...subscription,
+      keys: {
+        p256dh: 'admin-p256dh-key',
+        auth: 'admin-auth-key',
+      },
+    },
+    userAgent: 'same-browser-admin',
+    now: '2026-06-04T12:05:00.000Z',
+  });
+
+  assert.equal(moved.userId, 'admin_1');
+  assert.equal(repository.listPushSubscriptionsByUserId('user_member').length, 0);
+  const adminSubscriptions = repository.listPushSubscriptionsByUserId('admin_1');
+  assert.equal(adminSubscriptions.length, 1);
+  assert.equal(adminSubscriptions[0].endpoint, subscription.endpoint);
+  assert.equal(adminSubscriptions[0].p256dh, 'admin-p256dh-key');
+});
+
 test('web push database and repository expose subscription persistence', () => {
   assert.match(repositorySource, /export type PushSubscriptionRecord = \{/);
   assert.match(repositorySource, /listPushSubscriptionsByUserId\(userId: string\): PushSubscriptionRecord\[\];/);
@@ -91,6 +132,9 @@ test('web push routes service worker and notification panel are wired', () => {
   const testRoute = readFileSync(new URL('../app/api/push/test/route.ts', import.meta.url), 'utf8');
   const serviceWorkerSource = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
   const clientSource = readFileSync(new URL('../app/notifications/push-notification-control.tsx', import.meta.url), 'utf8');
+  const pushClientSource = readFileSync(new URL('../app/push-subscription-client.ts', import.meta.url), 'utf8');
+  const sessionNavSource = readFileSync(new URL('../app/session-nav.tsx', import.meta.url), 'utf8');
+  const loginPanelSource = readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
 
   assert.match(publicKeyRoute, /getWebPushPublicKey/);
   assert.match(subscribeRoute, /registerPushSubscriptionForUser/);
@@ -101,12 +145,20 @@ test('web push routes service worker and notification panel are wired', () => {
   assert.match(serviceWorkerSource, /postMessage\(\{ type: 'chart-service-notifications-refresh' \}\)/);
   assert.match(serviceWorkerSource, /\/api\/notifications\?summary=1/);
   assert.match(serviceWorkerSource, /self\.registration\.showNotification/);
-  assert.match(clientSource, /navigator\.serviceWorker\.register\('\/sw\.js'\)/);
-  assert.match(clientSource, /pushManager\.subscribe/);
-  assert.match(clientSource, /\/api\/push\/subscribe/);
+  assert.match(pushClientSource, /navigator\.serviceWorker\.register\('\/sw\.js'\)/);
+  assert.match(pushClientSource, /pushManager\.subscribe/);
+  assert.match(pushClientSource, /\/api\/push\/subscribe/);
+  assert.match(pushClientSource, /\/api\/push\/unsubscribe/);
+  assert.match(pushClientSource, /syncExistingBrowserPushSubscriptionForCurrentUser/);
+  assert.match(clientSource, /createBrowserPushSubscription/);
+  assert.match(clientSource, /syncCurrentBrowserPushSubscription/);
   assert.match(clientSource, /\/api\/push\/test/);
   assert.match(clientSource, /testPush/);
   assert.match(notificationPanelSource, /<PushNotificationControl \/>/);
+  assert.match(sessionNavSource, /detachBrowserPushSubscriptionForCurrentUser/);
+  assert.match(sessionNavSource, /syncExistingBrowserPushSubscriptionForCurrentUser/);
+  assert.match(loginPanelSource, /detachBrowserPushSubscriptionForCurrentUser/);
+  assert.match(loginPanelSource, /syncExistingBrowserPushSubscriptionForCurrentUser/);
 });
 
 test('new async notifications attempt web push delivery without blocking notification creation', () => {

@@ -336,7 +336,7 @@ export function createMockChartServiceRepository(
         .map((subscription) => ({ ...subscription }));
     },
     savePushSubscription(subscription) {
-      upsertByCompositeKey(state.pushSubscriptions, subscription, ['userId', 'endpoint']);
+      upsertByKey(state.pushSubscriptions, subscription, 'endpoint');
     },
     deletePushSubscription(userId, endpoint) {
       state.pushSubscriptions = state.pushSubscriptions.filter((subscription) => (

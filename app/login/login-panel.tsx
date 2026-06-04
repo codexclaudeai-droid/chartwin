@@ -5,6 +5,11 @@ import { useState } from 'react';
 import { dispatchAuthSessionChangedEvent } from '../auth-events';
 import { clearAuthSessionCache, primeAuthSession } from '../auth-session-client';
 import { navigateToSafeRedirect } from '../auth-redirect';
+import {
+  detachBrowserPushSubscriptionForCurrentUser,
+  disableBrowserPushSubscription,
+  syncExistingBrowserPushSubscriptionForCurrentUser,
+} from '../push-subscription-client';
 
 export function LoginPanel() {
   const [email, setEmail] = useState('');
@@ -33,6 +38,7 @@ export function LoginPanel() {
         actor: payload.user ? { id: payload.user.id, role: payload.user.role } : null,
         user: payload.user ?? null,
       });
+      await syncExistingBrowserPushSubscriptionForCurrentUser(payload.user?.id).catch(() => false);
       dispatchAuthSessionChangedEvent();
       if (isAdminRole(payload.user?.role)) {
         window.location.assign('/admin');
@@ -47,6 +53,8 @@ export function LoginPanel() {
 
   async function logout() {
     setIsSubmitting(true);
+    await detachBrowserPushSubscriptionForCurrentUser()
+      .catch(() => disableBrowserPushSubscription().catch(() => false));
     await fetch('/api/auth/logout', { method: 'POST' });
     setIsSubmitting(false);
     clearAuthSessionCache();
