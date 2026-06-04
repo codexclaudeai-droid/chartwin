@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { dispatchAuthSessionChangedEvent, subscribeAuthSessionChangedEvent } from '../auth-events';
 import { clearAuthSessionCache, primeAuthSession } from '../auth-session-client';
 import { getNotificationCenterHref } from '../notifications/notification-display';
+import { PushNotificationControl } from '../shared/push-notification-control';
 import { RefreshIconButton } from '../shared/refresh-icon-button';
 import { formatSignupPhoneNumber } from '../signup/phone-format';
 import {
@@ -938,6 +939,9 @@ export function ProfilePanel() {
               <strong>대기 {dashboard.support.waitingThreadCount}건</strong>
               <p>확인 가능한 문의 {dashboard.support.visibleThreadCount}건</p>
             </article>
+          </div>
+          <div className="profile-push-setting-row">
+            <PushNotificationControl />
           </div>
           <div className="actions">
             <Link className="button" href="/pricing">구독신청</Link>

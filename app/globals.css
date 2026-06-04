@@ -15253,6 +15253,10 @@ body:not(:has(.landing-page)) .profile-page .status-row {
   border-top-color: rgba(125, 183, 255, 0.14);
 }
 
+body:not(:has(.landing-page)) .profile-page .profile-push-setting-row {
+  border-top-color: rgba(125, 183, 255, 0.14);
+}
+
 body:not(:has(.landing-page)) .profile-page .status-row span,
 body:not(:has(.landing-page)) .profile-page .referral-card span,
 body:not(:has(.landing-page)) .profile-page .mini-card span,
@@ -15262,8 +15266,29 @@ body:not(:has(.landing-page)) .profile-page label {
 
 body:not(:has(.landing-page)) .profile-page .status-row strong,
 body:not(:has(.landing-page)) .profile-page .referral-card strong,
-body:not(:has(.landing-page)) .profile-page .mini-card strong {
+body:not(:has(.landing-page)) .profile-page .mini-card strong,
+body:not(:has(.landing-page)) .profile-page .push-notification-copy strong {
   color: #ffffff;
+}
+
+body:not(:has(.landing-page)) .profile-page .push-notification-status,
+body:not(:has(.landing-page)) .profile-page .push-notification-toggle-label {
+  color: rgba(216, 236, 255, 0.68);
+}
+
+body:not(:has(.landing-page)) .profile-page .push-notification-toggle-track {
+  background: rgba(2, 7, 19, 0.52);
+  border-color: rgba(125, 183, 255, 0.22);
+}
+
+body:not(:has(.landing-page)) .profile-page .push-notification-toggle.active .push-notification-toggle-track {
+  background: linear-gradient(135deg, var(--tc-ui-blue), var(--tc-ui-blue-2));
+  border-color: rgba(125, 183, 255, 0.48);
+  box-shadow: 0 12px 28px rgba(55, 125, 255, 0.28);
+}
+
+body:not(:has(.landing-page)) .profile-page .push-notification-toggle:not(:disabled):is(:hover, :focus-visible, :active) .push-notification-toggle-track {
+  box-shadow: 0 0 0 4px rgba(76, 141, 255, 0.14);
 }
 
 body:not(:has(.landing-page)) .pricing-checkout-card label,
@@ -16842,17 +16867,122 @@ input[type="checkbox"] {
   stroke-width: 2;
 }
 
+.profile-push-setting-row {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
 .push-notification-control {
   align-items: center;
-  display: inline-flex;
+  display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
+  gap: 14px;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.push-notification-copy {
+  display: grid;
+  gap: 4px;
+  min-width: min(100%, 240px);
+}
+
+.push-notification-copy strong {
+  font-size: 14px;
+  line-height: 1.3;
 }
 
 .push-notification-status {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
   margin: 0;
-  max-width: 240px;
+  max-width: 100%;
+}
+
+.push-notification-actions {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.push-notification-toggle {
+  -webkit-tap-highlight-color: transparent;
+  align-items: center;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  gap: 9px;
+  justify-content: center;
+  min-height: 34px;
+  outline: 0;
+  padding: 0;
+}
+
+.push-notification-toggle:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.push-notification-toggle-track {
+  background: rgba(23, 22, 18, 0.12);
+  border: 1px solid color-mix(in srgb, var(--muted) 32%, transparent);
+  border-radius: 999px;
+  display: inline-flex;
+  height: 30px;
+  position: relative;
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  width: 54px;
+}
+
+.push-notification-toggle-thumb {
+  background: #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(23, 22, 18, 0.2);
+  height: 22px;
+  left: 3px;
+  position: absolute;
+  top: 3px;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  width: 22px;
+}
+
+.push-notification-toggle.active {
+  color: var(--accent);
+}
+
+.push-notification-toggle.active .push-notification-toggle-track {
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #56f0ff));
+  border-color: color-mix(in srgb, var(--accent) 64%, transparent);
+}
+
+.push-notification-toggle.active .push-notification-toggle-thumb {
+  transform: translateX(24px);
+}
+
+.push-notification-toggle:not(:disabled):is(:hover, :focus-visible, :active) .push-notification-toggle-track {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.push-notification-toggle-label {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.push-notification-test-button {
+  min-height: 34px;
+  padding-inline: 12px;
 }
 
 @media (max-width: 720px) {

@@ -289,7 +289,7 @@ test('profile page and panel expose my profile edit modal and referral controls'
   assert.match(panelSource, /프로필수정/);
   assert.match(panelSource, /role="dialog"/);
 
-  assert.match(layoutSource, /ProfileNavLink/);
+  assert.match(layoutSource, /SessionNav/);
   assert.match(pageSource, /마이프로필/);
   assert.match(panelSource, /phoneDraft/);
   assert.match(panelSource, /htmlFor="profilePhoneNumber"/);

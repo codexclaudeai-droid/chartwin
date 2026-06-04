@@ -7,7 +7,6 @@ import {
   subscribeNotificationsRefreshEvent,
 } from '../notification-events';
 import { RefreshIconButton } from '../shared/refresh-icon-button';
-import { PushNotificationControl } from './push-notification-control';
 import {
   playNotificationVoice,
 } from '../../src/domain/chart-service/notification-voice.ts';
@@ -276,7 +275,6 @@ export function NotificationsPanel() {
       <div className="toolbar">
         <h2>알림센터</h2>
         <div className="actions compact">
-          <PushNotificationControl />
           <RefreshIconButton onClick={refresh} disabled={isBusy} />
           <button
             aria-describedby={summary.unreadCount === 0 ? bulkActionHintId : undefined}
