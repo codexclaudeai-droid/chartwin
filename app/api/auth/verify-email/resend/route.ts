@@ -28,17 +28,43 @@ export async function POST(request: NextRequest) {
     email: String(body.email || ''),
     requestedAt: new Date().toISOString(),
   }));
+  let emailDelivery = {
+    processed: 0,
+    sent: 0,
+    failed: 0,
+    remainingQueued: 0,
+    lastError: null as string | null,
+  };
   if (result.emailOutboxId) {
-    const provider = createEmailDeliveryProviderFromEnv(getEmailDeliveryRuntimeEnv());
-    await persistence.runMutation((repository) => deliverQueuedEmailOutbox(repository, provider, {
-      deliveredAt: new Date().toISOString(),
-      limit: 1,
-      recordIds: [result.emailOutboxId],
-    }));
+    try {
+      const provider = createEmailDeliveryProviderFromEnv(getEmailDeliveryRuntimeEnv());
+      emailDelivery = await persistence.runMutation(async (repository) => {
+        const summary = await deliverQueuedEmailOutbox(repository, provider, {
+          deliveredAt: new Date().toISOString(),
+          limit: 1,
+          recordIds: [result.emailOutboxId ?? ''],
+        });
+        const record = (await repository.listEmailOutboxRecords())
+          .find((item) => item.id === result.emailOutboxId);
+        return {
+          ...summary,
+          lastError: record?.lastError ?? null,
+        };
+      });
+    } catch (error) {
+      emailDelivery = {
+        processed: 0,
+        sent: 0,
+        failed: 1,
+        remainingQueued: 1,
+        lastError: error instanceof Error ? error.message : 'Unknown email delivery error',
+      };
+    }
   }
 
   return NextResponse.json({
     ok: true,
+    emailDelivery,
     message: '가입된 미인증 이메일이라면 인증 메일을 다시 보냈습니다. 메일함을 확인해 주세요.',
   });
 }

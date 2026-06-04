@@ -218,6 +218,9 @@ test('signup API queues email verification and login requires verified email', a
   assert.equal(signupResponse.headers.get('X-Email-Delivery-Sent'), '1');
   assert.equal(signupResponse.headers.get('X-Email-Delivery-Failed'), '0');
   assert.equal(signupPayload.verificationRequired, true);
+  assert.equal(signupPayload.emailDelivery.sent, 1);
+  assert.equal(signupPayload.emailDelivery.failed, 0);
+  assert.equal(signupPayload.emailDelivery.lastError, null);
   assert.equal(signupResponse.headers.get('set-cookie'), null);
   assert.equal(repository.getUserByEmail(email)?.emailVerifiedAt, null);
   assert.equal(verificationEmail?.template, 'email_verification');
@@ -389,6 +392,8 @@ test('email verification resend API queues a fresh verification email for unveri
 
   assert.equal(response.status, 200);
   assert.equal(payload.ok, true);
+  assert.equal(payload.emailDelivery.sent, 1);
+  assert.equal(payload.emailDelivery.failed, 0);
   assert.equal(verificationEmails.length, beforeCount + 1);
   assert.match(verificationEmails.at(-1)?.body ?? '', /\/verify-email\?token=/);
 });
@@ -595,6 +600,8 @@ test('signup panel confirms email verification instead of logging in immediately
   const panelSource = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
 
   assert.match(panelSource, /verificationRequired/);
+  assert.match(panelSource, /emailDelivery/);
+  assert.match(panelSource, /인증 메일 발송에 실패/);
   assert.match(panelSource, /이메일 인증/);
   assert.match(panelSource, /인증 메일/);
   assert.doesNotMatch(panelSource, /primeAuthSession/);

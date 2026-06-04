@@ -17,6 +17,19 @@ export function VerifyEmailResendForm() {
     });
     const payload = await response.json().catch(() => ({}));
     setIsSubmitting(false);
+    const emailDelivery = payload.emailDelivery;
+    if (
+      response.ok &&
+      emailDelivery &&
+      Number(emailDelivery.sent ?? 0) <= 0 &&
+      Number(emailDelivery.failed ?? 0) > 0
+    ) {
+      const lastError = typeof emailDelivery.lastError === 'string' && emailDelivery.lastError
+        ? ` 오류: ${emailDelivery.lastError.slice(0, 180)}`
+        : '';
+      setMessage(`인증 메일 재발송에 실패했습니다. 잠시 후 다시 시도해 주세요.${lastError}`);
+      return;
+    }
     setMessage(payload.message || (response.ok
       ? '인증 메일 재발송 요청을 접수했습니다. 메일함을 확인해 주세요.'
       : '인증 메일 재발송에 실패했습니다. 잠시 후 다시 시도해 주세요.'));

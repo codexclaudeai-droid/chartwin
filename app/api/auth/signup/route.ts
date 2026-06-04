@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
         trial: trialResult,
       };
     });
+    const emailDelivery = await deliverSignupVerificationEmail(persistence, result.verification.emailOutboxId);
     const response = NextResponse.json({
       ok: true,
       verificationRequired: true,
@@ -97,17 +98,10 @@ export async function POST(request: NextRequest) {
         id: agreement.id,
         userId: agreement.userId,
         termsAcceptedAt: agreement.termsAcceptedAt,
-        privacyAcceptedAt: agreement.privacyAcceptedAt,
+          privacyAcceptedAt: agreement.privacyAcceptedAt,
       },
+      emailDelivery,
     });
-    const provider = createEmailDeliveryProviderFromEnv(getEmailDeliveryRuntimeEnv());
-    const emailDelivery = await persistence.runMutation((repository) => (
-      deliverQueuedEmailOutbox(repository, provider, {
-        deliveredAt: new Date().toISOString(),
-        limit: 1,
-        recordIds: [result.verification.emailOutboxId],
-      })
-    ));
     response.headers.set('X-Email-Delivery-Sent', String(emailDelivery.sent));
     response.headers.set('X-Email-Delivery-Failed', String(emailDelivery.failed));
     return response;
@@ -123,4 +117,35 @@ function getRequestIpAddress(request: NextRequest): string | null {
   const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
   if (forwardedFor) return forwardedFor;
   return request.headers.get('x-real-ip')?.trim() || null;
+}
+
+async function deliverSignupVerificationEmail(
+  persistence: ReturnType<typeof getAsyncChartServicePersistence>,
+  emailOutboxId: string,
+) {
+  try {
+    const provider = createEmailDeliveryProviderFromEnv(getEmailDeliveryRuntimeEnv());
+    const delivery = await persistence.runMutation(async (repository) => {
+      const summary = await deliverQueuedEmailOutbox(repository, provider, {
+        deliveredAt: new Date().toISOString(),
+        limit: 1,
+        recordIds: [emailOutboxId],
+      });
+      const record = (await repository.listEmailOutboxRecords())
+        .find((item) => item.id === emailOutboxId);
+      return {
+        ...summary,
+        lastError: record?.lastError ?? null,
+      };
+    });
+    return delivery;
+  } catch (error) {
+    return {
+      processed: 0,
+      sent: 0,
+      failed: 1,
+      remainingQueued: 1,
+      lastError: error instanceof Error ? error.message : 'Unknown email delivery error',
+    };
+  }
 }

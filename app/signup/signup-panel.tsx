@@ -143,6 +143,18 @@ export function SignupPanel() {
         return;
       }
       const verificationRequired = Boolean(payload.verificationRequired);
+      const emailDelivery = payload.emailDelivery;
+      const emailDeliveryFailed = verificationRequired &&
+        emailDelivery &&
+        Number(emailDelivery.sent ?? 0) <= 0 &&
+        Number(emailDelivery.failed ?? 0) > 0;
+      if (emailDeliveryFailed) {
+        const lastError = typeof emailDelivery.lastError === 'string' && emailDelivery.lastError
+          ? ` 오류: ${emailDelivery.lastError.slice(0, 180)}`
+          : '';
+        setMessage(`${payload.user.email} 회원가입은 완료됐지만 인증 메일 발송에 실패했습니다. 인증 메일 재발송을 시도해 주세요.${lastError}`);
+        return;
+      }
       setMessage(verificationRequired
         ? `${payload.user.email} 이메일 인증이 필요합니다. 발송된 인증 메일을 확인해 주세요.`
         : `${payload.user.email} 회원가입이 정상 완료되었습니다.`);
