@@ -11042,6 +11042,15 @@ body:not(:has(.landing-page)) .social-auth-divider::after {
   height: 1px;
 }
 
+body:not(:has(.landing-page)) .social-auth-helper {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: -2px 0 2px;
+  text-align: center;
+}
+
 body:not(:has(.landing-page)) .signup-social-auth-actions {
   display: grid;
   gap: 10px;

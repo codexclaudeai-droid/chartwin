@@ -101,6 +101,7 @@ export function LoginPanel() {
           </button>
         </div>
         <div className="social-auth-divider" role="separator" aria-label="간편로그인"></div>
+        <p className="social-auth-helper">SNS(소셜네트워크 서비스) 계정으로 간편 로그인</p>
         <div className="login-social-auth-actions" aria-label="간편로그인">
           <button
             aria-label="Google 간편로그인"
