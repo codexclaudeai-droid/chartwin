@@ -110,6 +110,66 @@ test('notification voice reads service notifications by situation', async () => 
   }), '새 입금 확인 요청 게시글이 도착했어요.');
 });
 
+test('notification voice plays stored mp3 files for service notification categories', async () => {
+  const {
+    playNotificationVoice,
+    resolveNotificationVoiceAudioPath,
+    STORED_NOTIFICATION_AUDIO_PATHS,
+  } = await import('../src/domain/chart-service/notification-voice.ts');
+
+  assert.equal(STORED_NOTIFICATION_AUDIO_PATHS.adminSubscriptionPayment, '/audio/notifications/admin-subscription-payment.mp3');
+  assert.equal(STORED_NOTIFICATION_AUDIO_PATHS.adminSupportCheck, '/audio/notifications/admin-support-check.mp3');
+  assert.equal(STORED_NOTIFICATION_AUDIO_PATHS.memberSubscriptionApproved, '/audio/notifications/member-subscription-approved.mp3');
+  assert.equal(STORED_NOTIFICATION_AUDIO_PATHS.memberSupportReplied, '/audio/notifications/member-support-replied.mp3');
+
+  assert.equal(resolveNotificationVoiceAudioPath({
+    category: 'payment',
+    title: '입금확인 요청이 접수되었습니다',
+  }), STORED_NOTIFICATION_AUDIO_PATHS.adminSubscriptionPayment);
+  assert.equal(resolveNotificationVoiceAudioPath({
+    category: 'support_request',
+    title: '입금확인 요청',
+  }), STORED_NOTIFICATION_AUDIO_PATHS.adminSupportCheck);
+  assert.equal(resolveNotificationVoiceAudioPath({
+    category: 'subscription',
+    title: '구독이 활성화되었습니다',
+  }), STORED_NOTIFICATION_AUDIO_PATHS.memberSubscriptionApproved);
+  assert.equal(resolveNotificationVoiceAudioPath({
+    category: 'support_reply',
+    title: '고객센터 답변이 등록되었습니다',
+  }), STORED_NOTIFICATION_AUDIO_PATHS.memberSupportReplied);
+
+  const calls = [];
+  class FakeAudio {
+    constructor(src) {
+      this.src = src;
+      calls.push(['audio', src]);
+    }
+
+    async play() {
+      calls.push(['play', this.src]);
+    }
+  }
+
+  const didPlayStoredAudio = await playNotificationVoice({
+    category: 'support_reply',
+    title: '고객센터 답변이 등록되었습니다',
+  }, {
+    Audio: FakeAudio,
+    fetch: async (url, init) => {
+      calls.push(['fetch', url, init.method]);
+      return { ok: true };
+    },
+  });
+
+  assert.equal(didPlayStoredAudio, true);
+  assert.deepEqual(calls, [
+    ['fetch', STORED_NOTIFICATION_AUDIO_PATHS.memberSupportReplied, 'HEAD'],
+    ['audio', STORED_NOTIFICATION_AUDIO_PATHS.memberSupportReplied],
+    ['play', STORED_NOTIFICATION_AUDIO_PATHS.memberSupportReplied],
+  ]);
+});
+
 test('notification voice prefers Korean female-style voices and avoids empty speech', async () => {
   const {
     speakNotificationVoice,

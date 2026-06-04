@@ -9,7 +9,6 @@ import {
 import { RefreshIconButton } from '../shared/refresh-icon-button';
 import { PushNotificationControl } from './push-notification-control';
 import {
-  formatNotificationVoiceMessage,
   playNotificationVoice,
 } from '../../src/domain/chart-service/notification-voice.ts';
 import {
@@ -173,11 +172,11 @@ export function NotificationsPanel() {
     const latestNotification = newUnreadNotifications.at(-1);
     if (!latestNotification) return;
 
-    void playNotificationVoice(formatNotificationVoiceMessage({
+    void playNotificationVoice({
       category: latestNotification.category,
       title: normalizeNotificationTitle(latestNotification.title),
       body: latestNotification.body,
-    }));
+    });
   }
 
   async function markNotificationRead(

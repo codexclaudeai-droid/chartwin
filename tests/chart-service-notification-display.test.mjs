@@ -169,7 +169,7 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /RefreshIconButton/);
   assert.match(panelSource, /subscribeNotificationsRefreshEvent/);
   assert.match(panelSource, /speakNewUnreadNotifications/);
-  assert.match(panelSource, /playNotificationVoice\(formatNotificationVoiceMessage/);
+  assert.match(panelSource, /playNotificationVoice\(\{/);
   assert.match(panelSource, /모두 읽음/);
   assert.doesNotMatch(panelSource, /<span className="badge">\{notification\.category\}<\/span>/);
   assert.match(navSource, /getNotificationCenterHref/);

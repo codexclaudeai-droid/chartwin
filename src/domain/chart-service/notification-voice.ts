@@ -21,13 +21,19 @@ type NotificationVoiceOptions = {
   fetch?: typeof fetch | null;
 };
 
+type NotificationVoiceTarget = string | VoiceNotificationInput;
+
 export const STORED_NOTIFICATION_AUDIO_PATHS = {
   signalBuy: '/audio/notifications/signal-buy.mp3',
   signalSell: '/audio/notifications/signal-sell.mp3',
-  paymentRequested: '/audio/notifications/payment-requested.mp3',
-  paymentConfirmed: '/audio/notifications/payment-confirmed.mp3',
-  subscriptionApproved: '/audio/notifications/subscription-approved.mp3',
-  supportReplied: '/audio/notifications/support-replied.mp3',
+  adminSubscriptionPayment: '/audio/notifications/admin-subscription-payment.mp3',
+  adminSupportCheck: '/audio/notifications/admin-support-check.mp3',
+  memberSubscriptionApproved: '/audio/notifications/member-subscription-approved.mp3',
+  memberSupportReplied: '/audio/notifications/member-support-replied.mp3',
+  paymentRequested: '/audio/notifications/admin-subscription-payment.mp3',
+  paymentConfirmed: '/audio/notifications/admin-subscription-payment.mp3',
+  subscriptionApproved: '/audio/notifications/member-subscription-approved.mp3',
+  supportReplied: '/audio/notifications/member-support-replied.mp3',
 } as const;
 
 const FEMALE_KOREAN_VOICE_HINTS = [
@@ -94,16 +100,35 @@ export function speakNotificationVoice(message: string, options: NotificationVoi
   }
 }
 
-export async function playNotificationVoice(message: string, options: NotificationVoiceOptions = {}): Promise<boolean> {
-  const text = normalizeVoiceText(message);
+export async function playNotificationVoice(target: NotificationVoiceTarget, options: NotificationVoiceOptions = {}): Promise<boolean> {
+  const text = normalizeVoiceText(typeof target === 'string' ? target : formatNotificationVoiceMessage(target));
   if (!text) return false;
 
-  const audioPath = getStoredNotificationAudioPath(text);
+  const audioPath = typeof target === 'string'
+    ? getStoredNotificationAudioPath(text)
+    : resolveNotificationVoiceAudioPath(target) ?? getStoredNotificationAudioPath(text);
   if (audioPath && await tryPlayStoredNotificationAudio(audioPath, options)) {
     return true;
   }
 
   return speakNotificationVoice(text, options);
+}
+
+export function resolveNotificationVoiceAudioPath(notification: VoiceNotificationInput): string | null {
+  const title = normalizeVoiceText(notification.title);
+  const body = normalizeVoiceText(notification.body ?? '');
+  const text = `${title} ${body}`;
+
+  if (notification.category === 'payment') return STORED_NOTIFICATION_AUDIO_PATHS.adminSubscriptionPayment;
+  if (notification.category === 'support_request' || notification.category === 'qna') {
+    return STORED_NOTIFICATION_AUDIO_PATHS.adminSupportCheck;
+  }
+  if (notification.category === 'support_reply') return STORED_NOTIFICATION_AUDIO_PATHS.memberSupportReplied;
+  if (notification.category === 'subscription' && includesAny(text, ['구독이 활성화', '구독 승인', '구독이 승인'])) {
+    return STORED_NOTIFICATION_AUDIO_PATHS.memberSubscriptionApproved;
+  }
+
+  return null;
 }
 
 export function getStoredNotificationAudioPath(message: string): string | null {
@@ -112,10 +137,16 @@ export function getStoredNotificationAudioPath(message: string): string | null {
 
   if (text === '매수신호발생') return STORED_NOTIFICATION_AUDIO_PATHS.signalBuy;
   if (text === '매도신호발생') return STORED_NOTIFICATION_AUDIO_PATHS.signalSell;
-  if (includesAny(text, ['입금 확인 요청이 접수'])) return STORED_NOTIFICATION_AUDIO_PATHS.paymentRequested;
-  if (includesAny(text, ['입금 확인이 완료'])) return STORED_NOTIFICATION_AUDIO_PATHS.paymentConfirmed;
-  if (includesAny(text, ['구독 승인이 완료', '구독이 활성화'])) return STORED_NOTIFICATION_AUDIO_PATHS.subscriptionApproved;
-  if (includesAny(text, ['문의 답변이 등록'])) return STORED_NOTIFICATION_AUDIO_PATHS.supportReplied;
+  if (includesAny(text, ['새 입금 확인 요청 게시글', '새 문의 게시글이 등록'])) {
+    return STORED_NOTIFICATION_AUDIO_PATHS.adminSupportCheck;
+  }
+  if (includesAny(text, ['입금 확인 요청이 접수', '입금 확인이 완료'])) {
+    return STORED_NOTIFICATION_AUDIO_PATHS.adminSubscriptionPayment;
+  }
+  if (includesAny(text, ['구독 승인이 완료', '구독이 활성화'])) {
+    return STORED_NOTIFICATION_AUDIO_PATHS.memberSubscriptionApproved;
+  }
+  if (includesAny(text, ['문의 답변이 등록'])) return STORED_NOTIFICATION_AUDIO_PATHS.memberSupportReplied;
 
   return null;
 }
