@@ -51,10 +51,10 @@ export async function queueAsyncEmailVerification(
     template: 'email_verification',
     subject: 'Verify your TradingCore email',
     body: [
-      'Complete your TradingCore signup by verifying this email address:',
+      'TradingCore 가입을 완료하려면 아래 링크를 눌러 이메일 주소를 인증하세요.',
       verifyUrl,
       '',
-      `This verification link expires at ${expiresAt}.`,
+      `이 인증 링크는 한국시간 ${formatKstDateTime(expiresAt)} (KST)에 만료됩니다.`,
     ].join('\n'),
     status: 'queued',
     createdAt: input.requestedAt,
@@ -103,6 +103,7 @@ export async function resendAsyncEmailVerification(
   input: {
     email: string;
     requestedAt: string;
+    verifyUrlBase?: string;
   },
 ): Promise<{ accepted: true; queued: boolean; emailOutboxId: string | null }> {
   const email = input.email.trim().toLowerCase();
@@ -118,6 +119,7 @@ export async function resendAsyncEmailVerification(
   const verification = await queueAsyncEmailVerification(repository, {
     user,
     requestedAt: input.requestedAt,
+    verifyUrlBase: input.verifyUrlBase,
   });
   return { accepted: true, queued: true, emailOutboxId: verification.emailOutboxId };
 }
@@ -126,4 +128,15 @@ function createEmailVerificationUrl(token: string, verifyUrlBase?: string): stri
   const base = verifyUrlBase?.trim() || '/verify-email';
   const separator = base.includes('?') ? '&' : '?';
   return `${base}${separator}token=${encodeURIComponent(token)}`;
+}
+
+function formatKstDateTime(isoDate: string): string {
+  const kstDate = new Date(new Date(isoDate).getTime() + 9 * 60 * 60 * 1000);
+  const year = kstDate.getUTCFullYear();
+  const month = kstDate.getUTCMonth() + 1;
+  const day = kstDate.getUTCDate();
+  const hour = String(kstDate.getUTCHours()).padStart(2, '0');
+  const minute = String(kstDate.getUTCMinutes()).padStart(2, '0');
+  const second = String(kstDate.getUTCSeconds()).padStart(2, '0');
+  return `${year}년 ${month}월 ${day}일 ${hour}시 ${minute}분 ${second}초`;
 }

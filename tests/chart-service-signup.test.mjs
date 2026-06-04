@@ -226,7 +226,8 @@ test('signup API queues email verification and login requires verified email', a
   assert.equal(verificationEmail?.template, 'email_verification');
   assert.equal(verificationEmail?.senderEmail, 'verify@tradingcore.co');
   assert.match(verificationEmail?.subject ?? '', /Verify/);
-  assert.match(verificationEmail?.body ?? '', /\/verify-email\?token=/);
+  assert.match(verificationEmail?.body ?? '', /http:\/\/localhost\/verify-email\?token=/);
+  assert.match(verificationEmail?.body ?? '', /KST/);
   assert.doesNotMatch(verificationEmail?.body ?? '', /\/api\/auth\/verify-email\?token=/);
   assert.ok(token);
 
@@ -395,7 +396,7 @@ test('email verification resend API queues a fresh verification email for unveri
   assert.equal(payload.emailDelivery.sent, 1);
   assert.equal(payload.emailDelivery.failed, 0);
   assert.equal(verificationEmails.length, beforeCount + 1);
-  assert.match(verificationEmails.at(-1)?.body ?? '', /\/verify-email\?token=/);
+  assert.match(verificationEmails.at(-1)?.body ?? '', /http:\/\/localhost\/verify-email\?token=/);
 });
 
 test('signup API stores policy agreement evidence for the created account', async () => {

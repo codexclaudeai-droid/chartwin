@@ -719,6 +719,7 @@ export async function registerAsyncMockUserAccount(
     createdAt: string;
     referralCode?: string | null;
     phoneNumber?: string | null;
+    verifyUrlBase?: string;
   },
 ) {
   const email = input.email.trim().toLowerCase();
@@ -753,6 +754,7 @@ export async function registerAsyncMockUserAccount(
   const verification = await queueAsyncEmailVerification(repository, {
     user,
     requestedAt: input.createdAt,
+    verifyUrlBase: input.verifyUrlBase,
   });
   return { user, verification };
 }

@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
         phoneNumber: String(body.phoneNumber || ''),
         referralCode: typeof body.referralCode === 'string' ? body.referralCode : '',
         createdAt: acceptedAt,
+        verifyUrlBase: createEmailVerificationUrlBase(request),
       });
       const signupAgreement = await saveAsyncSignupAgreementEvidence(repository, {
         userId: signupResult.user.id,
@@ -117,6 +118,10 @@ function getRequestIpAddress(request: NextRequest): string | null {
   const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
   if (forwardedFor) return forwardedFor;
   return request.headers.get('x-real-ip')?.trim() || null;
+}
+
+function createEmailVerificationUrlBase(request: NextRequest): string {
+  return new URL('/verify-email', request.url).toString();
 }
 
 async function deliverSignupVerificationEmail(

@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
   const result = await persistence.runMutation((repository) => resendAsyncEmailVerification(repository, {
     email: String(body.email || ''),
     requestedAt: new Date().toISOString(),
+    verifyUrlBase: createEmailVerificationUrlBase(request),
   }));
   let emailDelivery = {
     processed: 0,
@@ -67,4 +68,8 @@ export async function POST(request: NextRequest) {
     emailDelivery,
     message: '가입된 미인증 이메일이라면 인증 메일을 다시 보냈습니다. 메일함을 확인해 주세요.',
   });
+}
+
+function createEmailVerificationUrlBase(request: NextRequest): string {
+  return new URL('/verify-email', request.url).toString();
 }
