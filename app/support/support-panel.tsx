@@ -15,7 +15,6 @@ import {
 import {
   SUPPORT_THREAD_FILTER_PRESETS,
   filterSupportThreads,
-  getSupportThreadFilterPreset,
   sortSupportThreadsByCreatedAtDesc,
 } from '../admin/support-thread-filters';
 
@@ -85,7 +84,6 @@ export function SupportPanel() {
     : null;
   const latestAdminReply = targetThread?.messages.filter((threadMessage) => threadMessage.isAdminReply).at(-1) ?? null;
   const orderedThreads = sortSupportThreadsByCreatedAtDesc(threads);
-  const activeFilter = getSupportThreadFilterPreset(activeFilterKey);
   const filteredThreads = filterSupportThreads(orderedThreads, activeFilterKey);
   const categoryFilteredThreads = activeCategoryTab === 'all'
     ? filteredThreads
@@ -361,23 +359,19 @@ export function SupportPanel() {
             )}
           </div>
         )}
-        <div className="quick-filter-row" aria-label="내 문의 빠른 필터">
-          {SUPPORT_THREAD_FILTER_PRESETS.map((preset) => {
-            const isActive = activeFilter.key === preset.key;
-            const presetCount = filterSupportThreads(orderedThreads, preset.key).length;
-            return (
-              <button
-                className={`button secondary${isActive ? ' active' : ''}`}
-                type="button"
-                key={preset.key}
-                aria-pressed={isActive}
-                onClick={() => setActiveFilterKey(preset.key)}
-              >
-                {preset.label}
-                <strong className="quick-filter-count">{presetCount}</strong>
-              </button>
-            );
-          })}
+        <div className="support-filter-select-row">
+          <label className="support-filter-select-field" htmlFor="support-thread-filter">
+            <span>문의 상태</span>
+            <select
+              id="support-thread-filter"
+              value={activeFilterKey}
+              onChange={(event) => setActiveFilterKey(event.target.value)}
+            >
+              {SUPPORT_THREAD_FILTER_PRESETS.map((preset) => (
+                <option key={preset.key} value={preset.key}>{preset.label}</option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="support-category-tabs" aria-label="문의 카테고리">
           {SUPPORT_THREAD_CATEGORY_TABS.map((tab) => {
@@ -399,9 +393,6 @@ export function SupportPanel() {
             );
           })}
         </div>
-        <p className="support-filter-summary">
-          현재 필터: {activeFilter.label} / 표시 {categoryFilteredThreads.length}건
-        </p>
         <div className="thread-list">
           {threads.length === 0 ? (
             <article className="thread-card support-empty-card">
@@ -410,8 +401,8 @@ export function SupportPanel() {
             </article>
           ) : categoryFilteredThreads.length === 0 ? (
             <article className="thread-card support-empty-card">
-              <h3>현재 필터에 해당하는 문의가 없습니다.</h3>
-              <p>전체 필터로 전환하면 등록된 문의를 모두 확인할 수 있습니다.</p>
+              <h3>선택한 조건에 해당하는 문의가 없습니다.</h3>
+              <p>전체 또는 다른 카테고리로 전환하면 등록된 문의를 확인할 수 있습니다.</p>
             </article>
           ) : paginatedThreads.map((item) => {
             const canEditThread = canManageThread(item);

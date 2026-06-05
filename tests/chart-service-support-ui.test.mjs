@@ -54,7 +54,7 @@ test('support page uses final service-center layout structure', () => {
   assert.match(panelSource, /support-form-grid/);
   assert.match(panelSource, /support-submit-row/);
   assert.match(panelSource, /support-thread-toolbar/);
-  assert.match(panelSource, /support-filter-summary/);
+  assert.match(panelSource, /support-filter-select-row/);
   assert.match(panelSource, /support-empty-card/);
   assert.match(panelSource, /support-thread-title/);
 });
@@ -67,7 +67,9 @@ test('support page final pass uses dark operational styling without nested gener
   assert.doesNotMatch(panelSource, /className="card wide support-thread-card"/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-panel-frame\s*\{[\s\S]*?border: 1px solid rgba\(125, 183, 255, 0\.16\)/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-form-grid\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-filter-summary\s*\{[\s\S]*?background: transparent/);
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-filter-select-row\s*\{[\s\S]*?display: flex/);
+  assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-filter-select-field select\s*\{[\s\S]*?appearance: none/);
+  assert.doesNotMatch(cssSource, /\.support-filter-summary/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-empty-card\s*\{[\s\S]*?text-align: center/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-thread-title\s*\{[\s\S]*?color: #ffffff/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-thread-title\s*\{[\s\S]*?display: flex/);
@@ -86,8 +88,15 @@ test('support inquiry list uses category tabs and ten item pagination', () => {
   assert.match(panelSource, /activeCategoryTab/);
   assert.match(panelSource, /categoryFilteredThreads/);
   assert.match(panelSource, /paginatedThreads/);
+  assert.match(panelSource, /support-filter-select-row/);
+  assert.match(panelSource, /id="support-thread-filter"/);
+  assert.match(panelSource, /onChange=\{\(event\) => setActiveFilterKey\(event\.target\.value\)\}/);
   assert.match(panelSource, /support-category-tabs/);
+  assert.match(panelSource, /support-filter-select-row[\s\S]*support-category-tabs/);
   assert.match(panelSource, /support-pagination/);
+  assert.doesNotMatch(panelSource, /quick-filter-count/);
+  assert.doesNotMatch(panelSource, /support-filter-summary/);
+  assert.doesNotMatch(panelSource, /현재 필터/);
   assert.doesNotMatch(panelSource, /key: 'signal'/);
   assert.doesNotMatch(panelSource, /key: 'trial'/);
   assert.doesNotMatch(panelSource, /key: 'partnership'/);

@@ -11583,20 +11583,52 @@ body:not(:has(.landing-page)) .support-submit-row {
   margin-top: 2px;
 }
 
-body:not(:has(.landing-page)) .support-filter-summary {
-  background: transparent;
-  border: 0;
-  color: rgba(216, 236, 255, 0.68);
+body:not(:has(.landing-page)) .support-filter-select-row {
+  display: flex;
+  justify-content: flex-start;
+  margin: 12px 0 8px;
+}
+
+body:not(:has(.landing-page)) .support-filter-select-field {
+  display: grid;
+  gap: 6px;
+  min-width: min(100%, 220px);
+}
+
+body:not(:has(.landing-page)) .support-filter-select-field span {
+  color: rgba(141, 197, 255, 0.86);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+body:not(:has(.landing-page)) .support-filter-select-field select {
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, rgba(216, 236, 255, 0.82) 50%) calc(100% - 18px) 50% / 6px 6px no-repeat,
+    linear-gradient(135deg, rgba(216, 236, 255, 0.82) 50%, transparent 50%) calc(100% - 13px) 50% / 6px 6px no-repeat,
+    rgba(2, 7, 19, 0.5);
+  border: 1px solid rgba(125, 183, 255, 0.18);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
   font-size: 0.9rem;
-  margin: 2px 0 14px;
-  padding: 0;
+  font-weight: 800;
+  min-height: 38px;
+  padding: 0 38px 0 12px;
+}
+
+body:not(:has(.landing-page)) .support-filter-select-field select:focus-visible {
+  border-color: rgba(125, 183, 255, 0.46);
+  outline: 2px solid rgba(76, 141, 255, 0.22);
+  outline-offset: 2px;
 }
 
 body:not(:has(.landing-page)) .support-category-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 12px 0 12px;
+  margin: 0 0 14px;
 }
 
 body:not(:has(.landing-page)) .support-category-tab {
