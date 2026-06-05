@@ -17346,6 +17346,13 @@ input[type="checkbox"] {
   padding-inline: 12px;
 }
 
+body:not(:has(.landing-page)) .profile-page .button.secondary.compact.push-notification-test-button {
+  box-sizing: border-box;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 14px;
+}
+
 @media (max-width: 720px) {
   .admin-notice-popup-fields {
     grid-template-columns: 1fr;

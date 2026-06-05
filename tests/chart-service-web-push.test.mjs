@@ -167,7 +167,8 @@ test('web push routes service worker and notification panel are wired', () => {
   assert.match(styleSource, /\.push-notification-toggle-state\s*\{[\s\S]*?letter-spacing: 0\.04em/);
   assert.match(styleSource, /\.push-notification-toggle-track\s*\{[\s\S]*?width: 68px/);
   assert.match(styleSource, /\.push-notification-toggle\.active \.push-notification-toggle-thumb\s*\{[\s\S]*?translateX\(38px\)/);
-  assert.match(styleSource, /\.push-notification-test-button\s*\{[\s\S]*?height: 34px/);
+  assert.match(styleSource, /\.profile-page \.button\.secondary\.compact\.push-notification-test-button\s*\{[\s\S]*?height: 30px/);
+  assert.match(styleSource, /\.profile-page \.button\.secondary\.compact\.push-notification-test-button\s*\{[\s\S]*?min-height: 30px/);
   assert.match(styleSource, /\.push-notification-test-button\s*\{[\s\S]*?align-items: center/);
   assert.match(profilePanelSource, /<PushNotificationControl \/>/);
   assert.match(profilePanelSource, /profile-push-setting-row/);
