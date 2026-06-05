@@ -359,7 +359,7 @@ export function SupportPanel() {
             )}
           </div>
         )}
-        <div className="support-filter-select-row">
+        <div className="support-filter-row">
           <label className="support-filter-select-field" htmlFor="support-thread-filter">
             <span>문의 상태</span>
             <select
@@ -372,26 +372,26 @@ export function SupportPanel() {
               ))}
             </select>
           </label>
-        </div>
-        <div className="support-category-tabs" aria-label="문의 카테고리">
-          {SUPPORT_THREAD_CATEGORY_TABS.map((tab) => {
-            const isActive = activeCategoryTab === tab.key;
-            const tabCount = tab.key === 'all'
-              ? filteredThreads.length
-              : filteredThreads.filter((item) => item.thread.category === tab.key).length;
-            return (
-              <button
-                className={`support-category-tab${isActive ? ' active' : ''}`}
-                type="button"
-                key={tab.key}
-                aria-pressed={isActive}
-                onClick={() => setActiveCategoryTab(tab.key)}
-              >
-                <span>{tab.label}</span>
-                <strong>{tabCount}</strong>
-              </button>
-            );
-          })}
+          <div className="support-category-tabs" aria-label="문의 카테고리">
+            {SUPPORT_THREAD_CATEGORY_TABS.map((tab) => {
+              const isActive = activeCategoryTab === tab.key;
+              const tabCount = tab.key === 'all'
+                ? filteredThreads.length
+                : filteredThreads.filter((item) => item.thread.category === tab.key).length;
+              return (
+                <button
+                  className={`support-category-tab${isActive ? ' active' : ''}`}
+                  type="button"
+                  key={tab.key}
+                  aria-pressed={isActive}
+                  onClick={() => setActiveCategoryTab(tab.key)}
+                >
+                  <span>{tab.label}</span>
+                  <strong>{tabCount}</strong>
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="thread-list">
           {threads.length === 0 ? (

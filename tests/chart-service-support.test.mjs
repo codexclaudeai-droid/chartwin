@@ -650,7 +650,8 @@ test('member support panel supports notification deep links to a thread', () => 
   assert.match(panelSource, /orderedThreads/);
   assert.match(panelSource, /activeFilterKey/);
   assert.match(panelSource, /filterSupportThreads/);
-  assert.match(panelSource, /support-filter-select-row/);
+  assert.match(panelSource, /support-filter-row/);
+  assert.match(panelSource, /support-filter-row[\s\S]*support-filter-select-field[\s\S]*support-category-tabs/);
   assert.match(panelSource, /id="support-thread-filter"/);
   assert.match(panelSource, /SUPPORT_THREAD_FILTER_PRESETS\.map/);
   assert.doesNotMatch(panelSource, /aria-label="내 문의 빠른 필터"/);

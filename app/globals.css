@@ -11583,10 +11583,13 @@ body:not(:has(.landing-page)) .support-submit-row {
   margin-top: 2px;
 }
 
-body:not(:has(.landing-page)) .support-filter-select-row {
+body:not(:has(.landing-page)) .support-filter-row {
+  align-items: end;
   display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   justify-content: flex-start;
-  margin: 12px 0 8px;
+  margin: 12px 0 14px;
 }
 
 body:not(:has(.landing-page)) .support-filter-select-field {
@@ -11625,10 +11628,11 @@ body:not(:has(.landing-page)) .support-filter-select-field select:focus-visible 
 }
 
 body:not(:has(.landing-page)) .support-category-tabs {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 0 0 14px;
+  margin: 0;
 }
 
 body:not(:has(.landing-page)) .support-category-tab {
