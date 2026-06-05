@@ -260,6 +260,13 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     overlay.style.maxWidth = overlayConstrainedWidth || 'none';
     overlay.style.gap = '0px';
 
+    const indicatorVisibilityTargetKeys = [
+      'ma','ema','hma','maShort','maLong','ma60','ma120','ma200','bb','vwap','volumeProfile','vpvr','ichimoku','envelope',
+      'williamsFractal','parabolicSar','smartMoneyConcepts',
+      'supertrend','statisticalTrailingStop','zeroLagMaTrendLevels',
+      'rsi','dmi','macd','stochF','stochS','cci','atr','obv','cvd','volume',
+    ];
+
     const getIndicatorStyleKeys = (targetKey: string): string[] => {
       const indicators = chart.config.indicators as any;
       if (targetKey === 'ma') {
@@ -288,10 +295,25 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       return styleKeys.some((styleKey) => chart.isIndicatorLineVisible?.(styleKey) !== false);
     };
 
-    const setIndicatorLineVisible = (targetKey: string, visible: boolean) => {
+    const setIndicatorLineVisibilityRaw = (targetKey: string, visible: boolean) => {
       const styleKeys = getIndicatorStyleKeys(targetKey);
       if (!styleKeys.length) return;
       styleKeys.forEach((styleKey) => chart.setIndicatorLineVisible?.(styleKey, visible));
+    };
+
+    const setIndicatorLineVisible = (targetKey: string, visible: boolean) => {
+      setIndicatorLineVisibilityRaw(targetKey, visible);
+      chart.draw();
+      renderOverlay();
+      onOverlayChange?.();
+    };
+
+    const showOnlyIndicatorFromGlobalHidden = (targetKey: string) => {
+      chart.setIndicatorsVisible?.(true);
+      indicatorVisibilityTargetKeys.forEach((key) => {
+        if (!Boolean((ind as any)[key]?.show)) return;
+        setIndicatorLineVisibilityRaw(key, key === targetKey);
+      });
       chart.draw();
       renderOverlay();
       onOverlayChange?.();
@@ -346,10 +368,17 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       const currentlyHidden = isIndicatorGloballyHidden() || !isIndicatorLineVisible(key);
       actions.dataset.hiddenDefault = currentlyHidden ? '1' : '0';
       const currentlyVisible = isIndicatorLineVisible(key);
+      const currentlyVisibleForAction = !currentlyHidden;
       const hideBtn = makeTagActionButton(
-        currentlyVisible ? '감추기' : '표시',
-        eyeIconSvg(currentlyVisible),
-        () => setIndicatorLineVisible(key, !currentlyVisible),
+        currentlyVisibleForAction ? '감추기' : '표시',
+        eyeIconSvg(currentlyVisibleForAction),
+        () => {
+          if (isIndicatorGloballyHidden()) {
+            showOnlyIndicatorFromGlobalHidden(key);
+            return;
+          }
+          setIndicatorLineVisible(key, !currentlyVisible);
+        },
       );
       const settingsBtn = makeTagActionButton(
         '설정',
@@ -864,12 +893,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       panelMap[item.id] = item.panel;
     });
 
-    const allKeys = [
-      'ma','ema','hma','maShort','maLong','ma60','ma120','ma200','bb','vwap','volumeProfile','vpvr','ichimoku','envelope',
-      'williamsFractal','parabolicSar','smartMoneyConcepts',
-      'supertrend','statisticalTrailingStop','zeroLagMaTrendLevels',
-      'rsi','dmi','macd','stochF','stochS','cci','atr','obv','cvd','volume',
-    ];
+    const allKeys = indicatorVisibilityTargetKeys;
     // 표시할 지표가 있는지 미리 파악
     let hasAnyIndicators = false;
     allKeys.forEach(key => {
@@ -924,6 +948,9 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       });
       overlay.appendChild(toggleBtn);
     }
+
+    const suppressStrategyReportPanelControls = (chart as any)._suspendMobilePanelAutoRatio === true;
+    if (suppressStrategyReportPanelControls) return;
 
     const panels = chart.activePanels as string[];
     if (!panels.length) return;
@@ -1072,7 +1099,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       if ((headerData?.values?.length ?? 0) > 0) infoWrap.appendChild(valuesWrap);
 
       const panelVisible = isIndicatorLineVisible(panelId);
-      const panelHidden = isIndicatorGloballyHidden() || !panelVisible;
+      const panelHidden = !panelVisible;
 
       const actionWrap = document.createElement('div');
       actionWrap.style.cssText = `display:none;align-items:center;gap:2px;height:${titleHeaderBoxHeight}px;overflow:hidden;`;

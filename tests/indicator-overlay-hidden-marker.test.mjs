@@ -15,7 +15,7 @@ test('indicator overlay shows only the existing hide action beside hidden indica
   assert.match(indicatorOverlaySource, /actions\.style\.display = expanded \|\| currentlyHidden \? 'inline-flex' : 'none'/);
   assert.match(indicatorOverlaySource, /settingsBtn\.style\.display = expanded \? 'inline-flex' : 'none'/);
   assert.match(indicatorOverlaySource, /trashBtn\.style\.display = expanded \? 'inline-flex' : 'none'/);
-  assert.match(indicatorOverlaySource, /const panelHidden = isIndicatorGloballyHidden\(\) \|\| !panelVisible/);
+  assert.match(indicatorOverlaySource, /const panelHidden = !panelVisible/);
   assert.match(indicatorOverlaySource, /const setHeaderActionsExpanded = \(expanded: boolean\) => \{/);
   assert.match(indicatorOverlaySource, /actionWrap\.style\.display = expanded \|\| panelHidden \? 'flex' : 'none'/);
   assert.match(indicatorOverlaySource, /settingBtn\.style\.display = expanded \? 'flex' : 'none'/);
@@ -24,5 +24,11 @@ test('indicator overlay shows only the existing hide action beside hidden indica
   assert.match(indicatorOverlaySource, /kind: 'eye' \| 'eyeOff'/);
   assert.match(indicatorOverlaySource, /eyeOff: `<svg width="20" height="20"[\s\S]*?<line x1="4" y1="20" x2="20" y2="4"><\/line><\/svg>`/);
   assert.match(indicatorOverlaySource, /const eyeBtn = iconBtn\(iconSvg\(panelVisible \? 'eye' : 'eyeOff'\)/);
+  assert.match(indicatorOverlaySource, /const showOnlyIndicatorFromGlobalHidden = \(targetKey: string\) => \{/);
+  assert.match(indicatorOverlaySource, /setIndicatorLineVisibilityRaw\(key, key === targetKey\)/);
+  assert.match(indicatorOverlaySource, /showOnlyIndicatorFromGlobalHidden\(key\);/);
+  assert.doesNotMatch(indicatorOverlaySource, /showOnlyIndicatorFromGlobalHidden\(panelId\);/);
+  assert.match(indicatorOverlaySource, /const suppressStrategyReportPanelControls = \(chart as any\)\._suspendMobilePanelAutoRatio === true/);
+  assert.match(indicatorOverlaySource, /if \(suppressStrategyReportPanelControls\) return;/);
   assert.match(indicatorOverlaySource, /const valueEls = Array\.from\(tag\.querySelectorAll<HTMLElement>\('\.indicator-overlay-tag-value'\)\)/);
 });
