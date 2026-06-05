@@ -15,6 +15,8 @@ import {
   renderSingleMainLine,
 } from './main-line-renderer.ts';
 import { renderEnvelopeLines } from './envelope-renderer.ts';
+import type { SmartMoneyConceptsResult } from '../indicators/smart-money-concepts.ts';
+import { renderSmartMoneyConcepts } from './smart-money-concepts-renderer.ts';
 import {
   getStatisticalTrailingStopMarkerGeometry,
   renderStatisticalTrailingStopBase,
@@ -29,6 +31,19 @@ export interface MainIndicatorSettings extends SubPanelIndicatorSettings {
   volume: { show: boolean };
   vwap: { show: boolean };
   williamsFractal?: { show: boolean };
+  smartMoneyConcepts?: {
+    show: boolean;
+    swingLength?: number;
+    internalLength?: number;
+    equalLength?: number;
+    equalThreshold?: number;
+    showInternal?: boolean;
+    showStructure?: boolean;
+    showEqualLevels?: boolean;
+    showOrderBlocks?: boolean;
+    showFairValueGaps?: boolean;
+    showZones?: boolean;
+  };
   zeroLagMaTrendLevels: {
     show: boolean;
     showLevels: boolean;
@@ -90,6 +105,7 @@ export interface RenderMainIndicatorsParams {
   }>;
   vwapD: NullableSeries;
   williamsFractalD: WilliamsFractalRenderData;
+  smartMoneyConceptsD: SmartMoneyConceptsResult;
   zeroLagMaTrendLevelsD: ZeroLagMaTrendLevelsData;
   zeroLagStates: ZeroLagTrendStates;
   supertrendD: SupertrendRenderData;
@@ -132,6 +148,7 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     bbSeries,
     vwapD,
     williamsFractalD,
+    smartMoneyConceptsD,
     zeroLagMaTrendLevelsD,
     zeroLagStates,
     supertrendD,
@@ -211,6 +228,44 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
       showHigh: showLine('williamsFractalHigh'),
       showLow: showLine('williamsFractalLow'),
       getY,
+    });
+  }
+
+  if (indicatorLayerOn && ind.smartMoneyConcepts?.show) {
+    const bullishStyle = resolveStyle('smartMoneyConceptsBullish', '#089981', 1);
+    const bearishStyle = resolveStyle('smartMoneyConceptsBearish', '#f23645', 1);
+    const internalBullishStyle = resolveStyle('smartMoneyConceptsInternalBullish', '#089981', 1, [5, 4]);
+    const internalBearishStyle = resolveStyle('smartMoneyConceptsInternalBearish', '#f23645', 1, [5, 4]);
+    const equalStyle = resolveStyle('smartMoneyConceptsEqual', '#878b94', 1, [2, 3]);
+    renderSmartMoneyConcepts({
+      ctx,
+      data: smartMoneyConceptsD,
+      startIndex,
+      visLength: visData.length,
+      chartLeft,
+      chartRight,
+      effectiveChartLeft,
+      totalSp,
+      candleW,
+      top: R.top,
+      bottom: mainH,
+      fontStack,
+      getY,
+      bullishStyle,
+      bearishStyle,
+      internalBullishStyle,
+      internalBearishStyle,
+      equalStyle,
+      orderBlockBullColor: 'rgba(49,121,245,0.18)',
+      orderBlockBearColor: 'rgba(247,124,128,0.18)',
+      fairValueGapBullColor: 'rgba(0,255,104,0.16)',
+      fairValueGapBearColor: 'rgba(255,0,8,0.16)',
+      showStructure: ind.smartMoneyConcepts.showStructure !== false,
+      showInternal: ind.smartMoneyConcepts.showInternal !== false,
+      showEqualLevels: ind.smartMoneyConcepts.showEqualLevels !== false,
+      showOrderBlocks: ind.smartMoneyConcepts.showOrderBlocks !== false,
+      showFairValueGaps: ind.smartMoneyConcepts.showFairValueGaps !== false,
+      showZones: ind.smartMoneyConcepts.showZones === true,
     });
   }
 

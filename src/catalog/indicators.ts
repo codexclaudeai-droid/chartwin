@@ -15,6 +15,7 @@
   { id: 'hma', label: 'HMA', desc: 'Hull Moving Average', panel: 'main' },
   { id: 'vwap', label: 'VWAP', desc: 'Volume Weighted Avg Price', panel: 'main' },
   { id: 'williamsFractal', label: 'Williams Fractal', desc: 'Variable swing high/low markers', panel: 'main' },
+  { id: 'smartMoneyConcepts', label: 'Smart Money Concepts', desc: 'SMC structure, BOS/CHoCH, OB, EQH/EQL, FVG', panel: 'main' },
   { id: 'supertrend', label: 'Supertrend', desc: 'ATR trend indicator', panel: 'main' },
   { id: 'statisticalTrailingStop', label: 'Statistical Trailing Stop', desc: 'Log-normal volatility trailing stop', panel: 'main' },
   { id: 'zeroLagMaTrendLevels', label: 'Zero-Lag MA Trend Levels', desc: 'Zero-lag EMA trend and ATR levels', panel: 'main' },

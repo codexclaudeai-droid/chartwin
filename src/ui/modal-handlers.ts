@@ -2089,6 +2089,7 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
       })
       .forEach(ind => {
         const isMultiMain = ind.id === 'ma' || ind.id === 'ema';
+        const hasSettings = isMultiMain || ind.id === 'smartMoneyConcepts';
         const isOn = isMultiMain
           ? Boolean((chart.config.indicators as any)[ind.id]?.show && (((chart.config.indicators as any)[ind.id]?.lines?.length ?? 0) > 0))
           : ((chart.config.indicators as any)[ind.id]?.show ?? false);
@@ -2105,7 +2106,7 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
           <div style="font-size:11px;color:#555;margin-top:2px;">${ind.desc}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-          ${isMultiMain ? '<button type="button" data-ind-settings="1" style="height:24px;padding:0 8px;border:1px solid #3a4055;border-radius:6px;background:#1a1f2d;color:#c8cfde;cursor:pointer;font-size:11px;">세부</button>' : ''}
+          ${hasSettings ? '<button type="button" data-ind-settings="1" style="height:24px;padding:0 8px;border:1px solid #3a4055;border-radius:6px;background:#1a1f2d;color:#c8cfde;cursor:pointer;font-size:11px;">세부</button>' : ''}
           <div style="width:36px;height:20px;border-radius:10px;background:${isOn ? '#2962ff' : '#363a45'};
             display:flex;align-items:center;padding:0 3px;box-sizing:border-box;transition:background 0.2s;">
             <div style="width:14px;height:14px;border-radius:50%;background:white;
@@ -2222,6 +2223,8 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
       ? 'HMA - Hull Moving Average'
     : popupKey === 'williamsFractal'
       ? 'Williams Fractal'
+    : popupKey === 'smartMoneyConcepts'
+      ? 'Smart Money Concepts'
     : popupKey === 'atr'
       ? 'ATR - Average True Range'
     : popupKey === 'cvd'
@@ -2240,6 +2243,7 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     statisticalTrailingStop: ['dataLength', 'distributionLength', 'baseLevel'],
     zeroLagMaTrendLevels: ['length'],
     williamsFractal: ['span'],
+    smartMoneyConcepts: ['swingLength', 'internalLength', 'equalLength', 'equalThreshold'],
     rsi: ['period'], dmi: ['period'], macd: ['fast','slow','signal'],
     stochF: ['kPeriod','dPeriod'], stochS: ['kPeriod','dPeriod'],
     cci: ['period'], atr: ['period'], ichimoku: ['tenkan','kijun','senkou'],
@@ -2253,6 +2257,10 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     baseLevel: 'Base Level',
     length: 'Length',
     span: '기간',
+    swingLength: 'Swing Length',
+    internalLength: 'Internal Length',
+    equalLength: 'EQ Bars',
+    equalThreshold: 'EQ Threshold',
     fast: 'Fast', slow: 'Slow', signal: 'Signal',
     kPeriod: 'K 기간', dPeriod: 'D 기간',
     tenkan: '전환선', kijun: '기준선', senkou: '선행스팬 B', pct: '편차 (%)',
@@ -2711,6 +2719,15 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
       inp.min = '1';
       inp.max = '20';
       inp.step = '1';
+    } else if (popupKey === 'smartMoneyConcepts') {
+      if (field === 'equalThreshold') {
+        inp.min = '0';
+        inp.max = '0.5';
+        inp.step = '0.01';
+      } else {
+        inp.min = '1';
+        inp.step = '1';
+      }
     }
     inp.style.cssText = 'width:64px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:3px 7px;text-align:right;font-size:12px;';
     inp.addEventListener('change', () => {
@@ -2723,6 +2740,16 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
         next = Math.max(1, Math.floor(Number(next) || 15));
       } else if (popupKey === 'williamsFractal' && field === 'span') {
         next = Math.max(1, Math.min(20, Math.floor(Number(next) || 2)));
+      } else if (popupKey === 'smartMoneyConcepts') {
+        if (field === 'equalThreshold') {
+          next = Math.max(0, Math.min(0.5, Number.isFinite(next) ? next : 0.1));
+        } else if (field === 'internalLength') {
+          next = Math.max(1, Math.min(100, Math.floor(Number(next) || 5)));
+        } else if (field === 'equalLength') {
+          next = Math.max(1, Math.min(50, Math.floor(Number(next) || 3)));
+        } else {
+          next = Math.max(1, Math.min(500, Math.floor(Number(next) || 50)));
+        }
       }
       ind[field] = next;
       inp.value = String(ind[field]);
@@ -2730,6 +2757,33 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     });
     row.appendChild(lbl); row.appendChild(inp); popup.appendChild(row);
   });
+
+  if (popupKey === 'smartMoneyConcepts') {
+    const toggles: Array<[string, string]> = [
+      ['showStructure', 'Swing Structure'],
+      ['showInternal', 'Internal Structure'],
+      ['showEqualLevels', 'EQH / EQL'],
+      ['showOrderBlocks', 'Order Blocks'],
+      ['showFairValueGaps', 'Fair Value Gaps'],
+      ['showZones', 'Premium / Discount'],
+    ];
+    toggles.forEach(([field, label]) => {
+      if (typeof ind[field] !== 'boolean') ind[field] = field !== 'showZones';
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+      const lbl = document.createElement('span');
+      lbl.textContent = label;
+      lbl.style.color = '#84898e';
+      const { button } = createSwitch(Boolean(ind[field]), (next) => {
+        ind[field] = next;
+        chart.draw();
+        onUpdate();
+      });
+      row.appendChild(lbl);
+      row.appendChild(button);
+      popup.appendChild(row);
+    });
+  }
 
   if (popupKey === 'cvd') {
     if (typeof ind.barMode !== 'boolean') ind.barMode = true;

@@ -10,6 +10,25 @@ export { calculateEma, calculateEmaFromValues, calculateMa } from './moving-aver
 export { calculateMacd, type MacdResult } from './macd.ts';
 export { calculateObv } from './obv.ts';
 export { calculateRsi } from './rsi.ts';
+export {
+  DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS,
+  EMPTY_SMART_MONEY_CONCEPTS_RESULT,
+  buildSmartMoneyConceptsCacheKey,
+  calculateSmartMoneyConcepts,
+  normalizeSmartMoneyConceptsSettings,
+  type SmartMoneyConceptsBias,
+  type SmartMoneyConceptsCandle,
+  type SmartMoneyConceptsEqualLevel,
+  type SmartMoneyConceptsFairValueGap,
+  type SmartMoneyConceptsOptions,
+  type SmartMoneyConceptsOrderBlock,
+  type SmartMoneyConceptsPivot,
+  type SmartMoneyConceptsResult,
+  type SmartMoneyConceptsSettings,
+  type SmartMoneyConceptsStructureEvent,
+  type SmartMoneyConceptsStructureKind,
+  type SmartMoneyConceptsStructureScope,
+} from './smart-money-concepts.ts';
 export { calculateStochastic, type StochasticResult } from './stochastic.ts';
 export { calculateCvd, calculateVwap } from './volume.ts';
 export {

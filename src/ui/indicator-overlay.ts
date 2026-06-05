@@ -694,6 +694,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         cvd:      () => 'CVD',
         vwap:     () => 'VWAP',
         williamsFractal: () => `Fractal(${Number(i.williamsFractal?.span ?? 2)})`,
+        smartMoneyConcepts: () => `SMC(${Number(i.smartMoneyConcepts?.swingLength ?? 50)}, ${Number(i.smartMoneyConcepts?.internalLength ?? 5)})`,
         ichimoku: () => `Ichimoku(${i.ichimoku.tenkan},${i.ichimoku.kijun})`,
         envelope: () => `Envelope(${i.envelope.period}, ${i.envelope.pct}%)`,
         supertrend: () => `Supertrend(${i.supertrend.period}, ${i.supertrend.factor})`,
@@ -731,6 +732,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       bb: getLineStyle(chart.config.panelState, ((chart.config.indicators as any).bb?.lines?.[0]?.id ?? 'bb1') + 'Upper', { color: 'rgba(100,149,237,0.95)', width: 1, dash: [] }).color,
       vwap: getLineStyle(chart.config.panelState, 'vwap', { color: '#ff9800', width: 1.5, dash: [] }).color,
       williamsFractal: getLineStyle(chart.config.panelState, 'williamsFractalHigh', { color: '#ef5350', width: 1.5, dash: [] }).color,
+      smartMoneyConcepts: getLineStyle(chart.config.panelState, 'smartMoneyConceptsBullish', { color: '#089981', width: 1, dash: [] }).color,
       ichimoku: '#aaaaff',
       envelope: getLineStyle(chart.config.panelState, 'envelopeUpper', { color: 'rgba(255,200,50,0.95)', width: 1, dash: [] }).color,
       supertrend: getLineStyle(chart.config.panelState, 'supertrendUp', { color: '#26a69a', width: 1.7, dash: [] }).color,
@@ -816,6 +818,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
           case 'hma':      return [{ text: 'HMA', color: '#dbe3f4' }, { text: String(i.hma?.period ?? ''), color: c }];
           case 'vwap':     return [{ text: 'VWAP', color: c }];
           case 'williamsFractal': return [{ text: 'Fractal', color: '#dbe3f4' }, { text: String(Number(i.williamsFractal?.span ?? 2)), color: c }];
+          case 'smartMoneyConcepts': return [{ text: 'SMC', color: '#dbe3f4' }, { text: String(Number(i.smartMoneyConcepts?.swingLength ?? 50)), color: c }, { text: String(Number(i.smartMoneyConcepts?.internalLength ?? 5)), color: c }];
           case 'ichimoku': return [{ text: 'Ichi', color: '#dbe3f4' }, { text: String(i.ichimoku?.tenkan ?? ''), color: c }, { text: String(i.ichimoku?.kijun ?? ''), color: c }];
           case 'envelope': return [{ text: 'Env', color: '#dbe3f4' }, { text: String(i.envelope?.period ?? ''), color: c }, { text: `${i.envelope?.pct ?? ''}%`, color: c }];
           case 'supertrend': return [{ text: 'ST', color: '#dbe3f4' }, { text: String(i.supertrend?.period ?? ''), color: c }, { text: String(i.supertrend?.factor ?? ''), color: c }];
@@ -855,7 +858,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
 
     const allKeys = [
       'ma','ema','hma','maShort','maLong','ma60','ma120','ma200','bb','vwap','volumeProfile','vpvr','ichimoku','envelope',
-      'williamsFractal',
+      'williamsFractal','smartMoneyConcepts',
       'supertrend','statisticalTrailingStop','zeroLagMaTrendLevels',
       'rsi','dmi','macd','stochF','stochS','cci','atr','obv','cvd','volume',
     ];

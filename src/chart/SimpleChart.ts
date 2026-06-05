@@ -93,6 +93,13 @@ import {
   calculateMa,
   calculateObv,
   calculateRsi,
+  buildSmartMoneyConceptsCacheKey,
+  DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS,
+  EMPTY_SMART_MONEY_CONCEPTS_RESULT,
+  calculateSmartMoneyConcepts,
+  normalizeSmartMoneyConceptsSettings,
+  type SmartMoneyConceptsResult,
+  type SmartMoneyConceptsSettings,
   calculateStochastic,
   calculateVwap,
   calculateWilliamsFractals,
@@ -352,6 +359,8 @@ export class SimpleChart {
   private gapMode: GapMode = 'raw';
   private displayDataCache: CandleData[] | null = null;
   private displayDataCacheKey = '';
+  private smartMoneyConceptsCacheKey = '';
+  private smartMoneyConceptsCache: SmartMoneyConceptsResult = EMPTY_SMART_MONEY_CONCEPTS_RESULT;
   private strategies: StrategyDefinition[] = loadStrategies();
   private activeStrategyId: string | null = null;
   private strategySignals: StrategySignal[] = [];
@@ -596,6 +605,7 @@ export class SimpleChart {
       cvd:      { show: false, barMode: true },
       vwap:     { show: false },
       williamsFractal: { show: false, span: 2 },
+      smartMoneyConcepts: { ...DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS },
       volumeProfile: { show: false, rows: 24, widthPct: 22, upOpacity: 45, downOpacity: 45, pocOpacity: 95 },
       vpvr: {
         show: false,
@@ -5319,6 +5329,15 @@ export class SimpleChart {
     return calculateEnvelope(this.getIndicatorSourceData(), period, pct);
   }
 
+  private calcSmartMoneyConcepts(settings: SmartMoneyConceptsSettings): SmartMoneyConceptsResult {
+    if (!settings.show) return EMPTY_SMART_MONEY_CONCEPTS_RESULT;
+    const cacheKey = buildSmartMoneyConceptsCacheKey(this.data, settings);
+    if (cacheKey === this.smartMoneyConceptsCacheKey) return this.smartMoneyConceptsCache;
+    this.smartMoneyConceptsCacheKey = cacheKey;
+    this.smartMoneyConceptsCache = calculateSmartMoneyConcepts(this.data, settings);
+    return this.smartMoneyConceptsCache;
+  }
+
   private calcEmaSeries(values: (number | null)[], period: number): (number | null)[] {
     const p = Math.max(1, Math.floor(Number(period) || 1));
     const out: (number | null)[] = new Array(values.length).fill(null);
@@ -5813,6 +5832,8 @@ export class SimpleChart {
     const williamsFractalD = indicatorLayerOn && ind.williamsFractal.show
       ? calculateWilliamsFractals(this.data, ind.williamsFractal.span)
       : { highs: [] as Array<number | null>, lows: [] as Array<number | null>, span: 2 };
+    ind.smartMoneyConcepts = normalizeSmartMoneyConceptsSettings(ind.smartMoneyConcepts);
+    const smartMoneyConceptsD = indicatorLayerOn ? this.calcSmartMoneyConcepts(ind.smartMoneyConcepts) : EMPTY_SMART_MONEY_CONCEPTS_RESULT;
     if (!ind.zeroLagMaTrendLevels) {
       ind.zeroLagMaTrendLevels = {
         show: false,
@@ -6216,6 +6237,7 @@ export class SimpleChart {
         bbSeries,
         vwapD,
         williamsFractalD,
+        smartMoneyConceptsD,
         zeroLagMaTrendLevelsD,
         zeroLagStates,
         supertrendD,
