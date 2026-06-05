@@ -29,3 +29,14 @@ test('Statistical Trailing Stop marker size is reduced on mobile chart viewports
   assert.match(simpleChartSource, /const isMobileIndicatorViewport = \(window\.matchMedia\?\.\('\(pointer: coarse\)'\)\.matches \?\? false\) \|\| window\.innerWidth <= 768/);
   assert.match(simpleChartSource, /isMobileViewport: isMobileIndicatorViewport/);
 });
+
+test('Smart Money Concepts hide action gates the whole renderer through style visibility', () => {
+  assert.match(
+    mainIndicatorSource,
+    /const smartMoneyConceptsVisible = showLine\('smartMoneyConceptsBullish'\)[\s\S]*showLine\('smartMoneyConceptsEqual'\)/,
+  );
+  assert.match(
+    mainIndicatorSource,
+    /if \(indicatorLayerOn && ind\.smartMoneyConcepts\?\.show && smartMoneyConceptsVisible\) \{/,
+  );
+});

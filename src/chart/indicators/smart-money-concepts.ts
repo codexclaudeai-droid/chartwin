@@ -2,6 +2,12 @@ export type SmartMoneyConceptsBias = 'bullish' | 'bearish';
 export type SmartMoneyConceptsStructureKind = 'BOS' | 'CHoCH';
 export type SmartMoneyConceptsStructureScope = 'internal' | 'swing';
 export type SmartMoneyConceptsPivotMode = 'lux' | 'strict';
+export type SmartMoneyConceptsMode = 'Historical' | 'Present';
+export type SmartMoneyConceptsStyle = 'Colored' | 'Monochrome';
+export type SmartMoneyConceptsDisplayFilter = 'All' | 'BOS' | 'CHoCH';
+export type SmartMoneyConceptsLabelSize = 'tiny' | 'small' | 'normal';
+export type SmartMoneyConceptsOrderBlockFilter = 'Atr' | 'Cumulative Mean Range';
+export type SmartMoneyConceptsOrderBlockMitigation = 'Close' | 'High/Low';
 
 export interface SmartMoneyConceptsCandle {
   open: number;
@@ -14,6 +20,7 @@ export interface SmartMoneyConceptsCandle {
 
 export interface SmartMoneyConceptsOptions {
   swingLength?: number;
+  swingsLength?: number;
   internalLength?: number;
   equalLength?: number;
   equalThreshold?: number;
@@ -21,16 +28,55 @@ export interface SmartMoneyConceptsOptions {
   includeOrderBlocks?: boolean;
   includeFairValueGaps?: boolean;
   pivotMode?: SmartMoneyConceptsPivotMode;
+  maxOrderBlocks?: number;
+  internalOrderBlocksSize?: number;
+  swingOrderBlocksSize?: number;
 }
 
 export interface SmartMoneyConceptsSettings extends Required<SmartMoneyConceptsOptions> {
   show: boolean;
+  mode: SmartMoneyConceptsMode;
+  style: SmartMoneyConceptsStyle;
+  showTrend: boolean;
   showInternal: boolean;
+  internalBullishStructure: SmartMoneyConceptsDisplayFilter;
+  internalBearishStructure: SmartMoneyConceptsDisplayFilter;
+  internalFilterConfluence: boolean;
+  internalLabelSize: SmartMoneyConceptsLabelSize;
   showStructure: boolean;
+  swingBullishStructure: SmartMoneyConceptsDisplayFilter;
+  swingBearishStructure: SmartMoneyConceptsDisplayFilter;
+  swingLabelSize: SmartMoneyConceptsLabelSize;
+  showSwingsPoints: boolean;
+  swingsLength: number;
+  showHighLowSwings: boolean;
+  showInternalOrderBlocks: boolean;
+  showSwingOrderBlocks: boolean;
+  orderBlockFilter: SmartMoneyConceptsOrderBlockFilter;
+  orderBlockMitigation: SmartMoneyConceptsOrderBlockMitigation;
   showEqualLevels: boolean;
-  showOrderBlocks: boolean;
+  equalLabelSize: SmartMoneyConceptsLabelSize;
   showFairValueGaps: boolean;
+  fairValueGapsAutoThreshold: boolean;
+  fairValueGapsTimeframe: string;
+  fairValueGapsExtend: number;
+  showDailyLevels: boolean;
+  showWeeklyLevels: boolean;
+  showMonthlyLevels: boolean;
   showZones: boolean;
+  internalBullColor: string;
+  internalBearColor: string;
+  swingBullColor: string;
+  swingBearColor: string;
+  internalBullishOrderBlockColor: string;
+  internalBearishOrderBlockColor: string;
+  swingBullishOrderBlockColor: string;
+  swingBearishOrderBlockColor: string;
+  fairValueGapsBullColor: string;
+  fairValueGapsBearColor: string;
+  premiumZoneColor: string;
+  equilibriumZoneColor: string;
+  discountZoneColor: string;
 }
 
 export interface SmartMoneyConceptsPivot {
@@ -103,12 +149,51 @@ export const DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS: SmartMoneyConceptsSettings =
   includeOrderBlocks: true,
   includeFairValueGaps: true,
   pivotMode: 'lux',
+  internalOrderBlocksSize: 5,
+  swingOrderBlocksSize: 5,
+  maxOrderBlocks: 5,
+  mode: 'Historical',
+  style: 'Colored',
+  showTrend: false,
   showInternal: true,
+  internalBullishStructure: 'All',
+  internalBearishStructure: 'All',
+  internalFilterConfluence: false,
+  internalLabelSize: 'tiny',
   showStructure: true,
+  swingBullishStructure: 'All',
+  swingBearishStructure: 'All',
+  swingLabelSize: 'small',
+  showSwingsPoints: false,
+  swingsLength: 50,
+  showHighLowSwings: true,
+  showInternalOrderBlocks: true,
+  showSwingOrderBlocks: false,
+  orderBlockFilter: 'Atr',
+  orderBlockMitigation: 'High/Low',
   showEqualLevels: true,
-  showOrderBlocks: true,
-  showFairValueGaps: true,
+  equalLabelSize: 'tiny',
+  showFairValueGaps: false,
+  fairValueGapsAutoThreshold: true,
+  fairValueGapsTimeframe: '',
+  fairValueGapsExtend: 1,
+  showDailyLevels: true,
+  showWeeklyLevels: true,
+  showMonthlyLevels: true,
   showZones: false,
+  internalBullColor: '#089981',
+  internalBearColor: '#f23645',
+  swingBullColor: '#089981',
+  swingBearColor: '#f23645',
+  internalBullishOrderBlockColor: 'rgba(49,121,245,0.20)',
+  internalBearishOrderBlockColor: 'rgba(247,124,128,0.20)',
+  swingBullishOrderBlockColor: 'rgba(24,72,204,0.20)',
+  swingBearishOrderBlockColor: 'rgba(178,40,51,0.20)',
+  fairValueGapsBullColor: 'rgba(0,255,104,0.25)',
+  fairValueGapsBearColor: 'rgba(255,0,8,0.25)',
+  premiumZoneColor: '#f23645',
+  equilibriumZoneColor: '#878b94',
+  discountZoneColor: '#089981',
 };
 
 export const EMPTY_SMART_MONEY_CONCEPTS_RESULT: SmartMoneyConceptsResult = {
@@ -136,8 +221,26 @@ function safeLength(value: unknown, fallback: number): number {
   return Number.isFinite(next) && next >= 1 ? next : fallback;
 }
 
+function safeLengthInRange(value: unknown, fallback: number, min: number, max: number): number {
+  const next = Math.floor(Number(value));
+  if (!Number.isFinite(next)) return fallback;
+  return Math.max(min, Math.min(max, next));
+}
+
 function safeBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
+}
+
+function safeDisplayFilter(value: unknown, fallback: SmartMoneyConceptsDisplayFilter): SmartMoneyConceptsDisplayFilter {
+  return value === 'BOS' || value === 'CHoCH' || value === 'All' ? value : fallback;
+}
+
+function safeLabelSize(value: unknown, fallback: SmartMoneyConceptsLabelSize): SmartMoneyConceptsLabelSize {
+  return value === 'small' || value === 'normal' || value === 'tiny' ? value : fallback;
+}
+
+function safeString(value: unknown, fallback: string): string {
+  return typeof value === 'string' ? value : fallback;
 }
 
 export function normalizeSmartMoneyConceptsSettings(
@@ -149,22 +252,64 @@ export function normalizeSmartMoneyConceptsSettings(
     ...DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS,
     ...source,
     show: safeBoolean(source.show, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.show),
-    swingLength: safeLength(source.swingLength, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.swingLength),
+    swingLength: safeLength(source.swingLength ?? source.swingsLength, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.swingLength),
     internalLength: safeLength(source.internalLength, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.internalLength),
     equalLength: safeLength(source.equalLength, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.equalLength),
     equalThreshold: Number.isFinite(equalThreshold) && equalThreshold >= 0 && equalThreshold <= 0.5
       ? equalThreshold
       : DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.equalThreshold,
     includeInternal: safeBoolean(source.showInternal ?? source.includeInternal, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.includeInternal),
-    includeOrderBlocks: safeBoolean(source.showOrderBlocks ?? source.includeOrderBlocks, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.includeOrderBlocks),
+    includeOrderBlocks: safeBoolean(
+      source.includeOrderBlocks ?? source.showInternalOrderBlocks ?? source.showSwingOrderBlocks,
+      DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.includeOrderBlocks,
+    ),
     includeFairValueGaps: safeBoolean(source.showFairValueGaps ?? source.includeFairValueGaps, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.includeFairValueGaps),
     pivotMode: source.pivotMode === 'strict' ? 'strict' : DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.pivotMode,
+    internalOrderBlocksSize: safeLengthInRange(source.internalOrderBlocksSize, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.internalOrderBlocksSize, 1, 20),
+    swingOrderBlocksSize: safeLengthInRange(source.swingOrderBlocksSize, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.swingOrderBlocksSize, 1, 20),
+    maxOrderBlocks: safeLength(source.maxOrderBlocks, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.maxOrderBlocks),
+    mode: source.mode === 'Present' ? 'Present' : DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.mode,
+    style: source.style === 'Monochrome' ? 'Monochrome' : DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.style,
+    showTrend: safeBoolean(source.showTrend, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showTrend),
     showInternal: safeBoolean(source.showInternal, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showInternal),
+    internalBullishStructure: safeDisplayFilter(source.internalBullishStructure, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.internalBullishStructure),
+    internalBearishStructure: safeDisplayFilter(source.internalBearishStructure, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.internalBearishStructure),
+    internalFilterConfluence: safeBoolean(source.internalFilterConfluence, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.internalFilterConfluence),
+    internalLabelSize: safeLabelSize(source.internalLabelSize, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.internalLabelSize),
     showStructure: safeBoolean(source.showStructure, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showStructure),
+    swingBullishStructure: safeDisplayFilter(source.swingBullishStructure, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.swingBullishStructure),
+    swingBearishStructure: safeDisplayFilter(source.swingBearishStructure, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.swingBearishStructure),
+    swingLabelSize: safeLabelSize(source.swingLabelSize, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.swingLabelSize),
+    showSwingsPoints: safeBoolean(source.showSwingsPoints, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showSwingsPoints),
+    swingsLength: safeLengthInRange(source.swingsLength ?? source.swingLength, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.swingsLength, 10, 500),
+    showHighLowSwings: safeBoolean(source.showHighLowSwings, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showHighLowSwings),
+    showInternalOrderBlocks: safeBoolean(source.showInternalOrderBlocks, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showInternalOrderBlocks),
+    showSwingOrderBlocks: safeBoolean(source.showSwingOrderBlocks, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showSwingOrderBlocks),
+    orderBlockFilter: source.orderBlockFilter === 'Cumulative Mean Range' ? 'Cumulative Mean Range' : DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.orderBlockFilter,
+    orderBlockMitigation: source.orderBlockMitigation === 'Close' ? 'Close' : DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.orderBlockMitigation,
     showEqualLevels: safeBoolean(source.showEqualLevels, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showEqualLevels),
-    showOrderBlocks: safeBoolean(source.showOrderBlocks, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showOrderBlocks),
+    equalLabelSize: safeLabelSize(source.equalLabelSize, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.equalLabelSize),
     showFairValueGaps: safeBoolean(source.showFairValueGaps, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showFairValueGaps),
+    fairValueGapsAutoThreshold: safeBoolean(source.fairValueGapsAutoThreshold, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.fairValueGapsAutoThreshold),
+    fairValueGapsTimeframe: safeString(source.fairValueGapsTimeframe, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.fairValueGapsTimeframe),
+    fairValueGapsExtend: safeLengthInRange(source.fairValueGapsExtend, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.fairValueGapsExtend, 0, 50),
+    showDailyLevels: safeBoolean(source.showDailyLevels, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showDailyLevels),
+    showWeeklyLevels: safeBoolean(source.showWeeklyLevels, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showWeeklyLevels),
+    showMonthlyLevels: safeBoolean(source.showMonthlyLevels, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showMonthlyLevels),
     showZones: safeBoolean(source.showZones, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.showZones),
+    internalBullColor: safeString(source.internalBullColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.internalBullColor),
+    internalBearColor: safeString(source.internalBearColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.internalBearColor),
+    swingBullColor: safeString(source.swingBullColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.swingBullColor),
+    swingBearColor: safeString(source.swingBearColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.swingBearColor),
+    internalBullishOrderBlockColor: safeString(source.internalBullishOrderBlockColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.internalBullishOrderBlockColor),
+    internalBearishOrderBlockColor: safeString(source.internalBearishOrderBlockColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.internalBearishOrderBlockColor),
+    swingBullishOrderBlockColor: safeString(source.swingBullishOrderBlockColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.swingBullishOrderBlockColor),
+    swingBearishOrderBlockColor: safeString(source.swingBearishOrderBlockColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.swingBearishOrderBlockColor),
+    fairValueGapsBullColor: safeString(source.fairValueGapsBullColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.fairValueGapsBullColor),
+    fairValueGapsBearColor: safeString(source.fairValueGapsBearColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.fairValueGapsBearColor),
+    premiumZoneColor: safeString(source.premiumZoneColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.premiumZoneColor),
+    equilibriumZoneColor: safeString(source.equilibriumZoneColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.equilibriumZoneColor),
+    discountZoneColor: safeString(source.discountZoneColor, DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS.discountZoneColor),
   };
 }
 
@@ -196,6 +341,15 @@ export function buildSmartMoneyConceptsCacheKey(
     Number(settings.includeOrderBlocks),
     Number(settings.includeFairValueGaps),
     settings.pivotMode,
+    settings.mode,
+    Number(settings.showInternalOrderBlocks),
+    Number(settings.showSwingOrderBlocks),
+    settings.internalOrderBlocksSize,
+    settings.swingOrderBlocksSize,
+    settings.orderBlockFilter,
+    settings.orderBlockMitigation,
+    Number(settings.fairValueGapsAutoThreshold),
+    settings.fairValueGapsExtend,
   ].join('|');
 }
 
@@ -303,6 +457,36 @@ function calculateTrueRange(candles: SmartMoneyConceptsCandle[], index: number):
   );
 }
 
+function calculateAtr(candles: SmartMoneyConceptsCandle[], index: number, length = 200): number {
+  const end = Math.max(0, Math.min(index, candles.length - 1));
+  const start = Math.max(0, end - length + 1);
+  let atr = calculateTrueRange(candles, start);
+  let count = 1;
+  for (let i = start + 1; i <= end; i += 1) {
+    const tr = calculateTrueRange(candles, i);
+    count += 1;
+    if (count <= length) {
+      atr = atr + (tr - atr) / count;
+    } else {
+      atr = (atr * (length - 1) + tr) / length;
+    }
+  }
+  return atr;
+}
+
+function calculateCumulativeMeanRange(candles: SmartMoneyConceptsCandle[], index: number): number {
+  const end = Math.max(0, Math.min(index, candles.length - 1));
+  let total = 0;
+  let count = 0;
+  for (let i = 0; i <= end; i += 1) {
+    const candle = candles[i];
+    if (!candle) continue;
+    total += Math.max(0, candle.high - candle.low);
+    count += 1;
+  }
+  return count > 0 ? total / count : 0;
+}
+
 function calculateMeanRange(candles: SmartMoneyConceptsCandle[]): number {
   if (!candles.length) return 0;
   const total = candles.reduce((sum, _candle, index) => sum + calculateTrueRange(candles, index), 0);
@@ -356,6 +540,7 @@ function calculateEqualLevels(
 function createOrderBlock(
   candles: SmartMoneyConceptsCandle[],
   event: SmartMoneyConceptsStructureEvent,
+  settings: Pick<SmartMoneyConceptsSettings, 'orderBlockFilter'>,
 ): SmartMoneyConceptsOrderBlock | null {
   const start = Math.max(0, event.pivotIndex);
   const end = Math.min(candles.length - 1, event.breakIndex - 1);
@@ -371,6 +556,11 @@ function createOrderBlock(
   }
   const selected = candles[selectedIndex];
   if (!selected) return null;
+  const selectedRange = selected.high - selected.low;
+  const filterRange = settings.orderBlockFilter === 'Atr'
+    ? calculateAtr(candles, selectedIndex)
+    : calculateCumulativeMeanRange(candles, selectedIndex);
+  if (filterRange > 0 && selectedRange > filterRange * 2) return null;
   return {
     bias: event.bias,
     scope: event.scope,
@@ -379,6 +569,42 @@ function createOrderBlock(
     high: selected.high,
     low: selected.low,
   };
+}
+
+function isOrderBlockMitigated(
+  candles: SmartMoneyConceptsCandle[],
+  block: SmartMoneyConceptsOrderBlock,
+  mitigation: SmartMoneyConceptsOrderBlockMitigation,
+): boolean {
+  for (let index = block.rightIndex + 1; index < candles.length; index += 1) {
+    const candle = candles[index];
+    if (!candle) continue;
+    if (mitigation === 'Close') {
+      if (block.bias === 'bearish' && candle.close > block.high) return true;
+      if (block.bias === 'bullish' && candle.close < block.low) return true;
+    } else {
+      if (block.bias === 'bearish' && candle.high > block.high) return true;
+      if (block.bias === 'bullish' && candle.low < block.low) return true;
+    }
+  }
+  return false;
+}
+
+function selectActiveOrderBlocks(
+  candles: SmartMoneyConceptsCandle[],
+  blocks: SmartMoneyConceptsOrderBlock[],
+  settings: Pick<SmartMoneyConceptsSettings, 'showInternalOrderBlocks' | 'showSwingOrderBlocks' | 'internalOrderBlocksSize' | 'swingOrderBlocksSize' | 'orderBlockMitigation'>,
+): SmartMoneyConceptsOrderBlock[] {
+  const active = blocks
+    .filter((block) => !isOrderBlockMitigated(candles, block, settings.orderBlockMitigation))
+    .sort((a, b) => b.rightIndex - a.rightIndex);
+  const internal = settings.showInternalOrderBlocks
+    ? active.filter((block) => block.scope === 'internal').slice(0, settings.internalOrderBlocksSize)
+    : [];
+  const swing = settings.showSwingOrderBlocks
+    ? active.filter((block) => block.scope === 'swing').slice(0, settings.swingOrderBlocksSize)
+    : [];
+  return [...internal, ...swing].sort((a, b) => b.rightIndex - a.rightIndex);
 }
 
 function calculateStructuresForScope(
@@ -457,14 +683,23 @@ function calculateStructuresForScope(
   return { pivots, structures };
 }
 
-function calculateFairValueGaps(candles: SmartMoneyConceptsCandle[]): SmartMoneyConceptsFairValueGap[] {
+function calculateFairValueGaps(
+  candles: SmartMoneyConceptsCandle[],
+  settings: Pick<SmartMoneyConceptsSettings, 'fairValueGapsAutoThreshold'>,
+): SmartMoneyConceptsFairValueGap[] {
   const result: SmartMoneyConceptsFairValueGap[] = [];
+  let cumulativeRelativeRange = 0;
   for (let index = 2; index < candles.length; index += 1) {
     const left = candles[index - 2];
     const middle = candles[index - 1];
     const right = candles[index];
     if (!left || !middle || !right) continue;
+    cumulativeRelativeRange += left.low > 0 ? (left.high - left.low) / left.low : 0;
+    const autoThreshold = settings.fairValueGapsAutoThreshold ? cumulativeRelativeRange / Math.max(1, index - 1) : 0;
+    const bullishGapRatio = left.high > 0 ? (right.low - left.high) / left.high : 0;
+    const bearishGapRatio = left.low > 0 ? (left.low - right.high) / left.low : 0;
     if (right.low > left.high && middle.close > left.high) {
+      if (bullishGapRatio <= autoThreshold) continue;
       result.push({
         bias: 'bullish',
         leftIndex: index - 2,
@@ -475,6 +710,7 @@ function calculateFairValueGaps(candles: SmartMoneyConceptsCandle[]): SmartMoney
       });
     }
     if (right.high < left.low && middle.close < left.low) {
+      if (bearishGapRatio <= autoThreshold) continue;
       result.push({
         bias: 'bearish',
         leftIndex: index - 2,
@@ -486,6 +722,20 @@ function calculateFairValueGaps(candles: SmartMoneyConceptsCandle[]): SmartMoney
     }
   }
   return result;
+}
+
+function selectPresentStructures(structures: SmartMoneyConceptsStructureEvent[]): SmartMoneyConceptsStructureEvent[] {
+  const latest = new Map<string, SmartMoneyConceptsStructureEvent>();
+  structures.forEach((event) => {
+    latest.set(`${event.scope}:${event.bias}`, event);
+  });
+  return [...latest.values()].sort((a, b) => a.breakIndex - b.breakIndex);
+}
+
+function selectPresentEqualLevels(levels: SmartMoneyConceptsEqualLevel[]): SmartMoneyConceptsEqualLevel[] {
+  const latest = new Map<string, SmartMoneyConceptsEqualLevel>();
+  levels.forEach((level) => latest.set(level.kind, level));
+  return [...latest.values()].sort((a, b) => a.rightIndex - b.rightIndex);
 }
 
 function calculateZones(candles: SmartMoneyConceptsCandle[], pivots: SmartMoneyConceptsPivot[]): SmartMoneyConceptsZones {
@@ -509,13 +759,14 @@ export function calculateSmartMoneyConcepts(
   candles: SmartMoneyConceptsCandle[],
   options: SmartMoneyConceptsOptions = {},
 ): SmartMoneyConceptsResult {
-  const swingLength = safeLength(options.swingLength, 50);
-  const internalLength = safeLength(options.internalLength, 5);
-  const equalLength = safeLength(options.equalLength, 3);
-  const pivotMode = options.pivotMode === 'strict' ? 'strict' : 'lux';
-  const includeInternal = options.includeInternal !== false;
-  const includeOrderBlocks = options.includeOrderBlocks !== false;
-  const includeFairValueGaps = options.includeFairValueGaps !== false;
+  const settings = normalizeSmartMoneyConceptsSettings(options as Partial<SmartMoneyConceptsSettings>);
+  const swingLength = settings.swingLength;
+  const internalLength = settings.internalLength;
+  const equalLength = settings.equalLength;
+  const pivotMode = settings.pivotMode;
+  const includeInternal = settings.includeInternal;
+  const includeOrderBlocks = settings.includeOrderBlocks;
+  const includeFairValueGaps = settings.includeFairValueGaps;
 
   const swing = calculateStructuresForScope(candles, swingLength, 'swing', pivotMode);
   const internal = includeInternal
@@ -523,17 +774,19 @@ export function calculateSmartMoneyConcepts(
     : { pivots: [] as SmartMoneyConceptsPivot[], structures: [] as SmartMoneyConceptsStructureEvent[] };
 
   const pivots = [...swing.pivots, ...internal.pivots].sort((a, b) => a.index - b.index);
-  const structures = [...swing.structures, ...internal.structures].sort((a, b) => a.breakIndex - b.breakIndex);
+  const allStructures = [...swing.structures, ...internal.structures].sort((a, b) => a.breakIndex - b.breakIndex);
+  const structures = settings.mode === 'Present' ? selectPresentStructures(allStructures) : allStructures;
   const orderBlocks = includeOrderBlocks
-    ? structures.map((event) => createOrderBlock(candles, event)).filter((block): block is SmartMoneyConceptsOrderBlock => Boolean(block))
+    ? allStructures.map((event) => createOrderBlock(candles, event, settings)).filter((block): block is SmartMoneyConceptsOrderBlock => Boolean(block))
     : [];
+  const equalLevels = calculateEqualLevels(candles, equalLength, settings.equalThreshold, pivotMode);
 
   return {
     pivots,
     structures,
-    equalLevels: calculateEqualLevels(candles, equalLength, Number(options.equalThreshold ?? 0.1), pivotMode),
-    orderBlocks,
-    fairValueGaps: includeFairValueGaps ? calculateFairValueGaps(candles) : [],
+    equalLevels: settings.mode === 'Present' ? selectPresentEqualLevels(equalLevels) : equalLevels,
+    orderBlocks: selectActiveOrderBlocks(candles, orderBlocks, settings),
+    fairValueGaps: includeFairValueGaps ? calculateFairValueGaps(candles, settings) : [],
     zones: calculateZones(candles, pivots),
   };
 }

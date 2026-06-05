@@ -43,6 +43,7 @@ const DEFAULT_LINE_STYLES: Record<string, LineStyle> = {
   vwap: { color: '#ff9800', width: 1.5, dash: [] },
   williamsFractalHigh: { color: '#ef5350', width: 1.5, dash: [] },
   williamsFractalLow: { color: '#26a69a', width: 1.5, dash: [] },
+  parabolicSar: { color: '#2962ff', width: 1.5, dash: [] },
   smartMoneyConceptsBullish: { color: '#089981', width: 1, dash: [] },
   smartMoneyConceptsBearish: { color: '#f23645', width: 1, dash: [] },
   smartMoneyConceptsInternalBullish: { color: '#089981', width: 1, dash: [5, 4] },
@@ -112,6 +113,7 @@ export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: strin
     { key: 'williamsFractalHigh', label: 'High' },
     { key: 'williamsFractalLow', label: 'Low' },
   ],
+  parabolicSar: [{ key: 'parabolicSar', label: 'Cross' }],
   smartMoneyConcepts: [
     { key: 'smartMoneyConceptsBullish', label: 'Bullish Structure' },
     { key: 'smartMoneyConceptsBearish', label: 'Bearish Structure' },

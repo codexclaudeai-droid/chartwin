@@ -9,6 +9,7 @@ export { calculateHma } from './hma.ts';
 export { calculateEma, calculateEmaFromValues, calculateMa } from './moving-average.ts';
 export { calculateMacd, type MacdResult } from './macd.ts';
 export { calculateObv } from './obv.ts';
+export { calculateParabolicSar, type ParabolicSarCandle } from './parabolic-sar.ts';
 export { calculateRsi } from './rsi.ts';
 export {
   DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS,

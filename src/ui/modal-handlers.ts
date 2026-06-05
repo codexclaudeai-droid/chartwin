@@ -2089,7 +2089,7 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
       })
       .forEach(ind => {
         const isMultiMain = ind.id === 'ma' || ind.id === 'ema';
-        const hasSettings = isMultiMain || ind.id === 'smartMoneyConcepts';
+        const hasSettings = isMultiMain || ind.id === 'smartMoneyConcepts' || ind.id === 'parabolicSar';
         const isOn = isMultiMain
           ? Boolean((chart.config.indicators as any)[ind.id]?.show && (((chart.config.indicators as any)[ind.id]?.lines?.length ?? 0) > 0))
           : ((chart.config.indicators as any)[ind.id]?.show ?? false);
@@ -2164,6 +2164,23 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
 
 export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, onUpdate: () => void) {
   document.querySelectorAll('.ind-popup').forEach(e => e.remove());
+  if (!document.getElementById('indicator-popup-scrollbar-style')) {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'indicator-popup-scrollbar-style';
+    styleEl.textContent = `
+      .ind-popup { scrollbar-width: thin; scrollbar-color: rgba(132,137,142,0.34) transparent; }
+      .ind-popup::-webkit-scrollbar { width: 4px; height: 4px; }
+      .ind-popup::-webkit-scrollbar-track { background: transparent; }
+      .ind-popup::-webkit-scrollbar-thumb { background: rgba(132,137,142,0.34); border-radius: 999px; }
+      .ind-popup::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+      .ind-setting-label { display:inline-flex; align-items:center; gap:5px; min-width:0; }
+      .ind-info-button { width:15px; height:15px; min-width:15px; display:inline-flex; align-items:center; justify-content:center; position:relative; color:#a7adba; cursor:help; }
+      .ind-info-button svg { width:15px; height:15px; display:block; }
+      .ind-info-tooltip { display:none; position:absolute; left:0; bottom:calc(100% + 8px); transform:translateX(-18px); width:260px; max-width:calc(100vw - 32px); background:#2b2b2b; color:#f5f7fb; border-radius:6px; padding:8px 10px; font-size:11px; line-height:1.45; font-weight:600; text-align:left; white-space:normal; box-shadow:0 8px 24px rgba(0,0,0,0.38); z-index:10020; pointer-events:none; box-sizing:border-box; }
+      .ind-info-button:hover .ind-info-tooltip, .ind-info-button:focus-visible .ind-info-tooltip { display:block; }
+    `;
+    document.head.appendChild(styleEl);
+  }
   const indicators = chart.config.indicators as any;
   const popupKey = key;
   const ind = indicators[popupKey];
@@ -2210,7 +2227,7 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
   };
 
   const hdr = document.createElement('div');
-  hdr.style.cssText = 'font-weight:700;margin-bottom:12px;font-size:13px;display:flex;justify-content:space-between;';
+  hdr.style.cssText = 'font-weight:700;margin:-4px -4px 12px 0;font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:-14px;background:#1c2030;z-index:2;padding-top:4px;padding-bottom:6px;';
   const headerTitle = popupKey === 'supertrend'
     ? 'SUPER - SUPERTREND'
     : popupKey === 'statisticalTrailingStop'
@@ -2223,6 +2240,8 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
       ? 'HMA - Hull Moving Average'
     : popupKey === 'williamsFractal'
       ? 'Williams Fractal'
+    : popupKey === 'parabolicSar'
+      ? 'Parabolic SAR'
     : popupKey === 'smartMoneyConcepts'
       ? 'Smart Money Concepts'
     : popupKey === 'atr'
@@ -2233,7 +2252,8 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
   hdr.innerHTML = `<span>${headerTitle}</span>`;
   const xb = document.createElement('button');
   xb.textContent = '×';
-  xb.style.cssText = 'background:none;border:none;color:#84898e;cursor:pointer;font-size:14px;';
+  xb.setAttribute('aria-label', '닫기');
+  xb.style.cssText = 'width:34px;height:34px;min-width:34px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;border-radius:8px;color:#d7dfef;cursor:pointer;font-size:28px;line-height:1;outline:none;padding:0;';
   xb.addEventListener('click', () => popup.remove());
   hdr.appendChild(xb); popup.appendChild(hdr);
 
@@ -2243,7 +2263,8 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     statisticalTrailingStop: ['dataLength', 'distributionLength', 'baseLevel'],
     zeroLagMaTrendLevels: ['length'],
     williamsFractal: ['span'],
-    smartMoneyConcepts: ['swingLength', 'internalLength', 'equalLength', 'equalThreshold'],
+    parabolicSar: ['start', 'increment', 'maximum'],
+    smartMoneyConcepts: [],
     rsi: ['period'], dmi: ['period'], macd: ['fast','slow','signal'],
     stochF: ['kPeriod','dPeriod'], stochS: ['kPeriod','dPeriod'],
     cci: ['period'], atr: ['period'], ichimoku: ['tenkan','kijun','senkou'],
@@ -2257,15 +2278,53 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     baseLevel: 'Base Level',
     length: 'Length',
     span: '기간',
+    start: 'Start',
+    increment: 'Increment',
+    maximum: 'Max value',
     swingLength: 'Swing Length',
     internalLength: 'Internal Length',
     equalLength: 'EQ Bars',
     equalThreshold: 'EQ Threshold',
+    swingsLength: 'Swings Points',
+    internalOrderBlocksSize: 'Internal Order Blocks',
+    swingOrderBlocksSize: 'Swing Order Blocks',
+    fairValueGapsExtend: 'Extend FVG',
     fast: 'Fast', slow: 'Slow', signal: 'Signal',
     kPeriod: 'K 기간', dPeriod: 'D 기간',
     tenkan: '전환선', kijun: '기준선', senkou: '선행스팬 B', pct: '편차 (%)',
     rows: '행 개수 / 행당 틱', widthPct: '폭 (%)', valueAreaVolume: 'Value Area 비율(%)',
     upOpacity: '상승 투명도 (%)', downOpacity: '하락 투명도 (%)', pocOpacity: 'POC 투명도 (%)',
+  };
+  const INFO_TEXTS: Record<string, string> = {
+    'smartMoneyConcepts.orderBlockFilter': '변동성이 과도한 오더블록을 걸러내는 방식입니다. 데이터가 적을 때는 누적 평균 범위(Cumulative Mean Range) 방식을 사용하는 것을 권장합니다.',
+  };
+  const getInfoText = (field: string): string => INFO_TEXTS[`${popupKey}.${field}`] ?? INFO_TEXTS[field] ?? '';
+  const createInfoIcon = (text: string): HTMLElement | null => {
+    if (!text) return null;
+    const icon = document.createElement('span');
+    icon.className = 'ind-info-button';
+    icon.tabIndex = 0;
+    icon.setAttribute('role', 'img');
+    icon.setAttribute('aria-label', text);
+    icon.innerHTML = [
+      '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">',
+      '<circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+      '<path d="M8 7.1v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+      '<circle cx="8" cy="4.8" r="0.85" fill="currentColor"/>',
+      '</svg>',
+      `<span class="ind-info-tooltip">${text}</span>`,
+    ].join('');
+    return icon;
+  };
+  const createSettingLabel = (label: string, field: string): HTMLElement => {
+    const wrap = document.createElement('span');
+    wrap.className = 'ind-setting-label';
+    const text = document.createElement('span');
+    text.textContent = label;
+    wrap.appendChild(text);
+    const icon = createInfoIcon(getInfoText(field));
+    if (icon) wrap.appendChild(icon);
+    return wrap;
   };
   const toHexColor = (source: string): string => {
     if (source.startsWith('#')) return source.length === 7 ? source : '#ffffff';
@@ -2317,19 +2376,21 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     let state = initial;
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.style.cssText = 'width:34px;height:16px;border:none;border-radius:999px;padding:1px;cursor:pointer;position:relative;transition:background 0.15s ease;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;';
+    btn.style.cssText = 'width:36px;height:18px;border:none;border-radius:999px;padding:1px;cursor:pointer;position:relative;transition:background 0.15s ease;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;vertical-align:middle;outline:none;';
     const text = document.createElement('span');
-    text.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;font-size:8px;font-weight:800;letter-spacing:0.2px;color:#ffffff;line-height:1;pointer-events:none;user-select:none;padding:0 4px;z-index:0;text-shadow:0 1px 1px rgba(0,0,0,0.85);';
+    text.style.cssText = 'position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:800;letter-spacing:0;color:#ffffff;line-height:1;pointer-events:none;user-select:none;z-index:0;text-shadow:0 1px 1px rgba(0,0,0,0.85);';
     const knob = document.createElement('span');
-    knob.style.cssText = 'width:12px;height:12px;border-radius:50%;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.45);transition:transform 0.15s ease;position:absolute;left:1px;top:2px;z-index:1;';
+    knob.style.cssText = 'width:14px;height:14px;border-radius:50%;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.45);transition:transform 0.15s ease;position:absolute;left:2px;top:2px;z-index:1;';
     btn.appendChild(text);
     btn.appendChild(knob);
 
     const render = () => {
       btn.style.background = state ? '#2a65ff' : '#4f5668';
-      knob.style.transform = state ? 'translateX(20px)' : 'translateX(0)';
+      knob.style.transform = state ? 'translateX(18px)' : 'translateX(0)';
       text.textContent = state ? 'ON' : 'OFF';
-      text.style.justifyContent = state ? 'flex-start' : 'flex-end';
+      text.style.left = state ? '4px' : '17px';
+      text.style.right = '';
+      text.style.width = state ? '15px' : '16px';
       text.style.opacity = state ? '1' : '0.95';
       btn.title = state ? (titles?.on ?? '켜짐') : (titles?.off ?? '꺼짐');
       btn.setAttribute('aria-checked', state ? 'true' : 'false');
@@ -2694,8 +2755,7 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
   (FIELDS[popupKey] || []).forEach(field => {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
-    const lbl = document.createElement('span');
-    lbl.textContent = popupKey === 'supertrend' && field === 'period' ? 'ATR Length' : (LABELS[field] || field);
+    const lbl = createSettingLabel(popupKey === 'supertrend' && field === 'period' ? 'ATR Length' : (LABELS[field] || field), field);
     lbl.style.color = '#84898e';
     const inp = document.createElement('input');
     inp.type = 'number'; inp.value = ind[field] ?? '';
@@ -2719,6 +2779,10 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
       inp.min = '1';
       inp.max = '20';
       inp.step = '1';
+    } else if (popupKey === 'parabolicSar') {
+      inp.min = '0.001';
+      inp.max = '1';
+      inp.step = '0.001';
     } else if (popupKey === 'smartMoneyConcepts') {
       if (field === 'equalThreshold') {
         inp.min = '0';
@@ -2740,6 +2804,9 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
         next = Math.max(1, Math.floor(Number(next) || 15));
       } else if (popupKey === 'williamsFractal' && field === 'span') {
         next = Math.max(1, Math.min(20, Math.floor(Number(next) || 2)));
+      } else if (popupKey === 'parabolicSar') {
+        const fallback = field === 'maximum' ? 0.2 : 0.02;
+        next = Math.max(0.001, Math.min(1, Number.isFinite(next) ? next : fallback));
       } else if (popupKey === 'smartMoneyConcepts') {
         if (field === 'equalThreshold') {
           next = Math.max(0, Math.min(0.5, Number.isFinite(next) ? next : 0.1));
@@ -2747,6 +2814,12 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
           next = Math.max(1, Math.min(100, Math.floor(Number(next) || 5)));
         } else if (field === 'equalLength') {
           next = Math.max(1, Math.min(50, Math.floor(Number(next) || 3)));
+        } else if (field === 'internalOrderBlocksSize' || field === 'swingOrderBlocksSize') {
+          next = Math.max(1, Math.min(20, Math.floor(Number(next) || 5)));
+        } else if (field === 'swingsLength') {
+          next = Math.max(10, Math.min(500, Math.floor(Number(next) || 50)));
+        } else if (field === 'fairValueGapsExtend') {
+          next = Math.max(0, Math.min(50, Math.floor(Number(next) || 1)));
         } else {
           next = Math.max(1, Math.min(500, Math.floor(Number(next) || 50)));
         }
@@ -2759,30 +2832,174 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
   });
 
   if (popupKey === 'smartMoneyConcepts') {
-    const toggles: Array<[string, string]> = [
-      ['showStructure', 'Swing Structure'],
-      ['showInternal', 'Internal Structure'],
-      ['showEqualLevels', 'EQH / EQL'],
-      ['showOrderBlocks', 'Order Blocks'],
-      ['showFairValueGaps', 'Fair Value Gaps'],
-      ['showZones', 'Premium / Discount'],
-    ];
-    toggles.forEach(([field, label]) => {
-      if (typeof ind[field] !== 'boolean') ind[field] = field !== 'showZones';
+    popup.style.minWidth = 'min(390px, calc(100vw - 16px))';
+    const smartMoneyConceptsToggleDefaults: Record<string, boolean> = {
+      showTrend: false,
+      showInternal: true,
+      internalFilterConfluence: false,
+      showStructure: true,
+      showSwingsPoints: false,
+      showHighLowSwings: true,
+      showInternalOrderBlocks: true,
+      showSwingOrderBlocks: false,
+      showEqualLevels: true,
+      showFairValueGaps: false,
+      fairValueGapsAutoThreshold: true,
+      showDailyLevels: true,
+      showWeeklyLevels: true,
+      showMonthlyLevels: true,
+      showZones: false,
+    };
+    const sections = document.createElement('div');
+    sections.style.cssText = 'display:flex;flex-direction:column;gap:12px;';
+    popup.appendChild(sections);
+
+    const addSection = (title: string) => {
+      const section = document.createElement('section');
+      section.style.cssText = 'border-top:1px solid #303647;padding-top:10px;';
+      const heading = document.createElement('div');
+      heading.textContent = title;
+      heading.style.cssText = 'color:#a7adba;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;';
+      const rows = document.createElement('div');
+      rows.style.cssText = 'display:flex;flex-direction:column;gap:7px;';
+      section.append(heading, rows);
+      sections.appendChild(section);
+      return rows;
+    };
+
+    const addControlRow = (parent: HTMLElement, label: string, control: HTMLElement, field: string) => {
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
-      const lbl = document.createElement('span');
-      lbl.textContent = label;
-      lbl.style.color = '#84898e';
+      row.style.cssText = 'display:grid;grid-template-columns:minmax(128px,1fr) minmax(92px,auto);align-items:center;gap:10px;min-height:30px;';
+      const lbl = createSettingLabel(label, field);
+      lbl.style.cssText = 'color:#d7dfef;font-size:12px;line-height:1.25;';
+      row.append(lbl, control);
+      parent.appendChild(row);
+    };
+
+    const normalizeSmcNumber = (field: string, value: number): number => {
+      if (field === 'equalThreshold') return Math.max(0, Math.min(0.5, Number.isFinite(value) ? value : 0.1));
+      if (field === 'equalLength') return Math.max(1, Math.min(50, Math.floor(Number(value) || 3)));
+      if (field === 'internalOrderBlocksSize' || field === 'swingOrderBlocksSize') return Math.max(1, Math.min(20, Math.floor(Number(value) || 5)));
+      if (field === 'swingsLength') return Math.max(10, Math.min(500, Math.floor(Number(value) || 50)));
+      if (field === 'fairValueGapsExtend') return Math.max(0, Math.min(50, Math.floor(Number(value) || 1)));
+      return Math.max(1, Math.min(500, Math.floor(Number(value) || 50)));
+    };
+
+    const addNumber = (parent: HTMLElement, label: string, field: string, options: { min?: string; max?: string; step?: string } = {}) => {
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.value = String(ind[field] ?? '');
+      input.min = options.min ?? '1';
+      if (options.max) input.max = options.max;
+      input.step = options.step ?? '1';
+      input.style.cssText = 'width:92px;background:#131722;color:white;border:1px solid #363a45;border-radius:6px;padding:5px 8px;text-align:right;font-size:12px;box-sizing:border-box;';
+      input.addEventListener('change', () => {
+        const next = normalizeSmcNumber(field, Number(input.value));
+        ind[field] = next;
+        input.value = String(next);
+        chart.draw();
+        onUpdate();
+      });
+      addControlRow(parent, label, input, field);
+    };
+
+    const addToggle = (parent: HTMLElement, label: string, field: string) => {
+      if (typeof ind[field] !== 'boolean') ind[field] = smartMoneyConceptsToggleDefaults[field] ?? false;
       const { button } = createSwitch(Boolean(ind[field]), (next) => {
         ind[field] = next;
         chart.draw();
         onUpdate();
       });
-      row.appendChild(lbl);
-      row.appendChild(button);
-      popup.appendChild(row);
-    });
+      addControlRow(parent, label, button, field);
+    };
+
+    const addSelect = (parent: HTMLElement, label: string, field: string, values: string[]) => {
+      const select = document.createElement('select');
+      select.style.cssText = 'width:132px;background:#131722;color:white;border:1px solid #363a45;border-radius:6px;padding:5px 7px;font-size:12px;';
+      select.innerHTML = values.map(value => `<option value="${value}">${value === 'All' ? '모두' : value || '차트'}</option>`).join('');
+      select.value = String(ind[field] ?? values[0]);
+      select.addEventListener('change', () => {
+        ind[field] = select.value;
+        chart.draw();
+        onUpdate();
+      });
+      addControlRow(parent, label, select, field);
+    };
+
+    const addColor = (parent: HTMLElement, label: string, field: string, fallback: string) => {
+      const input = document.createElement('input');
+      input.type = 'color';
+      input.value = toHexColor(String(ind[field] || fallback));
+      input.style.cssText = 'width:44px;height:30px;border:1px solid #363a45;border-radius:7px;background:#131722;padding:2px;justify-self:end;';
+      input.addEventListener('change', () => {
+        ind[field] = input.value;
+        chart.draw();
+        onUpdate();
+      });
+      addControlRow(parent, label, input, field);
+    };
+
+    const smc = addSection('Smart Money Concepts');
+    addSelect(smc, 'Mode', 'mode', ['Historical', 'Present']);
+    addSelect(smc, 'Style', 'style', ['Colored', 'Monochrome']);
+    addToggle(smc, 'Color Candles', 'showTrend');
+
+    const internal = addSection('Real Time Internal Structure');
+    addToggle(internal, 'Show Internal Structure', 'showInternal');
+    addSelect(internal, 'Bullish Structure', 'internalBullishStructure', ['All', 'BOS', 'CHoCH']);
+    addColor(internal, 'Bullish Color', 'internalBullColor', '#089981');
+    addSelect(internal, 'Bearish Structure', 'internalBearishStructure', ['All', 'BOS', 'CHoCH']);
+    addColor(internal, 'Bearish Color', 'internalBearColor', '#f23645');
+    addToggle(internal, 'Confluence Filter', 'internalFilterConfluence');
+    addSelect(internal, 'Internal Label Size', 'internalLabelSize', ['tiny', 'small', 'normal']);
+
+    const swing = addSection('Real Time Swing Structure');
+    addToggle(swing, 'Show Swing Structure', 'showStructure');
+    addSelect(swing, 'Bullish Structure', 'swingBullishStructure', ['All', 'BOS', 'CHoCH']);
+    addColor(swing, 'Bullish Color', 'swingBullColor', '#089981');
+    addSelect(swing, 'Bearish Structure', 'swingBearishStructure', ['All', 'BOS', 'CHoCH']);
+    addColor(swing, 'Bearish Color', 'swingBearColor', '#f23645');
+    addSelect(swing, 'Swing Label Size', 'swingLabelSize', ['tiny', 'small', 'normal']);
+    addToggle(swing, 'Show Swings Points', 'showSwingsPoints');
+    addNumber(swing, 'Swings Length', 'swingsLength', { min: '10', max: '500', step: '1' });
+    addToggle(swing, 'Strong/Weak High/Low', 'showHighLowSwings');
+
+    const orderBlocks = addSection('Order Blocks');
+    addToggle(orderBlocks, 'Internal Order Blocks', 'showInternalOrderBlocks');
+    addNumber(orderBlocks, 'Internal Blocks', 'internalOrderBlocksSize', { min: '1', max: '20', step: '1' });
+    addToggle(orderBlocks, 'Swing Order Blocks', 'showSwingOrderBlocks');
+    addNumber(orderBlocks, 'Swing Blocks', 'swingOrderBlocksSize', { min: '1', max: '20', step: '1' });
+    addSelect(orderBlocks, 'Order Block Filter', 'orderBlockFilter', ['Atr', 'Cumulative Mean Range']);
+    addSelect(orderBlocks, 'Order Block Mitigation', 'orderBlockMitigation', ['High/Low', 'Close']);
+    addColor(orderBlocks, 'Internal Bullish OB', 'internalBullishOrderBlockColor', '#3179f5');
+    addColor(orderBlocks, 'Internal Bearish OB', 'internalBearishOrderBlockColor', '#f77c80');
+    addColor(orderBlocks, 'Bullish OB', 'swingBullishOrderBlockColor', '#1848cc');
+    addColor(orderBlocks, 'Bearish OB', 'swingBearishOrderBlockColor', '#b22833');
+
+    const equalLevels = addSection('EQH / EQL');
+    addToggle(equalLevels, 'Equal High/Low', 'showEqualLevels');
+    addNumber(equalLevels, 'Bars Confirmation', 'equalLength', { min: '1', max: '50', step: '1' });
+    addNumber(equalLevels, 'Threshold', 'equalThreshold', { min: '0', max: '0.5', step: '0.01' });
+    addSelect(equalLevels, 'Label Size', 'equalLabelSize', ['tiny', 'small', 'normal']);
+
+    const fairValueGaps = addSection('Fair Value Gaps');
+    addToggle(fairValueGaps, 'Fair Value Gaps', 'showFairValueGaps');
+    addToggle(fairValueGaps, 'Auto Threshold', 'fairValueGapsAutoThreshold');
+    addSelect(fairValueGaps, 'Timeframe', 'fairValueGapsTimeframe', ['', '1', '5', '15', '60', 'D', 'W', 'M']);
+    addColor(fairValueGaps, 'Bullish FVG', 'fairValueGapsBullColor', '#00ff68');
+    addColor(fairValueGaps, 'Bearish FVG', 'fairValueGapsBearColor', '#ff0008');
+    addNumber(fairValueGaps, 'Extend FVG', 'fairValueGapsExtend', { min: '0', max: '50', step: '1' });
+
+    const mtf = addSection('Highs & Lows MTF');
+    addToggle(mtf, 'Daily', 'showDailyLevels');
+    addToggle(mtf, 'Weekly', 'showWeeklyLevels');
+    addToggle(mtf, 'Monthly', 'showMonthlyLevels');
+
+    const zones = addSection('Premium & Discount Zones');
+    addToggle(zones, 'Premium/Discount Zones', 'showZones');
+    addColor(zones, 'Premium Zone', 'premiumZoneColor', '#f23645');
+    addColor(zones, 'Equilibrium Zone', 'equilibriumZoneColor', '#878b94');
+    addColor(zones, 'Discount Zone', 'discountZoneColor', '#089981');
   }
 
   if (popupKey === 'cvd') {

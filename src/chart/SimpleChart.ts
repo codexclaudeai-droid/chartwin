@@ -92,6 +92,7 @@ import {
   calculateMacd,
   calculateMa,
   calculateObv,
+  calculateParabolicSar,
   calculateRsi,
   buildSmartMoneyConceptsCacheKey,
   DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS,
@@ -605,6 +606,7 @@ export class SimpleChart {
       cvd:      { show: false, barMode: true },
       vwap:     { show: false },
       williamsFractal: { show: false, span: 2 },
+      parabolicSar: { show: false, start: 0.02, increment: 0.02, maximum: 0.2 },
       smartMoneyConcepts: { ...DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS },
       volumeProfile: { show: false, rows: 24, widthPct: 22, upOpacity: 45, downOpacity: 45, pocOpacity: 95 },
       vpvr: {
@@ -5832,6 +5834,13 @@ export class SimpleChart {
     const williamsFractalD = indicatorLayerOn && ind.williamsFractal.show
       ? calculateWilliamsFractals(this.data, ind.williamsFractal.span)
       : { highs: [] as Array<number | null>, lows: [] as Array<number | null>, span: 2 };
+    if (!ind.parabolicSar) ind.parabolicSar = { show: false, start: 0.02, increment: 0.02, maximum: 0.2 };
+    if (!Number.isFinite(Number(ind.parabolicSar.start)) || Number(ind.parabolicSar.start) <= 0) ind.parabolicSar.start = 0.02;
+    if (!Number.isFinite(Number(ind.parabolicSar.increment)) || Number(ind.parabolicSar.increment) <= 0) ind.parabolicSar.increment = 0.02;
+    if (!Number.isFinite(Number(ind.parabolicSar.maximum)) || Number(ind.parabolicSar.maximum) <= 0) ind.parabolicSar.maximum = 0.2;
+    const parabolicSarD = indicatorLayerOn && ind.parabolicSar.show
+      ? calculateParabolicSar(this.data, ind.parabolicSar.start, ind.parabolicSar.increment, ind.parabolicSar.maximum)
+      : [];
     ind.smartMoneyConcepts = normalizeSmartMoneyConceptsSettings(ind.smartMoneyConcepts);
     const smartMoneyConceptsD = indicatorLayerOn ? this.calcSmartMoneyConcepts(ind.smartMoneyConcepts) : EMPTY_SMART_MONEY_CONCEPTS_RESULT;
     if (!ind.zeroLagMaTrendLevels) {
@@ -6237,6 +6246,7 @@ export class SimpleChart {
         bbSeries,
         vwapD,
         williamsFractalD,
+        parabolicSarD,
         smartMoneyConceptsD,
         zeroLagMaTrendLevelsD,
         zeroLagStates,

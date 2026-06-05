@@ -9,6 +9,7 @@ export type MainIndicatorsLike = {
     hma?: { show: boolean };
     bb: { show: boolean };
     vwap: { show: boolean };
+    parabolicSar?: { show: boolean };
     smartMoneyConcepts?: { show: boolean };
     supertrend: { show: boolean };
     statisticalTrailingStop: { show: boolean };
@@ -31,6 +32,7 @@ export function collectMainIndicatorNames(config: MainIndicatorsLike): string[] 
   if (config.indicators.bb.show) names.push('BB');
   if (config.indicators.hma?.show) names.push('HMA');
   if (config.indicators.vwap.show) names.push('VWAP');
+  if (config.indicators.parabolicSar?.show) names.push('SAR');
   if (config.indicators.smartMoneyConcepts?.show) names.push('SMC');
   if (config.indicators.supertrend.show) names.push('ST');
   if (config.indicators.statisticalTrailingStop.show) names.push('STS');

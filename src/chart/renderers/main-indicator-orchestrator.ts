@@ -17,6 +17,7 @@ import {
 import { renderEnvelopeLines } from './envelope-renderer.ts';
 import type { SmartMoneyConceptsResult } from '../indicators/smart-money-concepts.ts';
 import { renderSmartMoneyConcepts } from './smart-money-concepts-renderer.ts';
+import { renderParabolicSar } from './parabolic-sar-renderer.ts';
 import {
   getStatisticalTrailingStopMarkerGeometry,
   renderStatisticalTrailingStopBase,
@@ -31,18 +32,39 @@ export interface MainIndicatorSettings extends SubPanelIndicatorSettings {
   volume: { show: boolean };
   vwap: { show: boolean };
   williamsFractal?: { show: boolean };
+  parabolicSar?: { show: boolean };
   smartMoneyConcepts?: {
     show: boolean;
     swingLength?: number;
     internalLength?: number;
     equalLength?: number;
     equalThreshold?: number;
+    internalBullishStructure?: 'All' | 'BOS' | 'CHoCH';
+    internalBearishStructure?: 'All' | 'BOS' | 'CHoCH';
+    swingBullishStructure?: 'All' | 'BOS' | 'CHoCH';
+    swingBearishStructure?: 'All' | 'BOS' | 'CHoCH';
     showInternal?: boolean;
     showStructure?: boolean;
     showEqualLevels?: boolean;
-    showOrderBlocks?: boolean;
+    showHighLowSwings?: boolean;
+    showInternalOrderBlocks?: boolean;
+    showSwingOrderBlocks?: boolean;
     showFairValueGaps?: boolean;
     showZones?: boolean;
+    internalBullColor?: string;
+    internalBearColor?: string;
+    swingBullColor?: string;
+    swingBearColor?: string;
+    internalBullishOrderBlockColor?: string;
+    internalBearishOrderBlockColor?: string;
+    swingBullishOrderBlockColor?: string;
+    swingBearishOrderBlockColor?: string;
+    fairValueGapsBullColor?: string;
+    fairValueGapsBearColor?: string;
+    fairValueGapsExtend?: number;
+    premiumZoneColor?: string;
+    equilibriumZoneColor?: string;
+    discountZoneColor?: string;
   };
   zeroLagMaTrendLevels: {
     show: boolean;
@@ -105,6 +127,7 @@ export interface RenderMainIndicatorsParams {
   }>;
   vwapD: NullableSeries;
   williamsFractalD: WilliamsFractalRenderData;
+  parabolicSarD: NullableSeries;
   smartMoneyConceptsD: SmartMoneyConceptsResult;
   zeroLagMaTrendLevelsD: ZeroLagMaTrendLevelsData;
   zeroLagStates: ZeroLagTrendStates;
@@ -148,6 +171,7 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     bbSeries,
     vwapD,
     williamsFractalD,
+    parabolicSarD,
     smartMoneyConceptsD,
     zeroLagMaTrendLevelsD,
     zeroLagStates,
@@ -231,17 +255,43 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     });
   }
 
-  if (indicatorLayerOn && ind.smartMoneyConcepts?.show) {
-    const bullishStyle = resolveStyle('smartMoneyConceptsBullish', '#089981', 1);
-    const bearishStyle = resolveStyle('smartMoneyConceptsBearish', '#f23645', 1);
-    const internalBullishStyle = resolveStyle('smartMoneyConceptsInternalBullish', '#089981', 1, [5, 4]);
-    const internalBearishStyle = resolveStyle('smartMoneyConceptsInternalBearish', '#f23645', 1, [5, 4]);
+  if (indicatorLayerOn && ind.parabolicSar?.show && showLine('parabolicSar')) {
+    const style = resolveStyle('parabolicSar', '#2962ff', 1.5);
+    renderParabolicSar({
+      ctx,
+      data: parabolicSarD,
+      startIndex,
+      visLength: visData.length,
+      chartLeft,
+      chartRight,
+      effectiveChartLeft,
+      totalSp,
+      candleW,
+      top: R.top,
+      bottom: mainH,
+      style,
+      getY,
+    });
+  }
+
+  const smartMoneyConceptsVisible = showLine('smartMoneyConceptsBullish')
+    || showLine('smartMoneyConceptsBearish')
+    || showLine('smartMoneyConceptsInternalBullish')
+    || showLine('smartMoneyConceptsInternalBearish')
+    || showLine('smartMoneyConceptsEqual');
+  if (indicatorLayerOn && ind.smartMoneyConcepts?.show && smartMoneyConceptsVisible) {
+    const bullishStyle = resolveStyle('smartMoneyConceptsBullish', ind.smartMoneyConcepts.swingBullColor || '#089981', 1);
+    const bearishStyle = resolveStyle('smartMoneyConceptsBearish', ind.smartMoneyConcepts.swingBearColor || '#f23645', 1);
+    const internalBullishStyle = resolveStyle('smartMoneyConceptsInternalBullish', ind.smartMoneyConcepts.internalBullColor || '#089981', 1, [5, 4]);
+    const internalBearishStyle = resolveStyle('smartMoneyConceptsInternalBearish', ind.smartMoneyConcepts.internalBearColor || '#f23645', 1, [5, 4]);
     const equalStyle = resolveStyle('smartMoneyConceptsEqual', '#878b94', 1, [2, 3]);
     renderSmartMoneyConcepts({
       ctx,
       data: smartMoneyConceptsD,
+      candles: displayData,
       startIndex,
       visLength: visData.length,
+      lastDataIndex: Math.max(0, displayData.length - 1),
       chartLeft,
       chartRight,
       effectiveChartLeft,
@@ -256,15 +306,26 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
       internalBullishStyle,
       internalBearishStyle,
       equalStyle,
-      orderBlockBullColor: 'rgba(49,121,245,0.18)',
-      orderBlockBearColor: 'rgba(247,124,128,0.18)',
-      fairValueGapBullColor: 'rgba(0,255,104,0.16)',
-      fairValueGapBearColor: 'rgba(255,0,8,0.16)',
+      internalOrderBlockBullColor: ind.smartMoneyConcepts.internalBullishOrderBlockColor || 'rgba(49,121,245,0.20)',
+      internalOrderBlockBearColor: ind.smartMoneyConcepts.internalBearishOrderBlockColor || 'rgba(247,124,128,0.20)',
+      swingOrderBlockBullColor: ind.smartMoneyConcepts.swingBullishOrderBlockColor || 'rgba(24,72,204,0.20)',
+      swingOrderBlockBearColor: ind.smartMoneyConcepts.swingBearishOrderBlockColor || 'rgba(178,40,51,0.20)',
+      fairValueGapBullColor: ind.smartMoneyConcepts.fairValueGapsBullColor || 'rgba(0,255,104,0.25)',
+      fairValueGapBearColor: ind.smartMoneyConcepts.fairValueGapsBearColor || 'rgba(255,0,8,0.25)',
+      premiumZoneColor: ind.smartMoneyConcepts.premiumZoneColor || 'rgba(242,54,69,0.12)',
+      equilibriumZoneColor: ind.smartMoneyConcepts.equilibriumZoneColor || 'rgba(135,139,148,0.12)',
+      discountZoneColor: ind.smartMoneyConcepts.discountZoneColor || 'rgba(8,153,129,0.12)',
+      internalBullishFilter: ind.smartMoneyConcepts.internalBullishStructure || 'All',
+      internalBearishFilter: ind.smartMoneyConcepts.internalBearishStructure || 'All',
+      swingBullishFilter: ind.smartMoneyConcepts.swingBullishStructure || 'All',
+      swingBearishFilter: ind.smartMoneyConcepts.swingBearishStructure || 'All',
       showStructure: ind.smartMoneyConcepts.showStructure !== false,
       showInternal: ind.smartMoneyConcepts.showInternal !== false,
       showEqualLevels: ind.smartMoneyConcepts.showEqualLevels !== false,
-      showOrderBlocks: ind.smartMoneyConcepts.showOrderBlocks !== false,
+      showOrderBlocks: ind.smartMoneyConcepts.showInternalOrderBlocks !== false || ind.smartMoneyConcepts.showSwingOrderBlocks === true,
       showFairValueGaps: ind.smartMoneyConcepts.showFairValueGaps !== false,
+      fairValueGapsExtend: Number(ind.smartMoneyConcepts.fairValueGapsExtend ?? 1),
+      showHighLowSwings: ind.smartMoneyConcepts.showHighLowSwings !== false,
       showZones: ind.smartMoneyConcepts.showZones === true,
     });
   }
