@@ -164,6 +164,7 @@ export function PushNotificationControl() {
           type="button"
         >
           <span className="push-notification-toggle-track" aria-hidden="true">
+            <span className="push-notification-toggle-state">{isSubscribed ? 'ON' : 'OFF'}</span>
             <span className="push-notification-toggle-thumb" />
           </span>
           <span className="push-notification-toggle-label">{toggleLabel}</span>

@@ -15605,6 +15605,10 @@ body:not(:has(.landing-page)) .profile-page .push-notification-toggle-label {
   color: rgba(216, 236, 255, 0.68);
 }
 
+body:not(:has(.landing-page)) .profile-page .push-notification-toggle-state {
+  color: rgba(216, 236, 255, 0.78);
+}
+
 body:not(:has(.landing-page)) .profile-page .push-notification-toggle-track {
   background: rgba(2, 7, 19, 0.52);
   border-color: rgba(125, 183, 255, 0.22);
@@ -15614,6 +15618,10 @@ body:not(:has(.landing-page)) .profile-page .push-notification-toggle.active .pu
   background: linear-gradient(135deg, var(--tc-ui-blue), var(--tc-ui-blue-2));
   border-color: rgba(125, 183, 255, 0.48);
   box-shadow: 0 12px 28px rgba(55, 125, 255, 0.28);
+}
+
+body:not(:has(.landing-page)) .profile-page .push-notification-toggle.active .push-notification-toggle-state {
+  color: #ffffff;
 }
 
 body:not(:has(.landing-page)) .profile-page .push-notification-toggle:not(:disabled):is(:hover, :focus-visible, :active) .push-notification-toggle-track {
@@ -17263,14 +17271,29 @@ input[type="checkbox"] {
 }
 
 .push-notification-toggle-track {
+  align-items: center;
   background: rgba(23, 22, 18, 0.12);
   border: 1px solid color-mix(in srgb, var(--muted) 32%, transparent);
   border-radius: 999px;
   display: inline-flex;
   height: 30px;
+  justify-content: flex-end;
   position: relative;
+  padding: 0 8px;
   transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-  width: 54px;
+  width: 68px;
+}
+
+.push-notification-toggle-state {
+  color: color-mix(in srgb, var(--muted) 78%, #ffffff);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  min-width: 24px;
+  text-align: center;
+  transition: color 180ms ease, transform 180ms ease;
+  z-index: 1;
 }
 
 .push-notification-toggle-thumb {
@@ -17292,10 +17315,15 @@ input[type="checkbox"] {
 .push-notification-toggle.active .push-notification-toggle-track {
   background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #56f0ff));
   border-color: color-mix(in srgb, var(--accent) 64%, transparent);
+  justify-content: flex-start;
+}
+
+.push-notification-toggle.active .push-notification-toggle-state {
+  color: #ffffff;
 }
 
 .push-notification-toggle.active .push-notification-toggle-thumb {
-  transform: translateX(24px);
+  transform: translateX(38px);
 }
 
 .push-notification-toggle:not(:disabled):is(:hover, :focus-visible, :active) .push-notification-toggle-track {
@@ -17310,7 +17338,11 @@ input[type="checkbox"] {
 }
 
 .push-notification-test-button {
-  min-height: 34px;
+  align-items: center;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  line-height: 1;
   padding-inline: 12px;
 }
 

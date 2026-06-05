@@ -133,6 +133,7 @@ test('web push routes service worker and notification panel are wired', () => {
   const testRoute = readFileSync(new URL('../app/api/push/test/route.ts', import.meta.url), 'utf8');
   const serviceWorkerSource = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
   const clientSource = readFileSync(new URL('../app/shared/push-notification-control.tsx', import.meta.url), 'utf8');
+  const styleSource = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const pushClientSource = readFileSync(new URL('../app/push-subscription-client.ts', import.meta.url), 'utf8');
   const sessionNavSource = readFileSync(new URL('../app/session-nav.tsx', import.meta.url), 'utf8');
   const loginPanelSource = readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
@@ -160,6 +161,14 @@ test('web push routes service worker and notification panel are wired', () => {
   assert.match(clientSource, /앱 푸시 알림 켜기/);
   assert.match(clientSource, /앱 푸시 알림 끄기/);
   assert.match(clientSource, /push-notification-toggle/);
+  assert.match(clientSource, /push-notification-toggle-state/);
+  assert.match(clientSource, /\{isSubscribed \? 'ON' : 'OFF'\}/);
+  assert.match(styleSource, /\.push-notification-toggle-state\s*\{[\s\S]*?font-weight: 500/);
+  assert.match(styleSource, /\.push-notification-toggle-state\s*\{[\s\S]*?letter-spacing: 0\.04em/);
+  assert.match(styleSource, /\.push-notification-toggle-track\s*\{[\s\S]*?width: 68px/);
+  assert.match(styleSource, /\.push-notification-toggle\.active \.push-notification-toggle-thumb\s*\{[\s\S]*?translateX\(38px\)/);
+  assert.match(styleSource, /\.push-notification-test-button\s*\{[\s\S]*?height: 34px/);
+  assert.match(styleSource, /\.push-notification-test-button\s*\{[\s\S]*?align-items: center/);
   assert.match(profilePanelSource, /<PushNotificationControl \/>/);
   assert.match(profilePanelSource, /profile-push-setting-row/);
   assert.doesNotMatch(notificationPanelSource, /<PushNotificationControl \/>/);
