@@ -11676,22 +11676,29 @@ body:not(:has(.landing-page)) .support-pagination-button:focus-visible {
 }
 
 body:not(:has(.landing-page)) .support-thread-title {
+  align-items: center;
   color: #ffffff;
+  display: flex;
   font-size: 1.08rem;
+  gap: 12px;
+  justify-content: space-between;
   line-height: 1.45;
   margin: 12px 0 10px;
 }
 
 body:not(:has(.landing-page)) .support-thread-title-button {
+  align-items: center;
   appearance: none;
   background: transparent;
   border: 0;
   color: inherit;
   cursor: pointer;
   display: inline-flex;
+  flex: 1 1 auto;
   font: inherit;
   font-weight: 800;
   letter-spacing: 0;
+  min-width: 0;
   padding: 0;
   text-align: left;
 }
@@ -11896,13 +11903,21 @@ body:not(:has(.landing-page)) #admin-support .admin-support-reply-enter-icon svg
   width: 20px;
 }
 
-body:not(:has(.landing-page)) .support-thread-actions,
 body:not(:has(.landing-page)) .support-thread-edit-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
   margin: 8px 0 10px;
+}
+
+body:not(:has(.landing-page)) .support-thread-actions {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  justify-content: flex-end;
+  margin: 0;
 }
 
 body:not(:has(.landing-page)) .support-thread-edit-panel {
@@ -14817,9 +14832,18 @@ body:not(:has(.landing-page)) #admin-support .admin-support-thread-header {
   justify-content: space-between;
 }
 
+body:not(:has(.landing-page)) #admin-support .admin-support-thread-header > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 body:not(:has(.landing-page)) #admin-support .admin-support-thread-header h3 {
+  align-items: center;
   color: #ffffff;
+  display: flex;
   font-size: 1rem;
+  gap: 12px;
+  justify-content: space-between;
   line-height: 1.45;
   margin: 5px 0 0;
 }
@@ -14996,6 +15020,9 @@ body:not(:has(.landing-page)) #admin-support .admin-support-reply-edit-actions {
 
 body:not(:has(.landing-page)) #admin-support .admin-support-thread-actions {
   min-width: 0;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  margin: 0;
 }
 
 body:not(:has(.landing-page)) #admin-support .admin-support-thread-edit-panel,

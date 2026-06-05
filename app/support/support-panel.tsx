@@ -458,17 +458,17 @@ export function SupportPanel() {
                       <span>{formatSupportThreadDisplayTitle(item.thread)}</span>
                     </span>
                   </button>
+                  {canEditThread ? (
+                    <span className="support-thread-actions" role="group" aria-label="문의글 관리">
+                      <IconButton className="action-icon-button edit" label="문의글 수정" onClick={() => startThreadEdit(item)} disabled={isBusy}>
+                        <EditActionIcon />
+                      </IconButton>
+                      <IconButton className="action-icon-button delete" label="문의글 삭제" onClick={() => void deleteThread(item.thread.id)} disabled={isBusy}>
+                        <DeleteActionIcon />
+                      </IconButton>
+                    </span>
+                  ) : null}
                 </h3>
-                {canEditThread ? (
-                  <div className="support-thread-actions">
-                    <IconButton className="action-icon-button edit" label="문의글 수정" onClick={() => startThreadEdit(item)} disabled={isBusy}>
-                      <EditActionIcon />
-                    </IconButton>
-                    <IconButton className="action-icon-button delete" label="문의글 삭제" onClick={() => void deleteThread(item.thread.id)} disabled={isBusy}>
-                      <DeleteActionIcon />
-                    </IconButton>
-                  </div>
-                ) : null}
                 {isEditingThread ? (
                   <div className="support-thread-edit-panel">
                     <label>

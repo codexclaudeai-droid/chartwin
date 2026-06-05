@@ -409,15 +409,15 @@ export function SupportAdminPanel() {
                     {item.thread.visibility === 'private' ? <PrivateSupportThreadLockIcon /> : null}
                     <span>{item.thread.title}</span>
                   </span>
+                  <span className="admin-support-thread-actions" role="group" aria-label="게시글 관리">
+                    <IconButton className="action-icon-button edit" label="게시글 수정" onClick={() => startThreadEdit(item)} disabled={isBusy}>
+                      <EditActionIcon />
+                    </IconButton>
+                    <IconButton className="action-icon-button delete" label="게시글 삭제" onClick={() => void deleteThread(item.thread.id)} disabled={isBusy}>
+                      <DeleteActionIcon />
+                    </IconButton>
+                  </span>
                 </h3>
-              </div>
-              <div className="admin-support-thread-actions">
-                <IconButton className="action-icon-button edit" label="게시글 수정" onClick={() => startThreadEdit(item)} disabled={isBusy}>
-                  <EditActionIcon />
-                </IconButton>
-                <IconButton className="action-icon-button delete" label="게시글 삭제" onClick={() => void deleteThread(item.thread.id)} disabled={isBusy}>
-                  <DeleteActionIcon />
-                </IconButton>
               </div>
               <a className="text-link compact admin-support-detail-link" href={createAdminSupportThreadUrl(item.thread.id)}>
                 상세 답변 링크

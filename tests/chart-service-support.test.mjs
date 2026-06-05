@@ -573,12 +573,16 @@ test('support panels expose edit and delete controls for threads and admin repli
   assert.match(replyRouteSource, /export async function DELETE/);
   assert.match(replyRouteSource, /deleteAsyncSupportMessageAsAdmin/);
   assert.match(styleSource, /support-thread-actions/);
+  assert.match(supportSource, /<h3 className="support-thread-title">[\s\S]*?<span className="support-thread-actions" role="group"/);
+  assert.doesNotMatch(supportSource, /<\/h3>\s*\{canEditThread \? \(/);
   assert.match(styleSource, /admin-support-reply-icon-actions/);
   assert.match(supportSource, /EditActionIcon/);
   assert.match(supportSource, /DeleteActionIcon/);
   assert.match(adminSource, /EditActionIcon/);
   assert.match(adminSource, /DeleteActionIcon/);
   assert.match(supportSource, /action-icon-button edit/);
+  assert.match(adminSource, /<h3 className="admin-support-thread-title">[\s\S]*?<span className="admin-support-thread-actions" role="group"/);
+  assert.doesNotMatch(adminSource, /<\/div>\s*<div className="admin-support-thread-actions">/);
   assert.match(adminSource, /action-icon-button delete/);
   assert.doesNotMatch(supportSource, /button secondary compact" type="button" onClick=\{\(\) => startThreadEdit/);
   assert.doesNotMatch(adminSource, /button danger compact" type="button" onClick=\{\(\) => void deleteThread/);
