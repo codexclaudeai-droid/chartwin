@@ -4824,44 +4824,6 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   margin: 0;
 }
 
-.support-contact-routes {
-  display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: 24px 0;
-}
-
-.support-contact-route-card {
-  background:
-    radial-gradient(circle at top right, rgba(12, 102, 90, 0.12), transparent 44%),
-    rgba(255, 253, 247, 0.9);
-  border: 1px solid rgba(214, 208, 194, 0.82);
-  border-radius: 22px;
-  box-shadow: 0 16px 42px rgba(23, 22, 18, 0.08);
-  display: grid;
-  gap: 12px;
-  padding: 20px;
-}
-
-.support-contact-route-card span {
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 950;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.support-contact-route-card p {
-  color: var(--muted);
-  line-height: 1.65;
-  margin: 0;
-}
-
-.support-contact-route-card .button {
-  justify-self: start;
-  margin-top: 4px;
-}
-
 #support-inquiry-form {
   scroll-margin-top: 90px;
 }
@@ -6690,12 +6652,6 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   box-shadow: 0 16px 42px rgba(12, 102, 90, 0.12);
 }
 
-.support-answer-badge {
-  background: rgba(12, 102, 90, 0.12);
-  border-color: rgba(12, 102, 90, 0.24);
-  color: var(--accent);
-}
-
 .support-target-badge {
   background: rgba(168, 76, 22, 0.12);
   border-color: rgba(168, 76, 22, 0.24);
@@ -6985,7 +6941,6 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
     grid-template-columns: 1fr;
   }
 
-  .support-contact-routes,
   .support-public-board-grid {
     grid-template-columns: 1fr;
   }
@@ -9886,7 +9841,6 @@ body:not(:has(.landing-page)) .pricing-flow-summary article,
 body:not(:has(.landing-page)) .pricing-plan-summary-card,
 body:not(:has(.landing-page)) .plan-card,
 body:not(:has(.landing-page)) .support-public-board-card,
-body:not(:has(.landing-page)) .support-contact-route-card,
 body:not(:has(.landing-page)) .thread-card,
 body:not(:has(.landing-page)) .status-panel,
 body:not(:has(.landing-page)) .profile-edit-modal {
@@ -9940,7 +9894,6 @@ body:not(:has(.landing-page)) .card p,
 body:not(:has(.landing-page)) .thread-card p,
 body:not(:has(.landing-page)) .pricing-flow-summary p,
 body:not(:has(.landing-page)) .pricing-plan-summary-card p,
-body:not(:has(.landing-page)) .support-contact-route-card p,
 body:not(:has(.landing-page)) .support-public-board-card p,
 body:not(:has(.landing-page)) .plan-card-service-list li,
 body:not(:has(.landing-page)) .pricing-service-list li {
@@ -10766,7 +10719,6 @@ body:not(:has(.landing-page)) .grid-panel {
   gap: 22px;
 }
 
-body:not(:has(.landing-page)) .support-contact-routes,
 body:not(:has(.landing-page)) .support-public-board-grid {
   gap: 16px;
 }
@@ -11640,6 +11592,45 @@ body:not(:has(.landing-page)) .support-filter-summary {
   padding: 0;
 }
 
+body:not(:has(.landing-page)) .support-category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 12px;
+}
+
+body:not(:has(.landing-page)) .support-category-tab {
+  align-items: center;
+  appearance: none;
+  background: rgba(2, 7, 19, 0.34);
+  border: 1px solid rgba(125, 183, 255, 0.14);
+  border-radius: 8px;
+  color: rgba(216, 236, 255, 0.72);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 750;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+body:not(:has(.landing-page)) .support-category-tab.active,
+body:not(:has(.landing-page)) .support-category-tab:hover,
+body:not(:has(.landing-page)) .support-category-tab:focus-visible {
+  background: rgba(76, 141, 255, 0.18);
+  border-color: rgba(125, 183, 255, 0.42);
+  color: #ffffff;
+  outline: 0;
+}
+
+body:not(:has(.landing-page)) .support-category-tab strong {
+  color: var(--tc-ui-blue-2);
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
 body:not(:has(.landing-page)) .support-empty-card {
   min-height: 150px;
   place-content: center;
@@ -11649,6 +11640,39 @@ body:not(:has(.landing-page)) .support-empty-card {
 body:not(:has(.landing-page)) .support-empty-card h3 {
   color: #ffffff;
   margin: 0 0 8px;
+}
+
+body:not(:has(.landing-page)) .support-pagination {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+body:not(:has(.landing-page)) .support-pagination-button {
+  appearance: none;
+  background: rgba(2, 7, 19, 0.34);
+  border: 1px solid rgba(125, 183, 255, 0.15);
+  border-radius: 8px;
+  color: rgba(216, 236, 255, 0.74);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  height: 34px;
+  min-width: 34px;
+  padding: 0 10px;
+}
+
+body:not(:has(.landing-page)) .support-pagination-button.active,
+body:not(:has(.landing-page)) .support-pagination-button:hover,
+body:not(:has(.landing-page)) .support-pagination-button:focus-visible {
+  background: rgba(76, 141, 255, 0.2);
+  border-color: rgba(125, 183, 255, 0.46);
+  color: #ffffff;
+  outline: 0;
 }
 
 body:not(:has(.landing-page)) .support-thread-title {
@@ -11740,10 +11764,6 @@ body:not(:has(.landing-page)) .support-deep-link-notice .text-link {
   justify-self: start;
 }
 
-body:not(:has(.landing-page)) .support-route-action {
-  justify-self: start;
-}
-
 body:not(:has(.landing-page)) .support-public-board {
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(55, 125, 255, 0.026)),
@@ -11775,7 +11795,6 @@ body:not(:has(.landing-page)) .support-board-empty {
   color: rgba(216, 236, 255, 0.58);
 }
 
-body:not(:has(.landing-page)) .support-contact-route-card,
 body:not(:has(.landing-page)) .support-public-board-card,
 body:not(:has(.landing-page)) .thread-card {
   background:
@@ -11786,7 +11805,6 @@ body:not(:has(.landing-page)) .thread-card {
   box-shadow: 0 20px 64px rgba(0, 0, 0, 0.22);
 }
 
-body:not(:has(.landing-page)) .support-contact-route-card span,
 body:not(:has(.landing-page)) .support-public-board-card span,
 body:not(:has(.landing-page)) .support-deep-link-kicker {
   color: var(--tc-ui-blue-2);
@@ -11825,8 +11843,8 @@ body:not(:has(.landing-page)) .support-message-list .admin-reply {
 }
 
 body:not(:has(.landing-page)) .support-message-list .support-admin-reply-line {
-  align-items: start;
-  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  grid-template-columns: 20px max-content minmax(0, 1fr);
   padding-left: 18px;
 }
 
@@ -11838,9 +11856,22 @@ body:not(:has(.landing-page)) .support-message-list p strong {
 }
 
 body:not(:has(.landing-page)) .support-admin-reply-copy {
-  display: grid;
-  gap: 4px;
+  color: rgba(216, 236, 255, 0.82);
   min-width: 0;
+}
+
+body:not(:has(.landing-page)) .support-admin-reply-badge {
+  align-items: center;
+  background: rgba(76, 141, 255, 0.18);
+  border: 1px solid rgba(125, 183, 255, 0.28);
+  border-radius: 999px;
+  color: rgba(216, 236, 255, 0.95);
+  display: inline-flex;
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1;
+  min-height: 22px;
+  padding: 0 8px;
 }
 
 body:not(:has(.landing-page)) .support-admin-reply-enter-icon,

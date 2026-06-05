@@ -5,31 +5,9 @@ import {
   PUBLIC_BOARD_CATEGORY_LABELS,
   type PublicBoardCategory,
 } from '../../src/server/chart-service/index.ts';
-import { FreeTrialRequestButton } from '../shared/free-trial-request-button';
 import { SupportPanel } from './support-panel';
 
 export const dynamic = 'force-dynamic';
-
-const SUPPORT_CONTACT_ROUTES = [
-  {
-    title: '1:1 문의',
-    description: '서비스 이용, 구독 상태, 차트 기능, 알림 설정과 관련된 문의를 회원 전용 게시글로 남길 수 있습니다.',
-    href: '#support-inquiry-form',
-    action: '1:1 문의하기',
-  },
-  {
-    title: '제휴문의',
-    description: '영업 제휴, 파트너십, 공동 프로모션 제안은 제휴 문의로 별도 접수합니다.',
-    href: '/support?category=partnership#support-inquiry-form',
-    action: '제휴 문의하기',
-  },
-  {
-    title: '무료체험신청',
-    description: '일반회원 가입 후 BASIC 플랜의 핵심 시그널과 기본 분석 도구를 먼저 체험할 수 있습니다.',
-    href: 'free-trial',
-    action: '무료체험 신청',
-  },
-];
 
 const PUBLIC_BOARD_CATEGORIES = ['notice', 'qna', 'faq'] as const satisfies PublicBoardCategory[];
 
@@ -44,21 +22,7 @@ export default async function SupportPage() {
       <section className="support-page-hero">
         <span className="eyebrow">Support Center</span>
         <h1>고객센터</h1>
-        <p className="lede">입금 확인, 환불 요청, 시그널 이용 문의를 한 곳에서 관리합니다. 제휴문의와 무료체험 신청도 목적에 맞게 접수할 수 있습니다.</p>
-      </section>
-
-      <section className="support-contact-routes" aria-label="문의 유형 선택">
-        {SUPPORT_CONTACT_ROUTES.map((item) => (
-          <article className="support-contact-route-card" key={item.title}>
-            <span className="support-route-card-title">{item.title}</span>
-            <p className="support-route-card-body">{item.description}</p>
-            {item.href === 'free-trial' ? (
-              <FreeTrialRequestButton className="button secondary support-route-action">{item.action}</FreeTrialRequestButton>
-            ) : (
-              <a className="button secondary support-route-action" href={item.href}>{item.action}</a>
-            )}
-          </article>
-        ))}
+        <p className="lede">입금 확인, 환불 요청, 사용 방법 문의를 한 곳에서 관리합니다. 필요한 내용을 남기면 관리자 확인 후 답변합니다.</p>
       </section>
 
       <section className="support-public-board" aria-label="공개 게시판">

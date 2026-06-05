@@ -13,10 +13,6 @@ import {
   formatSupportVisibilityLabel,
 } from './support-display-labels';
 import {
-  getPartnershipSupportRequestDraft,
-  getTrialSupportRequestDraft,
-} from './support-request-defaults';
-import {
   SUPPORT_THREAD_FILTER_PRESETS,
   filterSupportThreads,
   getSupportThreadFilterPreset,
@@ -54,6 +50,16 @@ type SupportThreadListItem = {
   }>;
 };
 
+const SUPPORT_THREAD_PAGE_SIZE = 10;
+const SUPPORT_THREAD_PAGE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const SUPPORT_THREAD_CATEGORY_TABS = [
+  { key: 'all', label: '전체' },
+  { key: 'deposit', label: formatSupportCategoryLabel('deposit') },
+  { key: 'cancel', label: formatSupportCategoryLabel('cancel') },
+  { key: 'usage', label: formatSupportCategoryLabel('usage') },
+  { key: 'general', label: formatSupportCategoryLabel('general') },
+];
+
 export function SupportPanel() {
   const searchParams = useSearchParams();
   const [threads, setThreads] = useState<SupportThreadListItem[]>([]);
@@ -64,17 +70,16 @@ export function SupportPanel() {
   const [message, setMessage] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const [activeFilterKey, setActiveFilterKey] = useState('all');
+  const [activeCategoryTab, setActiveCategoryTab] = useState('all');
+  const [currentThreadPage, setCurrentThreadPage] = useState(1);
   const [authSession, setAuthSession] = useState<AuthSessionState | null>(null);
   const [showAuthPromptModal, setShowAuthPromptModal] = useState(false);
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
   const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(() => new Set());
   const [threadEditById, setThreadEditById] = useState<Record<string, { title: string; body: string }>>({});
-  const presetCategory = searchParams.get('category');
   const targetThreadId = searchParams.get('thread');
-  const isTrialPreset = presetCategory === 'trial';
   const isDepositCategory = category === 'deposit';
   const effectiveVisibility = isDepositCategory ? 'private' : visibility;
-  const canSubmitTrialRequest = !isTrialPreset || (authSession?.authenticated && authSession.user?.role === 'member');
   const targetThread = targetThreadId
     ? threads.find((item) => item.thread.id === targetThreadId) ?? null
     : null;
@@ -82,22 +87,20 @@ export function SupportPanel() {
   const orderedThreads = sortSupportThreadsByCreatedAtDesc(threads);
   const activeFilter = getSupportThreadFilterPreset(activeFilterKey);
   const filteredThreads = filterSupportThreads(orderedThreads, activeFilterKey);
+  const categoryFilteredThreads = activeCategoryTab === 'all'
+    ? filteredThreads
+    : filteredThreads.filter((item) => item.thread.category === activeCategoryTab);
+  const threadPageCount = Math.max(1, Math.ceil(categoryFilteredThreads.length / SUPPORT_THREAD_PAGE_SIZE));
+  const safeCurrentThreadPage = Math.min(currentThreadPage, threadPageCount);
+  const paginatedThreads = categoryFilteredThreads.slice(
+    (safeCurrentThreadPage - 1) * SUPPORT_THREAD_PAGE_SIZE,
+    safeCurrentThreadPage * SUPPORT_THREAD_PAGE_SIZE,
+  );
 
   useEffect(() => {
     void refresh();
     void refreshAuthSession();
   }, []);
-
-  useEffect(() => {
-    if (presetCategory !== 'trial' && presetCategory !== 'partnership') return;
-    const draft = presetCategory === 'partnership'
-      ? getPartnershipSupportRequestDraft()
-      : getTrialSupportRequestDraft();
-    setCategory(presetCategory);
-    setTitle(draft.title);
-    setBody(draft.body);
-    setVisibility('private');
-  }, [presetCategory]);
 
   useEffect(() => {
     if (!targetThreadId) return;
@@ -110,6 +113,15 @@ export function SupportPanel() {
       return next;
     });
   }, [targetThreadId, threads]);
+
+  useEffect(() => {
+    setCurrentThreadPage(1);
+  }, [activeFilterKey, activeCategoryTab]);
+
+  useEffect(() => {
+    if (currentThreadPage <= threadPageCount) return;
+    setCurrentThreadPage(threadPageCount);
+  }, [currentThreadPage, threadPageCount]);
 
   async function refresh() {
     setIsBusy(true);
@@ -143,15 +155,6 @@ export function SupportPanel() {
     if (!authSession?.authenticated) {
       setMessage('');
       setShowAuthPromptModal(true);
-      return;
-    }
-
-    if (!canSubmitTrialRequest) {
-      const nextMessage = authSession?.authenticated
-        ? '무료체험 신청은 일반회원 계정으로 로그인한 상태에서만 접수할 수 있습니다.'
-        : '무료체험 신청은 회원가입 후 일반회원으로 로그인해야 접수할 수 있습니다.';
-      window.alert(nextMessage);
-      setMessage(nextMessage);
       return;
     }
 
@@ -268,20 +271,6 @@ export function SupportPanel() {
           <h2>1:1 문의 작성</h2>
           <p className="support-compose-intro">로그인하면 1:1 문의를 남길 수 있습니다. 문의 유형과 공개 범위를 선택한 뒤 필요한 내용을 남겨주세요.</p>
         </div>
-        {isTrialPreset && !canSubmitTrialRequest && (
-          <div className="trial-auth-gate" role="status">
-            <strong>무료체험 신청은 일반회원 로그인이 필요합니다.</strong>
-            <p>회원가입을 완료하면 일반회원으로 자동 로그인되고 무료체험 신청 작성 화면으로 돌아옵니다.</p>
-            <div className="actions compact">
-              <a className="button" href="/signup?redirect=/support%3Fcategory%3Dtrial%23support-inquiry-form">
-                회원가입 후 신청
-              </a>
-              <a className="button secondary" href="/login?redirect=/support%3Fcategory%3Dtrial%23support-inquiry-form">
-                일반회원 로그인
-              </a>
-            </div>
-          </div>
-        )}
         <form className="form support-form-grid" onSubmit={submitThread}>
           <label className="support-field" htmlFor="supportCategory">
             <span>분류</span>
@@ -289,9 +278,6 @@ export function SupportPanel() {
               <option value="deposit">{formatSupportCategoryLabel('deposit')}</option>
               <option value="cancel">{formatSupportCategoryLabel('cancel')}</option>
               <option value="usage">{formatSupportCategoryLabel('usage')}</option>
-              <option value="signal">{formatSupportCategoryLabel('signal')}</option>
-              <option value="trial">{formatSupportCategoryLabel('trial')}</option>
-              <option value="partnership">{formatSupportCategoryLabel('partnership')}</option>
               <option value="general">{formatSupportCategoryLabel('general')}</option>
             </select>
           </label>
@@ -329,8 +315,8 @@ export function SupportPanel() {
           <AuthPromptModal
             title="로그인 후 문의 등록이 가능합니다."
             description="회원가입 또는 로그인 후 1:1 문의를 등록해 주세요."
-            loginHref={isTrialPreset ? '/login?redirect=/support%3Fcategory%3Dtrial%23support-inquiry-form' : '/login?redirect=/support'}
-            signupHref={isTrialPreset ? '/signup?redirect=/support%3Fcategory%3Dtrial%23support-inquiry-form' : '/signup?redirect=/support'}
+            loginHref="/login?redirect=/support"
+            signupHref="/signup?redirect=/support"
             onClose={() => setShowAuthPromptModal(false)}
           />
         ) : null}
@@ -349,7 +335,7 @@ export function SupportPanel() {
                 <div className="thread-meta">
                   <span className="badge">{formatSupportStatusLabel(targetThread.thread.status)}</span>
                   <span>{formatSupportCategoryLabel(targetThread.thread.category)}</span>
-                  <span>{formatSupportVisibilityLabel(targetThread.thread.visibility)}</span>
+                  {targetThread.thread.visibility === 'private' ? <PrivateSupportThreadLockIcon /> : null}
                 </div>
                 <strong>{formatSupportThreadDisplayTitle(targetThread.thread)}</strong>
                 {latestAdminReply ? (
@@ -393,8 +379,28 @@ export function SupportPanel() {
             );
           })}
         </div>
+        <div className="support-category-tabs" aria-label="문의 카테고리">
+          {SUPPORT_THREAD_CATEGORY_TABS.map((tab) => {
+            const isActive = activeCategoryTab === tab.key;
+            const tabCount = tab.key === 'all'
+              ? filteredThreads.length
+              : filteredThreads.filter((item) => item.thread.category === tab.key).length;
+            return (
+              <button
+                className={`support-category-tab${isActive ? ' active' : ''}`}
+                type="button"
+                key={tab.key}
+                aria-pressed={isActive}
+                onClick={() => setActiveCategoryTab(tab.key)}
+              >
+                <span>{tab.label}</span>
+                <strong>{tabCount}</strong>
+              </button>
+            );
+          })}
+        </div>
         <p className="support-filter-summary">
-          현재 필터: {activeFilter.label} / 표시 {filteredThreads.length}건
+          현재 필터: {activeFilter.label} / 표시 {categoryFilteredThreads.length}건
         </p>
         <div className="thread-list">
           {threads.length === 0 ? (
@@ -402,13 +408,12 @@ export function SupportPanel() {
               <h3>아직 확인 가능한 문의가 없습니다.</h3>
               <p>비공개 문의는 작성자와 관리자만 볼 수 있습니다.</p>
             </article>
-          ) : filteredThreads.length === 0 ? (
+          ) : categoryFilteredThreads.length === 0 ? (
             <article className="thread-card support-empty-card">
               <h3>현재 필터에 해당하는 문의가 없습니다.</h3>
               <p>전체 필터로 전환하면 등록된 문의를 모두 확인할 수 있습니다.</p>
             </article>
-          ) : filteredThreads.map((item) => {
-            const replyPreview = item.messages.filter((threadMessage) => threadMessage.isAdminReply).at(-1) ?? null;
+          ) : paginatedThreads.map((item) => {
             const canEditThread = canManageThread(item);
             const isEditingThread = editingThreadId === item.thread.id;
             const isExpandedThread = expandedThreadIds.has(item.thread.id);
@@ -430,10 +435,7 @@ export function SupportPanel() {
               >
                 <div className="thread-meta">
                   <span className="badge">{formatSupportStatusLabel(item.thread.status)}</span>
-                  {replyPreview ? <span className="badge support-answer-badge">답변 확인 가능</span> : null}
                   {targetThreadId === item.thread.id ? <span className="badge support-target-badge">알림에서 이동</span> : null}
-                  <span>{formatSupportCategoryLabel(item.thread.category)}</span>
-                  <span>{formatSupportVisibilityLabel(item.thread.visibility)}</span>
                   <span>작성 {formatDateTime(item.thread.createdAt)}</span>
                   <span>{item.author?.email ?? 'system'}</span>
                 </div>
@@ -516,10 +518,8 @@ export function SupportPanel() {
                         {threadMessage.isAdminReply ? (
                           <>
                             <SupportReplyReturnIcon className="support-admin-reply-enter-icon" />
-                            <span className="support-admin-reply-copy">
-                              <strong>관리자 답변</strong>
-                              <span>{formatSupportMessageDisplayBody(item.thread, threadMessage.body)}</span>
-                            </span>
+                            <span className="support-admin-reply-badge">답변</span>
+                            <span className="support-admin-reply-copy">{formatSupportMessageDisplayBody(item.thread, threadMessage.body)}</span>
                           </>
                         ) : (
                           <>
@@ -535,6 +535,21 @@ export function SupportPanel() {
             );
           })}
         </div>
+        {categoryFilteredThreads.length > SUPPORT_THREAD_PAGE_SIZE ? (
+          <nav className="support-pagination" aria-label="문의 목록 페이지">
+            {SUPPORT_THREAD_PAGE_NUMBERS.filter((pageNumber) => pageNumber <= threadPageCount).map((pageNumber) => (
+              <button
+                className={`support-pagination-button${safeCurrentThreadPage === pageNumber ? ' active' : ''}`}
+                type="button"
+                key={pageNumber}
+                aria-current={safeCurrentThreadPage === pageNumber ? 'page' : undefined}
+                onClick={() => setCurrentThreadPage(pageNumber)}
+              >
+                {pageNumber}
+              </button>
+            ))}
+          </nav>
+        ) : null}
       </section>
     </section>
   );

@@ -611,7 +611,7 @@ test('admin support reply edit and delete controls move into top-right icon butt
   assert.match(styleSource, /#admin-support \.admin-support-reply-icon-button\s*\{[\s\S]*?width: 30px/);
 });
 
-test('support panels indent admin replies with a return arrow marker', () => {
+test('support panels render admin replies as inline answer rows', () => {
   const supportSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
   const adminSource = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
   const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
@@ -619,13 +619,16 @@ test('support panels indent admin replies with a return arrow marker', () => {
   assert.match(supportSource, /support-admin-reply-line/);
   assert.match(supportSource, /support-admin-reply-enter-icon/);
   assert.match(supportSource, /support-admin-reply-copy/);
+  assert.match(supportSource, /<span className="support-admin-reply-badge">답변<\/span>/);
+  assert.doesNotMatch(supportSource, /<strong>관리자 답변<\/strong>/);
   assert.match(adminSource, /admin-support-reply-enter-icon/);
   assert.match(adminSource, /admin-support-message-content/);
   assert.match(adminSource, /messageIndex > 0/);
   assert.match(adminSource, /admin-support-customer-reply/);
   assert.match(supportSource, /M15 10l4 4-4 4/);
   assert.match(adminSource, /M15 10l4 4-4 4/);
-  assert.match(styleSource, /\.support-message-list \.support-admin-reply-line\s*\{[\s\S]*?grid-template-columns: 20px minmax\(0, 1fr\)/);
+  assert.match(styleSource, /\.support-message-list \.support-admin-reply-line\s*\{[\s\S]*?grid-template-columns: 20px max-content minmax\(0, 1fr\)/);
+  assert.match(styleSource, /\.support-admin-reply-badge\s*\{[\s\S]*?display: inline-flex/);
   assert.match(styleSource, /#admin-support \.admin-support-admin-reply,[\s\S]*?#admin-support \.admin-support-customer-reply\s*\{[\s\S]*?grid-template-columns: 20px minmax\(0, 1fr\)/);
   assert.match(styleSource, /#admin-support \.admin-support-customer-reply\s*\{[\s\S]*?border-top-color: rgba\(125, 183, 255, 0\.16\)/);
   assert.match(styleSource, /\.support-admin-reply-enter-icon svg,[\s\S]*?#admin-support \.admin-support-reply-enter-icon svg\s*\{[\s\S]*?stroke-linejoin: round/);
@@ -646,14 +649,14 @@ test('member support panel supports notification deep links to a thread', () => 
   assert.match(panelSource, /aria-label="내 문의 빠른 필터"/);
   assert.match(panelSource, /quick-filter-count/);
   assert.match(panelSource, /현재 필터: \{activeFilter\.label\}/);
-  assert.match(panelSource, /filteredThreads\.map/);
+  assert.match(panelSource, /paginatedThreads\.map/);
   assert.match(panelSource, /현재 필터에 해당하는 문의가 없습니다/);
   assert.match(panelSource, /support-deep-link-notice/);
   assert.match(panelSource, /답변 확인 대상 문의/);
   assert.match(panelSource, /최근 관리자 답변/);
   assert.match(panelSource, /support-thread-answered/);
-  assert.match(panelSource, /support-answer-badge/);
-  assert.match(panelSource, /답변 확인 가능/);
+  assert.doesNotMatch(panelSource, /support-answer-badge/);
+  assert.doesNotMatch(panelSource, /답변 확인 가능/);
   assert.match(panelSource, /support-target-badge/);
   assert.match(panelSource, /알림에서 이동/);
   assert.doesNotMatch(panelSource, /support-reply-preview/);
@@ -666,7 +669,7 @@ test('member support panel supports notification deep links to a thread', () => 
   assert.match(styleSource, /\.thread-card\.support-thread-target/);
   assert.match(styleSource, /\.thread-card\.support-thread-answered/);
   assert.match(styleSource, /@keyframes supportTargetPulse/);
-  assert.match(styleSource, /\.support-answer-badge/);
+  assert.doesNotMatch(styleSource, /\.support-answer-badge/);
   assert.match(styleSource, /\.support-target-badge/);
   assert.doesNotMatch(styleSource, /\.support-reply-preview/);
   assert.match(styleSource, /\.support-deep-link-notice/);
@@ -741,36 +744,26 @@ test('deposit support compose forces private visibility in the member form', () 
   assert.match(routeSource, /category === 'deposit' \? 'private'/);
 });
 
-test('member support panel supports trial request presets from landing links', () => {
+test('member support panel removes trial partnership and signal from customer categories', () => {
   const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
-  const labelSource = fs.readFileSync(new URL('../app/support/support-display-labels.ts', import.meta.url), 'utf8');
-  const defaultSource = fs.readFileSync(new URL('../app/support/support-request-defaults.ts', import.meta.url), 'utf8');
-  const routeSource = fs.readFileSync(new URL('../app/api/support/threads/route.ts', import.meta.url), 'utf8');
-  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
-  assert.match(panelSource, /presetCategory/);
-  assert.match(panelSource, /searchParams\.get\('category'\)/);
-  assert.match(panelSource, /presetCategory !== 'trial' && presetCategory !== 'partnership'/);
   assert.match(panelSource, /authSession/);
-  assert.match(panelSource, /canSubmitTrialRequest/);
   assert.match(panelSource, /getAuthSession/);
-  assert.match(panelSource, /trial-auth-gate/);
-  assert.match(panelSource, /무료체험 신청은 일반회원 로그인이 필요합니다/);
-  assert.match(panelSource, /\/signup\?redirect=\/support%3Fcategory%3Dtrial%23support-inquiry-form/);
-  assert.match(panelSource, /\/login\?redirect=\/support%3Fcategory%3Dtrial%23support-inquiry-form/);
-  assert.match(panelSource, /getTrialSupportRequestDraft/);
-  assert.match(panelSource, /getPartnershipSupportRequestDraft/);
-  assert.match(panelSource, /value="trial"/);
-  assert.match(panelSource, /value="partnership"/);
-  assert.match(labelSource, /trial/);
-  assert.match(labelSource, /partnership/);
-  assert.match(defaultSource, /무료체험 신청/);
-  assert.match(defaultSource, /체험 가능 조건/);
-  assert.match(defaultSource, /제휴문의/);
-  assert.match(defaultSource, /TradingCore 서비스 제휴/);
-  assert.match(routeSource, /'trial'/);
-  assert.match(styleSource, /\.trial-auth-gate/);
-  assert.doesNotMatch(defaultSource, /5분 차트 미리보기/);
+  assert.match(panelSource, /SUPPORT_THREAD_CATEGORY_TABS/);
+  assert.match(panelSource, /value="deposit"/);
+  assert.match(panelSource, /value="cancel"/);
+  assert.match(panelSource, /value="usage"/);
+  assert.match(panelSource, /value="general"/);
+  assert.doesNotMatch(panelSource, /getTrialSupportRequestDraft/);
+  assert.doesNotMatch(panelSource, /getPartnershipSupportRequestDraft/);
+  assert.doesNotMatch(panelSource, /canSubmitTrialRequest/);
+  assert.doesNotMatch(panelSource, /trial-auth-gate/);
+  assert.doesNotMatch(panelSource, /key: 'signal'/);
+  assert.doesNotMatch(panelSource, /key: 'trial'/);
+  assert.doesNotMatch(panelSource, /key: 'partnership'/);
+  assert.doesNotMatch(panelSource, /value="signal"/);
+  assert.doesNotMatch(panelSource, /value="trial"/);
+  assert.doesNotMatch(panelSource, /value="partnership"/);
 });
 
 test('support page exposes public notice qna and faq boards before private inquiries', () => {
@@ -780,16 +773,17 @@ test('support page exposes public notice qna and faq boards before private inqui
 
   assert.match(pageSource, /getAsyncChartServicePersistence/);
   assert.match(pageSource, /persistence\.runRead/);
-  assert.match(pageSource, /SUPPORT_CONTACT_ROUTES/);
-  assert.match(pageSource, /support-contact-routes/);
-  assert.match(pageSource, /1:1 문의/);
-  assert.match(pageSource, /제휴문의/);
-  assert.match(pageSource, /무료체험신청/);
-  assert.match(pageSource, /#support-inquiry-form/);
-  assert.match(pageSource, /\/support\?category=partnership#support-inquiry-form/);
-  assert.match(pageSource, /FreeTrialRequestButton/);
-  assert.match(pageSource, /href: 'free-trial'/);
-  assert.match(pageSource, /무료체험 신청/);
+  assert.doesNotMatch(pageSource, /SUPPORT_CONTACT_ROUTES/);
+  assert.doesNotMatch(pageSource, /support-contact-routes/);
+  assert.doesNotMatch(pageSource, /support-contact-route-card/);
+  assert.doesNotMatch(pageSource, /support-route-card-title/);
+  assert.doesNotMatch(pageSource, /support-route-action/);
+  assert.doesNotMatch(pageSource, /1:1 문의/);
+  assert.doesNotMatch(pageSource, /#support-inquiry-form/);
+  assert.doesNotMatch(pageSource, /\/support\?category=partnership#support-inquiry-form/);
+  assert.doesNotMatch(pageSource, /FreeTrialRequestButton/);
+  assert.doesNotMatch(pageSource, /href: 'free-trial'/);
+  assert.doesNotMatch(pageSource, /무료체험신청/);
   assert.match(panelSource, /id="support-inquiry-form"/);
   assert.doesNotMatch(pageSource, /SUPPORT_FLOW/);
   assert.doesNotMatch(pageSource, /입금\/결제/);
@@ -802,8 +796,8 @@ test('support page exposes public notice qna and faq boards before private inqui
   assert.match(pageSource, /FAQ/);
   assert.match(pageSource, /공개 게시판/);
   assert.match(pageSource, /<SupportPanel \/>/);
-  assert.match(styleSource, /\.support-contact-routes/);
-  assert.match(styleSource, /\.support-contact-route-card/);
+  assert.doesNotMatch(styleSource, /\.support-contact-routes/);
+  assert.doesNotMatch(styleSource, /\.support-contact-route-card/);
   assert.match(styleSource, /#support-inquiry-form/);
   assert.match(styleSource, /\.support-public-board/);
   assert.match(styleSource, /\.support-public-board-card/);

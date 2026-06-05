@@ -31,7 +31,7 @@ test('support page and panel use readable Korean copy and status labels', () => 
   const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
 
   assert.match(pageSource, /고객센터/);
-  assert.match(pageSource, /입금 확인, 환불 요청, 시그널 이용 문의를 한 곳에서 관리합니다/);
+  assert.match(pageSource, /입금 확인, 환불 요청, 사용 방법 문의를 한 곳에서 관리합니다/);
   assert.match(panelSource, /formatSupportCategoryLabel/);
   assert.match(panelSource, /formatSupportStatusLabel/);
   assert.match(panelSource, /formatSupportVisibilityLabel/);
@@ -43,9 +43,9 @@ test('support page uses final service-center layout structure', () => {
   const pageSource = fs.readFileSync(new URL('../app/support/page.tsx', import.meta.url), 'utf8');
   const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
 
-  assert.match(pageSource, /support-route-card-title/);
-  assert.match(pageSource, /support-route-card-body/);
-  assert.match(pageSource, /support-route-action/);
+  assert.doesNotMatch(pageSource, /support-route-card-title/);
+  assert.doesNotMatch(pageSource, /support-route-card-body/);
+  assert.doesNotMatch(pageSource, /support-route-action/);
   assert.match(pageSource, /support-board-section-title/);
   assert.match(pageSource, /support-board-empty/);
   assert.match(panelSource, /support-panel-frame/);
@@ -72,4 +72,28 @@ test('support page final pass uses dark operational styling without nested gener
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-thread-title\s*\{[\s\S]*?color: #ffffff/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-deep-link-notice\s*\{[\s\S]*?rgba\(9, 19, 36, 0\.82\)/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) \.support-deep-link-notice p\s*\{[\s\S]*?rgba\(216, 236, 255, 0\.72\)/);
+});
+
+test('support inquiry list uses category tabs and ten item pagination', () => {
+  const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /SUPPORT_THREAD_CATEGORY_TABS/);
+  assert.match(panelSource, /SUPPORT_THREAD_PAGE_SIZE = 10/);
+  assert.match(panelSource, /SUPPORT_THREAD_PAGE_NUMBERS = \[1, 2, 3, 4, 5, 6, 7, 8, 9\]/);
+  assert.match(panelSource, /activeCategoryTab/);
+  assert.match(panelSource, /categoryFilteredThreads/);
+  assert.match(panelSource, /paginatedThreads/);
+  assert.match(panelSource, /support-category-tabs/);
+  assert.match(panelSource, /support-pagination/);
+  assert.doesNotMatch(panelSource, /key: 'signal'/);
+  assert.doesNotMatch(panelSource, /key: 'trial'/);
+  assert.doesNotMatch(panelSource, /key: 'partnership'/);
+  assert.doesNotMatch(panelSource, /<option value="signal">/);
+  assert.doesNotMatch(panelSource, /<option value="trial">/);
+  assert.doesNotMatch(panelSource, /<option value="partnership">/);
+  assert.doesNotMatch(panelSource, /<span>\{formatSupportCategoryLabel\(item\.thread\.category\)\}<\/span>/);
+  assert.doesNotMatch(panelSource, /<span>\{formatSupportVisibilityLabel\(item\.thread\.visibility\)\}<\/span>/);
+  assert.match(cssSource, /\.support-category-tabs/);
+  assert.match(cssSource, /\.support-pagination/);
 });
