@@ -634,6 +634,22 @@ export function createPaneChrome<TKey extends string>({
       indBtn.style.fontSize = '11px';
       strategyBtn.style.fontSize = '11px';
     }
+    if (isMobilePhone) {
+      symBtn.style.maxWidth = 'min(42%, 150px)';
+      marketPriceWrap.style.width = 'auto';
+      marketPriceWrap.style.maxWidth = '132px';
+      marketPriceWrap.style.gap = '4px';
+      symPriceLabel.style.fontSize = '11px';
+      symPriceLabel.style.marginRight = '0';
+      symChangeWrap.style.width = 'auto';
+      symChangeMetaLabel.style.display = 'none';
+      symChangeLabel.style.fontSize = '10px';
+    } else {
+      marketPriceWrap.style.maxWidth = '';
+      marketPriceWrap.style.gap = '0';
+      symPriceLabel.style.marginRight = '4px';
+      symChangeWrap.style.width = '58px';
+    }
   };
 
   const resizeObserver = new ResizeObserver(() => applyResponsive());

@@ -205,6 +205,67 @@ if (app) {
 })();
 
 const splitPresets = [1, 2, 4, 6, 8] as const;
+  const STRATEGY_SIGNAL_ON_SVG = (size: number): string => `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+      class="lucide lucide-radio-icon lucide-radio" aria-hidden="true">
+      <path d="M16.247 7.761a6 6 0 0 1 0 8.478"/>
+      <path d="M19.075 4.933a10 10 0 0 1 0 14.134"/>
+      <path d="M4.925 19.067a10 10 0 0 1 0-14.134"/>
+      <path d="M7.753 16.239a6 6 0 0 1 0-8.478"/>
+      <circle cx="12" cy="12" r="2"/>
+    </svg>`;
+  const STRATEGY_SIGNAL_OFF_SVG = (size: number): string => `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+      class="lucide lucide-radio-off-icon lucide-radio-off" aria-hidden="true">
+      <path d="M13.414 13.414a2 2 0 1 1-2.828-2.828"/>
+      <path d="M16.247 7.761a6 6 0 0 1 1.744 4.572"/>
+      <path d="M19.075 4.933a10 10 0 0 1 2.234 10.72"/>
+      <path d="m2 2 20 20"/>
+      <path d="M4.925 19.067a10 10 0 0 1 0-14.134"/>
+      <path d="M7.753 16.239a6 6 0 0 1 0-8.478"/>
+    </svg>`;
+  type StrategySignalVisibilityButton = HTMLButtonElement & {
+    refreshSignalVisibilityIcon: () => void;
+  };
+  const createStrategySignalVisibilityButton = ({
+    getChart,
+    size,
+    style,
+    syncBorder = true,
+    onAfterToggle,
+  }: {
+    getChart: () => SimpleChart;
+    size: number;
+    style: string;
+    syncBorder?: boolean;
+    onAfterToggle?: () => void;
+  }): StrategySignalVisibilityButton => {
+    const btn = document.createElement('button') as StrategySignalVisibilityButton;
+    btn.type = 'button';
+    btn.dataset.strategySignalVisibility = 'true';
+    btn.style.cssText = style;
+    const refresh = () => {
+      const chart = getChart();
+      const visible = chart.isStrategySignalVisible();
+      btn.innerHTML = visible ? STRATEGY_SIGNAL_ON_SVG(size) : STRATEGY_SIGNAL_OFF_SVG(size);
+      btn.title = visible ? '시그널 감추기' : '시그널 보이기';
+      btn.setAttribute('aria-label', btn.title);
+      btn.setAttribute('aria-pressed', String(visible));
+      btn.style.color = visible ? '#dce6f7' : '#7f8ca3';
+      if (syncBorder) btn.style.borderColor = visible ? '#3d5275' : '#2e3f5c';
+    };
+    btn.addEventListener('click', () => {
+      const chart = getChart();
+      chart.setStrategySignalVisible(!chart.isStrategySignalVisible());
+      refresh();
+      onAfterToggle?.();
+    });
+    btn.refreshSignalVisibilityIcon = refresh;
+    refresh();
+    return btn;
+  };
   const NO_FX_INDEX_SYMBOLS = new Set(['KOSPI', 'KOSPI200', 'KOSDAQ']);
   const DRAWING_STORAGE_KEY = 'my-chart-lib.drawings.v1';
   const DRAWING_KIND_SET = new Set<string>([
@@ -1202,6 +1263,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         lastMarketInfoSide === side
         && symBtn.parentElement === paneHeader
         && marketPriceWrap.parentElement === paneHeader
+        && (!isMobile || marketPriceWrap.previousElementSibling === symBtn)
         && currencySelect.parentElement === (dockCurrency ? currencyDock : paneHeader)
       ) {
         return;
@@ -1217,6 +1279,17 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         currencySelect.style.fontSize = '10px';
         currencySelect.style.padding = '1px 4px';
         currencySelect.style.marginLeft = '0';
+      }
+      if (isMobile) {
+        paneHeader.insertBefore(marketPriceWrap, symBtn.nextSibling);
+        if (!dockCurrency) paneHeader.insertBefore(currencySelect, winCtrlWrap);
+        ohlcHeaderDisplay.style.marginLeft = 'auto';
+        winCtrlWrap.style.marginLeft = '6px';
+        if (!dockCurrency) {
+          currencySelect.style.height = '';
+          currencySelect.style.marginLeft = '0';
+        }
+        return;
       }
       if (side === 'left') {
         if (!dockCurrency) paneHeader.insertBefore(currencySelect, symBtn);
@@ -1330,6 +1403,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       refreshChartUi();
     });
 
+    let refreshStrategySignalDesktopButton = () => {};
     const dividerManager = createPanelDividerManager({
       chart,
       chartArea,
@@ -1356,6 +1430,25 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       refreshHeader();
       refreshStrategyReport();
     };
+    if (!isMobile) {
+      const strategySignalDesktopBtn = createStrategySignalVisibilityButton({
+        getChart: () => chart,
+        size: 15,
+        style: 'height:22px;width:22px;min-width:22px;background:#1f2533;color:#dce6f7;border:none;border-radius:4px;padding:0;cursor:pointer;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;',
+        syncBorder: false,
+        onAfterToggle: () => {
+          refreshChartUi();
+        },
+      });
+      strategySignalDesktopBtn.addEventListener('mouseenter', () => {
+        strategySignalDesktopBtn.style.background = '#2b3448';
+      });
+      strategySignalDesktopBtn.addEventListener('mouseleave', () => {
+        strategySignalDesktopBtn.style.background = '#1f2533';
+      });
+      marketSessionBadge.insertAdjacentElement('afterend', strategySignalDesktopBtn);
+      refreshStrategySignalDesktopButton = strategySignalDesktopBtn.refreshSignalVisibilityIcon;
+    }
     const handleChartSettingsChanged = () => {
       refreshChartUi();
       persistChartUserSettingsForChart(chart);
@@ -1446,7 +1539,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     const refreshHeader = () => {
       applyMarketInfoLayout();
       const visibleCount = paneState.currentVisiblePaneIds.filter((id) => paneSlots[id].style.display !== 'none').length;
-      const hideMarketPriceOnDenseMobileSplit = isMobile && visibleCount >= 4;
+      const hideMarketPriceOnDenseMobileSplit = false;
       marketPriceWrap.style.display = hideMarketPriceOnDenseMobileSplit ? 'none' : 'flex';
       refreshSymbolVisual(chart.config.symbol);
       tfSelect.value = chart.config.timeframe;
@@ -1470,6 +1563,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       marketSessionBadge.style.background = sessionOpen ? '#1fbf75' : '#e24a4a';
       marketSessionBadge.style.borderColor = sessionOpen ? '#2f8f66' : '#9d3c3c';
       marketSessionBadge.title = sessionOpen ? '장오픈' : '장마감';
+      refreshStrategySignalDesktopButton();
       const delayedData = cmeSessionSymbol;
       delayedDataBadge.style.display = delayedData ? 'inline-flex' : 'none';
       if (delayedData) {
@@ -2322,6 +2416,30 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         });
       });
       mobileBarEl.appendChild(indMobileBtn);
+
+      const signalMobileBtn = createStrategySignalVisibilityButton({
+        getChart: () => getActivePane().chart,
+        size: 17,
+        style: MOBILE_BAR_BTN,
+        onAfterToggle: () => {
+          getActivePane().refreshChartUi();
+        },
+      });
+      signalMobileBtn.addEventListener('touchstart', () => {
+        signalMobileBtn.style.background  = '#2962ff';
+        signalMobileBtn.style.borderColor = '#2962ff';
+        signalMobileBtn.style.color       = '#fff';
+      }, { passive: true });
+      signalMobileBtn.addEventListener('touchend', () => {
+        setTimeout(() => {
+          signalMobileBtn.style.background  = '#1c2840';
+          signalMobileBtn.refreshSignalVisibilityIcon();
+        }, 200);
+      }, { passive: true });
+      mobileBarEl.appendChild(signalMobileBtn);
+      startManagedInterval(() => {
+        signalMobileBtn.refreshSignalVisibilityIcon();
+      }, 600);
 
       if (isDevApp) {
         const STRAT_ICON_IMG = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#ffffff" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3.5H7.8C6.11984 3.5 5.27976 3.5 4.63803 3.82698C4.07354 4.1146 3.6146 4.57354 3.32698 5.13803C3 5.77976 3 6.61984 3 8.3V16.7C3 18.3802 3 19.2202 3.32698 19.862C3.6146 20.4265 4.07354 20.8854 4.63803 21.173C5.27976 21.5 6.11984 21.5 7.8 21.5H16.2C17.8802 21.5 18.7202 21.5 19.362 21.173C19.9265 20.8854 20.3854 20.4265 20.673 19.862C21 19.2202 21 18.3802 21 16.7V13.5M12 8.5H16V12.5M15.5 4V2.5M19.4393 5.06066L20.5 4M20.5103 9H22.0103M3 13.8471C3.65194 13.9478 4.31987 14 5 14C9.38636 14 13.2653 11.8276 15.6197 8.5"></path></svg>`;
