@@ -27,6 +27,7 @@ import {
 import { renderSupertrend, type SupertrendRenderData } from './supertrend-renderer.ts';
 import { renderWilliamsFractals, type WilliamsFractalRenderData } from './williams-fractal-renderer.ts';
 import type { SubPanelIndicatorSettings } from './subpanel-render-orchestrator.ts';
+import { INDICATOR_STYLE_TARGETS } from '../../indicator-panel-module.ts';
 
 export interface MainIndicatorSettings extends SubPanelIndicatorSettings {
   volume: { show: boolean };
@@ -155,6 +156,11 @@ export interface RenderMainIndicatorsParams {
   fontStack: string;
 }
 
+function isIndicatorStyleTargetVisible(indicatorKey: string, showLine: (key: string) => boolean): boolean {
+  const targets = INDICATOR_STYLE_TARGETS[indicatorKey] ?? [];
+  return targets.length === 0 || targets.some((target) => showLine(target.key));
+}
+
 export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
   const {
     ctx,
@@ -274,11 +280,7 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     });
   }
 
-  const smartMoneyConceptsVisible = showLine('smartMoneyConceptsBullish')
-    || showLine('smartMoneyConceptsBearish')
-    || showLine('smartMoneyConceptsInternalBullish')
-    || showLine('smartMoneyConceptsInternalBearish')
-    || showLine('smartMoneyConceptsEqual');
+  const smartMoneyConceptsVisible = isIndicatorStyleTargetVisible('smartMoneyConcepts', showLine);
   if (indicatorLayerOn && ind.smartMoneyConcepts?.show && smartMoneyConceptsVisible) {
     const bullishStyle = resolveStyle('smartMoneyConceptsBullish', ind.smartMoneyConcepts.swingBullColor || '#089981', 1);
     const bearishStyle = resolveStyle('smartMoneyConceptsBearish', ind.smartMoneyConcepts.swingBearColor || '#f23645', 1);

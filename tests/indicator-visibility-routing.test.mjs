@@ -31,9 +31,11 @@ test('Statistical Trailing Stop marker size is reduced on mobile chart viewports
 });
 
 test('Smart Money Concepts hide action gates the whole renderer through style visibility', () => {
+  assert.match(mainIndicatorSource, /import \{ INDICATOR_STYLE_TARGETS \} from '\.\.\/\.\.\/indicator-panel-module\.ts'/);
+  assert.match(mainIndicatorSource, /function isIndicatorStyleTargetVisible\(indicatorKey: string, showLine: \(key: string\) => boolean\): boolean/);
   assert.match(
     mainIndicatorSource,
-    /const smartMoneyConceptsVisible = showLine\('smartMoneyConceptsBullish'\)[\s\S]*showLine\('smartMoneyConceptsEqual'\)/,
+    /const smartMoneyConceptsVisible = isIndicatorStyleTargetVisible\('smartMoneyConcepts', showLine\)/,
   );
   assert.match(
     mainIndicatorSource,
