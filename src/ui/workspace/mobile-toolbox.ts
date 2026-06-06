@@ -36,6 +36,39 @@ const MAGNET_OFF_SVG = '<svg viewBox="0 0 512 512" width="27" height="27" fill="
 const MAGNET_STRONG_SVG = '<svg viewBox="0 0 512 512" width="27" height="27" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">' + MAGNET_SOFT_SVG.replace('<svg viewBox="0 0 512 512" width="27" height="27" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">', '').replace('</svg>', '') + '<circle cx="430" cy="96" r="34" stroke-width="20"></circle></svg>';
 const MOBILE_FIB_RETRACEMENT_SVG = '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="14" x2="17.5" y2="14"></line><line x1="20.5" y1="14" x2="21" y2="14"></line><line x1="3" y1="19" x2="3.3" y2="19"></line><line x1="6.7" y1="19" x2="21" y2="19"></line><line x1="6.8" y1="18.4" x2="17.2" y2="14.6" stroke-dasharray="4 3"></line><circle cx="5" cy="19" r="1.7" fill="none"></circle><circle cx="19" cy="14" r="1.7" fill="none"></circle></svg>';
 
+type MobilePatternIconAnchor = {
+  x: number;
+  y: number;
+  r?: number;
+};
+
+function renderMobilePatternIcon(
+  maskId: string,
+  linePath: string,
+  anchors: MobilePatternIconAnchor[],
+): string {
+  const anchorCircles = anchors
+    .map((anchor) => `<circle cx="${anchor.x}" cy="${anchor.y}" r="${anchor.r ?? 1.45}"></circle>`)
+    .join('');
+  const cutoutCircles = anchors
+    .map((anchor) => `<circle cx="${anchor.x}" cy="${anchor.y}" r="${(anchor.r ?? 1.45) + 0.2}" fill="black"></circle>`)
+    .join('');
+
+  return `<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><defs><mask id="${maskId}" maskUnits="userSpaceOnUse"><rect x="0" y="0" width="24" height="24" fill="white"></rect>${cutoutCircles}</mask></defs><path d="${linePath}" mask="url(#${maskId})"></path>${anchorCircles}</svg>`;
+}
+
+const MOBILE_XABCD_PATTERN_SVG = renderMobilePatternIcon('mobile-xabcd-pattern-mask', 'M4 18L8 6L12 15L16 8L20 18', [{ x: 4, y: 18 }, { x: 8, y: 6 }, { x: 12, y: 15 }, { x: 16, y: 8 }, { x: 20, y: 18 }]);
+const MOBILE_CYPHER_PATTERN_SVG = renderMobilePatternIcon('mobile-cypher-pattern-mask', 'M4 18L8 7L12 15L16 6L20 18', [{ x: 4, y: 18 }, { x: 8, y: 7 }, { x: 12, y: 15 }, { x: 16, y: 6 }, { x: 20, y: 18 }]);
+const MOBILE_HEAD_SHOULDERS_PATTERN_SVG = renderMobilePatternIcon('mobile-head-shoulders-pattern-mask', 'M3 19L6.5 9L10 14L13 3L16 14L19.5 9L22 19M2 14L22 14', [{ x: 3, y: 19, r: 1.45 }, { x: 6.5, y: 9, r: 1.45 }, { x: 10, y: 14, r: 1.45 }, { x: 13, y: 3, r: 1.45 }, { x: 16, y: 14, r: 1.45 }, { x: 19.5, y: 9, r: 1.45 }, { x: 22, y: 19, r: 1.45 }]);
+const MOBILE_ABCD_PATTERN_SVG = renderMobilePatternIcon('mobile-abcd-pattern-mask', 'M5 18L7 6L20 4L18 16L5 18M7 6L18 16', [{ x: 5, y: 18 }, { x: 7, y: 6 }, { x: 20, y: 4 }, { x: 18, y: 16 }]);
+const MOBILE_TRIANGLE_PATTERN_SVG = renderMobilePatternIcon('mobile-triangle-pattern-mask', 'M4 19L4 4L21 14L4 19M4 4L8 7L13 10L21 14M4 19L8 7L10 17L13 10M10 17L21 14', [{ x: 4, y: 19 }, { x: 8, y: 7 }, { x: 13, y: 10 }, { x: 10, y: 17 }]);
+const MOBILE_THREE_DRIVES_PATTERN_SVG = renderMobilePatternIcon('mobile-three-drives-pattern-mask', 'M4 6L4 17L9 9L9 19L14 12L14 21L19 4M4 6L9 9L14 12L20.5 15M4 17L9 19L14 21L17 22', [{ x: 4, y: 6, r: 1.35 }, { x: 4, y: 17, r: 1.35 }, { x: 9, y: 9, r: 1.35 }, { x: 9, y: 19, r: 1.35 }, { x: 14, y: 12, r: 1.35 }, { x: 14, y: 21, r: 1.35 }, { x: 19, y: 4, r: 1.35 }]);
+const MOBILE_ELLIOTT_IMPULSE_SVG = renderMobilePatternIcon('mobile-elliott-impulse-mask', 'M3 17L7 8L11 14L15 4L18 11L21 6', [{ x: 3, y: 17, r: 1.25 }, { x: 7, y: 8, r: 1.25 }, { x: 11, y: 14, r: 1.25 }, { x: 15, y: 4, r: 1.25 }, { x: 18, y: 11, r: 1.25 }, { x: 21, y: 6, r: 1.25 }]);
+const MOBILE_ELLIOTT_CORRECTION_SVG = renderMobilePatternIcon('mobile-elliott-correction-mask', 'M4 16L9 8L14 15L19 5', [{ x: 4, y: 16, r: 1.3 }, { x: 9, y: 8, r: 1.3 }, { x: 14, y: 15, r: 1.3 }, { x: 19, y: 5, r: 1.3 }]);
+const MOBILE_ELLIOTT_TRIANGLE_SVG = renderMobilePatternIcon('mobile-elliott-triangle-mask', 'M3 17L7 7L11 15L15 9L18 16L21 11', [{ x: 3, y: 17, r: 1.2 }, { x: 7, y: 7, r: 1.2 }, { x: 11, y: 15, r: 1.2 }, { x: 15, y: 9, r: 1.2 }, { x: 18, y: 16, r: 1.2 }, { x: 21, y: 11, r: 1.2 }]);
+const MOBILE_ELLIOTT_DOUBLE_COMBO_SVG = renderMobilePatternIcon('mobile-elliott-double-combo-mask', 'M4 16L9 8L14 16L20 8', [{ x: 4, y: 16, r: 1.3 }, { x: 9, y: 8, r: 1.3 }, { x: 14, y: 16, r: 1.3 }, { x: 20, y: 8, r: 1.3 }]);
+const MOBILE_ELLIOTT_TRIPLE_COMBO_SVG = renderMobilePatternIcon('mobile-elliott-triple-combo-mask', 'M3 16L7 8L11 16L15 8L18 16L21 8', [{ x: 3, y: 16, r: 1.25 }, { x: 7, y: 8, r: 1.25 }, { x: 11, y: 16, r: 1.25 }, { x: 15, y: 8, r: 1.25 }, { x: 18, y: 16, r: 1.25 }, { x: 21, y: 8, r: 1.25 }]);
+
 const MOBILE_DRAWING_TOOLS: MobileDrawingTool[] = [
   { id: null, title: '선택 해제', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-7 1-3 7z"/></svg>' },
   { id: 'cursor-cross', title: '크로스', isAction: true, svg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="3.5" x2="12" y2="9.5"/><line x1="12" y1="14.5" x2="12" y2="20.5"/><line x1="3.5" y1="12" x2="9.5" y2="12"/><line x1="14.5" y1="12" x2="20.5" y2="12"/></svg>' },
@@ -51,17 +84,17 @@ const MOBILE_DRAWING_TOOLS: MobileDrawingTool[] = [
   { id: 'channel', title: '채널', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5.4" y1="8.7" x2="16.2" y2="4.8"></line><line x1="7.8" y1="16.6" x2="18.6" y2="12.7"></line><circle cx="4" cy="9.2" r="1.5" fill="none"></circle><circle cx="17.6" cy="4.3" r="1.5" fill="none"></circle><circle cx="6.4" cy="17.1" r="1.5" fill="none"></circle><circle cx="20" cy="12.2" r="1.5" fill="none"></circle></svg>' },
   { id: 'fib-retracement', title: '피보나치', svg: MOBILE_FIB_RETRACEMENT_SVG },
   { id: 'fib-trend', title: '추세 피보나치', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"></line><line x1="3" y1="9" x2="10.3" y2="9"></line><line x1="13.7" y1="9" x2="21" y2="9"></line><line x1="3" y1="14" x2="17.5" y2="14"></line><line x1="20.5" y1="14" x2="21" y2="14"></line><line x1="6.3" y1="21.0" x2="10.8" y2="10.2" stroke-dasharray="4 3"></line><line x1="13.5" y1="9.9" x2="17.5" y2="13.1" stroke-dasharray="4 3"></line><circle cx="5" cy="22" r="1.7" fill="none"></circle><circle cx="12" cy="9" r="1.7" fill="none"></circle><circle cx="19" cy="14" r="1.7" fill="none"></circle></svg>' },
-  { id: 'xabcd-pattern', title: 'XABCD', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l4-12 4 9 4-7 4 10"></path><circle cx="4" cy="18" r="1.45"></circle><circle cx="8" cy="6" r="1.45"></circle><circle cx="12" cy="15" r="1.45"></circle><circle cx="16" cy="8" r="1.45"></circle><circle cx="20" cy="18" r="1.45"></circle></svg>' },
-  { id: 'cypher-pattern', title: '사이퍼', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l4-11 4 8 4-9 4 12"></path><circle cx="4" cy="18" r="1.45"></circle><circle cx="8" cy="7" r="1.45"></circle><circle cx="12" cy="15" r="1.45"></circle><circle cx="16" cy="6" r="1.45"></circle><circle cx="20" cy="18" r="1.45"></circle></svg>' },
-  { id: 'head-shoulders-pattern', title: '헤드숄더', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-6 4 3 3-9 3 9 4-3"></path><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="7" cy="11" r="1.4"></circle><circle cx="14" cy="5" r="1.4"></circle><circle cx="21" cy="11" r="1.4"></circle></svg>' },
-  { id: 'abcd-pattern', title: 'ABCD', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17l4-11 5 9 5-11"></path><circle cx="5" cy="17" r="1.45"></circle><circle cx="9" cy="6" r="1.45"></circle><circle cx="14" cy="15" r="1.45"></circle><circle cx="19" cy="4" r="1.45"></circle></svg>' },
-  { id: 'triangle-pattern', title: '삼각형', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18l14-12M5 6l14 12M5 18l14 0"></path><circle cx="5" cy="18" r="1.45"></circle><circle cx="5" cy="6" r="1.45"></circle><circle cx="19" cy="18" r="1.45"></circle></svg>' },
-  { id: 'three-drives-pattern', title: '쓰리드라이브', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l3-8 4 6 3-8 4 6 4-9"></path><circle cx="3" cy="17" r="1.35"></circle><circle cx="6" cy="9" r="1.35"></circle><circle cx="10" cy="15" r="1.35"></circle><circle cx="13" cy="7" r="1.35"></circle><circle cx="17" cy="13" r="1.35"></circle><circle cx="21" cy="4" r="1.35"></circle></svg>' },
-  { id: 'elliott-impulse-wave', title: '0·1·2·3·4·5', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-9 4 6 4-10 3 7 3-5"></path><circle cx="3" cy="17" r="1.25"></circle><circle cx="7" cy="8" r="1.25"></circle><circle cx="11" cy="14" r="1.25"></circle><circle cx="15" cy="4" r="1.25"></circle><circle cx="18" cy="11" r="1.25"></circle><circle cx="21" cy="6" r="1.25"></circle></svg>' },
-  { id: 'elliott-correction-wave', title: '0·A·B·C', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-8 5 7 5-10"></path><circle cx="4" cy="16" r="1.3"></circle><circle cx="9" cy="8" r="1.3"></circle><circle cx="14" cy="15" r="1.3"></circle><circle cx="19" cy="5" r="1.3"></circle></svg>' },
-  { id: 'elliott-triangle-wave', title: '0·A·B·C·D·E', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-10 4 8 4-6 3 7 3-5"></path><circle cx="3" cy="17" r="1.2"></circle><circle cx="7" cy="7" r="1.2"></circle><circle cx="11" cy="15" r="1.2"></circle><circle cx="15" cy="9" r="1.2"></circle><circle cx="18" cy="16" r="1.2"></circle><circle cx="21" cy="11" r="1.2"></circle></svg>' },
-  { id: 'elliott-double-combo-wave', title: '0·W·X·Y', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-8 5 8 6-8"></path><circle cx="4" cy="16" r="1.3"></circle><circle cx="9" cy="8" r="1.3"></circle><circle cx="14" cy="16" r="1.3"></circle><circle cx="20" cy="8" r="1.3"></circle></svg>' },
-  { id: 'elliott-triple-combo-wave', title: '0·W·X·Y·X·Z', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l4-8 4 8 4-8 3 8 3-8"></path><circle cx="3" cy="16" r="1.25"></circle><circle cx="7" cy="8" r="1.25"></circle><circle cx="11" cy="16" r="1.25"></circle><circle cx="15" cy="8" r="1.25"></circle><circle cx="18" cy="16" r="1.25"></circle><circle cx="21" cy="8" r="1.25"></circle></svg>' },
+  { id: 'xabcd-pattern', title: 'XABCD', svg: MOBILE_XABCD_PATTERN_SVG },
+  { id: 'cypher-pattern', title: '사이퍼', svg: MOBILE_CYPHER_PATTERN_SVG },
+  { id: 'head-shoulders-pattern', title: '헤드숄더', svg: MOBILE_HEAD_SHOULDERS_PATTERN_SVG },
+  { id: 'abcd-pattern', title: 'ABCD', svg: MOBILE_ABCD_PATTERN_SVG },
+  { id: 'triangle-pattern', title: '삼각형', svg: MOBILE_TRIANGLE_PATTERN_SVG },
+  { id: 'three-drives-pattern', title: '쓰리드라이브', svg: MOBILE_THREE_DRIVES_PATTERN_SVG },
+  { id: 'elliott-impulse-wave', title: '0·1·2·3·4·5', svg: MOBILE_ELLIOTT_IMPULSE_SVG },
+  { id: 'elliott-correction-wave', title: '0·A·B·C', svg: MOBILE_ELLIOTT_CORRECTION_SVG },
+  { id: 'elliott-triangle-wave', title: '0·A·B·C·D·E', svg: MOBILE_ELLIOTT_TRIANGLE_SVG },
+  { id: 'elliott-double-combo-wave', title: '0·W·X·Y', svg: MOBILE_ELLIOTT_DOUBLE_COMBO_SVG },
+  { id: 'elliott-triple-combo-wave', title: '0·W·X·Y·X·Z', svg: MOBILE_ELLIOTT_TRIPLE_COMBO_SVG },
   { id: 'measure', title: '재기', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16.5 16.5 4l3.5 3.5L7.5 20z"></path><path d="M8.2 12.3l2.5 2.5M11.1 9.4l2.5 2.5M14 6.5l2.5 2.5"></path></svg>' },
   { id: 'long-position', title: '롱 포지션', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round"><path d="M5 16h14"></path><path d="M12 19V5"></path><path d="M9 8l3-3 3 3"></path></svg>' },
   { id: 'short-position', title: '숏 포지션', svg: '<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round"><path d="M5 8h14"></path><path d="M12 5v14"></path><path d="M9 16l3 3 3-3"></path></svg>' },

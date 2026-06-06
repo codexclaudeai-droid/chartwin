@@ -10,6 +10,116 @@ const magnetOffIcon = `<svg viewBox="0 0 512 512" width="22" height="22" fill="n
 const eraserIcon = `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="${iconStroke}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>`;
 const fibRetracementIcon = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="14" x2="17.5" y2="14"></line><line x1="20.5" y1="14" x2="21" y2="14"></line><line x1="3" y1="19" x2="3.3" y2="19"></line><line x1="6.7" y1="19" x2="21" y2="19"></line><line x1="6.8" y1="18.4" x2="17.2" y2="14.6" stroke-dasharray="4 3"></line><circle cx="5" cy="19" r="1.7" fill="none"></circle><circle cx="19" cy="14" r="1.7" fill="none"></circle></svg>`;
 
+type PatternIconAnchor = {
+  x: number;
+  y: number;
+  r?: number;
+};
+
+function renderPatternMenuIcon(
+  maskId: string,
+  linePath: string,
+  anchors: PatternIconAnchor[],
+  options: { width?: number; height?: number; stroke?: string; labels?: Array<{ text: string; x: number; y: number }> } = {},
+): string {
+  const width = options.width ?? 22;
+  const height = options.height ?? 22;
+  const stroke = options.stroke ?? iconStroke;
+  const anchorCircles = anchors
+    .map((anchor) => `<circle cx="${anchor.x}" cy="${anchor.y}" r="${anchor.r ?? 1.45}"></circle>`)
+    .join('');
+  const cutoutCircles = anchors
+    .map((anchor) => `<circle cx="${anchor.x}" cy="${anchor.y}" r="${(anchor.r ?? 1.45) + 0.2}" fill="black"></circle>`)
+    .join('');
+  const labelMarkup = (options.labels ?? [])
+    .map((label) => `<text x="${label.x}" y="${label.y}" font-size="4" fill="${stroke}" stroke="none" font-weight="700">${label.text}</text>`)
+    .join('');
+
+  return `<svg viewBox="0 0 24 24" width="${width}" height="${height}" fill="none" stroke="${stroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><defs><mask id="${maskId}" maskUnits="userSpaceOnUse"><rect x="0" y="0" width="24" height="24" fill="white"></rect>${cutoutCircles}</mask></defs><path d="${linePath}" mask="url(#${maskId})"></path>${anchorCircles}${labelMarkup}</svg>`;
+}
+
+const patternMenuIcon = renderPatternMenuIcon(
+  'pattern-menu-mask',
+  'M4 17L8 7L12 15L16 9L20 18',
+  [{ x: 4, y: 17 }, { x: 8, y: 7 }, { x: 12, y: 15 }, { x: 16, y: 9 }, { x: 20, y: 18 }],
+);
+const xabcdPatternIcon = renderPatternMenuIcon(
+  'xabcd-pattern-mask',
+  'M4 18L8 6L12 15L16 8L20 18',
+  [{ x: 4, y: 18 }, { x: 8, y: 6 }, { x: 12, y: 15 }, { x: 16, y: 8 }, { x: 20, y: 18 }],
+);
+const cypherPatternIcon = renderPatternMenuIcon(
+  'cypher-pattern-mask',
+  'M4 18L8 7L12 15L16 6L20 18',
+  [{ x: 4, y: 18 }, { x: 8, y: 7 }, { x: 12, y: 15 }, { x: 16, y: 6 }, { x: 20, y: 18 }],
+);
+const headShouldersPatternIcon = renderPatternMenuIcon(
+  'head-shoulders-pattern-mask',
+  'M3 19L6.5 9L10 14L13 3L16 14L19.5 9L22 19M2 14L22 14',
+  [
+    { x: 3, y: 19, r: 1.45 },
+    { x: 6.5, y: 9, r: 1.45 },
+    { x: 10, y: 14, r: 1.45 },
+    { x: 13, y: 3, r: 1.45 },
+    { x: 16, y: 14, r: 1.45 },
+    { x: 19.5, y: 9, r: 1.45 },
+    { x: 22, y: 19, r: 1.45 },
+  ],
+);
+const abcdPatternIcon = renderPatternMenuIcon(
+  'abcd-pattern-mask',
+  'M5 18L7 6L20 4L18 16L5 18M7 6L18 16',
+  [{ x: 5, y: 18 }, { x: 7, y: 6 }, { x: 20, y: 4 }, { x: 18, y: 16 }],
+);
+const trianglePatternIcon = renderPatternMenuIcon(
+  'triangle-pattern-mask',
+  'M4 19L4 4L21 14L4 19M4 4L8 7L13 10L21 14M4 19L8 7L10 17L13 10M10 17L21 14',
+  [{ x: 4, y: 19 }, { x: 8, y: 7 }, { x: 13, y: 10 }, { x: 10, y: 17 }],
+);
+const threeDrivesPatternIcon = renderPatternMenuIcon(
+  'three-drives-pattern-mask',
+  'M4 6L4 17L9 9L9 19L14 12L14 21L19 4M4 6L9 9L14 12L20.5 15M4 17L9 19L14 21L17 22',
+  [
+    { x: 4, y: 6, r: 1.35 },
+    { x: 4, y: 17, r: 1.35 },
+    { x: 9, y: 9, r: 1.35 },
+    { x: 9, y: 19, r: 1.35 },
+    { x: 14, y: 12, r: 1.35 },
+    { x: 14, y: 21, r: 1.35 },
+    { x: 19, y: 4, r: 1.35 },
+  ],
+);
+const elliottImpulseWaveIcon = renderPatternMenuIcon(
+  'elliott-impulse-mask',
+  'M3 17L7 8L11 14L15 4L18 11L21 6',
+  [{ x: 3, y: 17, r: 1.25 }, { x: 7, y: 8, r: 1.25 }, { x: 11, y: 14, r: 1.25 }, { x: 15, y: 4, r: 1.25 }, { x: 18, y: 11, r: 1.25 }, { x: 21, y: 6, r: 1.25 }],
+  { labels: [{ text: '1', x: 3, y: 7 }, { text: '5', x: 8, y: 6 }] },
+);
+const elliottCorrectionWaveIcon = renderPatternMenuIcon(
+  'elliott-correction-mask',
+  'M4 16L9 8L14 15L19 5',
+  [{ x: 4, y: 16, r: 1.3 }, { x: 9, y: 8, r: 1.3 }, { x: 14, y: 15, r: 1.3 }, { x: 19, y: 5, r: 1.3 }],
+  { labels: [{ text: 'A', x: 4, y: 6 }, { text: 'C', x: 15, y: 6 }] },
+);
+const elliottTriangleWaveIcon = renderPatternMenuIcon(
+  'elliott-triangle-mask',
+  'M3 17L7 7L11 15L15 9L18 16L21 11',
+  [{ x: 3, y: 17, r: 1.2 }, { x: 7, y: 7, r: 1.2 }, { x: 11, y: 15, r: 1.2 }, { x: 15, y: 9, r: 1.2 }, { x: 18, y: 16, r: 1.2 }, { x: 21, y: 11, r: 1.2 }],
+  { labels: [{ text: 'A', x: 3, y: 6 }, { text: 'E', x: 17, y: 6 }] },
+);
+const elliottDoubleComboWaveIcon = renderPatternMenuIcon(
+  'elliott-double-combo-mask',
+  'M4 16L9 8L14 16L20 8',
+  [{ x: 4, y: 16, r: 1.3 }, { x: 9, y: 8, r: 1.3 }, { x: 14, y: 16, r: 1.3 }, { x: 20, y: 8, r: 1.3 }],
+  { labels: [{ text: 'W', x: 4, y: 6 }, { text: 'Y', x: 16, y: 6 }] },
+);
+const elliottTripleComboWaveIcon = renderPatternMenuIcon(
+  'elliott-triple-combo-mask',
+  'M3 16L7 8L11 16L15 8L18 16L21 8',
+  [{ x: 3, y: 16, r: 1.25 }, { x: 7, y: 8, r: 1.25 }, { x: 11, y: 16, r: 1.25 }, { x: 15, y: 8, r: 1.25 }, { x: 18, y: 16, r: 1.25 }, { x: 21, y: 8, r: 1.25 }],
+  { labels: [{ text: 'W', x: 3, y: 6 }, { text: 'Z', x: 17, y: 6 }] },
+);
+
 type ToolboxItem = {
   id: string;
   label: string;
@@ -219,29 +329,29 @@ const tools: ToolboxTool[] = [
   {
     id: 'patterns',
     label: '패턴',
-    icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l4-10 4 8 4-6 4 9"></path><circle cx="4" cy="17" r="1.5"></circle><circle cx="8" cy="7" r="1.5"></circle><circle cx="12" cy="15" r="1.5"></circle><circle cx="16" cy="9" r="1.5"></circle><circle cx="20" cy="18" r="1.5"></circle></svg>`,
+    icon: patternMenuIcon,
     menu: {
       title: '패턴',
       sections: [
         {
           title: '차트 패턴',
           items: [
-            { id: 'xabcd-pattern', label: 'XABCD 패턴', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l4-12 4 9 4-7 4 10"></path><circle cx="4" cy="18" r="1.45"></circle><circle cx="8" cy="6" r="1.45"></circle><circle cx="12" cy="15" r="1.45"></circle><circle cx="16" cy="8" r="1.45"></circle><circle cx="20" cy="18" r="1.45"></circle></svg>` },
-            { id: 'cypher-pattern', label: '사이퍼 패턴', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l4-11 4 8 4-9 4 12"></path><circle cx="4" cy="18" r="1.45"></circle><circle cx="8" cy="7" r="1.45"></circle><circle cx="12" cy="15" r="1.45"></circle><circle cx="16" cy="6" r="1.45"></circle><circle cx="20" cy="18" r="1.45"></circle></svg>` },
-            { id: 'head-shoulders-pattern', label: '헤드 앤 숄더', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-6 4 3 3-9 3 9 4-3"></path><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="7" cy="11" r="1.4"></circle><circle cx="14" cy="5" r="1.4"></circle><circle cx="21" cy="11" r="1.4"></circle></svg>` },
-            { id: 'abcd-pattern', label: 'ABCD 패턴', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17l4-11 5 9 5-11"></path><circle cx="5" cy="17" r="1.45"></circle><circle cx="9" cy="6" r="1.45"></circle><circle cx="14" cy="15" r="1.45"></circle><circle cx="19" cy="4" r="1.45"></circle></svg>` },
-            { id: 'triangle-pattern', label: '삼각형 패턴', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18l14-12M5 6l14 12M5 18l14 0"></path><circle cx="5" cy="18" r="1.45"></circle><circle cx="5" cy="6" r="1.45"></circle><circle cx="19" cy="18" r="1.45"></circle></svg>` },
-            { id: 'three-drives-pattern', label: '쓰리 드라이브 패턴', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l3-8 4 6 3-8 4 6 4-9"></path><circle cx="3" cy="17" r="1.35"></circle><circle cx="6" cy="9" r="1.35"></circle><circle cx="10" cy="15" r="1.35"></circle><circle cx="13" cy="7" r="1.35"></circle><circle cx="17" cy="13" r="1.35"></circle><circle cx="21" cy="4" r="1.35"></circle></svg>` },
+            { id: 'xabcd-pattern', label: 'XABCD 패턴', icon: xabcdPatternIcon },
+            { id: 'cypher-pattern', label: '사이퍼 패턴', icon: cypherPatternIcon },
+            { id: 'head-shoulders-pattern', label: '헤드 앤 숄더', icon: headShouldersPatternIcon },
+            { id: 'abcd-pattern', label: 'ABCD 패턴', icon: abcdPatternIcon },
+            { id: 'triangle-pattern', label: '삼각형 패턴', icon: trianglePatternIcon },
+            { id: 'three-drives-pattern', label: '쓰리 드라이브 패턴', icon: threeDrivesPatternIcon },
           ],
         },
         {
           title: '엘리엇 파동',
           items: [
-            { id: 'elliott-impulse-wave', label: '엘리엇 충격 파동 (0·1·2·3·4·5)', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-9 4 6 4-10 3 7 3-5"></path><text x="3" y="7" font-size="4" fill="${iconStroke}">0</text><text x="8" y="6" font-size="4" fill="${iconStroke}">5</text><circle cx="3" cy="17" r="1.25"></circle><circle cx="7" cy="8" r="1.25"></circle><circle cx="11" cy="14" r="1.25"></circle><circle cx="15" cy="4" r="1.25"></circle><circle cx="18" cy="11" r="1.25"></circle><circle cx="21" cy="6" r="1.25"></circle></svg>` },
-            { id: 'elliott-correction-wave', label: '엘리엇 조정 파동 (0·A·B·C)', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-8 5 7 5-10"></path><text x="4" y="6" font-size="4" fill="${iconStroke}">0</text><text x="15" y="6" font-size="4" fill="${iconStroke}">C</text><circle cx="4" cy="16" r="1.3"></circle><circle cx="9" cy="8" r="1.3"></circle><circle cx="14" cy="15" r="1.3"></circle><circle cx="19" cy="5" r="1.3"></circle></svg>` },
-            { id: 'elliott-triangle-wave', label: '엘리엇 삼각 파동 (0·A·B·C·D·E)', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-10 4 8 4-6 3 7 3-5"></path><text x="3" y="6" font-size="4" fill="${iconStroke}">0</text><text x="17" y="6" font-size="4" fill="${iconStroke}">E</text><circle cx="3" cy="17" r="1.2"></circle><circle cx="7" cy="7" r="1.2"></circle><circle cx="11" cy="15" r="1.2"></circle><circle cx="15" cy="9" r="1.2"></circle><circle cx="18" cy="16" r="1.2"></circle><circle cx="21" cy="11" r="1.2"></circle></svg>` },
-            { id: 'elliott-double-combo-wave', label: '엘리엇 이중 콤보 파동 (0·W·X·Y)', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-8 5 8 6-8"></path><text x="4" y="6" font-size="4" fill="${iconStroke}">0</text><text x="16" y="6" font-size="4" fill="${iconStroke}">Y</text><circle cx="4" cy="16" r="1.3"></circle><circle cx="9" cy="8" r="1.3"></circle><circle cx="14" cy="16" r="1.3"></circle><circle cx="20" cy="8" r="1.3"></circle></svg>` },
-            { id: 'elliott-triple-combo-wave', label: '엘리엇 삼중 콤보 파동 (0·W·X·Y·X·Z)', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l4-8 4 8 4-8 3 8 3-8"></path><text x="3" y="6" font-size="4" fill="${iconStroke}">0</text><text x="17" y="6" font-size="4" fill="${iconStroke}">Z</text><circle cx="3" cy="16" r="1.25"></circle><circle cx="7" cy="8" r="1.25"></circle><circle cx="11" cy="16" r="1.25"></circle><circle cx="15" cy="8" r="1.25"></circle><circle cx="18" cy="16" r="1.25"></circle><circle cx="21" cy="8" r="1.25"></circle></svg>` },
+            { id: 'elliott-impulse-wave', label: '엘리엇 충격 파동 (0·1·2·3·4·5)', icon: elliottImpulseWaveIcon },
+            { id: 'elliott-correction-wave', label: '엘리엇 조정 파동 (0·A·B·C)', icon: elliottCorrectionWaveIcon },
+            { id: 'elliott-triangle-wave', label: '엘리엇 삼각 파동 (0·A·B·C·D·E)', icon: elliottTriangleWaveIcon },
+            { id: 'elliott-double-combo-wave', label: '엘리엇 이중 콤보 파동 (0·W·X·Y)', icon: elliottDoubleComboWaveIcon },
+            { id: 'elliott-triple-combo-wave', label: '엘리엇 삼중 콤보 파동 (0·W·X·Y·X·Z)', icon: elliottTripleComboWaveIcon },
           ],
         },
       ],
