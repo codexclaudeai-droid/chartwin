@@ -56,6 +56,26 @@ function drawSeries(
   ctx.stroke();
 }
 
+function drawHandle(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+  lineWidth: number,
+  radius = 6,
+): void {
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = color;
+  ctx.fillStyle = '#0f172a';
+  ctx.lineWidth = Math.max(1.2, lineWidth);
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
 export function renderDrawingAnchoredVwap(params: RenderDrawingAnchoredVwapParams): void {
   const {
     ctx,
@@ -161,14 +181,21 @@ export function renderDrawingAnchoredVwap(params: RenderDrawingAnchoredVwapParam
   const anchorPoint = plot[0] ?? null;
   const anchorX = xForIndex(shape.a.index, metrics.totalSp, metrics.candleW);
   const anchorY = anchorPoint ? metrics.getY(anchorPoint.vwap) : metrics.getY(shape.a.price);
-  ctx.save();
-  ctx.setLineDash([]);
-  ctx.strokeStyle = strokeColor;
-  ctx.fillStyle = '#0f172a';
-  ctx.lineWidth = Math.max(1.2, strokeWidth);
-  ctx.beginPath();
-  ctx.arc(anchorX, anchorY, 7.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
+  drawHandle(ctx, anchorX, anchorY, strokeColor, strokeWidth);
+
+  if (shapeId !== selectedDrawingId || centerSeries.length < 2) return;
+
+  const midIndex = Math.floor((centerSeries.length - 1) / 2);
+  const centerMid = centerSeries[midIndex];
+  if (centerMid) {
+    drawHandle(ctx, centerMid.x, centerMid.y, strokeColor, strokeWidth, 3);
+  }
+
+  settings.bands.forEach((band, bandIndex) => {
+    if (!band.enabled || !band.visible) return;
+    const bandMid = bandSeries[bandIndex]?.[midIndex];
+    if (!bandMid) return;
+    drawHandle(ctx, bandMid.x, bandMid.upperY, band.color, Math.max(1, strokeWidth * 0.9), 3);
+    drawHandle(ctx, bandMid.x, bandMid.lowerY, band.color, Math.max(1, strokeWidth * 0.9), 3);
+  });
 }

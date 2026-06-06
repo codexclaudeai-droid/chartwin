@@ -4,6 +4,7 @@ export interface IndicatorCandle {
   low: number;
   close: number;
   volume: number;
+  time?: number;
 }
 
 export type NullableSeries = Array<number | null>;

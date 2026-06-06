@@ -213,6 +213,15 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
 
   container.addEventListener('mousemove', updateHoveredPanelFromMouse);
   container.addEventListener('mouseleave', () => applyHoveredPanel(null));
+  container.addEventListener('chart-open-indicator-settings', (event) => {
+    const detail = (event as CustomEvent<{ indicatorKey?: string }>).detail;
+    const indicatorKey = detail?.indicatorKey;
+    if (!indicatorKey) return;
+    openSettingsPopup(overlay, chart, indicatorKey, () => {
+      renderOverlay();
+      onOverlayChange?.();
+    });
+  });
   container.addEventListener('touchstart', (event) => {
     const target = event.target as Node | null;
     if (!target) return;
@@ -721,7 +730,22 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         atr:      () => `ATR(${i.atr?.period ?? 14})`,
         obv:      () => 'OBV',
         cvd:      () => 'CVD',
-        vwap:     () => 'VWAP',
+        vwap:     () => {
+          const anchor = String(i.vwap?.anchorPeriod ?? 'session');
+          const labels: Record<string, string> = {
+            all: 'All',
+            session: 'Session',
+            week: 'Week',
+            month: 'Month',
+            quarter: 'Quarter',
+            year: 'Year',
+            decade: 'Decade',
+            century: 'Century',
+          };
+          const timezone = String(i.vwap?.sessionTimezone ?? 'auto');
+          const timezoneLabel = timezone === 'auto' ? 'Auto' : timezone.split('/').pop()?.replace('_', ' ') ?? timezone;
+          return `VWAP ${labels[anchor] ?? 'Session'} ${timezoneLabel}`;
+        },
         williamsFractal: () => `Fractal(${Number(i.williamsFractal?.span ?? 2)})`,
         parabolicSar: () => `SAR(${Number(i.parabolicSar?.start ?? 0.02)}, ${Number(i.parabolicSar?.increment ?? 0.02)}, ${Number(i.parabolicSar?.maximum ?? 0.2)})`,
         smartMoneyConcepts: () => `SMC(${Number(i.smartMoneyConcepts?.swingsLength ?? i.smartMoneyConcepts?.swingLength ?? 50)}, ${Number(i.smartMoneyConcepts?.internalOrderBlocksSize ?? 5)}, ${Number(i.smartMoneyConcepts?.swingOrderBlocksSize ?? 5)})`,

@@ -2079,6 +2079,33 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
   const listWrap = document.createElement('div');
   body.appendChild(listWrap);
 
+  const getIndicatorStyleKeys = (targetKey: string): string[] => {
+    const indicators = chart.config.indicators as any;
+    if (targetKey === 'ma') {
+      const maLines = Array.isArray(indicators.ma?.lines) ? indicators.ma.lines : [];
+      return maLines.map((line: any, index: number) => String(line.id || `ma${index + 1}`));
+    }
+    if (targetKey === 'ema') {
+      const emaLines = Array.isArray(indicators.ema?.lines) ? indicators.ema.lines : [];
+      return emaLines.map((line: any, index: number) => String(line.id || `ema${index + 1}`));
+    }
+    if (targetKey === 'bb') {
+      const bbLines = Array.isArray(indicators.bb?.lines)
+        ? indicators.bb.lines
+        : [{ id: 'bb1' }];
+      return bbLines.flatMap((line: any, index: number) => {
+        const id = String(line.id || `bb${index + 1}`);
+        return [`${id}Upper`, `${id}Middle`, `${id}Lower`];
+      });
+    }
+    return (INDICATOR_STYLE_TARGETS[targetKey] ?? []).map((item) => item.key);
+  };
+
+  const restoreIndicatorStyleVisibility = (targetKey: string) => {
+    const styleKeys = getIndicatorStyleKeys(targetKey);
+    styleKeys.forEach((styleKey) => chart.setIndicatorLineVisible?.(styleKey, true));
+  };
+
   const render = (q: string) => {
     listWrap.innerHTML = '';
     INDICATOR_CATALOG
@@ -2136,6 +2163,7 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
               chart.addEmaLine?.();
             }
             (chart.config.indicators as any)[ind.id].show = nextOn;
+            if (nextOn) restoreIndicatorStyleVisibility(ind.id);
             if (ind.panel === 'sub') {
               const hiddenPanels = new Set<string>(((chart.config.panelState as any).hiddenPanels ?? []) as string[]);
               hiddenPanels.delete(ind.id);
@@ -2178,6 +2206,11 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
       .ind-info-button svg { width:15px; height:15px; display:block; }
       .ind-info-tooltip { display:none; position:absolute; left:0; bottom:calc(100% + 8px); transform:translateX(-18px); width:260px; max-width:calc(100vw - 32px); background:#2b2b2b; color:#f5f7fb; border-radius:6px; padding:8px 10px; font-size:11px; line-height:1.45; font-weight:600; text-align:left; white-space:normal; box-shadow:0 8px 24px rgba(0,0,0,0.38); z-index:10020; pointer-events:none; box-sizing:border-box; }
       .ind-info-button:hover .ind-info-tooltip, .ind-info-button:focus-visible .ind-info-tooltip { display:block; }
+      .vwap-opacity-slider { -webkit-appearance:none; appearance:none; height:14px; border-radius:999px; background:var(--vwap-opacity-track); outline:none; cursor:pointer; }
+      .vwap-opacity-slider::-webkit-slider-runnable-track { height:14px; border-radius:999px; background:var(--vwap-opacity-track); border:none; }
+      .vwap-opacity-slider::-moz-range-track { height:14px; border-radius:999px; background:var(--vwap-opacity-track); border:none; }
+      .vwap-opacity-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:21px; height:21px; border-radius:50%; background:#ffffff; border:3px solid #111111; box-shadow:0 1px 3px rgba(0,0,0,0.35); margin-top:-3.5px; }
+      .vwap-opacity-slider::-moz-range-thumb { width:17px; height:17px; border-radius:50%; background:#ffffff; border:3px solid #111111; box-shadow:0 1px 3px rgba(0,0,0,0.35); }
     `;
     document.head.appendChild(styleEl);
   }
@@ -2289,6 +2322,16 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     internalOrderBlocksSize: 'Internal Order Blocks',
     swingOrderBlocksSize: 'Swing Order Blocks',
     fairValueGapsExtend: 'Extend FVG',
+    hideOnDailyOrAbove: 'Hide on 1D and above',
+    anchorPeriod: 'Anchor Period',
+    source: 'Source',
+    offset: 'Offset',
+    sessionTimezone: 'Session Timezone',
+    bandMode: 'Band Calculation Mode',
+    bandFill: 'Band Area',
+    bandMultiplier1: 'Multiplier #1',
+    bandMultiplier2: 'Multiplier #2',
+    bandMultiplier3: 'Multiplier #3',
     fast: 'Fast', slow: 'Slow', signal: 'Signal',
     kPeriod: 'K 기간', dPeriod: 'D 기간',
     tenkan: '전환선', kijun: '기준선', senkou: '선행스팬 B', pct: '편차 (%)',
@@ -2297,6 +2340,16 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
   };
   const INFO_TEXTS: Record<string, string> = {
     'smartMoneyConcepts.orderBlockFilter': '변동성이 과도한 오더블록을 걸러내는 방식입니다. 데이터가 적을 때는 누적 평균 범위(Cumulative Mean Range) 방식을 사용하는 것을 권장합니다.',
+    'vwap.hideOnDailyOrAbove': '체크하면 VWAP를 인트라데이 타임프레임에서만 표시합니다.',
+    'vwap.anchorPeriod': 'VWAP 계산이 리셋되는 주기입니다.',
+    'vwap.source': 'VWAP 계산에 사용할 가격 소스입니다. 기본값은 hlc3입니다.',
+    'vwap.offset': 'VWAP 라인을 현재 위치 기준 앞/뒤로 이동하는 바 수입니다. 기본값은 0입니다.',
+    'vwap.sessionTimezone': 'Day/Week/Month/Year 리셋에 사용할 거래소 세션 시간대입니다. Auto Exchange는 현재 심볼에 맞는 거래소 시간대를 자동 적용합니다.',
+    'vwap.bandMode': '밴드 폭을 계산하는 방식입니다. 표준편차는 가격 분산을, 퍼센트는 VWAP 기준 비율을 사용합니다.',
+    'vwap.bandFill': '밴드 영역 채움 표시, 색상, 투명도를 설정합니다.',
+    'vwap.bandMultiplier1': '1번 상단/하단 밴드의 폭 배수입니다.',
+    'vwap.bandMultiplier2': '2번 상단/하단 밴드의 폭 배수입니다.',
+    'vwap.bandMultiplier3': '3번 상단/하단 밴드의 폭 배수입니다.',
   };
   const getInfoText = (field: string): string => INFO_TEXTS[`${popupKey}.${field}`] ?? INFO_TEXTS[field] ?? '';
   const createInfoIcon = (text: string): HTMLElement | null => {
@@ -2332,6 +2385,20 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     if (!m) return '#ffffff';
     const toHex = (n: string) => Number(n).toString(16).padStart(2, '0');
     return `#${toHex(m[1])}${toHex(m[2])}${toHex(m[3])}`;
+  };
+  const getColorOpacityPct = (source: string, fallbackPct = 100): number => {
+    const m = source.match(/rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*([0-9.]+))?\s*\)/i);
+    if (!m) return fallbackPct;
+    if (m[1] == null) return 100;
+    return Math.round(Math.max(0, Math.min(1, Number(m[1]) || 0)) * 100);
+  };
+  const hexToRgba = (hex: string, opacityPct: number): string => {
+    const safe = /^#[0-9a-f]{6}$/i.test(hex) ? hex : '#ffffff';
+    const r = parseInt(safe.slice(1, 3), 16);
+    const g = parseInt(safe.slice(3, 5), 16);
+    const b = parseInt(safe.slice(5, 7), 16);
+    const alpha = Math.max(0, Math.min(100, opacityPct)) / 100;
+    return alpha >= 1 ? safe : `rgba(${r},${g},${b},${Number(alpha.toFixed(3))})`;
   };
   const getDashMode = (dash: number[] | undefined): 'solid' | 'dashed' | 'dotted' => {
     if (!dash || !dash.length) return 'solid';
@@ -2748,6 +2815,424 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
       renderBbRows();
     });
     popup.appendChild(addBtn);
+    appendPopup();
+    return;
+  }
+
+  if (popupKey === 'vwap') {
+    popup.style.minWidth = 'min(390px, calc(100vw - 16px))';
+    if (!['session', 'week', 'month', 'quarter', 'year', 'decade', 'century', 'all'].includes(String(ind.anchorPeriod ?? ''))) {
+      ind.anchorPeriod = 'session';
+    }
+    if (!['open', 'high', 'low', 'close', 'hl2', 'hlc3', 'ohlc4'].includes(String(ind.source ?? ''))) ind.source = 'hlc3';
+    if (!Number.isFinite(Number(ind.offset))) ind.offset = 0;
+    if (!ind.sessionTimezone) ind.sessionTimezone = 'auto';
+    if (typeof ind.hideOnDailyOrAbove !== 'boolean') ind.hideOnDailyOrAbove = false;
+    if (!['standard-deviation', 'percentage'].includes(String(ind.bandMode ?? ''))) ind.bandMode = 'standard-deviation';
+    if (typeof ind.showFill !== 'boolean') ind.showFill = true;
+    if (!/^#[0-9a-f]{6}$/i.test(String(ind.fillColor ?? ''))) ind.fillColor = '#ff9800';
+    if (!Number.isFinite(Number(ind.fillOpacity))) ind.fillOpacity = 8;
+    [1, 2, 3].forEach((bandNumber) => {
+      if (!Number.isFinite(Number(ind[`bandMultiplier${bandNumber}`]))) ind[`bandMultiplier${bandNumber}`] = bandNumber;
+      if (typeof ind[`showUpperBand${bandNumber}`] !== 'boolean') ind[`showUpperBand${bandNumber}`] = bandNumber === 1;
+      if (typeof ind[`showLowerBand${bandNumber}`] !== 'boolean') ind[`showLowerBand${bandNumber}`] = bandNumber === 1;
+    });
+
+    const sync = () => {
+      chart.draw();
+      onUpdate();
+    };
+    const createRow = () => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;';
+      return row;
+    };
+    const appendSectionTitle = (title: string) => {
+      const heading = document.createElement('div');
+      heading.textContent = title;
+      heading.style.cssText = 'margin:12px 0 8px;color:#7f8796;font-size:11px;font-weight:800;text-transform:uppercase;';
+      popup.appendChild(heading);
+    };
+    const closeColorPopovers = () => {
+      popup.querySelectorAll<HTMLElement>('[data-vwap-color-open="1"]').forEach((el) => {
+        el.dataset.vwapColorOpen = '0';
+      });
+      document.querySelectorAll<HTMLElement>('.vwap-color-popover').forEach((el) => el.remove());
+    };
+    const createColorBox = (initialColor: string, onApply: (hex: string, opacityPct: number) => void, opacityPct = 100) => {
+      let colorValue = toHexColor(initialColor);
+      let opacityValue = Math.max(0, Math.min(100, opacityPct));
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.title = '색상/투명도';
+      btn.style.cssText = 'width:30px;height:24px;border:1px solid #363a45;border-radius:4px;background:#131722;padding:3px;cursor:pointer;position:relative;';
+      const swatch = document.createElement('span');
+      swatch.style.cssText = 'display:block;width:100%;height:100%;border-radius:2px;';
+      btn.appendChild(swatch);
+      const render = () => {
+        swatch.style.background = hexToRgba(colorValue, opacityValue);
+      };
+      btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const wasOpen = btn.dataset.vwapColorOpen === '1';
+        closeColorPopovers();
+        if (wasOpen) return;
+        btn.dataset.vwapColorOpen = '1';
+        const pop = document.createElement('div');
+        pop.className = 'vwap-color-popover';
+        pop.style.cssText = 'position:fixed;left:0;top:0;z-index:10030;width:300px;max-height:calc(100vh - 16px);overflow:auto;box-sizing:border-box;background:#ffffff;border:1px solid #d7d7d7;border-radius:4px;box-shadow:0 12px 28px rgba(0,0,0,0.28);padding:10px;display:flex;flex-direction:column;gap:10px;color:#555;font-family:Segoe UI,Arial,sans-serif;';
+        const palette = [
+          ['#ffffff', '#d9d9d9', '#b7b7b7', '#969696', '#777777', '#5f5f5f', '#474747', '#303030', '#171717', '#000000'],
+          ['#ff3030', '#ff9800', '#ffeb3b', '#2e7d32', '#009688', '#00acc1', '#2962ff', '#673ab7', '#9c27b0', '#e91e63'],
+          ['#ffc7c7', '#ffe0a3', '#fff8c4', '#c8e6c9', '#b2dfdb', '#b2ebf2', '#bbdefb', '#d1c4e9', '#e1bee7', '#f8bbd0'],
+          ['#ff9e9e', '#ffcc80', '#fff59d', '#a5d6a7', '#80cbc4', '#80deea', '#90caf9', '#b39ddb', '#ce93d8', '#f48fb1'],
+          ['#ff6b6b', '#ffb74d', '#fff176', '#81c784', '#4db6ac', '#4dd0e1', '#64b5f6', '#9575cd', '#ba68c8', '#f06292'],
+          ['#ff4757', '#ffa726', '#ffee58', '#66bb6a', '#26a69a', '#26c6da', '#4285f4', '#7e57c2', '#ab47bc', '#ec407a'],
+          ['#b71c1c', '#ef6c00', '#f9a825', '#2e7d32', '#00695c', '#00838f', '#1e40c7', '#512da8', '#8e24aa', '#c2185b'],
+          ['#8e1b24', '#e65100', '#f57f17', '#1b5e20', '#003c34', '#006064', '#0d2c91', '#311b92', '#4a148c', '#880e4f'],
+        ];
+        const opacityRow = document.createElement('div');
+        opacityRow.style.cssText = 'display:grid;grid-template-columns:1fr 46px;align-items:center;gap:10px;';
+        const opacityInput = document.createElement('input');
+        opacityInput.type = 'range';
+        opacityInput.className = 'vwap-opacity-slider';
+        opacityInput.min = '0';
+        opacityInput.max = '100';
+        opacityInput.step = '1';
+        opacityInput.value = String(opacityValue);
+        opacityInput.style.cssText = 'width:100%;';
+        const opacityText = document.createElement('span');
+        opacityText.style.cssText = 'height:30px;border:1px solid #d6d6d6;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#222;background:#fff;';
+        const updateOpacityTrack = () => {
+          const transparentColor = hexToRgba(colorValue, 0);
+          const fullOpacityColor = hexToRgba(colorValue, 100);
+          const track = [
+            `linear-gradient(90deg, ${transparentColor} 0%, ${fullOpacityColor} 100%)`,
+            'linear-gradient(45deg,#d9d9d9 25%,transparent 25%) 0 0/12px 12px',
+            'linear-gradient(45deg,transparent 75%,#d9d9d9 75%) 0 0/12px 12px',
+            'linear-gradient(45deg,transparent 75%,#d9d9d9 75%) 6px 6px/12px 12px',
+            'linear-gradient(45deg,#d9d9d9 25%,#ffffff 25%) 6px 6px/12px 12px',
+          ].join(',');
+          opacityInput.style.setProperty('--vwap-opacity-track', track);
+          opacityInput.style.background = track;
+        };
+        const applyNext = () => {
+          opacityValue = Math.max(0, Math.min(100, Number(opacityInput.value) || 0));
+          opacityText.textContent = `${opacityValue}%`;
+          updateOpacityTrack();
+          render();
+          onApply(colorValue, opacityValue);
+          sync();
+        };
+        const applyColor = (nextColor: string) => {
+          colorValue = nextColor;
+          updateOpacityTrack();
+          applyNext();
+          swatches.querySelectorAll<HTMLElement>('[data-vwap-color-swatch]').forEach((item) => {
+            const selected = item.dataset.color?.toLowerCase() === colorValue.toLowerCase();
+            item.style.outline = selected ? '2px solid #2e7d32' : 'none';
+            item.style.outlineOffset = selected ? '2px' : '0';
+          });
+        };
+        const swatches = document.createElement('div');
+        swatches.style.cssText = 'display:grid;grid-template-columns:repeat(10,23px);gap:5.5px 4px;width:max-content;max-width:100%;';
+        palette.flat().forEach((color) => {
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.dataset.vwapColorSwatch = '1';
+          item.dataset.color = color;
+          item.style.cssText = `width:23px;height:23px;border:1px solid ${color === '#ffffff' ? '#d5d5d5' : 'transparent'};border-radius:3px;background:${color};padding:0;cursor:pointer;box-sizing:border-box;`;
+          if (color.toLowerCase() === colorValue.toLowerCase()) {
+            item.style.outline = '2px solid #2e7d32';
+            item.style.outlineOffset = '2px';
+          }
+          item.addEventListener('click', (colorEvent) => {
+            colorEvent.preventDefault();
+            colorEvent.stopPropagation();
+            applyColor(color);
+          });
+          swatches.appendChild(item);
+        });
+        const customWrap = document.createElement('span');
+        customWrap.style.cssText = 'position:relative;display:block;width:24px;height:24px;';
+        const customButton = document.createElement('button');
+        customButton.type = 'button';
+        customButton.title = '사용자 색상';
+        customButton.tabIndex = -1;
+        customButton.style.cssText = 'width:24px;height:24px;border:none;background:#fff;color:#111;font-size:26px;line-height:1;cursor:pointer;padding:0;text-align:left;';
+        customButton.textContent = '+';
+        const hiddenColorInput = document.createElement('input');
+        hiddenColorInput.type = 'color';
+        hiddenColorInput.value = colorValue;
+        hiddenColorInput.title = '사용자 색상';
+        hiddenColorInput.style.cssText = 'position:absolute;inset:0;width:24px;height:24px;opacity:0;cursor:pointer;padding:0;border:none;';
+        hiddenColorInput.addEventListener('click', (colorEvent) => {
+          colorEvent.stopPropagation();
+        });
+        hiddenColorInput.addEventListener('pointerdown', (colorEvent) => {
+          colorEvent.stopPropagation();
+        });
+        hiddenColorInput.addEventListener('input', () => applyColor(hiddenColorInput.value));
+        hiddenColorInput.addEventListener('change', () => applyColor(hiddenColorInput.value));
+        customWrap.append(customButton, hiddenColorInput);
+        const divider = document.createElement('div');
+        divider.style.cssText = 'height:1px;background:#d8d8d8;margin:3px 0 2px;';
+        const opacityLabel = document.createElement('div');
+        opacityLabel.textContent = '투명도';
+        opacityLabel.style.cssText = 'font-size:13px;color:#777;margin-top:1px;';
+        opacityText.textContent = `${opacityValue}%`;
+        updateOpacityTrack();
+        opacityInput.addEventListener('input', applyNext);
+        pop.addEventListener('click', (innerEvent) => innerEvent.stopPropagation());
+        opacityRow.append(opacityInput, opacityText);
+        pop.append(swatches, divider, customWrap, opacityLabel, opacityRow);
+        document.body.appendChild(pop);
+        const buttonRect = btn.getBoundingClientRect();
+        const popRect = pop.getBoundingClientRect();
+        const margin = 8;
+        const left = Math.max(margin, Math.min(window.innerWidth - popRect.width - margin, buttonRect.right - popRect.width));
+        const top = Math.max(margin, Math.min(window.innerHeight - popRect.height - margin, buttonRect.bottom + 6));
+        pop.style.left = `${left}px`;
+        pop.style.top = `${top}px`;
+      });
+      render();
+      return btn;
+    };
+    popup.addEventListener('click', closeColorPopovers);
+
+    const hideRow = createRow();
+    const hideLabel = createSettingLabel(LABELS.hideOnDailyOrAbove, 'hideOnDailyOrAbove');
+    hideLabel.style.color = '#c0c4cc';
+    const hideSwitch = createSwitch(Boolean(ind.hideOnDailyOrAbove), (next) => {
+      ind.hideOnDailyOrAbove = next;
+      sync();
+    }).button;
+    hideRow.append(hideLabel, hideSwitch);
+    popup.appendChild(hideRow);
+
+    const anchorRow = createRow();
+    const anchorLabel = createSettingLabel(LABELS.anchorPeriod, 'anchorPeriod');
+    anchorLabel.style.color = '#c0c4cc';
+    const anchorSelect = document.createElement('select');
+    anchorSelect.style.cssText = 'width:150px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:5px 7px;font-size:12px;';
+    anchorSelect.innerHTML = [
+      '<option value="all">All Data</option>',
+      '<option value="session">Session</option>',
+      '<option value="week">Week</option>',
+      '<option value="month">Month</option>',
+      '<option value="quarter">Quarter</option>',
+      '<option value="year">Year</option>',
+      '<option value="decade">Decade</option>',
+      '<option value="century">Century</option>',
+    ].join('');
+    anchorSelect.value = String(ind.anchorPeriod ?? 'session');
+    anchorRow.append(anchorLabel, anchorSelect);
+    popup.appendChild(anchorRow);
+
+    anchorSelect.addEventListener('change', () => {
+      ind.anchorPeriod = anchorSelect.value;
+      sync();
+    });
+
+    const sourceRow = createRow();
+    const sourceLabel = createSettingLabel(LABELS.source, 'source');
+    sourceLabel.style.color = '#c0c4cc';
+    const sourceSelect = document.createElement('select');
+    sourceSelect.style.cssText = 'width:150px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:5px 7px;font-size:12px;';
+    sourceSelect.innerHTML = [
+      '<option value="hlc3">hlc3</option>',
+      '<option value="hl2">hl2</option>',
+      '<option value="ohlc4">ohlc4</option>',
+      '<option value="close">close</option>',
+      '<option value="open">open</option>',
+      '<option value="high">high</option>',
+      '<option value="low">low</option>',
+    ].join('');
+    sourceSelect.value = String(ind.source ?? 'hlc3');
+    sourceSelect.addEventListener('change', () => {
+      ind.source = sourceSelect.value;
+      sync();
+    });
+    sourceRow.append(sourceLabel, sourceSelect);
+    popup.appendChild(sourceRow);
+
+    const offsetRow = createRow();
+    const offsetLabel = createSettingLabel(LABELS.offset, 'offset');
+    offsetLabel.style.color = '#c0c4cc';
+    const offsetInput = document.createElement('input');
+    offsetInput.type = 'number';
+    offsetInput.min = '-500';
+    offsetInput.max = '500';
+    offsetInput.step = '1';
+    offsetInput.value = String(Math.trunc(Number(ind.offset) || 0));
+    offsetInput.style.cssText = 'width:86px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:4px 7px;text-align:right;font-size:12px;box-sizing:border-box;';
+    offsetInput.addEventListener('change', () => {
+      const next = Math.max(-500, Math.min(500, Math.trunc(Number(offsetInput.value) || 0)));
+      ind.offset = next;
+      offsetInput.value = String(next);
+      sync();
+    });
+    offsetRow.append(offsetLabel, withTouchStepper(offsetInput));
+    popup.appendChild(offsetRow);
+
+    const timezoneRow = createRow();
+    const timezoneLabel = createSettingLabel(LABELS.sessionTimezone, 'sessionTimezone');
+    timezoneLabel.style.color = '#c0c4cc';
+    const timezoneSelect = document.createElement('select');
+    timezoneSelect.style.cssText = 'width:150px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:5px 7px;font-size:12px;';
+    timezoneSelect.innerHTML = [
+      '<option value="auto">Auto Exchange</option>',
+      '<option value="UTC">UTC</option>',
+      '<option value="America/New_York">New York</option>',
+      '<option value="America/Chicago">Chicago</option>',
+      '<option value="Asia/Seoul">Seoul</option>',
+      '<option value="Asia/Hong_Kong">Hong Kong</option>',
+      '<option value="Asia/Tokyo">Tokyo</option>',
+      '<option value="Europe/London">London</option>',
+    ].join('');
+    timezoneSelect.value = String(ind.sessionTimezone ?? 'auto');
+    timezoneSelect.addEventListener('change', () => {
+      ind.sessionTimezone = timezoneSelect.value;
+      sync();
+    });
+    timezoneRow.append(timezoneLabel, timezoneSelect);
+    popup.appendChild(timezoneRow);
+
+    appendSectionTitle('Bands Settings');
+
+    const bandModeRow = createRow();
+    const bandModeLabel = createSettingLabel(LABELS.bandMode, 'bandMode');
+    bandModeLabel.style.color = '#c0c4cc';
+    const bandModeSelect = document.createElement('select');
+    bandModeSelect.style.cssText = 'width:150px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:5px 7px;font-size:12px;';
+    bandModeSelect.innerHTML = [
+      '<option value="standard-deviation">Standard Deviation</option>',
+      '<option value="percentage">Percentage</option>',
+    ].join('');
+    bandModeSelect.value = String(ind.bandMode ?? 'standard-deviation');
+    bandModeSelect.addEventListener('change', () => {
+      ind.bandMode = bandModeSelect.value;
+      sync();
+    });
+    bandModeRow.append(bandModeLabel, bandModeSelect);
+    popup.appendChild(bandModeRow);
+
+    const fillRow = createRow();
+    const fillLabel = createSettingLabel(LABELS.bandFill, 'bandFill');
+    fillLabel.style.color = '#c0c4cc';
+    const fillControls = document.createElement('div');
+    fillControls.style.cssText = 'display:flex;align-items:center;gap:8px;position:relative;';
+    const fillSwitch = createSwitch(Boolean(ind.showFill), (next) => {
+      ind.showFill = next;
+      sync();
+    }, { on: '밴드 영역 숨기기', off: '밴드 영역 보이기' }).button;
+    const fillColor = createColorBox(String(ind.fillColor ?? '#ff9800'), (hex, opacityPct) => {
+      ind.fillColor = hex;
+      ind.fillOpacity = opacityPct;
+      fillHint.textContent = `${opacityPct}%`;
+    }, Math.max(0, Math.min(100, Number(ind.fillOpacity ?? 8) || 0)));
+    const fillHint = document.createElement('span');
+    fillHint.textContent = `${Math.max(0, Math.min(100, Number(ind.fillOpacity ?? 8) || 0))}%`;
+    fillHint.style.cssText = 'font-size:11px;color:#7f8796;font-weight:700;min-width:22px;text-align:right;';
+    fillControls.append(fillSwitch, fillColor, fillHint);
+    fillRow.append(fillLabel, fillControls);
+    popup.appendChild(fillRow);
+
+    appendSectionTitle('Line Style');
+
+    const lineStyleRows = document.createElement('div');
+    lineStyleRows.style.cssText = 'display:flex;flex-direction:column;gap:7px;margin-bottom:10px;';
+    popup.appendChild(lineStyleRows);
+
+    const makeLineStyleRow = (
+      labelText: string,
+      styleKey: string,
+      fallbackColor: string,
+      fallbackWidth: number,
+      fallbackDash: number[] = [],
+    ) => {
+      const style = getLineStyle(chart.config.panelState, styleKey, {
+        color: fallbackColor,
+        width: fallbackWidth,
+        dash: fallbackDash,
+      });
+      const row = document.createElement('div');
+      row.style.cssText = 'display:grid;grid-template-columns:minmax(78px,1fr) 34px 58px 78px;align-items:center;gap:8px;';
+      const label = document.createElement('span');
+      label.textContent = labelText;
+      label.style.cssText = 'color:#c0c4cc;font-size:12px;';
+      const colorWrap = document.createElement('div');
+      colorWrap.style.cssText = 'position:relative;display:flex;';
+      const colorButton = createColorBox(style.color, (hex, opacityPct) => {
+        chart.setIndicatorStyle(styleKey, { color: hexToRgba(hex, opacityPct) });
+      }, getColorOpacityPct(style.color, 100));
+      colorWrap.appendChild(colorButton);
+      const widthInput = document.createElement('input');
+      widthInput.type = 'number';
+      widthInput.min = '1';
+      widthInput.max = '6';
+      widthInput.step = '0.5';
+      widthInput.value = String(style.width ?? fallbackWidth);
+      widthInput.style.cssText = 'width:58px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:4px 6px;text-align:right;font-size:12px;box-sizing:border-box;';
+      widthInput.addEventListener('change', () => {
+        const nextWidth = Math.max(1, Math.min(6, Number(widthInput.value) || fallbackWidth));
+        widthInput.value = String(nextWidth);
+        chart.setIndicatorStyle(styleKey, { width: nextWidth });
+        sync();
+      });
+      const modePicker = createLineModePicker(getDashMode(style.dash), (nextMode) => {
+        chart.setIndicatorStyle(styleKey, { dash: toDash(nextMode) });
+        sync();
+      });
+      row.append(label, colorWrap, withTouchStepper(widthInput), modePicker);
+      lineStyleRows.appendChild(row);
+    };
+
+    makeLineStyleRow('VWAP', 'vwap', '#ff9800', 1.5);
+    [0, 1, 2].forEach((bandIndex) => {
+      const bandNumber = bandIndex + 1;
+      const fallbackColor = bandIndex === 0 ? 'rgba(255,152,0,0.62)' : bandIndex === 1 ? 'rgba(255,193,7,0.52)' : 'rgba(255,214,10,0.45)';
+      const fallbackDash = bandIndex === 0 ? [] : bandIndex === 1 ? [5, 4] : [2, 3];
+      makeLineStyleRow(`Upper #${bandNumber}`, `vwapUpper${bandNumber}`, fallbackColor, 1, fallbackDash);
+      makeLineStyleRow(`Lower #${bandNumber}`, `vwapLower${bandNumber}`, fallbackColor, 1, fallbackDash);
+    });
+
+    [1, 2, 3].forEach((bandNumber) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:grid;grid-template-columns:minmax(88px,1fr) 42px 42px 86px;align-items:center;gap:8px;margin-bottom:8px;';
+      const label = createSettingLabel(LABELS[`bandMultiplier${bandNumber}`], `bandMultiplier${bandNumber}`);
+      label.style.color = '#c0c4cc';
+
+      const upperSwitch = createSwitch(Boolean(ind[`showUpperBand${bandNumber}`]), (next) => {
+        ind[`showUpperBand${bandNumber}`] = next;
+        sync();
+      }, { on: `상단 #${bandNumber} 감추기`, off: `상단 #${bandNumber} 보이기` }).button;
+      upperSwitch.title = `Upper #${bandNumber}`;
+
+      const lowerSwitch = createSwitch(Boolean(ind[`showLowerBand${bandNumber}`]), (next) => {
+        ind[`showLowerBand${bandNumber}`] = next;
+        sync();
+      }, { on: `하단 #${bandNumber} 감추기`, off: `하단 #${bandNumber} 보이기` }).button;
+      lowerSwitch.title = `Lower #${bandNumber}`;
+
+      const multiplierInput = document.createElement('input');
+      multiplierInput.type = 'number';
+      multiplierInput.min = '0';
+      multiplierInput.step = '0.1';
+      multiplierInput.value = String(Number(ind[`bandMultiplier${bandNumber}`] ?? bandNumber));
+      multiplierInput.style.cssText = 'width:86px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:4px 7px;text-align:right;font-size:12px;box-sizing:border-box;';
+      multiplierInput.addEventListener('change', () => {
+        const next = Math.max(0, Number(multiplierInput.value) || bandNumber);
+        ind[`bandMultiplier${bandNumber}`] = next;
+        multiplierInput.value = String(next);
+        sync();
+      });
+
+      row.append(label, upperSwitch, lowerSwitch, withTouchStepper(multiplierInput));
+      popup.appendChild(row);
+    });
+
     appendPopup();
     return;
   }

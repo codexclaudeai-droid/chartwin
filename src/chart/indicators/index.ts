@@ -31,7 +31,16 @@ export {
   type SmartMoneyConceptsStructureScope,
 } from './smart-money-concepts.ts';
 export { calculateStochastic, type StochasticResult } from './stochastic.ts';
-export { calculateCvd, calculateVwap } from './volume.ts';
+export {
+  calculateCvd,
+  calculateVwap,
+  calculateVwapWithBands,
+  type VwapAnchorPeriod,
+  type VwapBandMode,
+  type VwapBands,
+  type VwapOptions,
+  type VwapResult,
+} from './volume.ts';
 export {
   buildVpvrProfile,
   calculateVpvrLayout,

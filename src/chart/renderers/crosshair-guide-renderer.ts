@@ -8,6 +8,7 @@ export interface RenderCrosshairGuideParams {
   y: number;
   pointerMode: PointerMode;
   useBlueEditGuide: boolean;
+  hideCenterMarker?: boolean;
 }
 
 export function renderCrosshairGuide(params: RenderCrosshairGuideParams): void {
@@ -19,6 +20,7 @@ export function renderCrosshairGuide(params: RenderCrosshairGuideParams): void {
     y,
     pointerMode,
     useBlueEditGuide,
+    hideCenterMarker = false,
   } = params;
   const guideLineColor = useBlueEditGuide ? 'rgba(47,108,255,0.90)' : 'rgba(214,219,233,0.65)';
   const guideCenterColor = useBlueEditGuide ? 'rgba(47,108,255,0.98)' : 'rgba(255,255,255,0.92)';
@@ -34,6 +36,8 @@ export function renderCrosshairGuide(params: RenderCrosshairGuideParams): void {
   ctx.lineTo(width, y);
   ctx.stroke();
   ctx.restore();
+
+  if (hideCenterMarker) return;
 
   ctx.save();
   ctx.strokeStyle = guideCenterColor;

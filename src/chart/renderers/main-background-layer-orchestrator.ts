@@ -5,6 +5,7 @@ import type {
   IchimokuResult,
   IndicatorCandle,
 } from '../indicators/index.ts';
+import type { VwapBands } from '../indicators/volume.ts';
 import { renderBollingerBandFills, type BollingerBandRenderSeries } from './bollinger-renderer.ts';
 import { renderEnvelopeFill } from './envelope-renderer.ts';
 import { renderIchimoku } from './ichimoku-renderer.ts';
@@ -27,6 +28,7 @@ export interface RenderMainBackgroundLayersParams {
   candles: IndicatorCandle[];
   startIndex: number;
   bbSeries: BollingerBandRenderSeries[];
+  vwapBands: VwapBands;
   ichimokuData: IchimokuResult | null;
   envelopeData: EnvelopeResult | null;
   zeroLagMaTrendLevelsData: Parameters<typeof drawZeroLagAreaUnderCandles>[0]['data'];
@@ -59,6 +61,72 @@ export interface RenderMainBackgroundLayersParams {
   formatVolume: (value: number, digits: number) => string;
 }
 
+function renderVwapBandFills(params: {
+  ctx: CanvasRenderingContext2D;
+  enabled: boolean;
+  fillColor: string;
+  vwap: Record<string, unknown> | undefined;
+  vwapBands: { upper: Array<Array<number | null>>; lower: Array<Array<number | null>> };
+  startIndex: number;
+  visLength: number;
+  effectiveChartLeft: number;
+  totalSp: number;
+  candleW: number;
+  showLine: (styleKey: string) => boolean;
+  getY: (price: number) => number;
+}): void {
+  const {
+    ctx,
+    enabled,
+    fillColor,
+    vwap,
+    vwapBands,
+    startIndex,
+    visLength,
+    effectiveChartLeft,
+    totalSp,
+    candleW,
+    showLine,
+    getY,
+  } = params;
+  if (!enabled || !vwap) return;
+  const fillOpacity = Math.max(0, Math.min(100, Number(vwap.fillOpacity ?? 8) || 0)) / 100;
+
+  for (let bandIndex = 0; bandIndex < 3; bandIndex += 1) {
+    const bandNumber = bandIndex + 1;
+    const upperKey = `vwapUpper${bandNumber}`;
+    const lowerKey = `vwapLower${bandNumber}`;
+    if (vwap[`showUpperBand${bandNumber}`] !== true || vwap[`showLowerBand${bandNumber}`] !== true) continue;
+    if (!showLine(upperKey) || !showLine(lowerKey)) continue;
+
+    ctx.save();
+    ctx.fillStyle = toRgba(fillColor, fillOpacity, 'rgba(255,152,0,0.05)');
+    ctx.beginPath();
+    let first = true;
+    for (let i = 0; i < visLength; i += 1) {
+      const value = vwapBands.upper[bandIndex]?.[startIndex + i];
+      if (value == null) continue;
+      const x = effectiveChartLeft + i * totalSp + candleW / 2;
+      if (first) {
+        ctx.moveTo(x, getY(value));
+        first = false;
+      } else {
+        ctx.lineTo(x, getY(value));
+      }
+    }
+    if (!first) {
+      for (let i = visLength - 1; i >= 0; i -= 1) {
+        const value = vwapBands.lower[bandIndex]?.[startIndex + i];
+        if (value == null) continue;
+        ctx.lineTo(effectiveChartLeft + i * totalSp + candleW / 2, getY(value));
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
 export function renderMainBackgroundLayers(params: RenderMainBackgroundLayersParams): void {
   const {
     ctx,
@@ -67,6 +135,7 @@ export function renderMainBackgroundLayers(params: RenderMainBackgroundLayersPar
     candles,
     startIndex,
     bbSeries,
+    vwapBands,
     ichimokuData,
     envelopeData,
     zeroLagMaTrendLevelsData,
@@ -115,6 +184,23 @@ export function renderMainBackgroundLayers(params: RenderMainBackgroundLayersPar
   renderBollingerBandFills({
     ctx,
     bbSeries,
+    startIndex,
+    visLength,
+    effectiveChartLeft,
+    totalSp,
+    candleW,
+    showLine,
+    getY,
+  });
+
+  renderVwapBandFills({
+    ctx,
+    enabled: indicatorLayerOn && indicators.vwap?.show && indicators.vwap?.showFill !== false,
+    fillColor: typeof indicators.vwap?.fillColor === 'string' && indicators.vwap.fillColor
+      ? indicators.vwap.fillColor
+      : '#ff9800',
+    vwap: indicators.vwap as Record<string, unknown> | undefined,
+    vwapBands,
     startIndex,
     visLength,
     effectiveChartLeft,

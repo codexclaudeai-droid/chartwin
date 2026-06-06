@@ -16,7 +16,9 @@ import {
   calculateRsi,
   calculateStochastic,
   calculateVwap,
+  calculateVwapWithBands,
 } from '../src/chart/indicators/index.ts';
+import { getExchangeSessionTimezoneForSymbol } from '../src/utils/market-session.ts';
 
 const candle = (open, high, low, close, volume = 100) => ({ time: 0, open, high, low, close, volume });
 
@@ -180,4 +182,86 @@ test('indicator modules calculate CVD and VWAP from candle data', () => {
   assert.deepEqual(cvd, [0, -50, -50, 70]);
   assert.equal(Math.round((vwap[0] ?? 0) * 100) / 100, 10.33);
   assert.equal(Math.round((vwap[3] ?? 0) * 100) / 100, 11.34);
+});
+
+test('VWAP can reset by session and quarter anchors', () => {
+  const candles = [
+    { ...candle(10, 12, 8, 11, 100), time: Date.UTC(2026, 0, 1, 23, 58) / 1000 },
+    { ...candle(12, 14, 10, 13, 100), time: Date.UTC(2026, 0, 1, 23, 59) / 1000 },
+    { ...candle(20, 22, 18, 21, 100), time: Date.UTC(2026, 0, 2, 0, 0) / 1000 },
+    { ...candle(22, 24, 20, 23, 100), time: Date.UTC(2026, 0, 2, 0, 1) / 1000 },
+  ];
+
+  const session = calculateVwap(candles, { anchorPeriod: 'session' });
+  const sessionWithAnchors = calculateVwapWithBands(candles, { anchorPeriod: 'session' });
+  const quarter = calculateVwap([
+    { ...candle(10, 12, 8, 11, 100), time: Date.UTC(2026, 2, 31, 23, 59) / 1000 },
+    { ...candle(20, 22, 18, 21, 100), time: Date.UTC(2026, 3, 1, 0, 0) / 1000 },
+  ], { anchorPeriod: 'quarter' });
+
+  assert.equal(Math.round((session[1] ?? 0) * 100) / 100, 11.33);
+  assert.equal(Math.round((session[2] ?? 0) * 100) / 100, 20.33);
+  assert.deepEqual(sessionWithAnchors.anchorStarts, [0, 0, 2, 2]);
+  assert.equal(Math.round((quarter[0] ?? 0) * 100) / 100, 10.33);
+  assert.equal(Math.round((quarter[1] ?? 0) * 100) / 100, 20.33);
+});
+
+test('VWAP day anchor follows the configured exchange session timezone', () => {
+  const candles = [
+    { ...candle(10, 12, 8, 11, 100), time: Date.UTC(2026, 0, 2, 5, 58) / 1000 },
+    { ...candle(12, 14, 10, 13, 100), time: Date.UTC(2026, 0, 2, 5, 59) / 1000 },
+    { ...candle(20, 22, 18, 21, 100), time: Date.UTC(2026, 0, 2, 6, 0) / 1000 },
+  ];
+
+  const utc = calculateVwap(candles, { anchorPeriod: 'session', sessionTimezone: 'UTC' });
+  const chicago = calculateVwap(candles, { anchorPeriod: 'session', sessionTimezone: 'America/Chicago' });
+
+  assert.equal(Math.round((utc[2] ?? 0) * 100) / 100, 14.33);
+  assert.equal(Math.round((chicago[1] ?? 0) * 100) / 100, 11.33);
+  assert.equal(Math.round((chicago[2] ?? 0) * 100) / 100, 20.33);
+});
+
+test('VWAP supports TradingView-style source and offset inputs', () => {
+  const candles = [
+    candle(10, 14, 8, 12, 100),
+    candle(20, 24, 18, 22, 100),
+  ];
+
+  const closeSource = calculateVwap(candles, { source: 'close' });
+  const shifted = calculateVwap(candles, { source: 'close', offset: 1 });
+  const shiftedWithAnchors = calculateVwapWithBands(candles, { source: 'close', offset: 1 });
+
+  assert.deepEqual(closeSource, [12, 17]);
+  assert.deepEqual(shifted, [null, 12]);
+  assert.deepEqual(shiftedWithAnchors.anchorStarts, [0, 1]);
+});
+
+test('VWAP bands support standard deviation and percentage modes', () => {
+  const candles = [
+    candle(10, 12, 8, 12, 100),
+    candle(20, 22, 18, 22, 100),
+  ];
+
+  const standardDeviation = calculateVwapWithBands(candles, {
+    source: 'close',
+    bandMode: 'standard-deviation',
+    bandMultipliers: [1, 2, 3],
+  });
+  const percentage = calculateVwapWithBands(candles, {
+    source: 'close',
+    bandMode: 'percentage',
+    bandMultipliers: [10, 20, 30],
+  });
+
+  assert.equal(standardDeviation.vwap[1], 17);
+  assert.equal(standardDeviation.bands.upper[0][1], 22);
+  assert.equal(standardDeviation.bands.lower[0][1], 12);
+  assert.equal(Math.round((percentage.bands.upper[0][1] ?? 0) * 100) / 100, 18.7);
+  assert.equal(Math.round((percentage.bands.lower[0][1] ?? 0) * 100) / 100, 15.3);
+});
+
+test('VWAP exchange session timezone is inferred from chart symbols', () => {
+  assert.equal(getExchangeSessionTimezoneForSymbol('BTCUSDT.P'), 'UTC');
+  assert.equal(getExchangeSessionTimezoneForSymbol('NAS100'), 'America/Chicago');
+  assert.equal(getExchangeSessionTimezoneForSymbol('KOSPI'), 'Asia/Seoul');
 });

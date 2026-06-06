@@ -102,7 +102,10 @@ import {
   type SmartMoneyConceptsResult,
   type SmartMoneyConceptsSettings,
   calculateStochastic,
-  calculateVwap,
+  calculateVwapWithBands,
+  type VwapBands,
+  type VwapOptions,
+  type VwapResult,
   calculateWilliamsFractals,
 } from './indicators/index.ts';
 import { resolveChartCursor } from './interaction/chart-cursor-resolver.ts';
@@ -185,8 +188,12 @@ import type { CandleData } from '../types';
 import type { DisplayCurrency } from '../types/market';
 import { formatKUnit, formatKUnitWithComma, formatThousandAdaptive } from '../utils/format';
 import { applyGapSmoothing, type GapMode } from '../utils/gap-smoothing';
+import { getExchangeSessionTimezoneForSymbol } from '../utils/market-session';
 type ActiveDrawingToolId = DrawingToolId | 'eraser';
 type DrawingMagnetMode = 'off' | 'soft' | 'strong';
+type VwapAnchorSelection = {
+  active: boolean;
+};
 
 export const X_AXIS_HEIGHT = 22;
 const MAX_CANVAS_PIXEL_RATIO = 3;
@@ -506,6 +513,8 @@ export class SimpleChart {
   private focusVisualTimer: ReturnType<typeof setTimeout> | null = null;
   private focusVisualStartedAt = 0;
   private gotoDateMarker: { candleIndex: number; label: string } | null = null;
+  private vwapAnchorSelection: VwapAnchorSelection | null = null;
+  private lastVwapResult: VwapResult | null = null;
 
   // 십자선 가격박스 옆 + 아이콘 히트 영역
   private crosshairPlusHit: { x: number; y: number; r: number; price: number } | null = null;
@@ -604,7 +613,7 @@ export class SimpleChart {
       atr:      { show: false, period: 14 },
       obv:      { show: false },
       cvd:      { show: false, barMode: true },
-      vwap:     { show: false },
+      vwap:     { show: false, anchorPeriod: 'session', source: 'hlc3', offset: 0, hideOnDailyOrAbove: false, sessionTimezone: 'auto', bandMode: 'standard-deviation', showFill: true, fillColor: '#ff9800', fillOpacity: 8, showUpperBand1: true, showLowerBand1: true, bandMultiplier1: 1, showUpperBand2: false, showLowerBand2: false, bandMultiplier2: 2, showUpperBand3: false, showLowerBand3: false, bandMultiplier3: 3 },
       williamsFractal: { show: false, span: 2 },
       parabolicSar: { show: false, start: 0.02, increment: 0.02, maximum: 0.2 },
       smartMoneyConcepts: { ...DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS },
@@ -1502,6 +1511,7 @@ export class SimpleChart {
   }
 
   private clearDrawingSelection(): void {
+    const selectedShape = this.getSelectedDrawing();
     this.closeAnchoredVwapSettingsModal(false);
     this.closeTrendlineTextEditor(false);
     this.closePositionSettingsPopup();
@@ -1513,11 +1523,19 @@ export class SimpleChart {
     this.pendingChannelId = null;
     this.fibTrendPointStage = 0;
     this.syncDrawingToolbar();
-    this.requestOverlayDraw();
+    this.refreshDrawingSelectionVisual(selectedShape);
   }
 
   private getSelectedDrawing(): DrawingShape | null {
     return findDrawingById(this.drawings, this.selectedDrawingId);
+  }
+
+  private refreshDrawingSelectionVisual(shape: DrawingShape | null): void {
+    if (shape?.kind === 'anchored-vwap') {
+      this.draw();
+      return;
+    }
+    this.requestOverlayDraw();
   }
 
   private upsertDrawing(next: DrawingShape): void {
@@ -5219,8 +5237,205 @@ export class SimpleChart {
     return calculateObv(this.getIndicatorSourceData());
   }
 
-  private calcVWAP(): (number | null)[] {
-    return calculateVwap(this.getIndicatorSourceData());
+  private getEmptyVwapResult(): VwapResult {
+    return {
+      vwap: [],
+      anchorStarts: [],
+      bands: {
+        upper: [[], [], []],
+        lower: [[], [], []],
+      },
+    };
+  }
+
+  private calcVWAP(): VwapResult {
+    const vwapOptions = this.config.indicators.vwap as VwapOptions & { sessionTimezone?: string };
+    const multipliers: [number, number, number] = [
+      Math.max(0, Number((vwapOptions as any).bandMultiplier1 ?? 1) || 1),
+      Math.max(0, Number((vwapOptions as any).bandMultiplier2 ?? 2) || 2),
+      Math.max(0, Number((vwapOptions as any).bandMultiplier3 ?? 3) || 3),
+    ];
+    return calculateVwapWithBands(this.getIndicatorSourceData(), {
+      ...vwapOptions,
+      anchorPeriod: vwapOptions.anchorPeriod ?? 'session',
+      bandMultipliers: multipliers,
+      sessionTimezone: vwapOptions.sessionTimezone === 'auto' || !vwapOptions.sessionTimezone
+        ? getExchangeSessionTimezoneForSymbol(this.config.symbol)
+        : vwapOptions.sessionTimezone,
+    });
+  }
+
+  private getVwapInteractionResult(): VwapResult {
+    if (this.lastVwapResult && this.lastVwapResult.vwap.length === this.data.length) {
+      return this.lastVwapResult;
+    }
+    const result = this.calcVWAP();
+    this.lastVwapResult = result;
+    return result;
+  }
+
+  private shouldRenderVWAP(): boolean {
+    const vwap = this.config.indicators.vwap as { show?: boolean; hideOnDailyOrAbove?: boolean };
+    if (!vwap.show) return false;
+    if (!vwap.hideOnDailyOrAbove) return true;
+    return (TIMEFRAME_SECONDS[this.config.timeframe as TimeframeKey] ?? 0) < 86400;
+  }
+
+  private getVisibleVwapBandValues(bands: VwapBands, index: number): Array<number | null> {
+    const settings = this.config.indicators.vwap as Record<string, any>;
+    const values: Array<number | null> = [];
+    [0, 1, 2].forEach((bandIndex) => {
+      const bandNumber = bandIndex + 1;
+      if (settings[`showUpperBand${bandNumber}`] === true) values.push(bands.upper[bandIndex][index] ?? null);
+      if (settings[`showLowerBand${bandNumber}`] === true) values.push(bands.lower[bandIndex][index] ?? null);
+    });
+    return values;
+  }
+
+  private getVwapSeriesData(result: VwapResult, seriesKey: string): Array<number | null> | null {
+    if (seriesKey === 'vwap') return result.vwap;
+    const match = seriesKey.match(/^vwap(Upper|Lower)([123])$/);
+    if (!match) return null;
+    const bandIndex = Number(match[2]) - 1;
+    return match[1] === 'Upper' ? result.bands.upper[bandIndex] : result.bands.lower[bandIndex];
+  }
+
+  private getVisibleVwapSeries(result: VwapResult): Array<{ key: string; data: Array<number | null>; fallbackColor: string }> {
+    const settings = this.config.indicators.vwap as Record<string, any>;
+    const series: Array<{ key: string; data: Array<number | null>; fallbackColor: string }> = [];
+    if (this.isIndicatorLineVisible('vwap')) {
+      series.push({ key: 'vwap', data: result.vwap, fallbackColor: '#ff9800' });
+    }
+    [0, 1, 2].forEach((bandIndex) => {
+      const bandNumber = bandIndex + 1;
+      const fallbackColor = bandIndex === 0 ? 'rgba(255,152,0,0.62)' : bandIndex === 1 ? 'rgba(255,193,7,0.52)' : 'rgba(255,214,10,0.45)';
+      const upperKey = `vwapUpper${bandNumber}`;
+      const lowerKey = `vwapLower${bandNumber}`;
+      if (settings[`showUpperBand${bandNumber}`] === true && this.isIndicatorLineVisible(upperKey)) {
+        series.push({ key: upperKey, data: result.bands.upper[bandIndex], fallbackColor });
+      }
+      if (settings[`showLowerBand${bandNumber}`] === true && this.isIndicatorLineVisible(lowerKey)) {
+        series.push({ key: lowerKey, data: result.bands.lower[bandIndex], fallbackColor });
+      }
+    });
+    return series;
+  }
+
+  private findVwapLineHit(mx: number, my: number): boolean {
+    if (!this.indicatorsVisible || !this.shouldRenderVWAP()) return false;
+    const metrics = this.getMainViewportMetrics();
+    if (!metrics || mx < metrics.chartLeft || mx > metrics.chartRight || my < metrics.top || my > metrics.mainH) return false;
+    const result = this.getVwapInteractionResult();
+    const threshold = Math.max(6, Math.min(12, metrics.candleW * 0.7));
+    let hit = false;
+    this.getVisibleVwapSeries(result).forEach((series) => {
+      if (hit) return;
+      for (let dataIndex = this.startIndex; dataIndex < this.endIndex - 1; dataIndex += 1) {
+        const left = series.data[dataIndex];
+        const right = series.data[dataIndex + 1];
+        if (left == null || right == null) continue;
+        const visibleIndex = dataIndex - this.startIndex;
+        const x1 = metrics.effectiveChartLeft + visibleIndex * metrics.totalSp + metrics.candleW / 2;
+        const x2 = metrics.effectiveChartLeft + (visibleIndex + 1) * metrics.totalSp + metrics.candleW / 2;
+        const distance = pointToSegmentDistanceUtil(mx, my, x1, metrics.getY(left), x2, metrics.getY(right));
+        if (distance <= threshold) {
+          hit = true;
+          break;
+        }
+      }
+    });
+    return hit;
+  }
+
+  private getVwapAnchorMarkerIndices(result: VwapResult): number[] {
+    const visibleIndices: number[] = [];
+    for (let dataIndex = this.startIndex; dataIndex < this.endIndex; dataIndex += 1) {
+      if (result.vwap[dataIndex] != null) visibleIndices.push(dataIndex);
+    }
+    if (visibleIndices.length <= 1) return visibleIndices;
+    const desiredMarkers = Math.min(7, Math.max(3, Math.floor(visibleIndices.length / 24) + 2));
+    const lastSlot = Math.max(1, desiredMarkers - 1);
+    const markerIndices: number[] = [];
+    for (let slot = 0; slot < desiredMarkers; slot += 1) {
+      const sourceIndex = Math.round((slot * (visibleIndices.length - 1)) / lastSlot);
+      const dataIndex = visibleIndices[sourceIndex];
+      if (dataIndex != null && markerIndices[markerIndices.length - 1] !== dataIndex) {
+        markerIndices.push(dataIndex);
+      }
+    }
+    return markerIndices;
+  }
+
+  private isVwapAnchorSelectionHit(mx: number, my: number): boolean {
+    const selection = this.vwapAnchorSelection;
+    if (!selection?.active || !this.shouldRenderVWAP()) return false;
+    const metrics = this.getMainViewportMetrics();
+    if (!metrics) return false;
+    const result = this.getVwapInteractionResult();
+    const markerIndices = this.getVwapAnchorMarkerIndices(result);
+    const seriesList = this.getVisibleVwapSeries(result);
+    return markerIndices.some((dataIndex) => {
+      const visibleIndex = dataIndex - this.startIndex;
+      const markerX = metrics.effectiveChartLeft + visibleIndex * metrics.totalSp + metrics.candleW / 2;
+      if (markerX < metrics.chartLeft - 8 || markerX > metrics.chartRight + 8) return false;
+      return seriesList.some((series) => {
+        const value = series.data[dataIndex];
+        return value != null && Math.hypot(mx - markerX, my - metrics.getY(value)) <= 12;
+      });
+    });
+  }
+
+  private openVwapSettingsFromAnchor(): void {
+    this.canvas.dispatchEvent(new CustomEvent('chart-open-indicator-settings', {
+      bubbles: true,
+      detail: { indicatorKey: 'vwap' },
+    }));
+  }
+
+  private drawVwapAnchorSelection(
+    ctx: CanvasRenderingContext2D,
+    result: VwapResult,
+    getY: (price: number) => number,
+    chartLeft: number,
+    chartRight: number,
+    effectiveChartLeft: number,
+    totalSp: number,
+    candleW: number,
+    top: number,
+    bottom: number,
+  ): void {
+    const selection = this.vwapAnchorSelection;
+    if (!selection?.active || !this.shouldRenderVWAP()) return;
+    const markerIndices = this.getVwapAnchorMarkerIndices(result);
+    const seriesList = this.getVisibleVwapSeries(result);
+    if (!markerIndices.length || !seriesList.length) return;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(chartLeft, top, Math.max(1, chartRight - chartLeft), Math.max(1, bottom - top));
+    ctx.clip();
+    ctx.fillStyle = '#0f172a';
+    ctx.setLineDash([]);
+    markerIndices.forEach((dataIndex) => {
+      const visibleIndex = dataIndex - this.startIndex;
+      const markerX = effectiveChartLeft + visibleIndex * totalSp + candleW / 2;
+      if (markerX < chartLeft - 8 || markerX > chartRight + 8) return;
+      seriesList.forEach((series) => {
+        const value = series.data[dataIndex];
+        if (value == null) return;
+        const markerY = getY(value);
+        if (markerY < top || markerY > bottom) return;
+        const style = this.resolveStyle(series.key, series.fallbackColor, 1.5);
+        ctx.strokeStyle = style.color;
+        ctx.fillStyle = '#0f172a';
+        ctx.lineWidth = Math.max(1.4, style.width + 0.45);
+        ctx.beginPath();
+        ctx.arc(markerX, markerY, 4.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+    });
+    ctx.restore();
   }
 
   private getAnchoredVwapSeries(anchorIndex: number): Array<{ index: number; price: number }> {
@@ -5694,6 +5909,7 @@ export class SimpleChart {
     if (!displayData.length || this.startIndex >= this.endIndex) {
       this.signalHitAreas = [];
       this.lastDrawMeta = null;
+      this.lastVwapResult = null;
       this.requestOverlayDraw();
       return;
     }
@@ -5826,7 +6042,10 @@ export class SimpleChart {
     const obvSignal9 = indicatorLayerOn && ind.obv.show ? this.sma(obvD.map(v => v as number | null), 9) : [];
     const cvdD   = indicatorLayerOn && ind.cvd.show    ? this.calcCVD()                  : [];
     const cvdSignal9 = indicatorLayerOn && ind.cvd.show ? this.sma(cvdD.map(v => v as number | null), 9) : [];
-    const vwapD  = indicatorLayerOn && ind.vwap.show   ? this.calcVWAP()                 : [];
+    const vwapResult = indicatorLayerOn && this.shouldRenderVWAP() ? this.calcVWAP() : this.getEmptyVwapResult();
+    this.lastVwapResult = vwapResult;
+    const vwapD = vwapResult.vwap;
+    const vwapBandsD = vwapResult.bands;
     if (!ind.williamsFractal) ind.williamsFractal = { show: false, span: 2 };
     if (!Number.isFinite(Number(ind.williamsFractal.span)) || Number(ind.williamsFractal.span) < 1) {
       ind.williamsFractal.span = 2;
@@ -5980,6 +6199,7 @@ export class SimpleChart {
         ma200[gi],
         hmaD[gi],
         vwapD[gi],
+        ...this.getVisibleVwapBandValues(vwapBandsD, gi),
         zeroLagMaTrendLevelsD.zlma[gi],
         zeroLagMaTrendLevelsD.emaValue[gi],
       ].forEach(v => {
@@ -6164,6 +6384,7 @@ export class SimpleChart {
       candles: visData,
       startIndex: this.startIndex,
       bbSeries,
+      vwapBands: vwapBandsD,
       ichimokuData: ichiD,
       envelopeData: envD,
       zeroLagMaTrendLevelsData: zeroLagMaTrendLevelsD,
@@ -6245,6 +6466,7 @@ export class SimpleChart {
         hmaD,
         bbSeries,
         vwapD,
+        vwapBandsD,
         williamsFractalD,
         parabolicSarD,
         smartMoneyConceptsD,
@@ -6312,6 +6534,18 @@ export class SimpleChart {
       buildIndicatorRenderInput(indicatorRenderInput),
       indicatorRenderContext,
     ));
+    this.drawVwapAnchorSelection(
+      ctx,
+      vwapResult,
+      getY,
+      chartLeft,
+      chartRight,
+      effectiveChartLeft,
+      totalSp,
+      candleW,
+      R.top,
+      mainH,
+    );
     renderLeftYAxisOverlay({
       ctx,
       geometry,
@@ -8192,6 +8426,7 @@ export class SimpleChart {
     const onYAxis = this.isOnMainYAxis(this.mouseX, this.mouseY)
       || Boolean(this.getSubYAxisPanel(this.mouseX, this.mouseY));
     const onXAxis = this.isOnXAxis(this.mouseX, this.mouseY);
+    const hitVwapAnchor = this.isVwapAnchorSelectionHit(this.mouseX, this.mouseY);
     const shouldDrawCrosshairGuides = shouldShowCrosshairGuides({
       isTouchDevice: _isTouchDevice,
       noDrawingInteraction,
@@ -8213,6 +8448,7 @@ export class SimpleChart {
         y: this.mouseY,
         pointerMode: this.pointerMode,
         useBlueEditGuide,
+        hideCenterMarker: hitVwapAnchor,
       });
     }
 
@@ -8476,6 +8712,7 @@ export class SimpleChart {
       ? this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null
       : null;
     const hitSubAlert = this.findSubIndicatorAlertHit(this.mouseX, this.mouseY);
+    const hitVwapAnchor = this.isVwapAnchorSelectionHit(this.mouseX, this.mouseY);
     this.canvas.style.cursor = resolveChartCursor({
       isMouseOver: this.isMouseOver,
       mouseX: this.mouseX,
@@ -8490,6 +8727,7 @@ export class SimpleChart {
       selectedDrawingPart: this.selectedDrawingPart,
       movingShapeKind: movingShape?.kind ?? null,
       hitSubAlert: Boolean(hitSubAlert),
+      hitVwapAnchor,
       hitDrawing,
       hoveringCandle: this.isHoveringCandle(this.mouseX, this.mouseY),
       onMainYAxis: this.isOnMainYAxis(this.mouseX, this.mouseY),
@@ -8632,6 +8870,25 @@ export class SimpleChart {
 
     if (this.subIndicatorAlertPopupEl) {
       this.closeSubIndicatorAlertPopup();
+    }
+
+    if (!this.drawingTool && !this.drawingDraft) {
+      const vwapHit = this.findVwapLineHit(this.mouseX, this.mouseY);
+      if (vwapHit) {
+        this.vwapAnchorSelection = { active: true };
+        this.selectedDrawingId = null;
+        this.selectedDrawingPart = 'line';
+        this.drawingMoveState = null;
+        this.syncDrawingToolbar();
+        this.requestOverlayDraw();
+        this.updateChartCursor();
+        e.preventDefault();
+        return;
+      }
+      if (this.vwapAnchorSelection?.active && !this.isVwapAnchorSelectionHit(this.mouseX, this.mouseY)) {
+        this.vwapAnchorSelection = null;
+        this.requestOverlayDraw();
+      }
     }
 
     if (this.drawingTool === 'channel' && this.pendingChannelId) {
@@ -8795,7 +9052,7 @@ export class SimpleChart {
           };
       this.isDragging = false;
       this.syncDrawingToolbar();
-      this.requestOverlayDraw();
+      this.refreshDrawingSelectionVisual(hitDrawing.shape);
       this.updateChartCursor();
       return;
     }
@@ -8936,7 +9193,7 @@ export class SimpleChart {
         this.selectedDrawingId = created.id;
         this.selectedDrawingPart = 'start';
         this.syncDrawingToolbar();
-        this.requestOverlayDraw();
+        this.refreshDrawingSelectionVisual(created);
         if (this.shouldAutoDisarmAfterCreate(created.kind)) this.setDrawingTool(null);
         return;
       }
@@ -8982,6 +9239,12 @@ export class SimpleChart {
       delete this.subPanelScaleFactors[subPanel];
       this.draw();
       e.preventDefault();
+      return;
+    }
+    if (!this.drawingTool && this.isVwapAnchorSelectionHit(mx, my)) {
+      this.openVwapSettingsFromAnchor();
+      e.preventDefault();
+      e.stopPropagation();
       return;
     }
     const hitDrawing = this.findDrawingAt(mx, my);
@@ -10011,7 +10274,7 @@ export class SimpleChart {
         this.drawingDraft = null;
         this.isCrosshairMode = false;
         this.setDrawingTool(null);
-        this.requestOverlayDraw();
+        this.refreshDrawingSelectionVisual(created);
         return;
       }
 

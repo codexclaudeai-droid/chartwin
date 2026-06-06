@@ -30,6 +30,7 @@ export interface ResolveChartCursorParams {
   selectedDrawingPart: DrawingHitPart;
   movingShapeKind: DrawingShape['kind'] | null;
   hitSubAlert: boolean;
+  hitVwapAnchor: boolean;
   hitDrawing: DrawingHitTarget | null;
   hoveringCandle: boolean;
   onMainYAxis: boolean;
@@ -71,6 +72,7 @@ export function resolveChartCursor(params: ResolveChartCursorParams): string {
     selectedDrawingPart,
     movingShapeKind,
     hitSubAlert,
+    hitVwapAnchor,
     hitDrawing,
     hoveringCandle,
     onMainYAxis,
@@ -97,6 +99,7 @@ export function resolveChartCursor(params: ResolveChartCursorParams): string {
   }
 
   if (hitSubAlert) return 'pointer';
+  if (hitVwapAnchor) return 'default';
 
   if (hitDrawing) {
     if (isPositionShapeKind(hitDrawing.shape.kind)) {

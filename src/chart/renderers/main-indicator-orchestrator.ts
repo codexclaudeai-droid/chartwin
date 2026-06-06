@@ -18,6 +18,7 @@ import { renderEnvelopeLines } from './envelope-renderer.ts';
 import type { SmartMoneyConceptsResult } from '../indicators/smart-money-concepts.ts';
 import { renderSmartMoneyConcepts } from './smart-money-concepts-renderer.ts';
 import { renderParabolicSar } from './parabolic-sar-renderer.ts';
+import type { VwapBands } from '../indicators/volume.ts';
 import {
   getStatisticalTrailingStopMarkerGeometry,
   renderStatisticalTrailingStopBase,
@@ -31,7 +32,27 @@ import { INDICATOR_STYLE_TARGETS } from '../../indicator-panel-module.ts';
 
 export interface MainIndicatorSettings extends SubPanelIndicatorSettings {
   volume: { show: boolean };
-  vwap: { show: boolean };
+  vwap: {
+    show: boolean;
+    anchorPeriod?: string;
+    source?: string;
+    offset?: number;
+    hideOnDailyOrAbove?: boolean;
+    sessionTimezone?: string;
+    bandMode?: string;
+    showFill?: boolean;
+    fillColor?: string;
+    fillOpacity?: number;
+    showUpperBand1?: boolean;
+    showLowerBand1?: boolean;
+    bandMultiplier1?: number;
+    showUpperBand2?: boolean;
+    showLowerBand2?: boolean;
+    bandMultiplier2?: number;
+    showUpperBand3?: boolean;
+    showLowerBand3?: boolean;
+    bandMultiplier3?: number;
+  };
   williamsFractal?: { show: boolean };
   parabolicSar?: { show: boolean };
   smartMoneyConcepts?: {
@@ -127,6 +148,7 @@ export interface RenderMainIndicatorsParams {
     };
   }>;
   vwapD: NullableSeries;
+  vwapBandsD: VwapBands;
   williamsFractalD: WilliamsFractalRenderData;
   parabolicSarD: NullableSeries;
   smartMoneyConceptsD: SmartMoneyConceptsResult;
@@ -176,6 +198,7 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     hmaD,
     bbSeries,
     vwapD,
+    vwapBandsD,
     williamsFractalD,
     parabolicSarD,
     smartMoneyConceptsD,
@@ -236,6 +259,27 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     showLine,
     resolveStyle,
     drawLine: line,
+  });
+  [0, 1, 2].forEach((bandIndex) => {
+    const bandNumber = bandIndex + 1;
+    renderSingleMainLine({
+      enabled: indicatorLayerOn && ind.vwap.show && (ind.vwap as Record<string, any>)[`showUpperBand${bandNumber}`] === true,
+      styleKey: `vwapUpper${bandNumber}`,
+      fallbackColor: bandIndex === 0 ? 'rgba(255,152,0,0.62)' : bandIndex === 1 ? 'rgba(255,193,7,0.52)' : 'rgba(255,214,10,0.45)',
+      data: vwapBandsD.upper[bandIndex],
+      showLine,
+      resolveStyle,
+      drawLine: line,
+    });
+    renderSingleMainLine({
+      enabled: indicatorLayerOn && ind.vwap.show && (ind.vwap as Record<string, any>)[`showLowerBand${bandNumber}`] === true,
+      styleKey: `vwapLower${bandNumber}`,
+      fallbackColor: bandIndex === 0 ? 'rgba(255,152,0,0.62)' : bandIndex === 1 ? 'rgba(255,193,7,0.52)' : 'rgba(255,214,10,0.45)',
+      data: vwapBandsD.lower[bandIndex],
+      showLine,
+      resolveStyle,
+      drawLine: line,
+    });
   });
 
   if (indicatorLayerOn && ind.williamsFractal?.show) {

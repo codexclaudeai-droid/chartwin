@@ -154,3 +154,15 @@ export function getDefaultQuoteCurrencyForSymbol(symbol: string): DisplayCurrenc
   if (USD_INDEX_SYMBOLS.has(normalized) || USD_COMMODITY_SYMBOLS.has(normalized)) return 'USD';
   return 'USDT';
 }
+
+export function getExchangeSessionTimezoneForSymbol(symbol: string): string {
+  const normalized = canonicalizeUiSymbol(symbol).replace(/\.P$/, '');
+  if (normalized.includes('USDT')) return 'UTC';
+  if (isNasdaqFuturesLikeSymbol(normalized) || normalized === 'WTI1!') return 'America/Chicago';
+  if (KRW_INDEX_SYMBOLS.has(normalized)) return 'Asia/Seoul';
+  if (normalized === 'HSI' || normalized === 'HKG33') return 'Asia/Hong_Kong';
+  if (normalized === 'NASDAQ' || normalized === 'NDX' || normalized === 'SPX500' || normalized === '^GSPC' || normalized === '^IXIC' || normalized === '^DJI') {
+    return 'America/New_York';
+  }
+  return 'UTC';
+}

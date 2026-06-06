@@ -8,7 +8,27 @@ export type MainIndicatorsLike = {
     ma200: { show: boolean };
     hma?: { show: boolean };
     bb: { show: boolean };
-    vwap: { show: boolean };
+    vwap: {
+      show: boolean;
+      anchorPeriod?: string;
+      source?: string;
+      offset?: number;
+      hideOnDailyOrAbove?: boolean;
+      sessionTimezone?: string;
+      bandMode?: string;
+      showFill?: boolean;
+      fillColor?: string;
+      fillOpacity?: number;
+      showUpperBand1?: boolean;
+      showLowerBand1?: boolean;
+      bandMultiplier1?: number;
+      showUpperBand2?: boolean;
+      showLowerBand2?: boolean;
+      bandMultiplier2?: number;
+      showUpperBand3?: boolean;
+      showLowerBand3?: boolean;
+      bandMultiplier3?: number;
+    };
     parabolicSar?: { show: boolean };
     smartMoneyConcepts?: { show: boolean };
     supertrend: { show: boolean };
