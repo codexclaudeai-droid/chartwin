@@ -16,7 +16,7 @@ test('chevron hover only shows the title badge without opening the submenu popup
 test('menu-style drawing tools no longer trigger default selection on top-level icon click', () => {
   assert.doesNotMatch(
     leftToolboxSource,
-    /if \(!clickedChevron && tool\.menu && \(tool\.id === 'trend' \|\| tool\.id === 'fibonacci' \|\| tool\.id === 'forecast' \|\| tool\.id === 'draw' \|\| tool\.id === 'pointer'\)\)/,
+    /if \(!clickedChevron && tool\.menu && \(tool\.id === 'trend' \|\| tool\.id === 'fibonacci' \|\| tool\.id === 'forecast' \|\| tool\.id === 'patterns' \|\| tool\.id === 'draw' \|\| tool\.id === 'pointer'\)\)/,
   );
 });
 
@@ -45,6 +45,6 @@ test('menu button clicks open the submenu through the shared helper', () => {
 test('pointer submenu selections update the top-level tooltip label state', () => {
   assert.match(
     leftToolboxSource,
-    /tool\.id === 'trend' \|\| tool\.id === 'fibonacci' \|\| tool\.id === 'forecast' \|\| tool\.id === 'draw' \|\| tool\.id === 'pointer'/,
+    /tool\.id === 'trend' \|\| tool\.id === 'fibonacci' \|\| tool\.id === 'forecast' \|\| tool\.id === 'patterns' \|\| tool\.id === 'draw' \|\| tool\.id === 'pointer'/,
   );
 });

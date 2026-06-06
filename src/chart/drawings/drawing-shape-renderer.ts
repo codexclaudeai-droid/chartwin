@@ -13,6 +13,7 @@ import { renderDrawingFib } from './drawing-fib-renderer.ts';
 import { renderDrawingHline } from './drawing-hline-renderer.ts';
 import { renderDrawingLine } from './drawing-line-renderer.ts';
 import { renderDrawingMeasure } from './drawing-measure-renderer.ts';
+import { renderDrawingPattern } from './drawing-pattern-renderer.ts';
 import { renderDrawingPosition } from './drawing-position-renderer.ts';
 import { renderSingleAnchorLine } from './drawing-single-anchor-line-renderer.ts';
 import { renderDrawingTextNote } from './drawing-text-note-renderer.ts';
@@ -22,6 +23,7 @@ import type {
   DrawingLineStyle,
   DrawingViewportMetrics,
 } from './drawing-renderer-utils.ts';
+import { isPatternDrawingKind } from '../../ui/workspace/drawing-utils.ts';
 
 export type DrawingShapeRenderMetrics = DrawingViewportMetrics & DrawingChartBounds & DrawingAxisMetrics & {
   top: number;
@@ -56,8 +58,15 @@ function getDrawingStyle(shape: DrawingShape | DrawingDraft): {
   width: number;
   lineStyle: DrawingLineStyle;
 } {
+  const defaultColor = shape.kind === 'head-shoulders-pattern'
+    ? '#00a68f'
+    : shape.kind === 'abcd-pattern'
+      ? '#00a68f'
+    : shape.kind === 'triangle-pattern' || shape.kind === 'three-drives-pattern'
+      ? '#7c4dff'
+      : '#2f6cff';
   return {
-    alphaColor: ('color' in shape && shape.color) ? shape.color : '#2f6cff',
+    alphaColor: ('color' in shape && shape.color) ? shape.color : defaultColor,
     width: ('width' in shape && shape.width) ? shape.width : 2,
     lineStyle: ('lineStyle' in shape && shape.lineStyle) ? shape.lineStyle : 'solid',
   };
@@ -91,7 +100,10 @@ export function renderDrawingShape(params: RenderDrawingShapeParams): void {
 
   const alpha = isDraft ? 0.72 : 1;
   const style = getDrawingStyle(shape);
-  const shouldClipToChart = shape.kind !== 'hline' && shape.kind !== 'anchored-vwap';
+  const shouldClipToChart = shape.kind !== 'hline'
+    && shape.kind !== 'anchored-vwap'
+    && shape.kind !== 'xabcd-pattern'
+    && shape.kind !== 'head-shoulders-pattern';
   if (shouldClipToChart) {
     ctx.save();
     ctx.beginPath();
@@ -105,6 +117,36 @@ export function renderDrawingShape(params: RenderDrawingShapeParams): void {
   }
 
   switch (shape.kind) {
+    case 'xabcd-pattern':
+    case 'cypher-pattern':
+    case 'head-shoulders-pattern':
+    case 'abcd-pattern':
+    case 'triangle-pattern':
+    case 'three-drives-pattern':
+    case 'elliott-impulse-wave':
+    case 'elliott-correction-wave':
+    case 'elliott-triangle-wave':
+    case 'elliott-double-combo-wave':
+    case 'elliott-triple-combo-wave': {
+      if (isPatternDrawingKind(shape.kind)) {
+        renderDrawingPattern({
+          ctx,
+          shape,
+          isDraft,
+          metrics,
+          alpha,
+          strokeColor: style.alphaColor,
+          strokeWidth: style.width,
+          lineStyle: style.lineStyle,
+          selectedDrawingId,
+          hoveredDrawingId,
+          fontStack,
+          formatPrice,
+          xForIndex,
+        });
+      }
+      break;
+    }
     case 'anchored-vwap': {
       const anchoredShape = shape as DrawingShape;
       renderDrawingAnchoredVwap({

@@ -1,5 +1,14 @@
 import type { DrawingHitPart, DrawingShape } from '../../ui/workspace/drawing-types.ts';
-import { getCircleScreenGeometry, getSingleAnchorLineSegments, isSingleAnchorLineKind, isTrendlineKind, pointToSegmentDistance } from '../../ui/workspace/drawing-utils.ts';
+import {
+  getCircleScreenGeometry,
+  getDrawingPointPart,
+  getDrawingShapePoints,
+  getSingleAnchorLineSegments,
+  isPatternDrawingKind,
+  isSingleAnchorLineKind,
+  isTrendlineKind,
+  pointToSegmentDistance,
+} from '../../ui/workspace/drawing-utils.ts';
 
 export interface DrawingHitTestMetrics {
   chartLeft: number;
@@ -95,6 +104,30 @@ export function hitTestDrawing(params: HitTestDrawingParams): DrawingHitPart | n
   const pad = 8;
   const isCoarsePointer = adapters.isCoarsePointer();
   const anchorHitPad = isCoarsePointer ? 25 : 8;
+
+  if (isPatternDrawingKind(shape.kind)) {
+    const points = getDrawingShapePoints(shape);
+    const screenPoints = points.map((point) => ({
+      x: adapters.xForIndex(point.index, metrics.totalSp, metrics.candleW),
+      y: metrics.getY(point.price),
+    }));
+    for (let i = 0; i < screenPoints.length; i += 1) {
+      const part = getDrawingPointPart(i);
+      if (part && Math.hypot(mx - screenPoints[i].x, my - screenPoints[i].y) <= anchorHitPad) return part;
+    }
+    const lineHitPad = isCoarsePointer ? 22 : 12;
+    for (let i = 0; i < screenPoints.length - 1; i += 1) {
+      if (pointToSegmentDistance(mx, my, screenPoints[i].x, screenPoints[i].y, screenPoints[i + 1].x, screenPoints[i + 1].y) <= lineHitPad) {
+        return 'line';
+      }
+    }
+    const xs = screenPoints.map((point) => point.x);
+    const ys = screenPoints.map((point) => point.y);
+    if (!xs.length) return null;
+    return (mx >= Math.min(...xs) - pad && mx <= Math.max(...xs) + pad && my >= Math.min(...ys) - pad && my <= Math.max(...ys) + pad)
+      ? 'body'
+      : null;
+  }
 
   if (isSingleAnchorLineKind(shape.kind)) {
     const lineHitPad = isCoarsePointer ? 22 : 16;

@@ -1,5 +1,12 @@
 import type { DrawingAnchor, DrawingHitPart, DrawingShape } from '../../ui/workspace/drawing-types.ts';
-import { cloneDrawingShape, isSingleAnchorLineKind, isTrendlineKind } from '../../ui/workspace/drawing-utils.ts';
+import {
+  cloneDrawingShape,
+  getDrawingPointPartIndex,
+  getDrawingShapePoints,
+  isPatternDrawingKind,
+  isSingleAnchorLineKind,
+  isTrendlineKind,
+} from '../../ui/workspace/drawing-utils.ts';
 
 export interface DrawingTransformMetrics {
   totalSp: number;
@@ -42,6 +49,23 @@ export function moveDrawingByDelta(params: MoveDrawingByDeltaParams): DrawingSha
   });
 
   if (base.locked) return cloneShape(base);
+
+  if (isPatternDrawingKind(base.kind)) {
+    const next = cloneShape(base);
+    const points = getDrawingShapePoints(base).map((point) => ({ ...point }));
+    const pointIndex = getDrawingPointPartIndex(part);
+    if (pointIndex != null && points[pointIndex]) {
+      points[pointIndex] = moveAnchor(points[pointIndex]);
+    } else {
+      for (let i = 0; i < points.length; i += 1) {
+        points[i] = moveAnchor(points[i]);
+      }
+    }
+    next.points = points;
+    next.a = points[0] ?? next.a;
+    next.b = points[points.length - 1] ?? next.b;
+    return next;
+  }
 
   if (isSingleAnchorLineKind(base.kind)) {
     if (part === 'start' || part === 'line' || part === 'body') {

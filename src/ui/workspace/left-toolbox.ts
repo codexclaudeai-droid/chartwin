@@ -217,6 +217,37 @@ const tools: ToolboxTool[] = [
     },
   },
   {
+    id: 'patterns',
+    label: '패턴',
+    icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l4-10 4 8 4-6 4 9"></path><circle cx="4" cy="17" r="1.5"></circle><circle cx="8" cy="7" r="1.5"></circle><circle cx="12" cy="15" r="1.5"></circle><circle cx="16" cy="9" r="1.5"></circle><circle cx="20" cy="18" r="1.5"></circle></svg>`,
+    menu: {
+      title: '패턴',
+      sections: [
+        {
+          title: '차트 패턴',
+          items: [
+            { id: 'xabcd-pattern', label: 'XABCD 패턴', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l4-12 4 9 4-7 4 10"></path><circle cx="4" cy="18" r="1.45"></circle><circle cx="8" cy="6" r="1.45"></circle><circle cx="12" cy="15" r="1.45"></circle><circle cx="16" cy="8" r="1.45"></circle><circle cx="20" cy="18" r="1.45"></circle></svg>` },
+            { id: 'cypher-pattern', label: '사이퍼 패턴', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l4-11 4 8 4-9 4 12"></path><circle cx="4" cy="18" r="1.45"></circle><circle cx="8" cy="7" r="1.45"></circle><circle cx="12" cy="15" r="1.45"></circle><circle cx="16" cy="6" r="1.45"></circle><circle cx="20" cy="18" r="1.45"></circle></svg>` },
+            { id: 'head-shoulders-pattern', label: '헤드 앤 숄더', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-6 4 3 3-9 3 9 4-3"></path><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="7" cy="11" r="1.4"></circle><circle cx="14" cy="5" r="1.4"></circle><circle cx="21" cy="11" r="1.4"></circle></svg>` },
+            { id: 'abcd-pattern', label: 'ABCD 패턴', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17l4-11 5 9 5-11"></path><circle cx="5" cy="17" r="1.45"></circle><circle cx="9" cy="6" r="1.45"></circle><circle cx="14" cy="15" r="1.45"></circle><circle cx="19" cy="4" r="1.45"></circle></svg>` },
+            { id: 'triangle-pattern', label: '삼각형 패턴', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18l14-12M5 6l14 12M5 18l14 0"></path><circle cx="5" cy="18" r="1.45"></circle><circle cx="5" cy="6" r="1.45"></circle><circle cx="19" cy="18" r="1.45"></circle></svg>` },
+            { id: 'three-drives-pattern', label: '쓰리 드라이브 패턴', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l3-8 4 6 3-8 4 6 4-9"></path><circle cx="3" cy="17" r="1.35"></circle><circle cx="6" cy="9" r="1.35"></circle><circle cx="10" cy="15" r="1.35"></circle><circle cx="13" cy="7" r="1.35"></circle><circle cx="17" cy="13" r="1.35"></circle><circle cx="21" cy="4" r="1.35"></circle></svg>` },
+          ],
+        },
+        {
+          title: '엘리엇 파동',
+          items: [
+            { id: 'elliott-impulse-wave', label: '엘리엇 충격 파동 (0·1·2·3·4·5)', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-9 4 6 4-10 3 7 3-5"></path><text x="3" y="7" font-size="4" fill="${iconStroke}">0</text><text x="8" y="6" font-size="4" fill="${iconStroke}">5</text><circle cx="3" cy="17" r="1.25"></circle><circle cx="7" cy="8" r="1.25"></circle><circle cx="11" cy="14" r="1.25"></circle><circle cx="15" cy="4" r="1.25"></circle><circle cx="18" cy="11" r="1.25"></circle><circle cx="21" cy="6" r="1.25"></circle></svg>` },
+            { id: 'elliott-correction-wave', label: '엘리엇 조정 파동 (0·A·B·C)', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-8 5 7 5-10"></path><text x="4" y="6" font-size="4" fill="${iconStroke}">0</text><text x="15" y="6" font-size="4" fill="${iconStroke}">C</text><circle cx="4" cy="16" r="1.3"></circle><circle cx="9" cy="8" r="1.3"></circle><circle cx="14" cy="15" r="1.3"></circle><circle cx="19" cy="5" r="1.3"></circle></svg>` },
+            { id: 'elliott-triangle-wave', label: '엘리엇 삼각 파동 (0·A·B·C·D·E)', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-10 4 8 4-6 3 7 3-5"></path><text x="3" y="6" font-size="4" fill="${iconStroke}">0</text><text x="17" y="6" font-size="4" fill="${iconStroke}">E</text><circle cx="3" cy="17" r="1.2"></circle><circle cx="7" cy="7" r="1.2"></circle><circle cx="11" cy="15" r="1.2"></circle><circle cx="15" cy="9" r="1.2"></circle><circle cx="18" cy="16" r="1.2"></circle><circle cx="21" cy="11" r="1.2"></circle></svg>` },
+            { id: 'elliott-double-combo-wave', label: '엘리엇 이중 콤보 파동 (0·W·X·Y)', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-8 5 8 6-8"></path><text x="4" y="6" font-size="4" fill="${iconStroke}">0</text><text x="16" y="6" font-size="4" fill="${iconStroke}">Y</text><circle cx="4" cy="16" r="1.3"></circle><circle cx="9" cy="8" r="1.3"></circle><circle cx="14" cy="16" r="1.3"></circle><circle cx="20" cy="8" r="1.3"></circle></svg>` },
+            { id: 'elliott-triple-combo-wave', label: '엘리엇 삼중 콤보 파동 (0·W·X·Y·X·Z)', icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l4-8 4 8 4-8 3 8 3-8"></path><text x="3" y="6" font-size="4" fill="${iconStroke}">0</text><text x="17" y="6" font-size="4" fill="${iconStroke}">Z</text><circle cx="3" cy="16" r="1.25"></circle><circle cx="7" cy="8" r="1.25"></circle><circle cx="11" cy="16" r="1.25"></circle><circle cx="15" cy="8" r="1.25"></circle><circle cx="18" cy="16" r="1.25"></circle><circle cx="21" cy="8" r="1.25"></circle></svg>` },
+          ],
+        },
+      ],
+    },
+  },
+  {
     id: 'text',
     label: '메모',
     icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="6" x2="19" y2="6"></line><line x1="12" y1="6" x2="12" y2="19"></line></svg>`,
@@ -338,6 +369,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
       : toolId === 'trend' ? 'trendline'
         : toolId === 'fibonacci' ? 'fib-retracement'
           : toolId === 'forecast' ? 'measure'
+            : toolId === 'patterns' ? 'xabcd-pattern'
             : toolId === 'draw' ? 'draw-pencil'
             : toolId
   );
@@ -816,7 +848,7 @@ export function createLeftToolbox(workspace: HTMLElement): void {
             patternBoxesVisible = !patternBoxesVisible;
             syncHideToolIcon();
           } else if (tool.id !== 'trash' && item.icon) {
-            if (tool.id === 'trend' || tool.id === 'fibonacci' || tool.id === 'forecast' || tool.id === 'draw' || tool.id === 'pointer') {
+            if (tool.id === 'trend' || tool.id === 'fibonacci' || tool.id === 'forecast' || tool.id === 'patterns' || tool.id === 'draw' || tool.id === 'pointer') {
               selectedMenuItemMap.set(tool.id, { id: item.id, label: resolvedLabel, shortcut: item.shortcut });
             }
             selectedToolIconMap.set(tool.id, item.icon);

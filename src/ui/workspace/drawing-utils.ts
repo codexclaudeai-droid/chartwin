@@ -1,6 +1,8 @@
 import type {
   DrawingAnchor,
   DrawingDraft,
+  DrawingHitPart,
+  PatternDrawingToolId,
   DrawingShape,
   SingleAnchorLineDrawingToolId,
   TrendlineDrawingToolId,
@@ -24,6 +26,70 @@ export function isTrendlineKind(kind: string | null | undefined): kind is Trendl
 
 export function isSingleAnchorLineKind(kind: string | null | undefined): kind is SingleAnchorLineDrawingToolId {
   return kind === 'vertical-line' || kind === 'cross-line';
+}
+
+export function isPatternDrawingKind(kind: string | null | undefined): kind is PatternDrawingToolId {
+  return kind === 'xabcd-pattern'
+    || kind === 'cypher-pattern'
+    || kind === 'head-shoulders-pattern'
+    || kind === 'abcd-pattern'
+    || kind === 'triangle-pattern'
+    || kind === 'three-drives-pattern'
+    || kind === 'elliott-impulse-wave'
+    || kind === 'elliott-correction-wave'
+    || kind === 'elliott-triangle-wave'
+    || kind === 'elliott-double-combo-wave'
+    || kind === 'elliott-triple-combo-wave';
+}
+
+export function getPatternPointLabels(kind: PatternDrawingToolId): string[] {
+  switch (kind) {
+    case 'xabcd-pattern':
+    case 'cypher-pattern':
+      return ['X', 'A', 'B', 'C', 'D'];
+    case 'head-shoulders-pattern':
+      return ['', '왼어깨', '', '머리', '', '오른어깨', ''];
+    case 'abcd-pattern':
+      return ['A', 'B', 'C', 'D'];
+    case 'triangle-pattern':
+      return ['A', 'B', 'C', 'D'];
+    case 'three-drives-pattern':
+      return ['1', 'A', '2', 'B', '3', 'C', '4'];
+    case 'elliott-impulse-wave':
+      return ['0', '1', '2', '3', '4', '5'];
+    case 'elliott-correction-wave':
+      return ['0', 'A', 'B', 'C'];
+    case 'elliott-triangle-wave':
+      return ['0', 'A', 'B', 'C', 'D', 'E'];
+    case 'elliott-double-combo-wave':
+      return ['0', 'W', 'X', 'Y'];
+    case 'elliott-triple-combo-wave':
+      return ['0', 'W', 'X', 'Y', 'X', 'Z'];
+    default:
+      return [];
+  }
+}
+
+export function getPatternPointCount(kind: PatternDrawingToolId): number {
+  return getPatternPointLabels(kind).length;
+}
+
+export function getDrawingPointPart(index: number): DrawingHitPart | null {
+  if (!Number.isInteger(index) || index < 0 || index > 8) return null;
+  return `point-${index}` as DrawingHitPart;
+}
+
+export function getDrawingPointPartIndex(part: DrawingHitPart | null | undefined): number | null {
+  const match = String(part ?? '').match(/^point-(\d)$/);
+  if (!match) return null;
+  return Number(match[1]);
+}
+
+export function getDrawingShapePoints(shape: DrawingShape | DrawingDraft): DrawingAnchor[] {
+  if (shape.points?.length) return shape.points;
+  const points = [shape.a];
+  if (shape.b) points.push(shape.b);
+  return points;
 }
 
 export function canCopyDrawingShape(shape: Pick<DrawingShape, 'kind'> | null | undefined): boolean {

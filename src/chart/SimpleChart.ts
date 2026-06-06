@@ -35,13 +35,16 @@ import type {
   DrawingHitPart,
   DrawingShape,
   DrawingToolId,
+  PatternDrawingToolId,
   TrendlineDrawingToolId,
 } from '../ui/workspace/drawing-types';
 import {
   canCopyDrawingShape,
   cloneDrawingShape,
   getChannelGeometry as getChannelGeometryUtil,
+  getPatternPointCount,
   getTrendlineScreenLine,
+  isPatternDrawingKind,
   isTrendlineKind,
   pointToSegmentDistance as pointToSegmentDistanceUtil,
 } from '../ui/workspace/drawing-utils';
@@ -73,6 +76,7 @@ import {
   createAnchoredVwapDrawing,
   createFibTrendDrawing,
   createHlineDrawing,
+  createPatternDrawing,
   createPositionDrawing,
   createSingleAnchorLineDrawing,
   createTextNoteDrawing,
@@ -428,6 +432,7 @@ export class SimpleChart {
   private copiedDrawingTemplate: DrawingShape | null = null;
   private pendingChannelId: string | null = null;
   private fibTrendPointStage: 0 | 1 | 2 = 0;
+  private patternPointStage = 0;
   private oneSecondIndicatorVisibilityBackup: Partial<Record<string, boolean>> | null = null;
   private subIndicatorAlerts: Array<{
     id: string;
@@ -1155,6 +1160,17 @@ export class SimpleChart {
       'short-position',
       'measure',
       'text-note',
+      'xabcd-pattern',
+      'cypher-pattern',
+      'head-shoulders-pattern',
+      'abcd-pattern',
+      'triangle-pattern',
+      'three-drives-pattern',
+      'elliott-impulse-wave',
+      'elliott-correction-wave',
+      'elliott-triangle-wave',
+      'elliott-double-combo-wave',
+      'elliott-triple-combo-wave',
       'eraser',
     ];
     if (!tool || !allowed.includes(tool as ActiveDrawingToolId)) {
@@ -1170,6 +1186,7 @@ export class SimpleChart {
       this.drawingDragActive = false;
       this.pendingChannelId = null;
       this.fibTrendPointStage = 0;
+      this.patternPointStage = 0;
       this.touchDrawingTapCount = 0;
       this._lastCrosshairOHLCIdx = -2;
       this.updateChartCursor();
@@ -1187,6 +1204,7 @@ export class SimpleChart {
     this.touchDrawingTapCount = 0;
     if (this.drawingTool !== 'channel') this.pendingChannelId = null;
     if (this.drawingTool !== 'fib-trend') this.fibTrendPointStage = 0;
+    if (!isPatternDrawingKind(this.drawingTool)) this.patternPointStage = 0;
     // 자유 드로잉은 기본 열십자 라인을 유지
     if (this.isCrosshairMode && this.drawingTool !== 'draw-pencil' && this.drawingTool !== 'draw-highlighter') {
       this.exitCrosshairMode();
@@ -1232,6 +1250,17 @@ export class SimpleChart {
       'anchored-vwap':   ['앵커가 될 캔들을 탭하면 해당 시점부터 VWAP가 그려집니다'],
       'measure':         ['① 측정 시작점 탭', '② 끝점 탭으로 가격·시간 범위 측정'],
       'text-note':       ['텍스트입력 위치에 탭하세요'],
+      'xabcd-pattern':   ['X, A, B, C, D 순서로 5개 점을 탭하세요'],
+      'cypher-pattern':  ['X, A, B, C, D 순서로 5개 점을 탭하세요'],
+      'head-shoulders-pattern': ['시작점, 왼어깨, 왼목, 머리, 오른목, 오른어깨, 끝점 순서로 7개 점을 탭하세요'],
+      'abcd-pattern':    ['A, B, C, D 순서로 4개 점을 탭하세요'],
+      'triangle-pattern':['A, B, C, D 순서로 4개 점을 탭하세요'],
+      'three-drives-pattern': ['1, A, 2, B, 3, C, 4 순서로 7개 점을 탭하세요'],
+      'elliott-impulse-wave': ['0, 1, 2, 3, 4, 5 순서로 6개 점을 탭하세요'],
+      'elliott-correction-wave': ['0, A, B, C 순서로 4개 점을 탭하세요'],
+      'elliott-triangle-wave': ['0, A, B, C, D, E 순서로 6개 점을 탭하세요'],
+      'elliott-double-combo-wave': ['0, W, X, Y 순서로 4개 점을 탭하세요'],
+      'elliott-triple-combo-wave': ['0, W, X, Y, X, Z 순서로 6개 점을 탭하세요'],
     };
     // position 툴은 전용 가이드 사용
     if (tool === 'long-position' || tool === 'short-position') {
@@ -1389,6 +1418,7 @@ export class SimpleChart {
     this.drawingDragActive = false;
     this.pendingChannelId = null;
     this.fibTrendPointStage = 0;
+    this.patternPointStage = 0;
     this.syncDrawingToolbar();
     this.requestOverlayDraw();
     this.emitDrawingsChanged();
@@ -1435,6 +1465,47 @@ export class SimpleChart {
   // Only explicitly multi-stage tools should return false.
   private shouldAutoDisarmAfterCreate(kind: DrawingToolId): boolean {
     return kind !== 'fib-trend';
+  }
+
+  private appendPatternPoint(kind: PatternDrawingToolId, anchor: DrawingAnchor): boolean {
+    const required = getPatternPointCount(kind);
+    const existing = this.drawingDraft?.kind === kind
+      ? (this.drawingDraft.points ?? [this.drawingDraft.a]).slice(0, Math.max(1, this.patternPointStage))
+      : [];
+    const points = [...existing, anchor];
+    this.drawingDraft = {
+      kind,
+      a: points[0],
+      b: points[points.length - 1],
+      points,
+    };
+    this.patternPointStage = points.length;
+    if (points.length < required) {
+      this.requestOverlayDraw();
+      return false;
+    }
+
+    const created = createPatternDrawing({ kind, points });
+    this.drawingDraft = null;
+    this.patternPointStage = 0;
+    if (!created) {
+      this.requestOverlayDraw();
+      return true;
+    }
+    this.upsertDrawing(created);
+    this.selectedDrawingId = created.id;
+    this.selectedDrawingPart = 'line';
+    this.syncDrawingToolbar();
+    this.setDrawingTool(null);
+    this.requestOverlayDraw();
+    return true;
+  }
+
+  private updatePatternDraftPreview(anchor: DrawingAnchor): void {
+    if (!this.drawingTool || !isPatternDrawingKind(this.drawingTool) || !this.drawingDraft) return;
+    const committed = this.drawingDraft.points?.slice(0, Math.max(1, this.patternPointStage)) ?? [this.drawingDraft.a];
+    this.drawingDraft.points = [...committed, anchor];
+    this.drawingDraft.b = anchor;
   }
 
   private getDefaultChannelOffset(a: DrawingAnchor, b: DrawingAnchor): DrawingAnchor {
@@ -9118,6 +9189,10 @@ export class SimpleChart {
         this.requestOverlayDraw();
         return;
       }
+      if (isPatternDrawingKind(this.drawingTool)) {
+        this.appendPatternPoint(this.drawingTool, anchor);
+        return;
+      }
       if (this.drawingTool === 'fib-trend') {
         if (!this.drawingDraft || this.drawingDraft.kind !== 'fib-trend' || this.fibTrendPointStage === 0) {
           this.drawingDraft = {
@@ -9348,6 +9423,12 @@ export class SimpleChart {
       this.drawingMoveDistance = moveResult.moveDistance;
       this.upsertDrawing(moveResult.movedShape);
       this.syncDrawingToolbar();
+      this.requestOverlayDraw();
+      return;
+    }
+    if (this.drawingTool && isPatternDrawingKind(this.drawingTool) && this.drawingDraft) {
+      const anchor = this.getMouseAnchor(this.mouseX, this.mouseY);
+      if (anchor) this.updatePatternDraftPreview(anchor);
       this.requestOverlayDraw();
       return;
     }
@@ -9810,6 +9891,11 @@ export class SimpleChart {
           return;
         }
 
+        if (isPatternDrawingKind(this.drawingTool)) {
+          this.requestOverlayDraw();
+          return;
+        }
+
         // ── fib-trend: 십자선 이동만, 앵커 확정은 touchEnd ─────────────────
         if (this.drawingTool === 'fib-trend') {
           this.requestOverlayDraw();
@@ -10252,6 +10338,15 @@ export class SimpleChart {
         this.isCrosshairMode = false;
         this.setDrawingTool(null);
         this.requestOverlayDraw();
+        return;
+      }
+      if (isPatternDrawingKind(this.drawingTool)) {
+        const useX = this.touchDrawingCrosshairX || tx;
+        const useY = this.touchDrawingCrosshairY || ty;
+        const anchor = this.getMouseAnchor(useX, useY);
+        if (!anchor) { this.requestOverlayDraw(); return; }
+        this.appendPatternPoint(this.drawingTool, anchor);
+        this.isCrosshairMode = false;
         return;
       }
       if (this.drawingTool === 'vertical-line' || this.drawingTool === 'cross-line') {

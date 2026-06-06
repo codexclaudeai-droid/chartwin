@@ -1,4 +1,5 @@
 import type { DrawingAnchor, DrawingDraft, DrawingShape } from '../../../ui/workspace/drawing-types.ts';
+import { isPatternDrawingKind } from '../../../ui/workspace/drawing-utils.ts';
 
 export interface HasMeaningfulDraftMoveParams {
   a: DrawingAnchor;
@@ -23,6 +24,11 @@ function getDraftColor(kind: DrawingDraft['kind']): string {
   if (kind === 'draw-highlighter') return 'rgba(255,234,86,0.4)';
   if (kind === 'draw-box') return 'rgba(126,166,255,0.20)';
   if (kind === 'draw-circle') return 'rgba(126,166,255,0.16)';
+  if (kind === 'head-shoulders-pattern') return '#00a68f';
+  if (kind === 'abcd-pattern') return '#00a68f';
+  if (kind === 'triangle-pattern') return '#7c4dff';
+  if (kind === 'three-drives-pattern') return '#7c4dff';
+  if (isPatternDrawingKind(kind)) return '#2f6cff';
   return '#2f6cff';
 }
 

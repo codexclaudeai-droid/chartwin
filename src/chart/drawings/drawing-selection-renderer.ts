@@ -1,4 +1,4 @@
-import { isSingleAnchorLineKind, isTrendlineKind } from '../../ui/workspace/drawing-utils.ts';
+import { isPatternDrawingKind, isSingleAnchorLineKind, isTrendlineKind } from '../../ui/workspace/drawing-utils.ts';
 import type { DrawingShape } from '../../ui/workspace/drawing-types.ts';
 
 export interface DrawingSelectionMetrics {
@@ -31,6 +31,7 @@ function shouldHideSelectionBox(shape: DrawingShape): boolean {
     || shape.kind === 'draw-circle'
     || shape.kind === 'draw-pencil'
     || shape.kind === 'draw-highlighter'
+    || isPatternDrawingKind(shape.kind)
   );
 }
 
