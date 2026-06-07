@@ -32,14 +32,24 @@ const VWAP_SOURCES = new Set<VwapSource>(['open', 'high', 'low', 'close', 'hl2',
 
 export function calculateCvd(candles: IndicatorCandle[]): number[] {
   if (!candles.length) return [];
-  const cvd = [0];
-  for (let i = 1; i < candles.length; i += 1) {
-    const candle = candles[i];
-    const delta = candle.close > candle.open
+  const getDelta = (candle: IndicatorCandle): number => {
+    const tradeDelta = Number(candle.volumeDelta);
+    if (Number.isFinite(tradeDelta)) return tradeDelta;
+    const buyVolume = Number(candle.buyVolume);
+    const sellVolume = Number(candle.sellVolume);
+    if (Number.isFinite(buyVolume) && Number.isFinite(sellVolume)) return buyVolume - sellVolume;
+    return candle.close > candle.open
       ? candle.volume
       : candle.close < candle.open
         ? -candle.volume
         : 0;
+  };
+  const firstHasTradeDelta = Number.isFinite(Number(candles[0]?.volumeDelta))
+    || (Number.isFinite(Number(candles[0]?.buyVolume)) && Number.isFinite(Number(candles[0]?.sellVolume)));
+  const cvd = [firstHasTradeDelta ? getDelta(candles[0]) : 0];
+  for (let i = 1; i < candles.length; i += 1) {
+    const candle = candles[i];
+    const delta = getDelta(candle);
     cvd.push(cvd[i - 1] + delta);
   }
   return cvd;

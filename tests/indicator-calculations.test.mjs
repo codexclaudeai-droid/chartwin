@@ -184,6 +184,19 @@ test('indicator modules calculate CVD and VWAP from candle data', () => {
   assert.equal(Math.round((vwap[3] ?? 0) * 100) / 100, 11.34);
 });
 
+test('CVD prefers trade-derived candle delta when it is available', () => {
+  const candles = [
+    { ...candle(10, 12, 8, 11, 100), volumeDelta: -20 },
+    { ...candle(11, 13, 10, 12, 50), volumeDelta: 35 },
+    { ...candle(12, 13, 9, 10, 80), volumeDelta: -15 },
+    candle(10, 15, 10, 14, 120),
+  ];
+
+  const cvd = calculateCvd(candles);
+
+  assert.deepEqual(cvd, [-20, 15, 0, 120]);
+});
+
 test('VWAP can reset by session and quarter anchors', () => {
   const candles = [
     { ...candle(10, 12, 8, 11, 100), time: Date.UTC(2026, 0, 1, 23, 58) / 1000 },

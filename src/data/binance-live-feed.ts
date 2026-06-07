@@ -1,4 +1,4 @@
-import type { TimeframeKey } from '../catalog/time';
+import { TIMEFRAME_SECONDS, type TimeframeKey } from '../catalog/time';
 
 export type CandleDataLike = {
   time: number;
@@ -7,6 +7,9 @@ export type CandleDataLike = {
   low: number;
   close: number;
   volume: number;
+  buyVolume?: number;
+  sellVolume?: number;
+  volumeDelta?: number;
 };
 
 type ChartLike = {
@@ -17,7 +20,7 @@ type ChartLike = {
   setData: (candles: CandleDataLike[]) => void;
   getCandles: () => CandleDataLike[];
   addNewCandle: (candle: CandleDataLike) => void;
-  updateLastCandle: (patch: Pick<CandleDataLike, 'close' | 'high' | 'low' | 'volume'>) => void;
+  updateLastCandle: (patch: Partial<Pick<CandleDataLike, 'close' | 'high' | 'low' | 'volume' | 'buyVolume' | 'sellVolume' | 'volumeDelta'>>) => void;
 };
 
 type CreateBinanceLiveFeedArgs = {
@@ -67,19 +70,22 @@ function timeframeToInterval(timeframe: TimeframeKey): string | null {
   return INTERVAL_BY_TIMEFRAME[timeframe] ?? null;
 }
 
-function parseTradeRow(row: unknown): { id: number; timeSec: number; price: number; qty: number } | null {
+function parseTradeRow(row: unknown): { id: number; timeSec: number; price: number; qty: number; isBuyerMaker: boolean | null } | null {
   if (!row || typeof row !== 'object') return null;
   const value = row as Record<string, unknown>;
   const tradeTimeMs = Number(value.time ?? value.T);
   const price = Number(value.price ?? value.p);
   const qty = Number(value.qty ?? value.q);
   const id = Number(value.id ?? value.a);
+  const makerValue = value.isBuyerMaker ?? value.m;
+  const isBuyerMaker = typeof makerValue === 'boolean' ? makerValue : null;
   if (![tradeTimeMs, price, qty, id].every((v) => Number.isFinite(v))) return null;
   return {
     id,
     timeSec: Math.floor(tradeTimeMs / 1000),
     price,
     qty,
+    isBuyerMaker,
   };
 }
 
@@ -140,7 +146,7 @@ async function fetchRecentTrades(
   limit: number,
   signal: AbortSignal,
   endTimeMs?: number,
-): Promise<Array<{ id: number; timeSec: number; price: number; qty: number }>> {
+): Promise<Array<{ id: number; timeSec: number; price: number; qty: number; isBuyerMaker: boolean | null }>> {
   const query = new URLSearchParams({
     symbol,
     limit: String(Math.max(200, Math.min(1000, limit))),
@@ -157,14 +163,30 @@ async function fetchRecentTrades(
   });
   if (!response.ok) throw new Error(`Binance aggTrades REST error: ${response.status}`);
   const rows = (await response.json()) as unknown[];
-  const trades = rows.map(parseTradeRow).filter((trade): trade is { id: number; timeSec: number; price: number; qty: number } => trade != null);
+  const trades = rows.map(parseTradeRow).filter((trade): trade is { id: number; timeSec: number; price: number; qty: number; isBuyerMaker: boolean | null } => trade != null);
   if (!trades.length) throw new Error('Binance aggTrades REST returned empty trades');
   return trades;
 }
 
-function buildSecondCandlesFromTrades(trades: Array<{ timeSec: number; price: number; qty: number }>): CandleDataLike[] {
+function getTradeDelta(qty: number, isBuyerMaker: boolean | null): { buyVolume: number; sellVolume: number; volumeDelta: number } {
+  if (isBuyerMaker === true) {
+    return { buyVolume: 0, sellVolume: qty, volumeDelta: -qty };
+  }
+  if (isBuyerMaker === false) {
+    return { buyVolume: qty, sellVolume: 0, volumeDelta: qty };
+  }
+  return { buyVolume: 0, sellVolume: 0, volumeDelta: 0 };
+}
+
+function bucketTradeTimeSec(timeSec: number, timeframe: TimeframeKey): number {
+  const bucketSec = TIMEFRAME_SECONDS[timeframe] ?? 60;
+  return Math.floor(timeSec / bucketSec) * bucketSec;
+}
+
+function buildSecondCandlesFromTrades(trades: Array<{ timeSec: number; price: number; qty: number; isBuyerMaker: boolean | null }>): CandleDataLike[] {
   const out: CandleDataLike[] = [];
   trades.forEach((trade) => {
+    const delta = getTradeDelta(trade.qty, trade.isBuyerMaker);
     const last = out[out.length - 1];
     if (!last || trade.timeSec > last.time) {
       if (last && trade.timeSec > last.time + 1) {
@@ -176,6 +198,9 @@ function buildSecondCandlesFromTrades(trades: Array<{ timeSec: number; price: nu
             low: last.close,
             close: last.close,
             volume: 0,
+            buyVolume: 0,
+            sellVolume: 0,
+            volumeDelta: 0,
           });
         }
       }
@@ -186,6 +211,9 @@ function buildSecondCandlesFromTrades(trades: Array<{ timeSec: number; price: nu
         low: trade.price,
         close: trade.price,
         volume: trade.qty,
+        buyVolume: delta.buyVolume,
+        sellVolume: delta.sellVolume,
+        volumeDelta: delta.volumeDelta,
       });
       return;
     }
@@ -194,6 +222,9 @@ function buildSecondCandlesFromTrades(trades: Array<{ timeSec: number; price: nu
       last.low = Math.min(last.low, trade.price);
       last.close = trade.price;
       last.volume += trade.qty;
+      last.buyVolume = (last.buyVolume ?? 0) + delta.buyVolume;
+      last.sellVolume = (last.sellVolume ?? 0) + delta.sellVolume;
+      last.volumeDelta = (last.volumeDelta ?? 0) + delta.volumeDelta;
     }
   });
   return out;
@@ -241,11 +272,11 @@ async function fetchRecentTradesHistory(
   symbol: string,
   totalLimit: number,
   signal: AbortSignal,
-): Promise<Array<{ timeSec: number; price: number; qty: number }>> {
+): Promise<Array<{ timeSec: number; price: number; qty: number; isBuyerMaker: boolean | null }>> {
   const target = Math.max(1000, Math.min(20000, totalLimit));
   let remaining = target;
   let endTimeMs: number | undefined = undefined;
-  const out: Array<{ id: number; timeSec: number; price: number; qty: number }> = [];
+  const out: Array<{ id: number; timeSec: number; price: number; qty: number; isBuyerMaker: boolean | null }> = [];
 
   while (remaining > 0) {
     const batchLimit = Math.min(1000, remaining);
@@ -260,7 +291,7 @@ async function fetchRecentTradesHistory(
 
   const unique = Array.from(new Map(out.map((item) => [item.id, item])).values())
     .sort((a, b) => a.timeSec - b.timeSec)
-    .map(({ timeSec, price, qty }) => ({ timeSec, price, qty }));
+    .map(({ timeSec, price, qty, isBuyerMaker }) => ({ timeSec, price, qty, isBuyerMaker }));
   if (!unique.length) throw new Error('Binance aggTrades REST returned empty trades');
   return unique;
 }
@@ -358,27 +389,33 @@ export function createBinanceLiveFeed({
     }
   };
 
-  const applyTradeTick = (price: number, qty: number, tradeTimeSec: number) => {
+  const applyTradeTick = (price: number, qty: number, tradeTimeSec: number, isBuyerMaker: boolean | null) => {
     if (!Number.isFinite(price) || !Number.isFinite(qty) || !Number.isFinite(tradeTimeSec)) return;
+    const bucketTimeSec = bucketTradeTimeSec(tradeTimeSec, chart.config.timeframe);
+    const delta = getTradeDelta(qty, isBuyerMaker);
     const candles = chart.getCandles();
     const last = candles[candles.length - 1];
     if (!last) {
       const first: CandleDataLike = {
-        time: tradeTimeSec,
+        time: bucketTimeSec,
         open: price,
         high: price,
         low: price,
         close: price,
         volume: qty,
+        buyVolume: delta.buyVolume,
+        sellVolume: delta.sellVolume,
+        volumeDelta: delta.volumeDelta,
       };
       chart.setData([first]);
       onDataApplied?.([first]);
       onLiveTick?.();
       return;
     }
-    if (tradeTimeSec > last.time) {
-      if (tradeTimeSec > last.time + 1) {
-        for (let sec = last.time + 1; sec < tradeTimeSec; sec += 1) {
+    if (bucketTimeSec > last.time) {
+      const bucketSec = TIMEFRAME_SECONDS[chart.config.timeframe] ?? 60;
+      if (bucketTimeSec > last.time + bucketSec) {
+        for (let sec = last.time + bucketSec; sec < bucketTimeSec; sec += bucketSec) {
           chart.addNewCandle({
             time: sec,
             open: last.close,
@@ -386,26 +423,35 @@ export function createBinanceLiveFeed({
             low: last.close,
             close: last.close,
             volume: 0,
+            buyVolume: 0,
+            sellVolume: 0,
+            volumeDelta: 0,
           });
         }
       }
       chart.addNewCandle({
-        time: tradeTimeSec,
+        time: bucketTimeSec,
         open: last.close,
         high: Math.max(last.close, price),
         low: Math.min(last.close, price),
         close: price,
         volume: qty,
+        buyVolume: delta.buyVolume,
+        sellVolume: delta.sellVolume,
+        volumeDelta: delta.volumeDelta,
       });
       onLiveTick?.();
       return;
     }
-    if (tradeTimeSec === last.time) {
+    if (bucketTimeSec === last.time) {
       chart.updateLastCandle({
         close: price,
         high: Math.max(last.high, price),
         low: Math.min(last.low, price),
         volume: last.volume + qty,
+        buyVolume: (last.buyVolume ?? 0) + delta.buyVolume,
+        sellVolume: (last.sellVolume ?? 0) + delta.sellVolume,
+        volumeDelta: (last.volumeDelta ?? 0) + delta.volumeDelta,
       });
       onLiveTick?.();
     }
@@ -454,8 +500,10 @@ export function createBinanceLiveFeed({
         const price = Number(payload.p);
         const qty = Number(payload.q);
         const tradeTimeMs = Number(payload.T);
+        const makerValue = payload.m;
+        const isBuyerMaker = typeof makerValue === 'boolean' ? makerValue : null;
         if (![price, qty, tradeTimeMs].every((v) => Number.isFinite(v))) return;
-        applyTradeTick(price, qty, Math.floor(tradeTimeMs / 1000));
+        applyTradeTick(price, qty, Math.floor(tradeTimeMs / 1000), isBuyerMaker);
       } catch {
         // ignore malformed packets
       }
@@ -502,8 +550,7 @@ export function createBinanceLiveFeed({
         onStatusChange?.('idle');
         return false;
       }
-      if (secondMode) connectTradeWebSocket(resolved.market, symbol);
-      else connectKlineWebSocket(resolved.market, symbol, interval);
+      connectTradeWebSocket(resolved.market, symbol);
       connecting = false;
       return true;
     } catch {

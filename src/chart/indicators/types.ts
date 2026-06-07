@@ -4,6 +4,9 @@ export interface IndicatorCandle {
   low: number;
   close: number;
   volume: number;
+  buyVolume?: number;
+  sellVolume?: number;
+  volumeDelta?: number;
   time?: number;
 }
 
