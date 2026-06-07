@@ -15,7 +15,10 @@ test('binance direct chart feed starts with 3000 candles and lazy-loads older hi
   assert.match(initSource, /limit:\s*BINANCE_DIRECT_INITIAL_HISTORY_LIMIT/);
   assert.match(initSource, /binanceFeed\.loadOlder\(\)/);
   assert.match(initSource, /lastWheelViewportInteractionAt/);
+  assert.match(initSource, /olderHistoryLoadArmed/);
   assert.match(initSource, /WHEEL_AUTO_PAN_SUPPRESSION_MS\s*=\s*700/);
+  assert.match(initSource, /if \(!olderHistoryLoadArmed\) return/);
+  assert.match(initSource, /olderHistoryLoadArmed = false/);
   assert.match(initSource, /const addedCandles = Math\.max\(0, rawCandles\.length - beforeLength\)/);
   assert.match(initSource, /wheelRecentlyChangedViewport/);
   assert.match(initSource, /addedCandles > 0 && !wheelRecentlyChangedViewport/);

@@ -1187,9 +1187,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
 
     const chart = new SimpleChart(chartArea);
     let lastWheelViewportInteractionAt = 0;
+    let olderHistoryLoadArmed = true;
     const WHEEL_AUTO_PAN_SUPPRESSION_MS = 700;
     chartArea.addEventListener('wheel', () => {
       lastWheelViewportInteractionAt = performance.now();
+      olderHistoryLoadArmed = true;
     }, { capture: true, passive: true });
     applyUserFacingStrategy(chart);
     applySavedChartConfig(chart);
@@ -1774,10 +1776,15 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (!shouldUseBinanceDirect(chart.config.symbol)) return;
       if (!liveRunning) return;
       const range = chart.getVisibleCandleRange();
-      if (range.startIndex > 80) return;
+      if (range.startIndex > 80) {
+        olderHistoryLoadArmed = true;
+        return;
+      }
       if (rawCandles.length < BINANCE_DIRECT_INITIAL_HISTORY_LIMIT) return;
       if (olderHistoryInFlight) return;
+      if (!olderHistoryLoadArmed) return;
       olderHistoryInFlight = true;
+      olderHistoryLoadArmed = false;
       const beforeLength = rawCandles.length;
       void binanceFeed.loadOlder()
         .then((loaded) => {
