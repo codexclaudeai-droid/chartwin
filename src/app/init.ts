@@ -53,7 +53,7 @@ import { openMultiMonitorPopouts } from '../ui/workspace/multi-monitor';
 import { createPaneChrome } from '../ui/workspace/pane-chrome';
 import { createPanelDividerManager } from '../ui/workspace/panel-dividers';
 import { createLiveTicker } from '../ui/workspace/live-ticker';
-import { createBinanceLiveFeed } from '../data/binance-live-feed';
+import { BINANCE_DIRECT_CHART_HISTORY_LIMIT, createBinanceLiveFeed } from '../data/binance-live-feed';
 import { createGatewayLiveFeed, shouldUseBinanceDirect } from '../data/gateway-live-feed';
 import { bindPaneEventHandlers } from '../ui/workspace/pane-events';
 import { createStrategyReportPanel } from '../ui/workspace/strategy-report-panel';
@@ -1742,7 +1742,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           markStrategyReportStale();
         },
       },
-      limit: 3000,
+      limit: BINANCE_DIRECT_CHART_HISTORY_LIMIT,
       onDataApplied: (candles) => {
         rawCandles = candles.slice();
         applyDisplayCurrencyToChart();

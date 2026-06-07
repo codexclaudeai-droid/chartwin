@@ -28,6 +28,8 @@ type CreateBinanceLiveFeedArgs = {
   limit?: number;
 };
 
+export const BINANCE_DIRECT_CHART_HISTORY_LIMIT = 43_200;
+
 const INTERVAL_BY_TIMEFRAME: Partial<Record<TimeframeKey, string>> = {
   '1s': '1s',
   '1m': '1m',
@@ -212,7 +214,7 @@ async function fetchBinanceKlinesHistory(
   totalLimit: number,
   signal: AbortSignal,
 ): Promise<CandleDataLike[]> {
-  const target = Math.max(100, Math.min(3000, totalLimit));
+  const target = Math.max(100, Math.min(BINANCE_DIRECT_CHART_HISTORY_LIMIT, totalLimit));
   let remaining = target;
   let endTimeMs: number | undefined = undefined;
   const out: CandleDataLike[] = [];
