@@ -1773,9 +1773,16 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (rawCandles.length < BINANCE_DIRECT_INITIAL_HISTORY_LIMIT) return;
       if (olderHistoryInFlight) return;
       olderHistoryInFlight = true;
-      void binanceFeed.loadOlder().finally(() => {
-        olderHistoryInFlight = false;
-      });
+      const beforeLength = rawCandles.length;
+      void binanceFeed.loadOlder()
+        .then((loaded) => {
+          if (!loaded) return;
+          const addedCandles = Math.max(0, rawCandles.length - beforeLength);
+          if (addedCandles > 0) chart.panViewport(-addedCandles);
+        })
+        .finally(() => {
+          olderHistoryInFlight = false;
+        });
     };
     const gatewayFeed = createGatewayLiveFeed({
       chart: {
