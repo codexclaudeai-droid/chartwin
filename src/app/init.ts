@@ -1186,6 +1186,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     const isCurrencyDocked = () => currencySelect.parentElement === currencyDock;
 
     const chart = new SimpleChart(chartArea);
+    let lastWheelViewportInteractionAt = 0;
+    const WHEEL_AUTO_PAN_SUPPRESSION_MS = 700;
+    chartArea.addEventListener('wheel', () => {
+      lastWheelViewportInteractionAt = performance.now();
+    }, { capture: true, passive: true });
     applyUserFacingStrategy(chart);
     applySavedChartConfig(chart);
     let lastCurrencySelectWidth = '';
@@ -1778,7 +1783,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         .then((loaded) => {
           if (!loaded) return;
           const addedCandles = Math.max(0, rawCandles.length - beforeLength);
-          if (addedCandles > 0) chart.panViewport(-addedCandles);
+          const wheelRecentlyChangedViewport = performance.now() - lastWheelViewportInteractionAt < WHEEL_AUTO_PAN_SUPPRESSION_MS;
+          if (addedCandles > 0 && !wheelRecentlyChangedViewport) chart.panViewport(-addedCandles);
         })
         .finally(() => {
           olderHistoryInFlight = false;
