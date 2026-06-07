@@ -303,11 +303,31 @@ function getTriangleGuideApex(
   metrics: DrawingPatternMetrics,
 ): PatternScreenPoint {
   const apex = getLineIntersection(b, d, a, c);
-  if (apex && apex.x > Math.max(c.x, d.x)) return apex;
+  if (apex && apex.x > Math.min(a.x, b.x)) return apex;
   const fallbackX = Math.min(metrics.chartRight, Math.max(c.x, d.x) + Math.max(60, (d.x - a.x) * 0.36));
   return {
     x: fallbackX,
-    y: (getProjectedY(b, d, fallbackX) + getProjectedY(a, c, fallbackX)) / 2,
+    y: getProjectedY(b, d, fallbackX),
+  };
+}
+
+function getTriangleOuterLabelPoint(
+  point: PatternScreenPoint,
+  triangle: PatternScreenPoint[],
+): PatternScreenPoint {
+  const center = triangle.reduce(
+    (acc, item) => ({ x: acc.x + item.x, y: acc.y + item.y }),
+    { x: 0, y: 0 },
+  );
+  center.x /= Math.max(1, triangle.length);
+  center.y /= Math.max(1, triangle.length);
+  const dx = point.x - center.x;
+  const dy = point.y - center.y;
+  const distance = Math.max(1, Math.hypot(dx, dy));
+  const offset = 24;
+  return {
+    x: point.x + ((dx / distance) * offset),
+    y: point.y + ((dy / distance) * offset),
   };
 }
 
@@ -317,7 +337,7 @@ function renderTrianglePattern(
   labels: string[],
   isActive: boolean,
 ): boolean {
-  if (params.shape.kind !== 'triangle-pattern' || screenPoints.length < 4) return false;
+  if (params.shape.kind !== 'triangle-pattern' || screenPoints.length < 3) return false;
 
   const {
     ctx,
@@ -327,9 +347,12 @@ function renderTrianglePattern(
     strokeWidth,
     fontStack,
   } = params;
-  const [a, b, c, d] = screenPoints;
+  const [a, b, c] = screenPoints;
+  const d = screenPoints[3] ?? c;
   const apex = getTriangleGuideApex(a, b, c, d, metrics);
   const leftTop = { x: a.x, y: getProjectedY(b, d, a.x) };
+  const triangleBoundary = [a, leftTop, apex];
+  const triangleLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
 
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -356,12 +379,13 @@ function renderTrianglePattern(
   ctx.setLineDash([]);
   ctx.strokeStyle = strokeColor;
   ctx.lineWidth = Math.max(2, strokeWidth * 1.2);
-  drawSegment(ctx, a, b);
-  drawSegment(ctx, b, c);
-  drawSegment(ctx, c, d);
+  for (let i = 0; i < screenPoints.length - 1; i += 1) {
+    drawSegment(ctx, screenPoints[i], screenPoints[i + 1]);
+  }
 
-  screenPoints.slice(0, 4).forEach((point, index) => {
-    const label = labels[index] ?? String(index + 1);
+  screenPoints.forEach((point, index) => {
+    const label = labels[index] ?? triangleLabels[index] ?? String(index + 1);
+    const labelPoint = getTriangleOuterLabelPoint(point, triangleBoundary);
     const radius = isActive ? 5 : 4.2;
     ctx.beginPath();
     ctx.fillStyle = '#0f172a';
@@ -370,7 +394,7 @@ function renderTrianglePattern(
     ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    drawRoundedBadge(ctx, label, point.x, point.y + (index === 0 || index === 2 ? 22 : -22), {
+    drawRoundedBadge(ctx, label, labelPoint.x, labelPoint.y, {
       font: `700 12px ${fontStack}`,
       minWidth: 22,
       height: 24,

@@ -1501,6 +1501,74 @@ export class SimpleChart {
     return true;
   }
 
+  private addTrianglePatternAnchorAfterD(): void {
+    const selected = this.getSelectedDrawing();
+    if (!selected || selected.kind !== 'triangle-pattern' || selected.locked) return;
+    const points = (selected.points ?? [selected.a, selected.b ?? selected.a]).map((point) => ({ ...point }));
+    if (points.length < 4 || points.length >= 9) return;
+    const [a, b, c, d] = points;
+    const last = points[points.length - 1];
+    const previous = points[points.length - 2] ?? points[points.length - 1];
+    const visibleSpan = Math.max(1, this.endIndex - this.startIndex);
+    const indexStep = Math.max(2, Math.abs(last.index - previous.index), visibleSpan * 0.08);
+    const projectPrice = (left: DrawingAnchor, right: DrawingAnchor, index: number): number => {
+      const dx = right.index - left.index;
+      if (Math.abs(dx) < 1e-9) return right.price;
+      const t = (index - left.index) / dx;
+      return left.price + ((right.price - left.price) * t);
+    };
+    const getGuideIntersectionIndex = (): number | null => {
+      const acDx = c.index - a.index;
+      const acDy = c.price - a.price;
+      const bdDx = d.index - b.index;
+      const bdDy = d.price - b.price;
+      const denominator = (acDx * bdDy) - (acDy * bdDx);
+      if (Math.abs(denominator) < 1e-9) return null;
+      const sourceDx = b.index - a.index;
+      const sourceDy = b.price - a.price;
+      const t = ((sourceDx * bdDy) - (sourceDy * bdDx)) / denominator;
+      return a.index + (acDx * t);
+    };
+    const apexIndex = getGuideIntersectionIndex();
+    let nextIndex = last.index + indexStep;
+    if (apexIndex != null && apexIndex > last.index + 0.5) {
+      const remaining = apexIndex - last.index;
+      nextIndex = last.index + Math.max(0.5, Math.min(indexStep, remaining * 0.72));
+    }
+    const shouldUseLowerGuide = points.length % 2 === 0;
+    const guideStart = shouldUseLowerGuide ? a : b;
+    const guideEnd = shouldUseLowerGuide ? c : d;
+    const nextAnchor: DrawingAnchor = {
+      index: nextIndex,
+      price: projectPrice(guideStart, guideEnd, nextIndex),
+    };
+    const nextPoints = [...points, nextAnchor];
+    selected.points = nextPoints;
+    selected.a = nextPoints[0];
+    selected.b = nextPoints[nextPoints.length - 1];
+    this.upsertDrawing(selected);
+    this.selectedDrawingPart = `point-${nextPoints.length - 1}` as DrawingHitPart;
+    this.drawingToolbarBoundId = null;
+    this.syncDrawingToolbar();
+    this.requestOverlayDraw();
+  }
+
+  private removeTrianglePatternAnchorAfterD(): void {
+    const selected = this.getSelectedDrawing();
+    if (!selected || selected.kind !== 'triangle-pattern' || selected.locked) return;
+    const points = (selected.points ?? [selected.a, selected.b ?? selected.a]).map((point) => ({ ...point }));
+    if (points.length <= 4) return;
+    const nextPoints = points.slice(0, -1);
+    selected.points = nextPoints;
+    selected.a = nextPoints[0];
+    selected.b = nextPoints[nextPoints.length - 1];
+    this.upsertDrawing(selected);
+    this.selectedDrawingPart = 'line';
+    this.drawingToolbarBoundId = null;
+    this.syncDrawingToolbar();
+    this.requestOverlayDraw();
+  }
+
   private updatePatternDraftPreview(anchor: DrawingAnchor): void {
     if (!this.drawingTool || !isPatternDrawingKind(this.drawingTool) || !this.drawingDraft) return;
     const committed = this.drawingDraft.points?.slice(0, Math.max(1, this.patternPointStage)) ?? [this.drawingDraft.a];
@@ -7052,6 +7120,12 @@ export class SimpleChart {
 
     const alertBtn = mkBtn('<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a4 4 0 0 0-4 4v3c0 .6-.2 1.2-.6 1.7L6 14h12l-1.4-2.3A3 3 0 0 1 16 10V7a4 4 0 0 0-4-4z"></path><path d="M10 18a2 2 0 0 0 4 0"></path></svg>', '알림생성');
     alertBtn.dataset.k = 'alert-open';
+    const addTriangleAnchorBtn = mkBtn('<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17L9 7L14 15L19 9"></path><circle cx="5" cy="17" r="1.8"></circle><circle cx="9" cy="7" r="1.8"></circle><circle cx="14" cy="15" r="1.8"></circle><path d="M18 18h4"></path><path d="M20 16v4"></path></svg>', '삼각형 앵커 추가');
+    addTriangleAnchorBtn.dataset.k = 'triangle-anchor-add';
+    addTriangleAnchorBtn.style.display = 'none';
+    const removeTriangleAnchorBtn = mkBtn('<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17L9 7L14 15L19 9"></path><circle cx="5" cy="17" r="1.8"></circle><circle cx="9" cy="7" r="1.8"></circle><circle cx="14" cy="15" r="1.8"></circle><path d="M18 18h4"></path></svg>', '삼각형 앵커 삭제');
+    removeTriangleAnchorBtn.dataset.k = 'triangle-anchor-remove';
+    removeTriangleAnchorBtn.style.display = 'none';
 
     const lockBtn = mkBtn(LOCK_ICON_CLOSED_SVG, '잠금');
     lockBtn.dataset.k = 'lock';
@@ -7070,6 +7144,8 @@ export class SimpleChart {
       styleBtn,
       styleSelect,
       alertBtn,
+      addTriangleAnchorBtn,
+      removeTriangleAnchorBtn,
       lockBtn,
       hideBtn,
       delBtn,
@@ -7230,6 +7306,14 @@ export class SimpleChart {
       const isOpen = popup.style.display === 'block';
       popup.style.display = isOpen ? 'none' : 'block';
     });
+    addTriangleAnchorBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.addTrianglePatternAnchorAfterD();
+    });
+    removeTriangleAnchorBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.removeTrianglePatternAnchorAfterD();
+    });
     document.addEventListener('click', (event) => {
       if (!popup.contains(event.target as Node) && event.target !== alertBtn) {
         popup.style.display = 'none';
@@ -7358,6 +7442,8 @@ export class SimpleChart {
     const widthSelect = q<HTMLSelectElement>('width');
     const styleSelect = q<HTMLSelectElement>('style');
     const alertBtn = q<HTMLButtonElement>('alert-open');
+    const addTriangleAnchorBtn = q<HTMLButtonElement>('triangle-anchor-add');
+    const removeTriangleAnchorBtn = q<HTMLButtonElement>('triangle-anchor-remove');
     const lockBtn = q<HTMLButtonElement>('lock');
     const hideBtn = q<HTMLButtonElement>('hide');
     if (selected.kind === 'draw-highlighter' || selected.kind === 'draw-box') {
@@ -7389,6 +7475,35 @@ export class SimpleChart {
       const supportsAlert = selected.kind !== 'anchored-vwap';
       alertBtn.style.display = supportsAlert ? 'flex' : 'none';
       if (!supportsAlert && this.drawingAlertPopupEl) this.drawingAlertPopupEl.style.display = 'none';
+    }
+    if (addTriangleAnchorBtn) {
+      const trianglePointCount = selected.kind === 'triangle-pattern'
+        ? (selected.points ?? [selected.a, selected.b ?? selected.a]).length
+        : 0;
+      const canAddTriangleAnchor = selected.kind === 'triangle-pattern'
+        && !selected.locked
+        && trianglePointCount >= 4
+        && trianglePointCount < 9;
+      addTriangleAnchorBtn.style.display = selected.kind === 'triangle-pattern' ? 'flex' : 'none';
+      addTriangleAnchorBtn.disabled = !canAddTriangleAnchor;
+      addTriangleAnchorBtn.style.opacity = canAddTriangleAnchor ? '1' : '0.42';
+      addTriangleAnchorBtn.style.cursor = canAddTriangleAnchor ? 'pointer' : 'not-allowed';
+      addTriangleAnchorBtn.title = canAddTriangleAnchor
+        ? '삼각형 앵커 추가'
+        : trianglePointCount >= 9
+          ? '삼각형 앵커는 최대 9개까지 추가할 수 있습니다'
+          : 'D 앵커 이후부터 앵커를 추가할 수 있습니다';
+    }
+    if (removeTriangleAnchorBtn) {
+      const trianglePointCount = selected.kind === 'triangle-pattern'
+        ? (selected.points ?? [selected.a, selected.b ?? selected.a]).length
+        : 0;
+      const canRemoveTriangleAnchor = selected.kind === 'triangle-pattern'
+        && !selected.locked
+        && trianglePointCount > 4;
+      removeTriangleAnchorBtn.style.display = canRemoveTriangleAnchor ? 'flex' : 'none';
+      removeTriangleAnchorBtn.disabled = !canRemoveTriangleAnchor;
+      removeTriangleAnchorBtn.title = 'D 이후 추가 앵커 삭제';
     }
     if (widthSelect) {
       const maxWidth = selected.kind === 'draw-highlighter' ? 50 : selected.kind === 'anchored-vwap' ? 6 : 4;
@@ -10142,6 +10257,11 @@ export class SimpleChart {
         if (this.drawingDraft) {
           const anchor = this.getMouseAnchor(pos.x, pos.y);
           if (anchor) {
+            if (isPatternDrawingKind(this.drawingDraft.kind)) {
+              this.updatePatternDraftPreview(anchor);
+              this.requestOverlayDraw();
+              return;
+            }
             if (!this.drawingDragActive) {
               const dx2 = pos.x - this.touchStartX;
               const dy2 = pos.y - this.touchStartY;

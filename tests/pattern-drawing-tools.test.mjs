@@ -112,13 +112,57 @@ test('triangle pattern previews dotted triangle after C anchor and completes on 
   assert.match(drawingUtilsSource, /case 'triangle-pattern':\s+return \['A', 'B', 'C', 'D'\]/);
   assert.match(patternRendererSource, /function renderTrianglePattern/);
   assert.match(patternRendererSource, /function getTriangleGuideApex/);
-  assert.match(patternRendererSource, /params\.shape\.kind !== 'triangle-pattern' \|\| screenPoints\.length < 4/);
-  assert.match(patternRendererSource, /const \[a, b, c, d\] = screenPoints/);
+  assert.match(patternRendererSource, /function getTriangleOuterLabelPoint/);
+  assert.match(patternRendererSource, /params\.shape\.kind !== 'triangle-pattern' \|\| screenPoints\.length < 3/);
+  assert.match(patternRendererSource, /const d = screenPoints\[3\] \?\? c/);
+  assert.match(patternRendererSource, /const triangleBoundary = \[a, leftTop, apex\]/);
+  assert.match(patternRendererSource, /const labelPoint = getTriangleOuterLabelPoint\(point, triangleBoundary\)/);
+  assert.match(patternRendererSource, /y: getProjectedY\(b, d, fallbackX\)/);
   assert.match(patternRendererSource, /drawSegment\(ctx, leftTop, apex\)/);
   assert.match(patternRendererSource, /drawSegment\(ctx, a, apex\)/);
   assert.match(patternRendererSource, /drawSegment\(ctx, a, leftTop\)/);
+  assert.match(patternRendererSource, /for \(let i = 0; i < screenPoints\.length - 1; i \+= 1\)/);
   assert.match(patternRendererSource, /setLineDash\(\[2, 8\]\)/);
   assert.match(patternRendererSource, /renderTrianglePattern\(params, screenPoints, labels, isActive\)/);
+});
+
+test('triangle pattern toolbar can add anchors after D', () => {
+  assert.match(simpleChartSource, /private addTrianglePatternAnchorAfterD\(\): void/);
+  assert.match(simpleChartSource, /selected\.kind !== 'triangle-pattern'/);
+  assert.match(simpleChartSource, /points\.length < 4 \|\| points\.length >= 9/);
+  assert.match(simpleChartSource, /const \[a, b, c, d\] = points/);
+  assert.match(simpleChartSource, /const projectPrice = \(left: DrawingAnchor, right: DrawingAnchor, index: number\): number =>/);
+  assert.match(simpleChartSource, /const shouldUseLowerGuide = points\.length % 2 === 0/);
+  assert.match(simpleChartSource, /const guideStart = shouldUseLowerGuide \? a : b/);
+  assert.match(simpleChartSource, /const guideEnd = shouldUseLowerGuide \? c : d/);
+  assert.match(simpleChartSource, /price: projectPrice\(guideStart, guideEnd, nextIndex\)/);
+  assert.match(simpleChartSource, /selected\.points = nextPoints/);
+  assert.match(simpleChartSource, /addTriangleAnchorBtn\.dataset\.k = 'triangle-anchor-add'/);
+  assert.match(simpleChartSource, /this\.addTrianglePatternAnchorAfterD\(\)/);
+  assert.match(simpleChartSource, /private removeTrianglePatternAnchorAfterD\(\): void/);
+  assert.match(simpleChartSource, /if \(points\.length <= 4\) return/);
+  assert.match(simpleChartSource, /const nextPoints = points\.slice\(0, -1\)/);
+  assert.match(simpleChartSource, /removeTriangleAnchorBtn\.dataset\.k = 'triangle-anchor-remove'/);
+  assert.match(simpleChartSource, /trianglePointCount > 4/);
+  assert.match(simpleChartSource, /this\.removeTrianglePatternAnchorAfterD\(\)/);
+  assert.match(patternRendererSource, /const triangleLabels = \['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'\]/);
+  assert.match(patternRendererSource, /for \(let i = 0; i < screenPoints\.length - 1; i \+= 1\)/);
+  assert.match(patternRendererSource, /minWidth: 22,\s+height: 24/s);
+});
+
+test('triangle extension anchors stay snapped to alternating guide lines while editing', () => {
+  assert.match(transformSource, /function projectAnchorPriceOnLine/);
+  assert.match(transformSource, /function interpolateAnchorOnLine/);
+  assert.match(transformSource, /function getAnchorLineRatio/);
+  assert.match(transformSource, /function snapTriangleExtensionAnchors\(\s*points: DrawingAnchor\[\],\s*previousPoints: DrawingAnchor\[\],\s*movedPointIndex: number \| null,/);
+  assert.match(transformSource, /if \(index < 4\) return point/);
+  assert.match(transformSource, /const useLowerGuide = index % 2 === 0/);
+  assert.match(transformSource, /const guideA = useLowerGuide \? a : b/);
+  assert.match(transformSource, /const guideB = useLowerGuide \? c : d/);
+  assert.match(transformSource, /const shouldPreserveGuideRatio = movedPointIndex == null \|\| movedPointIndex < 4/);
+  assert.match(transformSource, /const ratio = getAnchorLineRatio\(previousGuideA, previousGuideB, previousPoint\)/);
+  assert.match(transformSource, /return interpolateAnchorOnLine\(guideA, guideB, ratio\)/);
+  assert.match(transformSource, /base\.kind === 'triangle-pattern'[\s\S]*?snapTriangleExtensionAnchors\(points, previousPoints, pointIndex\)/);
 });
 
 test('three drives pattern uses seven anchors with dotted ratio guides', () => {

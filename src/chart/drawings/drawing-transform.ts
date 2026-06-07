@@ -29,6 +29,56 @@ function cloneShape(shape: DrawingShape): DrawingShape {
   return cloneDrawingShape(shape);
 }
 
+function projectAnchorPriceOnLine(lineA: DrawingAnchor, lineB: DrawingAnchor, index: number): number {
+  const dx = lineB.index - lineA.index;
+  if (Math.abs(dx) < 1e-9) return lineB.price;
+  const t = (index - lineA.index) / dx;
+  return lineA.price + ((lineB.price - lineA.price) * t);
+}
+
+function interpolateAnchorOnLine(lineA: DrawingAnchor, lineB: DrawingAnchor, t: number): DrawingAnchor {
+  return {
+    index: lineA.index + ((lineB.index - lineA.index) * t),
+    price: lineA.price + ((lineB.price - lineA.price) * t),
+  };
+}
+
+function getAnchorLineRatio(lineA: DrawingAnchor, lineB: DrawingAnchor, point: DrawingAnchor): number {
+  const dx = lineB.index - lineA.index;
+  if (Math.abs(dx) >= 1e-9) return (point.index - lineA.index) / dx;
+  const dy = lineB.price - lineA.price;
+  if (Math.abs(dy) >= 1e-9) return (point.price - lineA.price) / dy;
+  return 1;
+}
+
+function snapTriangleExtensionAnchors(
+  points: DrawingAnchor[],
+  previousPoints: DrawingAnchor[],
+  movedPointIndex: number | null,
+): DrawingAnchor[] {
+  if (points.length <= 4) return points;
+  const [a, b, c, d] = points;
+  const [previousA, previousB, previousC, previousD] = previousPoints;
+  const shouldPreserveGuideRatio = movedPointIndex == null || movedPointIndex < 4;
+  return points.map((point, index) => {
+    if (index < 4) return point;
+    const useLowerGuide = index % 2 === 0;
+    const guideA = useLowerGuide ? a : b;
+    const guideB = useLowerGuide ? c : d;
+    if (shouldPreserveGuideRatio) {
+      const previousGuideA = useLowerGuide ? previousA : previousB;
+      const previousGuideB = useLowerGuide ? previousC : previousD;
+      const previousPoint = previousPoints[index] ?? point;
+      const ratio = getAnchorLineRatio(previousGuideA, previousGuideB, previousPoint);
+      return interpolateAnchorOnLine(guideA, guideB, ratio);
+    }
+    return {
+      ...point,
+      price: projectAnchorPriceOnLine(guideA, guideB, point.index),
+    };
+  });
+}
+
 export function moveDrawingByDelta(params: MoveDrawingByDeltaParams): DrawingShape {
   const { base, dx, dy, part = 'line', metrics, dataLength, applyMagnet } = params;
   if (!metrics) return cloneShape(base);
@@ -52,6 +102,7 @@ export function moveDrawingByDelta(params: MoveDrawingByDeltaParams): DrawingSha
 
   if (isPatternDrawingKind(base.kind)) {
     const next = cloneShape(base);
+    const previousPoints = getDrawingShapePoints(base).map((point) => ({ ...point }));
     const points = getDrawingShapePoints(base).map((point) => ({ ...point }));
     const pointIndex = getDrawingPointPartIndex(part);
     if (pointIndex != null && points[pointIndex]) {
@@ -61,9 +112,12 @@ export function moveDrawingByDelta(params: MoveDrawingByDeltaParams): DrawingSha
         points[i] = moveAnchor(points[i]);
       }
     }
-    next.points = points;
-    next.a = points[0] ?? next.a;
-    next.b = points[points.length - 1] ?? next.b;
+    const nextPoints = base.kind === 'triangle-pattern'
+      ? snapTriangleExtensionAnchors(points, previousPoints, pointIndex)
+      : points;
+    next.points = nextPoints;
+    next.a = nextPoints[0] ?? next.a;
+    next.b = nextPoints[nextPoints.length - 1] ?? next.b;
     return next;
   }
 
