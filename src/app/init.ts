@@ -53,7 +53,7 @@ import { openMultiMonitorPopouts } from '../ui/workspace/multi-monitor';
 import { createPaneChrome } from '../ui/workspace/pane-chrome';
 import { createPanelDividerManager } from '../ui/workspace/panel-dividers';
 import { createLiveTicker } from '../ui/workspace/live-ticker';
-import { BINANCE_DIRECT_CHART_HISTORY_LIMIT, createBinanceLiveFeed } from '../data/binance-live-feed';
+import { BINANCE_DIRECT_INITIAL_HISTORY_LIMIT, createBinanceLiveFeed } from '../data/binance-live-feed';
 import { createGatewayLiveFeed, shouldUseBinanceDirect } from '../data/gateway-live-feed';
 import { bindPaneEventHandlers } from '../ui/workspace/pane-events';
 import { createStrategyReportPanel } from '../ui/workspace/strategy-report-panel';
@@ -1748,7 +1748,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           markStrategyReportStale();
         },
       },
-      limit: BINANCE_DIRECT_CHART_HISTORY_LIMIT,
+      limit: BINANCE_DIRECT_INITIAL_HISTORY_LIMIT,
       onDataApplied: (candles) => {
         rawCandles = candles.slice();
         applyDisplayCurrencyToChart();
@@ -1764,6 +1764,19 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         setLiveStatus(status);
       },
     });
+    let olderHistoryInFlight = false;
+    const monitorOlderHistory = () => {
+      if (!shouldUseBinanceDirect(chart.config.symbol)) return;
+      if (!liveRunning) return;
+      const range = chart.getVisibleCandleRange();
+      if (range.startIndex > 80) return;
+      if (rawCandles.length < BINANCE_DIRECT_INITIAL_HISTORY_LIMIT) return;
+      if (olderHistoryInFlight) return;
+      olderHistoryInFlight = true;
+      void binanceFeed.loadOlder().finally(() => {
+        olderHistoryInFlight = false;
+      });
+    };
     const gatewayFeed = createGatewayLiveFeed({
       chart: {
         config: chart.config,
@@ -1880,6 +1893,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (chart.config.quoteCurrency === 'USDT' || chart.config.quoteCurrency === 'USD') return;
       void applyCurrencySelection();
     }, 60_000);
+    startManagedInterval(monitorOlderHistory, 350);
     void applyCurrencySelection();
 
     bindPaneEventHandlers<TimeframeKey>({

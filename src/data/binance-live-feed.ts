@@ -31,7 +31,8 @@ type CreateBinanceLiveFeedArgs = {
   limit?: number;
 };
 
-export const BINANCE_DIRECT_CHART_HISTORY_LIMIT = 43_200;
+export const BINANCE_DIRECT_INITIAL_HISTORY_LIMIT = 3000;
+export const BINANCE_DIRECT_OLDER_HISTORY_BATCH = 1000;
 
 const INTERVAL_BY_TIMEFRAME: Partial<Record<TimeframeKey, string>> = {
   '1s': '1s',
@@ -245,7 +246,7 @@ async function fetchBinanceKlinesHistory(
   totalLimit: number,
   signal: AbortSignal,
 ): Promise<CandleDataLike[]> {
-  const target = Math.max(100, Math.min(BINANCE_DIRECT_CHART_HISTORY_LIMIT, totalLimit));
+  const target = Math.max(100, Math.min(BINANCE_DIRECT_INITIAL_HISTORY_LIMIT, totalLimit));
   let remaining = target;
   let endTimeMs: number | undefined = undefined;
   const out: CandleDataLike[] = [];
@@ -265,6 +266,25 @@ async function fetchBinanceKlinesHistory(
   const unique = dedupeCandles(out);
   if (!unique.length) throw new Error('Binance REST returned empty candles');
   return unique;
+}
+
+async function fetchBinanceKlinesOlder(
+  market: 'spot' | 'futures',
+  symbol: string,
+  interval: string,
+  beforeTimeSec: number,
+  signal: AbortSignal,
+): Promise<CandleDataLike[]> {
+  if (!Number.isFinite(beforeTimeSec) || beforeTimeSec <= 0) return [];
+  const rows = await fetchBinanceKlines(
+    market,
+    symbol,
+    interval,
+    BINANCE_DIRECT_OLDER_HISTORY_BATCH,
+    signal,
+    beforeTimeSec * 1000 - 1,
+  );
+  return rows.filter((row) => row.time < beforeTimeSec);
 }
 
 async function fetchRecentTradesHistory(
@@ -305,13 +325,16 @@ export function createBinanceLiveFeed({
 }: CreateBinanceLiveFeedArgs): {
   start: () => Promise<boolean>;
   reload: () => Promise<boolean>;
+  loadOlder: () => Promise<boolean>;
   stop: () => void;
 } {
   let socket: WebSocket | null = null;
   let reconnectTimer: number | null = null;
   let abortController: AbortController | null = null;
+  let olderAbortController: AbortController | null = null;
   let running = false;
   let connecting = false;
+  let loadingOlder = false;
   let secondMode = false;
 
   const cleanupSocket = () => {
@@ -338,6 +361,12 @@ export function createBinanceLiveFeed({
     if (!abortController) return;
     abortController.abort();
     abortController = null;
+  };
+
+  const cleanupOlderFetch = () => {
+    if (!olderAbortController) return;
+    olderAbortController.abort();
+    olderAbortController = null;
   };
 
   const scheduleReconnect = () => {
@@ -572,17 +601,53 @@ export function createBinanceLiveFeed({
     return restart(true);
   };
 
+  const loadOlder = async (): Promise<boolean> => {
+    if (loadingOlder || connecting || secondMode) return false;
+    const current = chart.getCandles();
+    const first = current[0];
+    if (!first || !Number.isFinite(first.time)) return false;
+    const resolved = resolveBinanceMarketSymbol(chart.config.symbol);
+    const interval = timeframeToInterval(chart.config.timeframe);
+    if (!resolved.symbol || !interval) return false;
+
+    loadingOlder = true;
+    cleanupOlderFetch();
+    olderAbortController = new AbortController();
+    try {
+      const older = await fetchBinanceKlinesOlder(
+        resolved.market,
+        resolved.symbol,
+        interval,
+        first.time,
+        olderAbortController.signal,
+      );
+      if (!older.length) return false;
+      const merged = dedupeCandles([...older, ...current]);
+      if (merged.length <= current.length) return false;
+      chart.setData(merged);
+      onDataApplied?.(merged);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      loadingOlder = false;
+      olderAbortController = null;
+    }
+  };
+
   const stop = (): void => {
     running = false;
     cleanupReconnectTimer();
     cleanupSocket();
     cleanupFetch();
+    cleanupOlderFetch();
     onStatusChange?.('idle');
   };
 
   return {
     start,
     reload,
+    loadOlder,
     stop,
   };
 }
