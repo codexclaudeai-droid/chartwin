@@ -1776,16 +1776,25 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       },
     });
     let olderHistoryInFlight = false;
+    let lastOlderHistoryLoadAt = 0;
     const monitorOlderHistory = () => {
       if (!shouldUseBinanceDirect(chart.config.symbol)) return;
       if (!liveRunning) return;
       const range = chart.getVisibleCandleRange();
       if (range.startIndex > 80) return;
       if (performance.now() - lastViewportInputAt < LAZY_HISTORY_INPUT_IDLE_MS) return;
+      if (lastViewportInputAt <= lastOlderHistoryLoadAt) return;
       if (rawCandles.length < BINANCE_DIRECT_INITIAL_HISTORY_LIMIT) return;
       if (olderHistoryInFlight) return;
       olderHistoryInFlight = true;
+      const beforeLength = rawCandles.length;
       void binanceFeed.loadOlder()
+        .then((loaded) => {
+          lastOlderHistoryLoadAt = performance.now();
+          if (!loaded) return;
+          const addedCandles = Math.max(0, rawCandles.length - beforeLength);
+          if (addedCandles > 0) chart.panViewport(-addedCandles);
+        })
         .finally(() => {
           olderHistoryInFlight = false;
         });
