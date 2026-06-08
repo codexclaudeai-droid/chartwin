@@ -396,6 +396,7 @@ export class SimpleChart {
   private signalAnimationFrame = 0;
   private signalAnimationActive = false;
   private lastSignalDrawTimeMs = 0;
+  private signalLayerDrawFrame = 0;
   private strategyRequestId = 0;
   private pendingStrategyRequestId = 0;
   private strategyComputeTimer: number | null = null;
@@ -2635,8 +2636,9 @@ export class SimpleChart {
   }
 
   public setStrategySignalVisible(visible: boolean): void {
+    if (this.strategySignalVisible === visible) return;
     this.strategySignalVisible = visible;
-    this.drawSignalLayer(this.lastDrawMeta);
+    this.requestSignalLayerDraw();
     this.updateSignalAnimationLoop();
   }
 
@@ -2651,8 +2653,16 @@ export class SimpleChart {
     } catch {
       // Ignore storage failures and keep runtime state.
     }
-    this.drawSignalLayer(this.lastDrawMeta);
+    this.requestSignalLayerDraw();
     this.updateSignalAnimationLoop();
+  }
+
+  private requestSignalLayerDraw(): void {
+    if (this.signalLayerDrawFrame) return;
+    this.signalLayerDrawFrame = window.requestAnimationFrame(() => {
+      this.signalLayerDrawFrame = 0;
+      this.drawSignalLayer(this.lastDrawMeta);
+    });
   }
 
   private computeLatestSignalIndex(signals: StrategySignal[]): number {
@@ -2663,7 +2673,10 @@ export class SimpleChart {
   }
 
   private updateSignalAnimationLoop(): void {
-    const shouldAnimate = this.strategySignalVisible && this.latestStrategySignalIndex >= 0 && this.focusedTradeRange == null;
+    const latestIsVisible = this.latestStrategySignalIndex >= this.startIndex && this.latestStrategySignalIndex < this.endIndex;
+    const shouldAnimate = this.strategySignalVisible
+      && latestIsVisible
+      && this.focusedTradeRange == null;
     if (shouldAnimate) {
       if (!this.signalAnimationActive) {
         this.signalAnimationActive = true;
@@ -4258,11 +4271,13 @@ export class SimpleChart {
     subAxisStart: number;
   } = null;
 
-  private buildSignalRiskDetails(): Map<number, {
+  private buildSignalRiskDetails(startIndex = 0, endIndex = this.strategySignals.length): Map<number, {
     side: 'LONG' | 'SHORT';
     stopLoss: number | null;
     takeProfits: number[];
   }> {
+    const start = Math.max(0, Math.floor(startIndex));
+    const end = Math.max(start, Math.min(this.strategySignals.length, Math.ceil(endIndex)));
     const details = new Map<number, {
       side: 'LONG' | 'SHORT';
       stopLoss: number | null;
@@ -4273,6 +4288,7 @@ export class SimpleChart {
       const doubleBreakResult = this.getDoubleBreakResult();
       if (!doubleBreakResult) return details;
       doubleBreakResult.longSignals.forEach((signal) => {
+        if (signal.index < start || signal.index >= end) return;
         details.set(signal.index, {
           side: 'LONG',
           stopLoss: signal.sl,
@@ -4280,6 +4296,7 @@ export class SimpleChart {
         });
       });
       doubleBreakResult.shortSignals.forEach((signal) => {
+        if (signal.index < start || signal.index >= end) return;
         details.set(signal.index, {
           side: 'SHORT',
           stopLoss: signal.sl,
@@ -4291,13 +4308,12 @@ export class SimpleChart {
 
     if (this.activeStrategyId === 'strategy_pine_bbands_directed' && this.bollingerRiskConfig.enabled) {
       const risk = this.bollingerRiskConfig;
-      const atr = this.calcAtrSeries(risk.atrPeriod);
-      for (let i = 0; i < this.strategySignals.length; i += 1) {
+      for (let i = start; i < end; i += 1) {
         const signal = this.strategySignals[i] ?? 0;
         if (!signal) continue;
         const candle = this.data[i];
         if (!candle) continue;
-        const atrNow = atr[i];
+        const atrNow = this.calcAtrAtIndex(i, risk.atrPeriod);
         const atrValue = atrNow && Number.isFinite(atrNow) ? atrNow : Math.max(1e-9, candle.high - candle.low);
         if (signal > 0) {
           details.set(i, {
@@ -4323,13 +4339,12 @@ export class SimpleChart {
 
     if (this.activeStrategyId === MTF_1M_SCALPER_STRATEGY_ID) {
       const risk = this.getMtf1mScalperRiskConfig();
-      const atr = this.calcAtrSeries(risk.atrPeriod);
-      for (let i = 0; i < this.strategySignals.length; i += 1) {
+      for (let i = start; i < end; i += 1) {
         const signal = this.strategySignals[i] ?? 0;
         if (!signal) continue;
         const candle = this.data[i];
         if (!candle) continue;
-        const atrNow = atr[i];
+        const atrNow = this.calcAtrAtIndex(i, risk.atrPeriod);
         const atrValue = atrNow && Number.isFinite(atrNow) ? atrNow : Math.max(1e-9, candle.high - candle.low);
         const distance = atrValue * risk.atrMult;
         if (signal > 0) {
@@ -4382,7 +4397,7 @@ export class SimpleChart {
     ctx.textBaseline = 'middle';
     const symbolPriceDigits = getSymbolPricePrecision(this.config.symbol, this.config.quoteCurrency);
     const baseRadius = Math.max(8, Math.min(12, meta.candleW * 0.8));
-    const signalRiskDetails = this.buildSignalRiskDetails();
+    const signalRiskDetails = this.buildSignalRiskDetails(this.startIndex, this.endIndex);
     const riskDrawJobs: Array<{
       fromX: number;
       price: number;
@@ -5332,12 +5347,22 @@ export class SimpleChart {
 
   public resize() {
     const p = this.canvas.parentElement!;
-    this.viewportWidth = p.clientWidth;
-    this.viewportHeight = p.clientHeight;
-    this.pixelRatio = Math.max(1, Math.min(MAX_CANVAS_PIXEL_RATIO, window.devicePixelRatio || 1));
+    const nextViewportWidth = p.clientWidth;
+    const nextViewportHeight = p.clientHeight;
+    const nextPixelRatio = Math.max(1, Math.min(MAX_CANVAS_PIXEL_RATIO, window.devicePixelRatio || 1));
 
-    const backingWidth = Math.floor(this.viewportWidth * this.pixelRatio);
-    const backingHeight = Math.floor(this.viewportHeight * this.pixelRatio);
+    const backingWidth = Math.floor(nextViewportWidth * nextPixelRatio);
+    const backingHeight = Math.floor(nextViewportHeight * nextPixelRatio);
+    const unchanged = this.viewportWidth === nextViewportWidth
+      && this.viewportHeight === nextViewportHeight
+      && this.pixelRatio === nextPixelRatio
+      && this.canvas.width === backingWidth
+      && this.canvas.height === backingHeight;
+    if (unchanged) return;
+
+    this.viewportWidth = nextViewportWidth;
+    this.viewportHeight = nextViewportHeight;
+    this.pixelRatio = nextPixelRatio;
 
     [this.canvas, this.signalCanvas, this.overlayCanvas].forEach((canvas) => {
       canvas.style.width = `${this.viewportWidth}px`;
@@ -5457,6 +5482,30 @@ export class SimpleChart {
         ? getExchangeSessionTimezoneForSymbol(this.config.symbol)
         : vwapOptions.sessionTimezone,
     });
+  }
+
+  private calcAtrAtIndex(index: number, period: number): number | null {
+    if (!this.data.length || index < 0 || index >= this.data.length) return null;
+    const p = Math.max(1, Math.round(period));
+    const start = Math.max(0, index - p + 1);
+    let sum = 0;
+    let count = 0;
+    for (let i = start; i <= index; i += 1) {
+      const candle = this.data[i];
+      if (!candle) continue;
+      if (i === 0) {
+        sum += candle.high - candle.low;
+      } else {
+        const prevClose = this.data[i - 1]?.close ?? candle.close;
+        sum += Math.max(
+          candle.high - candle.low,
+          Math.abs(candle.high - prevClose),
+          Math.abs(candle.low - prevClose),
+        );
+      }
+      count += 1;
+    }
+    return count > 0 ? sum / count : null;
   }
 
   private getVwapInteractionResult(): VwapResult {
