@@ -143,6 +143,10 @@ test('web push routes service worker and notification panel are wired', () => {
   assert.match(unsubscribeRoute, /unregisterPushSubscriptionForUser/);
   assert.match(testRoute, /notifyUserPushSubscriptions/);
   assert.match(testRoute, /saveNotification/);
+  assert.match(testRoute, /isPushTestAllowed/);
+  assert.match(testRoute, /actor\.role === USER_ROLES\.admin/);
+  assert.match(testRoute, /actor\.role === USER_ROLES\.superAdmin/);
+  assert.match(testRoute, /process\.env\.NODE_ENV !== 'production'/);
   assert.match(serviceWorkerSource, /self\.addEventListener\('push'/);
   assert.match(serviceWorkerSource, /postMessage\(\{ type: 'chart-service-notifications-refresh' \}\)/);
   assert.match(serviceWorkerSource, /\/api\/notifications\?summary=1/);
@@ -156,6 +160,8 @@ test('web push routes service worker and notification panel are wired', () => {
   assert.match(clientSource, /syncCurrentBrowserPushSubscription/);
   assert.match(clientSource, /\/api\/push\/test/);
   assert.match(clientSource, /testPush/);
+  assert.match(clientSource, /canSendTestPush/);
+  assert.match(clientSource, /\{isSubscribed && canSendTestPush && \(/);
   assert.match(clientSource, /role="switch"/);
   assert.match(clientSource, /aria-checked=\{isSubscribed\}/);
   assert.match(clientSource, /앱 푸시 알림 켜기/);
@@ -170,7 +176,8 @@ test('web push routes service worker and notification panel are wired', () => {
   assert.match(styleSource, /\.profile-page \.button\.secondary\.compact\.push-notification-test-button\s*\{[\s\S]*?height: 30px/);
   assert.match(styleSource, /\.profile-page \.button\.secondary\.compact\.push-notification-test-button\s*\{[\s\S]*?min-height: 30px/);
   assert.match(styleSource, /\.push-notification-test-button\s*\{[\s\S]*?align-items: center/);
-  assert.match(profilePanelSource, /<PushNotificationControl \/>/);
+  assert.match(profilePanelSource, /canSendProfilePushTest/);
+  assert.match(profilePanelSource, /<PushNotificationControl canSendTestPush=\{canSendProfilePushTest\(dashboard\.user\.role\)\} \/>/);
   assert.match(profilePanelSource, /profile-push-setting-row/);
   assert.doesNotMatch(notificationPanelSource, /<PushNotificationControl \/>/);
   assert.match(sessionNavSource, /detachBrowserPushSubscriptionForCurrentUser/);

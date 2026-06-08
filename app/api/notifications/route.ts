@@ -30,9 +30,20 @@ export async function GET(request: NextRequest) {
       summary: result.summary,
     });
   } catch (error) {
+    if (summaryOnly) return createEmptyNotificationSummaryResponse();
     return NextResponse.json({
       ok: false,
       message: error instanceof Error ? error.message : 'unauthorized',
     }, { status: 401 });
   }
+}
+
+function createEmptyNotificationSummaryResponse() {
+  return NextResponse.json({
+    ok: false,
+    summary: {
+      totalCount: 0,
+      unreadCount: 0,
+    },
+  });
 }

@@ -1273,16 +1273,19 @@ test('landing page presents Kyrios strategic partnership before contact actions'
   const faqIndex = pageSource.indexOf('id="landing-faq"');
   const partnershipIndex = pageSource.indexOf('id="landing-strategic-partnership"');
   const contactIndex = pageSource.indexOf('id="landing-contact-actions"');
+  const anchorNavMatch = pageSource.match(/<nav className="landing-anchor-nav"[\s\S]*?<\/nav>/);
 
   assert.notEqual(faqIndex, -1);
   assert.notEqual(partnershipIndex, -1);
   assert.notEqual(contactIndex, -1);
+  assert.ok(anchorNavMatch);
   assert.ok(faqIndex < partnershipIndex);
   assert.ok(partnershipIndex < contactIndex);
   assert.equal(kyriosAssetExists, true);
   assert.equal(kyriosPngSource.readUInt32BE(16), 709);
   assert.equal(kyriosPngSource.readUInt32BE(20), 729);
-  assert.match(pageSource, /href="#landing-strategic-partnership"/);
+  assert.doesNotMatch(anchorNavMatch[0], /href="#landing-strategic-partnership"/);
+  assert.doesNotMatch(anchorNavMatch[0], />파트너십</);
   assert.match(pageSource, /Strategic Partnership/);
   assert.match(pageSource, /키리오스인베스트먼트, 전략적 투자 및 사업 파트너로 합류/);
   assert.doesNotMatch(pageSource, /키리오스인베스트먼트, TradingCore의 전략적 투자 및 사업 파트너로 합류/);

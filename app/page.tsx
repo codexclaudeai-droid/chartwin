@@ -279,7 +279,6 @@ export default async function HomePage() {
         <a href="#landing-tc-chart-features">TC Chart 기능</a>
         <a href="#landing-plans">플랜 비교</a>
         <a href="#landing-faq">FAQ</a>
-        <a href="#landing-strategic-partnership">파트너십</a>
         <a href="#landing-contact-actions">문의하기</a>
       </nav>
 

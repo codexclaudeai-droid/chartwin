@@ -77,7 +77,10 @@ test('chart runtime skips the duplicate client access check after server approva
   assert.match(source, /if \(accessVerified\)/);
   assert.match(source, /fetch\('\/api\/chart\/access'/);
   assert.match(source, /payload\.fullChart !== true/);
-  assert.match(source, /void import\('\.\.\/\.\.\/src\/main\.ts'\)/);
+  assert.match(source, /import\('\.\.\/\.\.\/src\/main\.ts'\)/);
+  assert.match(source, /\.catch\(\(error\)/);
+  assert.match(source, /formatChartRuntimeBootError\(error\)/);
+  assert.match(source, /차트 런타임을 불러오지 못했습니다/);
 });
 
 test('chart page performs a server-side session and subscription gate', () => {

@@ -8,7 +8,7 @@ import {
 export async function GET(request: NextRequest) {
   const sessionId = parseSessionCookie(request.headers.get('cookie'));
   if (!sessionId) {
-    return NextResponse.json({ authenticated: false }, { status: 401 });
+    return createSignedOutAuthResponse();
   }
 
   const persistence = getAsyncChartServicePersistence();
@@ -37,6 +37,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       authenticated: false,
       message: error instanceof Error ? error.message : 'invalid session',
-    }, { status: 401 });
+      user: null,
+    });
   }
+}
+
+function createSignedOutAuthResponse() {
+  return NextResponse.json({
+    authenticated: false,
+    user: null,
+  });
 }

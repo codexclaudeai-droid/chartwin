@@ -49,8 +49,25 @@ test('notifications API supports a summary-only badge request path', () => {
   assert.match(routeSource, /summaryOnly/);
   assert.match(routeSource, /request\.nextUrl\.searchParams\.get\('summary'\) === '1'/);
   assert.match(routeSource, /getAsyncNotificationSummaryForUser/);
+  assert.match(routeSource, /createEmptyNotificationSummaryResponse/);
+  assert.match(navSource, /getAuthSession/);
+  assert.match(navSource, /session\.authenticated/);
   assert.match(navSource, /getNotificationSummary/);
   assert.doesNotMatch(navSource, /fetch\('\/api\/notifications'/);
+});
+
+test('notifications summary API reports signed-out visitors without a console-noisy 401', async () => {
+  const { GET } = await import('../app/api/notifications/route.ts');
+
+  const response = await GET({
+    headers: new Headers(),
+    nextUrl: new URL('http://localhost/api/notifications?summary=1'),
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.ok, false);
+  assert.deepEqual(payload.summary, { totalCount: 0, unreadCount: 0 });
 });
 
 test('auth responses do not expose password hashes', async () => {

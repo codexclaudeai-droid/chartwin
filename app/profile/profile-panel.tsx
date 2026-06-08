@@ -14,6 +14,7 @@ import {
   formatPaymentStatusLabel,
   formatSubscriptionStatusLabel,
   DEFAULT_PROFILE_AVATARS,
+  USER_ROLES,
   type PaymentStatus,
   type SubscriptionStatus,
 } from '../../src/domain/chart-service/index.ts';
@@ -941,7 +942,7 @@ export function ProfilePanel() {
             </article>
           </div>
           <div className="profile-push-setting-row">
-            <PushNotificationControl />
+            <PushNotificationControl canSendTestPush={canSendProfilePushTest(dashboard.user.role)} />
           </div>
           <div className="actions">
             <Link className="button" href="/pricing">구독신청</Link>
@@ -1332,6 +1333,12 @@ function copyTextWithHiddenTextarea(value: string): boolean {
 
 function canWithdrawAccount(role: string | undefined): boolean {
   return role !== 'admin' && role !== 'super_admin';
+}
+
+function canSendProfilePushTest(role: string | undefined): boolean {
+  return role === USER_ROLES.admin ||
+    role === USER_ROLES.superAdmin ||
+    process.env.NODE_ENV !== 'production';
 }
 
 function formatReferralPoints(value: number): string {

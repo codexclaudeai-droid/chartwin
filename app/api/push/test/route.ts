@@ -4,7 +4,19 @@ import {
   getAsyncChartServicePersistence,
   notifyUserPushSubscriptions,
 } from '../../../../src/server/chart-service/index.ts';
-import type { NotificationRecord } from '../../../../src/domain/chart-service/index.ts';
+import {
+  USER_ROLES,
+  type Actor,
+  type NotificationRecord,
+} from '../../../../src/domain/chart-service/index.ts';
+
+class PushTestForbiddenError extends Error {}
+
+function isPushTestAllowed(actor: Actor): boolean {
+  return actor.role === USER_ROLES.admin ||
+    actor.role === USER_ROLES.superAdmin ||
+    process.env.NODE_ENV !== 'production';
+}
 
 export async function POST(request: NextRequest) {
   const persistence = getAsyncChartServicePersistence();
@@ -13,6 +25,10 @@ export async function POST(request: NextRequest) {
     const result = await persistence.runMutation(async (repository) => {
       const createdAt = new Date().toISOString();
       const actor = await getActorFromAsyncRequest(repository, request, createdAt);
+      if (!isPushTestAllowed(actor)) {
+        throw new PushTestForbiddenError('테스트 푸시 알림은 관리자 또는 개발 환경에서만 발송할 수 있습니다.');
+      }
+
       const notification: NotificationRecord = {
         id: await repository.nextId('notification'),
         userId: actor.id,
@@ -35,6 +51,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: false,
       message: error instanceof Error ? error.message : 'push test failed',
-    }, { status: 401 });
+    }, { status: error instanceof PushTestForbiddenError ? 403 : 401 });
   }
 }

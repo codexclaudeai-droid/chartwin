@@ -53,6 +53,17 @@ test('auth me API accepts signed session cookies when route memory is isolated',
   assert.equal(payload.user.email, 'admin@example.com');
 });
 
+test('auth me API reports signed-out visitors without a console-noisy 401', async () => {
+  const { GET } = await import('../app/api/auth/me/route.ts');
+
+  const response = await GET(new Request('http://localhost/api/auth/me'));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.authenticated, false);
+  assert.equal(payload.user, null);
+});
+
 test('auth me API stays lightweight for header session checks', () => {
   const source = fs.readFileSync(new URL('../app/api/auth/me/route.ts', import.meta.url), 'utf8');
 

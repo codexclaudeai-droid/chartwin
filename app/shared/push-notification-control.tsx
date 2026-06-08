@@ -18,7 +18,11 @@ type PublicKeyResponse = {
   publicKey?: string | null;
 };
 
-export function PushNotificationControl() {
+type PushNotificationControlProps = {
+  canSendTestPush?: boolean;
+};
+
+export function PushNotificationControl({ canSendTestPush = process.env.NODE_ENV !== 'production' }: PushNotificationControlProps) {
   const [status, setStatus] = useState<PushControlStatus>('checking');
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
@@ -169,7 +173,7 @@ export function PushNotificationControl() {
           </span>
           <span className="push-notification-toggle-label">{toggleLabel}</span>
         </button>
-        {isSubscribed && (
+        {isSubscribed && canSendTestPush && (
           <button
             className="button secondary compact push-notification-test-button"
             disabled={isBusy || isTesting}

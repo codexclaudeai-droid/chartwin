@@ -9,6 +9,7 @@ import {
   subscribeNotificationsRefreshEvent,
   subscribeServiceWorkerNotificationsRefreshMessages,
 } from './notification-events';
+import { getAuthSession } from './auth-session-client';
 import { getNotificationSummary } from './notification-summary-client';
 import { getNotificationCenterHref } from './notifications/notification-display';
 
@@ -22,6 +23,15 @@ export function NotificationNavLink() {
     let isMounted = true;
 
     async function refreshBadge(options: { force?: boolean } = {}) {
+      const session = await getAuthSession(options);
+      if (!session.authenticated) {
+        if (isMounted) {
+          setBadge(null);
+          setNotificationHref('/notifications');
+        }
+        return;
+      }
+
       const payload = await getNotificationSummary(options);
       if (!payload.ok || !payload.summary) {
         if (isMounted) {
