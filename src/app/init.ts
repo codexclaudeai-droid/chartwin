@@ -1865,6 +1865,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       binanceFeed.stop();
       gatewayFeed.stop();
       setLiveStatus('connecting');
+      chart.resetStrategyWorker();
       void refreshExchange24hPercent(true);
       const useBinance = shouldUseBinanceDirect(chart.config.symbol);
       const selectedFeed = useBinance ? binanceFeed : gatewayFeed;
@@ -1950,6 +1951,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           chart.isDrawingsVisible(),
         );
         persistCurrentChartDrawings();
+        chart.resetStrategyWorker();
         chart.setTimeframe(timeframe);
         saveTimeframe(timeframe);
         ohlcHeaderDisplay.innerHTML = '';

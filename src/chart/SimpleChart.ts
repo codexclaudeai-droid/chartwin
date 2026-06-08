@@ -392,6 +392,7 @@ export class SimpleChart {
   }> = [];
   public onStrategyComputed: (() => void) | null = null;
   private strategyWorker: Worker | null = null;
+  private strategyWorkerUrl: string | null = null;
   private signalAnimationFrame = 0;
   private signalAnimationActive = false;
   private lastSignalDrawTimeMs = 0;
@@ -2924,6 +2925,7 @@ export class SimpleChart {
     `;
     const blob = new Blob([workerSource], { type: 'application/javascript' });
     const workerUrl = URL.createObjectURL(blob);
+    this.strategyWorkerUrl = workerUrl;
     this.strategyWorker = new Worker(workerUrl);
     this.strategyWorker.addEventListener('message', (event: MessageEvent<{
       type: 'result';
@@ -2941,6 +2943,24 @@ export class SimpleChart {
       this.updateSignalAnimationLoop();
       this.onStrategyComputed?.();
     });
+  }
+
+  public resetStrategyWorker(): void {
+    if (this.strategyWorker) {
+      this.strategyWorker.terminate();
+      this.strategyWorker = null;
+    }
+    if (this.strategyWorkerUrl) {
+      URL.revokeObjectURL(this.strategyWorkerUrl);
+      this.strategyWorkerUrl = null;
+    }
+    this.strategyRequestId += 1;
+    this.pendingStrategyRequestId = this.strategyRequestId;
+    this.strategySignals = [];
+    this.signalHitAreas = [];
+    this.latestStrategySignalIndex = -1;
+    this.updateSignalAnimationLoop();
+    this.initStrategyWorker();
   }
 
   private requestStrategyCompute(changedFrom: number): void {
