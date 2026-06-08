@@ -1762,7 +1762,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       limit: BINANCE_DIRECT_INITIAL_HISTORY_LIMIT,
       onDataApplied: (candles) => {
         rawCandles = candles.slice();
-        applyDisplayCurrencyToChart();
         refreshChartUi();
         updateOhlcHeader(null);
         maybeWarnStrategyHistory(rawCandles.length);
@@ -1847,7 +1846,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       limit: 3000,
       onDataApplied: (candles) => {
         rawCandles = candles.slice();
-        applyDisplayCurrencyToChart();
         refreshChartUi();
         updateOhlcHeader(null);
         maybeWarnStrategyHistory(rawCandles.length);
@@ -1872,6 +1870,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const selectedFeed = useBinance ? binanceFeed : gatewayFeed;
       suppressSignalNoticesUntilNextReadyCompute(paneId);
       const ok = await selectedFeed.reload();
+      const now = performance.now();
+      lastViewportInputAt = now;
+      lastOlderHistoryLoadAt = now;
       if (!ok) {
         binanceFeed.stop();
         gatewayFeed.stop();
