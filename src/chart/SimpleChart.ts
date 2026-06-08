@@ -398,6 +398,8 @@ export class SimpleChart {
   private lastSignalDrawTimeMs = 0;
   private strategyRequestId = 0;
   private pendingStrategyRequestId = 0;
+  private strategyComputeTimer: number | null = null;
+  private pendingStrategyChangedFrom: number | null = null;
   private dmiScaleRange: { lo: number; hi: number } | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private resizeScheduled = false;
@@ -2946,6 +2948,7 @@ export class SimpleChart {
   }
 
   public resetStrategyWorker(): void {
+    this.cancelScheduledStrategyCompute();
     if (this.strategyWorker) {
       this.strategyWorker.terminate();
       this.strategyWorker = null;
@@ -2961,6 +2964,33 @@ export class SimpleChart {
     this.latestStrategySignalIndex = -1;
     this.updateSignalAnimationLoop();
     this.initStrategyWorker();
+  }
+
+  private cancelScheduledStrategyCompute(): void {
+    if (this.strategyComputeTimer != null) {
+      window.clearTimeout(this.strategyComputeTimer);
+      this.strategyComputeTimer = null;
+    }
+    this.pendingStrategyChangedFrom = null;
+  }
+
+  private scheduleStrategyCompute(changedFrom: number, delayMs: number): void {
+    const normalizedChangedFrom = Math.max(0, Math.floor(Number(changedFrom) || 0));
+    if (!this.getActiveStrategy() || !this.data.length || delayMs <= 0) {
+      this.cancelScheduledStrategyCompute();
+      this.requestStrategyCompute(normalizedChangedFrom);
+      return;
+    }
+    this.pendingStrategyChangedFrom = this.pendingStrategyChangedFrom == null
+      ? normalizedChangedFrom
+      : Math.min(this.pendingStrategyChangedFrom, normalizedChangedFrom);
+    if (this.strategyComputeTimer != null) window.clearTimeout(this.strategyComputeTimer);
+    this.strategyComputeTimer = window.setTimeout(() => {
+      const nextChangedFrom = this.pendingStrategyChangedFrom ?? normalizedChangedFrom;
+      this.strategyComputeTimer = null;
+      this.pendingStrategyChangedFrom = null;
+      this.requestStrategyCompute(nextChangedFrom);
+    }, Math.max(0, Math.floor(delayMs)));
   }
 
   private requestStrategyCompute(changedFrom: number): void {
@@ -4742,7 +4772,12 @@ export class SimpleChart {
 
     this.mainPricePanOffset = 0;
     this.dmiScaleRange = null;
-    this.requestStrategyCompute(0);
+    if (this.getActiveStrategy()) {
+      this.strategySignals = [];
+      this.signalHitAreas = [];
+      this.latestStrategySignalIndex = -1;
+    }
+    this.scheduleStrategyCompute(0, 300);
     this.draw();
   }
 
@@ -5222,7 +5257,7 @@ export class SimpleChart {
     this.data[i] = { ...this.data[i], ...td };
     this.displayDataCache = null;
     this.displayDataCacheKey = '';
-    this.requestStrategyCompute(Math.max(0, i - 1));
+    this.scheduleStrategyCompute(Math.max(0, i - 1), 50);
     this.draw();
   }
 
@@ -5231,7 +5266,7 @@ export class SimpleChart {
     this.displayDataCache = null;
     this.displayDataCacheKey = '';
     this.endIndex++; this.startIndex++;
-    this.requestStrategyCompute(Math.max(0, this.data.length - 3));
+    this.scheduleStrategyCompute(Math.max(0, this.data.length - 3), 50);
     this.draw();
   }
 
