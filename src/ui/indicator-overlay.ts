@@ -526,7 +526,6 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       const textEl = document.createElement('span');
       textEl.textContent = label;
       textEl.style.cssText = 'white-space:nowrap;';
-      const isVisible = chart.isStrategySignalVisible?.() !== false;
       const eyeSvgSz = actionIconSz;
       const eyeBtnSz = isMobileOverlay ? 22 : (compactOverlay ? 16 : desktopActionButtonSize);
       const reportSvgSz = touchLarge ? 14 : (compactOverlay ? 10 : 10);
@@ -541,19 +540,26 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       const visibilityBtn = document.createElement('button');
       visibilityBtn.type = 'button';
       visibilityBtn.className = 'strategy-visibility-btn';
-      visibilityBtn.title = isVisible ? '전략시그널 감추기' : '전략시그널 보이기';
       visibilityBtn.style.cssText = `width:${eyeBtnSz}px;height:${eyeBtnSz}px;border:none;border-radius:4px;
         background:transparent;color:#edf3ff;display:inline-flex;align-items:center;justify-content:center;
         padding:0;cursor:pointer;transition:color 0.15s ease;flex:0 0 auto;`;
-      visibilityBtn.innerHTML = isVisible
-        ? `<svg viewBox="0 0 24 24" width="${eyeSvgSz}" height="${eyeSvgSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><path class="eye-lid-top" d="M3 12c2.6-3.4 5.5-5 9-5 3.5 0 6.4 1.6 9 5"></path><path class="eye-lid-bottom" d="M3 12c2.6 3.4 5.5 5 9 5 3.5 0 6.4-1.6 9-5"></path><circle class="eye-iris" cx="12" cy="12" r="2.8"></circle></svg>`
-        : `<svg viewBox="0 0 24 24" width="${eyeSvgSz}" height="${eyeSvgSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="2.8"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`;
+      const refreshVisibilityButton = () => {
+        const isVisible = chart.isStrategySignalVisible?.() !== false;
+        visibilityBtn.title = isVisible ? '전략시그널 감추기' : '전략시그널 보이기';
+        visibilityBtn.setAttribute('aria-label', visibilityBtn.title);
+        visibilityBtn.setAttribute('aria-pressed', String(isVisible));
+        visibilityBtn.innerHTML = isVisible
+          ? `<svg viewBox="0 0 24 24" width="${eyeSvgSz}" height="${eyeSvgSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><path class="eye-lid-top" d="M3 12c2.6-3.4 5.5-5 9-5 3.5 0 6.4 1.6 9 5"></path><path class="eye-lid-bottom" d="M3 12c2.6 3.4 5.5 5 9 5 3.5 0 6.4-1.6 9-5"></path><circle class="eye-iris" cx="12" cy="12" r="2.8"></circle></svg>`
+          : `<svg viewBox="0 0 24 24" width="${eyeSvgSz}" height="${eyeSvgSz}" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="2.8"></circle><line x1="4" y1="20" x2="20" y2="4"></line></svg>`;
+      };
+      refreshVisibilityButton();
       visibilityBtn.addEventListener('mouseenter', () => { visibilityBtn.style.color = '#ffffff'; });
       visibilityBtn.addEventListener('mouseleave', () => { visibilityBtn.style.color = '#edf3ff'; });
       visibilityBtn.addEventListener('click', (event) => {
         event.stopPropagation();
-        chart.setStrategySignalVisible?.(!isVisible);
-        renderOverlay();
+        const nextVisible = !(chart.isStrategySignalVisible?.() !== false);
+        chart.setStrategySignalVisible?.(nextVisible);
+        refreshVisibilityButton();
       });
 
       const stratSettingsSvgSz = eyeSvgSz;

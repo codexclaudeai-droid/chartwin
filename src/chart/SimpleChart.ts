@@ -2638,7 +2638,11 @@ export class SimpleChart {
   public setStrategySignalVisible(visible: boolean): void {
     if (this.strategySignalVisible === visible) return;
     this.strategySignalVisible = visible;
-    this.requestSignalLayerDraw();
+    if (visible) {
+      this.requestSignalLayerDraw();
+    } else {
+      this.clearSignalLayer();
+    }
     this.updateSignalAnimationLoop();
   }
 
@@ -2663,6 +2667,16 @@ export class SimpleChart {
       this.signalLayerDrawFrame = 0;
       this.drawSignalLayer(this.lastDrawMeta);
     });
+  }
+
+  private clearSignalLayer(): void {
+    if (this.signalLayerDrawFrame) {
+      window.cancelAnimationFrame(this.signalLayerDrawFrame);
+      this.signalLayerDrawFrame = 0;
+    }
+    this.signalCtx.clearRect(0, 0, this.viewportWidth, this.viewportHeight);
+    this.signalHitAreas = [];
+    this.hoveredSignalCandleIndex = null;
   }
 
   private computeLatestSignalIndex(signals: StrategySignal[]): number {
