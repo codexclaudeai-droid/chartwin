@@ -53,7 +53,7 @@ import { openMultiMonitorPopouts } from '../ui/workspace/multi-monitor';
 import { createPaneChrome } from '../ui/workspace/pane-chrome';
 import { createPanelDividerManager } from '../ui/workspace/panel-dividers';
 import { createLiveTicker } from '../ui/workspace/live-ticker';
-import { BINANCE_DIRECT_INITIAL_HISTORY_LIMIT, createBinanceLiveFeed } from '../data/binance-live-feed';
+import { BINANCE_DIRECT_INITIAL_HISTORY_LIMIT, BINANCE_DIRECT_MAX_HISTORY_CANDLES, createBinanceLiveFeed } from '../data/binance-live-feed';
 import { createGatewayLiveFeed, shouldUseBinanceDirect } from '../data/gateway-live-feed';
 import { bindPaneEventHandlers } from '../ui/workspace/pane-events';
 import { createStrategyReportPanel } from '../ui/workspace/strategy-report-panel';
@@ -1784,6 +1784,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (performance.now() - lastViewportInputAt < LAZY_HISTORY_INPUT_IDLE_MS) return;
       if (lastViewportInputAt <= lastOlderHistoryLoadAt) return;
       if (rawCandles.length < BINANCE_DIRECT_INITIAL_HISTORY_LIMIT) return;
+      if (rawCandles.length >= BINANCE_DIRECT_MAX_HISTORY_CANDLES) return;
       if (olderHistoryInFlight) return;
       olderHistoryInFlight = true;
       const beforeLength = rawCandles.length;
@@ -2129,8 +2130,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   };
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-    else document.exitFullscreen();
+    const action = !document.fullscreenElement
+      ? document.documentElement.requestFullscreen()
+      : document.exitFullscreen();
+    action.catch((error) => {
+      console.warn('[chart] fullscreen request failed', error);
+    });
   };
 
   if (!isPopout) {
@@ -2173,8 +2178,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     document.addEventListener('fullscreenchange', () => {
       topBarControls.syncFullscreenIcon();
     });
-    // 페이지 로드 시 전체화면 자동 진입
-    document.documentElement.requestFullscreen().catch(() => {});
 
     if (isMobile) {
       // ??????????????????????????????????????????????????????????????????????

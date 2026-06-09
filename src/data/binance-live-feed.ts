@@ -33,6 +33,8 @@ type CreateBinanceLiveFeedArgs = {
 
 export const BINANCE_DIRECT_INITIAL_HISTORY_LIMIT = 3000;
 export const BINANCE_DIRECT_OLDER_HISTORY_BATCH = 1000;
+export const BINANCE_DIRECT_MAX_RENDER_CANDLES = 9000;
+export const BINANCE_DIRECT_MAX_HISTORY_CANDLES = 50000;
 
 const INTERVAL_BY_TIMEFRAME: Partial<Record<TimeframeKey, string>> = {
   '1s': '1s',
@@ -604,6 +606,7 @@ export function createBinanceLiveFeed({
   const loadOlder = async (): Promise<boolean> => {
     if (loadingOlder || connecting || secondMode) return false;
     const current = chart.getCandles();
+    if (current.length >= BINANCE_DIRECT_MAX_HISTORY_CANDLES) return false;
     const first = current[0];
     if (!first || !Number.isFinite(first.time)) return false;
     const resolved = resolveBinanceMarketSymbol(chart.config.symbol);

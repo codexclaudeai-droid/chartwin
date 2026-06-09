@@ -357,6 +357,8 @@ type StrategyReportResult = {
 
 export class SimpleChart {
   private static readonly FOCUS_VISUAL_DURATION_MS = 24000;
+  private static readonly MAX_RENDER_CANDLES = 9000;
+  private static readonly RENDER_WINDOW_BUFFER_CANDLES = 1500;
   private containerEl: HTMLElement;
   canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -381,6 +383,8 @@ export class SimpleChart {
   private strategyRiskLinesVisible = loadStrategyRiskLinesVisiblePreference();
   private doubleBreakConfig: DoubleBreakConfig = { ...DOUBLE_BREAK_DEFAULT_CONFIG };
   private doubleBreakConfigSymbolKey = '';
+  private doubleBreakResultCacheKey = '';
+  private doubleBreakResultCache: DoubleBreakResult | null = null;
   private bollingerRiskConfig: BollingerRiskConfig = { ...BOLLINGER_RISK_DEFAULT_CONFIG };
   private signalHitAreas: Array<{
     x: number;
@@ -397,6 +401,7 @@ export class SimpleChart {
   private signalAnimationActive = false;
   private lastSignalDrawTimeMs = 0;
   private signalLayerDrawFrame = 0;
+  private lastAuxiliaryAlertEvalMs = 0;
   private strategyRequestId = 0;
   private pendingStrategyRequestId = 0;
   private strategyComputeTimer: number | null = null;
@@ -404,6 +409,7 @@ export class SimpleChart {
   private dmiScaleRange: { lo: number; hi: number } | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private resizeScheduled = false;
+  private mainDrawScheduled = false;
   private overlayDrawScheduled = false;
   private drawingTool: ActiveDrawingToolId | null = null;
   private drawings: DrawingShape[] = [];
@@ -1760,6 +1766,52 @@ export class SimpleChart {
     }, 2200);
   }
 
+  private findNearestCandleIndexByTime(candles: CandleData[], targetTime: number): number {
+    if (!Number.isFinite(targetTime) || !candles.length) return -1;
+    let lo = 0;
+    let hi = candles.length - 1;
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      const time = Number(candles[mid]?.time);
+      if (!Number.isFinite(time)) break;
+      if (time === targetTime) return mid;
+      if (time < targetTime) lo = mid + 1;
+      else hi = mid - 1;
+    }
+    const left = Math.max(0, Math.min(candles.length - 1, hi));
+    const right = Math.max(0, Math.min(candles.length - 1, lo));
+    const leftDiff = Math.abs((candles[left]?.time ?? 0) - targetTime);
+    const rightDiff = Math.abs((candles[right]?.time ?? 0) - targetTime);
+    return rightDiff < leftDiff ? right : left;
+  }
+
+  private sliceRenderWindow(data: CandleData[], prevStartTime?: number, prevEndTime?: number): CandleData[] {
+    const max = SimpleChart.MAX_RENDER_CANDLES;
+    if (data.length <= max) return data;
+    const buffer = SimpleChart.RENDER_WINDOW_BUFFER_CANDLES;
+    const hasPreviousViewport = Number.isFinite(prevStartTime) && Number.isFinite(prevEndTime);
+    if (!hasPreviousViewport) return data.slice(Math.max(0, data.length - max));
+
+    const mappedStart = this.findNearestCandleIndexByTime(data, prevStartTime as number);
+    const mappedEnd = this.findNearestCandleIndexByTime(data, prevEndTime as number);
+    if (mappedStart < 0 || mappedEnd < 0) return data.slice(Math.max(0, data.length - max));
+
+    const anchorStart = Math.min(mappedStart, mappedEnd);
+    const anchorEnd = Math.max(mappedStart, mappedEnd);
+    let from = Math.max(0, anchorStart - buffer);
+    let to = Math.min(data.length, Math.max(anchorEnd + buffer + 1, from + max));
+    if (to - from > max) to = from + max;
+    if (to > data.length) {
+      to = data.length;
+      from = Math.max(0, to - max);
+    }
+    if (anchorEnd >= to) {
+      to = Math.min(data.length, anchorEnd + buffer + 1);
+      from = Math.max(0, to - max);
+    }
+    return data.slice(from, to);
+  }
+
   private showPatternPopup(signal: PatternSignal): void {
     const host = this.canvas.parentElement;
     if (!host) return;
@@ -2749,6 +2801,32 @@ export class SimpleChart {
     return `${DOUBLE_BREAK_PARAM_SYMBOL_PREFIX}${this.getStrategySymbolParamSuffix(symbol)}`;
   }
 
+  private invalidateDoubleBreakResultCache(): void {
+    this.doubleBreakResultCacheKey = '';
+    this.doubleBreakResultCache = null;
+  }
+
+  private buildDoubleBreakResultCacheKey(): string {
+    const len = this.data.length;
+    const first = len > 0 ? this.data[0] : null;
+    const last = len > 0 ? this.data[len - 1] : null;
+    return [
+      this.config.symbol,
+      len,
+      first?.time ?? 0,
+      first?.open ?? 0,
+      first?.high ?? 0,
+      first?.low ?? 0,
+      first?.close ?? 0,
+      last?.time ?? 0,
+      last?.open ?? 0,
+      last?.high ?? 0,
+      last?.low ?? 0,
+      last?.close ?? 0,
+      JSON.stringify(this.doubleBreakConfig),
+    ].join('|');
+  }
+
   private readDoubleBreakConfigFromParams(symbol = this.config.symbol): DoubleBreakConfig {
     const params = this.getStrategyParams(DOUBLE_BREAK_STRATEGY_ID);
     const parseConfig = (raw: StrategyParamValue | undefined): Partial<DoubleBreakConfig> => {
@@ -2784,6 +2862,7 @@ export class SimpleChart {
     const next = this.normalizeDoubleBreakConfig({ ...this.doubleBreakConfig, ...patch });
     this.doubleBreakConfig = next;
     this.doubleBreakConfigSymbolKey = this.getStrategySymbolParamSuffix(this.config.symbol);
+    this.invalidateDoubleBreakResultCache();
     this.setStrategyParams(DOUBLE_BREAK_STRATEGY_ID, {
       [DOUBLE_BREAK_PARAM_DEFAULT_KEY]: JSON.stringify(next),
       [this.getDoubleBreakConfigParamKey(this.config.symbol)]: JSON.stringify(next),
@@ -2819,6 +2898,7 @@ export class SimpleChart {
     });
     if (!changed) return;
     saveStrategies(this.strategies);
+    if (strategyId === DOUBLE_BREAK_STRATEGY_ID) this.invalidateDoubleBreakResultCache();
     if (!options.skipRefresh && strategyId === this.activeStrategyId) this.requestStrategyCompute(0);
     if (!options.skipRefresh) this.draw();
   }
@@ -2860,6 +2940,7 @@ export class SimpleChart {
 
   public setActiveStrategy(strategyId: string | null): void {
     this.activeStrategyId = strategyId;
+    this.invalidateDoubleBreakResultCache();
     if (strategyId === DOUBLE_BREAK_STRATEGY_ID) {
       this.syncDoubleBreakConfigFromParams(true);
       this.requestStrategyCompute(0);
@@ -3068,8 +3149,14 @@ export class SimpleChart {
     if (this.activeStrategyId !== DOUBLE_BREAK_STRATEGY_ID || !this.data.length) return null;
     try {
       this.syncDoubleBreakConfigFromParams();
-      return new DoubleBreakStrategy(this.doubleBreakConfig).run(this.data);
+      const cacheKey = this.buildDoubleBreakResultCacheKey();
+      if (cacheKey === this.doubleBreakResultCacheKey) return this.doubleBreakResultCache;
+      const result = new DoubleBreakStrategy(this.doubleBreakConfig).run(this.data);
+      this.doubleBreakResultCacheKey = cacheKey;
+      this.doubleBreakResultCache = result;
+      return result;
     } catch {
+      this.invalidateDoubleBreakResultCache();
       return null;
     }
   }
@@ -4750,10 +4837,12 @@ export class SimpleChart {
     const prevWasNearLatest = Math.max(0, prevData.length - prevEnd) <= 2;
     const prevStartTime = prevData[Math.max(0, Math.min(prevData.length - 1, prevStart))]?.time;
     const prevEndTime = prevData[Math.max(0, Math.min(prevData.length - 1, Math.max(prevStart, prevEnd - 1)))]?.time;
+    const nextData = this.sliceRenderWindow(data, prevStartTime, prevEndTime);
 
-    this.data = data;
+    this.data = nextData;
     this.displayDataCache = null;
     this.displayDataCacheKey = '';
+    this.invalidateDoubleBreakResultCache();
     this.lastPatternEvalSignature = '';
     this.lastPatternAlertByKey.clear();
     this.clearPatternPopups();
@@ -5142,7 +5231,7 @@ export class SimpleChart {
     const baseVirtualStart = this.startIndex - this.leftPanBars;
     const virtualStart = this.normalizeHorizontalVirtualStart(baseVirtualStart + shift, baseVirtualStart);
     this.applyHorizontalPan(virtualStart, visibleCount);
-    this.draw();
+    this.requestMainDraw();
   }
 
   /** 캔들 표시 개수 기반 확대/축소 (음수: 확대, 양수: 축소) */
@@ -5157,7 +5246,7 @@ export class SimpleChart {
     this.endIndex = this.data.length;
     this.startIndex = Math.max(0, this.endIndex - nextVisible);
     this.leftPanBars = 0;
-    this.draw();
+    this.requestMainDraw();
   }
 
   public getVisibleCandleRange(): { startIndex: number; endIndex: number } {
@@ -5286,6 +5375,7 @@ export class SimpleChart {
     this.data[i] = { ...this.data[i], ...td };
     this.displayDataCache = null;
     this.displayDataCacheKey = '';
+    this.invalidateDoubleBreakResultCache();
     this.scheduleStrategyCompute(Math.max(0, i - 1), 50);
     this.draw();
   }
@@ -5294,6 +5384,7 @@ export class SimpleChart {
     this.data.push(c);
     this.displayDataCache = null;
     this.displayDataCacheKey = '';
+    this.invalidateDoubleBreakResultCache();
     this.endIndex++; this.startIndex++;
     this.scheduleStrategyCompute(Math.max(0, this.data.length - 3), 50);
     this.draw();
@@ -6876,19 +6967,23 @@ export class SimpleChart {
     };
     this.updateLogBtnPosition();
     this.drawConfirmedPatternBoxes(this.lastDrawMeta);
-    this.evaluateSubIndicatorAlerts({
-      volume: this.data.map((d) => d.volume),
-      rsi: rsiD,
-      dmi: dmiD.adx,
-      macd: macdD.macdLine,
-      stochF: stFD?.k ?? [],
-      stochS: stSD?.k ?? [],
-      cci: cciD,
-      obv: obvD.map((v) => v as number | null),
-      cvd: cvdD.map((v) => v as number | null),
-    });
-    this.evaluateTrendlineAlerts();
-    this.evaluatePatternAlerts();
+    const nowMs = performance.now();
+    if (nowMs - this.lastAuxiliaryAlertEvalMs > 1000) {
+      this.lastAuxiliaryAlertEvalMs = nowMs;
+      this.evaluateSubIndicatorAlerts({
+        volume: this.data.map((d) => d.volume),
+        rsi: rsiD,
+        dmi: dmiD.adx,
+        macd: macdD.macdLine,
+        stochF: stFD?.k ?? [],
+        stochS: stSD?.k ?? [],
+        cci: cciD,
+        obv: obvD.map((v) => v as number | null),
+        cvd: cvdD.map((v) => v as number | null),
+      });
+      this.evaluateTrendlineAlerts();
+      this.evaluatePatternAlerts();
+    }
     this.drawSignalLayer(this.lastDrawMeta);
     this.requestOverlayDraw();
     this.onAfterDraw?.();
@@ -6907,6 +7002,15 @@ export class SimpleChart {
         (window as any).__simpleChartOverlayError = error;
         console.error('[SimpleChart] overlay draw failed', error);
       }
+    });
+  }
+
+  private requestMainDraw() {
+    if (this.mainDrawScheduled) return;
+    this.mainDrawScheduled = true;
+    window.requestAnimationFrame(() => {
+      this.mainDrawScheduled = false;
+      this.draw();
     });
   }
 
@@ -9072,7 +9176,7 @@ export class SimpleChart {
       this.startIndex = result.startIndex;
       this.endIndex = result.endIndex;
     }
-    this.draw();
+    this.requestMainDraw();
   }
 
   private handleMouseDown(e: MouseEvent) {
@@ -9611,12 +9715,12 @@ export class SimpleChart {
       });
       this.startIndex = range.startIndex;
       this.endIndex = range.endIndex;
-      this.draw();
+      this.requestMainDraw();
       return;
     }
     if (this.yAxisDragging) {
       this.yScaleFactor = resolveMainYAxisDragScale(e.clientY, this.yAxisDragStartY, this.yAxisDragStartFactor);
-      this.draw();
+      this.requestMainDraw();
       return;
     }
     if (this.subYAxisDragging) {
@@ -9625,7 +9729,7 @@ export class SimpleChart {
         this.subYAxisDragStartY,
         this.subYAxisDragStartFactor,
       );
-      this.draw();
+      this.requestMainDraw();
       return;
     }
 
@@ -9722,7 +9826,7 @@ export class SimpleChart {
       }
     }
     if (changed) {
-      this.draw();
+      this.requestMainDraw();
     }
   }
 
