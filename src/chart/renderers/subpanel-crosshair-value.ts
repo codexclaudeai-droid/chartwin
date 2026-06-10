@@ -50,7 +50,9 @@ export interface SubPanelCrosshairValueParams {
   calcCCI: (period: number) => NullableSeries;
   calcATR: (period: number) => NullableSeries;
   calcOBV: () => number[];
+  calcOBVSignal?: () => NullableSeries;
   calcCVD: () => number[];
+  calcCVDSignal?: () => NullableSeries;
   sma: (source: NullableSeries, period: number) => NullableSeries;
   formatKUnit: (value: number, digits?: number) => string;
 }
@@ -186,7 +188,7 @@ function resolveValueRange(params: SubPanelCrosshairValueParams): {
 
   if (panelId === 'obv') {
     const obvData = calcOBV();
-    const obvSignal9 = sma(obvData.map((value) => value), 9);
+    const obvSignal9 = params.calcOBVSignal?.() ?? sma(obvData.map((value) => value), 9);
     const rangeValues = [
       ...finiteNumbers(obvData.slice(visStart, visEnd)),
       ...finiteNumbers(obvSignal9.slice(visStart, visEnd)),
@@ -200,7 +202,7 @@ function resolveValueRange(params: SubPanelCrosshairValueParams): {
 
   if (panelId === 'cvd') {
     const cvdData = calcCVD();
-    const cvdSignal9 = sma(cvdData.map((value) => value), 9);
+    const cvdSignal9 = params.calcCVDSignal?.() ?? sma(cvdData.map((value) => value), 9);
     const rangeValues = [
       ...finiteNumbers(cvdData.slice(visStart, visEnd)),
       ...finiteNumbers(cvdSignal9.slice(visStart, visEnd)),

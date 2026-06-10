@@ -7,16 +7,60 @@ import { buildStrategyDefinition, isAdminMgmtButtonsVisible, type StrategyDefini
 import { DEFAULT_GRID_ATR_BNF_SROUTER_PARAMS, GRID_ATR_BNF_SROUTER_PRESETS, inferGridAtrBnfSrouterPreset, type GridAtrBnfSrouterPresetMode } from '../strategy/strategies/grid-atr-bnf-srouter-v1';
 import { GRID_MARTINGALE_PRESETS, inferGridMartingalePreset } from '../strategy/strategies/grid-martingale-presets.js';
 
+const modalCloseSvgIcon = `
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+  </svg>
+`;
+
+const checkSvgIcon = `
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <polyline points="20 6 9 17 4 12"></polyline>
+  </svg>
+`;
+
+const chevronUpSvgIcon = `
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <polyline points="18 15 12 9 6 15"></polyline>
+  </svg>
+`;
+
+const chevronDownSvgIcon = `
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <polyline points="6 9 12 15 18 9"></polyline>
+  </svg>
+`;
+
 function createModal(title: string, options: { anchorTop?: boolean } = {}) {
   if (!document.getElementById('strategy-list-scrollbar-style')) {
     const styleEl = document.createElement('style');
     styleEl.id = 'strategy-list-scrollbar-style';
     styleEl.textContent = `
-      .strategy-list-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
-      .strategy-list-scroll::-webkit-scrollbar-track { background: #1c2030; }
-      .strategy-list-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 999px; }
+      .tc-modal-scroll::-webkit-scrollbar,
+      .strategy-list-scroll::-webkit-scrollbar,
+      .symbol-list-scroll::-webkit-scrollbar,
+      .indicator-list-scroll::-webkit-scrollbar { width: 3px; height: 3px; }
+      .tc-modal-scroll::-webkit-scrollbar-track,
+      .strategy-list-scroll::-webkit-scrollbar-track,
+      .symbol-list-scroll::-webkit-scrollbar-track,
+      .indicator-list-scroll::-webkit-scrollbar-track { background: transparent; }
+      .tc-modal-scroll::-webkit-scrollbar-thumb,
+      .strategy-list-scroll::-webkit-scrollbar-thumb,
+      .symbol-list-scroll::-webkit-scrollbar-thumb,
+      .indicator-list-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 999px; }
+      .tc-modal-scroll::-webkit-scrollbar-button,
       .strategy-list-scroll::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
-      .strategy-list-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) #1c2030; }
+      .symbol-list-scroll::-webkit-scrollbar-button,
+      .indicator-list-scroll::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+      .tc-modal-scroll,
+      .strategy-list-scroll,
+      .symbol-list-scroll,
+      .indicator-list-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.16) transparent; }
     `;
     document.head.appendChild(styleEl);
   }
@@ -84,13 +128,15 @@ function createModal(title: string, options: { anchorTop?: boolean } = {}) {
     overlay.remove();
   };
   const xBtn  = document.createElement('button');
-  xBtn.textContent = '×';
-  xBtn.style.cssText = 'background:none;border:none;color:#84898e;font-size:18px;cursor:pointer;line-height:1;';
+  xBtn.innerHTML = modalCloseSvgIcon;
+  xBtn.setAttribute('aria-label', '닫기');
+  xBtn.style.cssText = 'width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:none;border:none;border-radius:6px;color:#aeb8ca;cursor:pointer;line-height:1;padding:0;';
   xBtn.addEventListener('click', close);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
   header.appendChild(xBtn);
 
   const body = document.createElement('div');
+  body.className = 'tc-modal-scroll';
   body.style.cssText = 'padding:16px 20px;overflow-y:auto;flex:1;';
 
   applyModalLayout();
@@ -1786,6 +1832,7 @@ export function openSymbolModal(chart: any, symLabel: HTMLElement, symIcon: HTML
   body.appendChild(categoryWrap);
 
   const listWrap = document.createElement('div');
+  listWrap.className = 'symbol-list-scroll';
   body.appendChild(listWrap);
 
   const FAVORITES_STORAGE_KEY = 'my-chart-lib.symbol-favorites.v1';
@@ -1912,8 +1959,8 @@ export function openSymbolModal(chart: any, symLabel: HTMLElement, symIcon: HTML
 
     if (active) {
       const check = document.createElement('span');
-      check.textContent = '?';
-      check.style.cssText = 'color:#2962ff;font-size:12px;';
+      check.innerHTML = checkSvgIcon;
+      check.style.cssText = 'width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;color:#5f8cff;';
       right.appendChild(check);
     }
 
@@ -2048,9 +2095,10 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
       const ctl = document.createElement('div');
       ctl.style.cssText = 'display:flex;gap:4px;';
       const up = document.createElement('button');
-      up.textContent = '↑';
+      up.innerHTML = chevronUpSvgIcon;
+      up.setAttribute('aria-label', '위로 이동');
       up.disabled = index === 0;
-      up.style.cssText = 'width:24px;height:20px;border:1px solid #363a45;background:#1f2434;color:#c0c4cc;border-radius:4px;cursor:pointer;';
+      up.style.cssText = 'width:24px;height:20px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #363a45;background:#1f2434;color:#c0c4cc;border-radius:4px;cursor:pointer;padding:0;';
       up.addEventListener('click', () => {
         chart.shiftPanelOrder(panelId, -1);
         chart.draw();
@@ -2059,9 +2107,10 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
       });
 
       const down = document.createElement('button');
-      down.textContent = '↓';
+      down.innerHTML = chevronDownSvgIcon;
+      down.setAttribute('aria-label', '아래로 이동');
       down.disabled = index === panels.length - 1;
-      down.style.cssText = 'width:24px;height:20px;border:1px solid #363a45;background:#1f2434;color:#c0c4cc;border-radius:4px;cursor:pointer;';
+      down.style.cssText = 'width:24px;height:20px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #363a45;background:#1f2434;color:#c0c4cc;border-radius:4px;cursor:pointer;padding:0;';
       down.addEventListener('click', () => {
         chart.shiftPanelOrder(panelId, 1);
         chart.draw();
@@ -2077,6 +2126,7 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
   };
 
   const listWrap = document.createElement('div');
+  listWrap.className = 'indicator-list-scroll';
   body.appendChild(listWrap);
 
   const getIndicatorStyleKeys = (targetKey: string): string[] => {
@@ -2116,7 +2166,7 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
       })
       .forEach(ind => {
         const isMultiMain = ind.id === 'ma' || ind.id === 'ema';
-        const hasSettings = isMultiMain || ind.id === 'smartMoneyConcepts' || ind.id === 'parabolicSar';
+        const hasSettings = isMultiMain || ind.id === 'smartMoneyConcepts' || ind.id === 'parabolicSar' || ind.id === 'atrTrailingEmaSignal' || ind.id === 'atrTrailingStopOrigin' || ind.id === 'bbMtfKalmanSignal' || ind.id === 'footprint' || ind.id === 'fixedRangeVolumeProfile';
         const isOn = isMultiMain
           ? Boolean((chart.config.indicators as any)[ind.id]?.show && (((chart.config.indicators as any)[ind.id]?.lines?.length ?? 0) > 0))
           : ((chart.config.indicators as any)[ind.id]?.show ?? false);
@@ -2196,10 +2246,10 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     const styleEl = document.createElement('style');
     styleEl.id = 'indicator-popup-scrollbar-style';
     styleEl.textContent = `
-      .ind-popup { scrollbar-width: thin; scrollbar-color: rgba(132,137,142,0.34) transparent; }
-      .ind-popup::-webkit-scrollbar { width: 4px; height: 4px; }
+      .ind-popup { scrollbar-width: thin; scrollbar-color: rgba(132,137,142,0.22) transparent; }
+      .ind-popup::-webkit-scrollbar { width: 2px; height: 2px; }
       .ind-popup::-webkit-scrollbar-track { background: transparent; }
-      .ind-popup::-webkit-scrollbar-thumb { background: rgba(132,137,142,0.34); border-radius: 999px; }
+      .ind-popup::-webkit-scrollbar-thumb { background: rgba(132,137,142,0.22); border-radius: 999px; }
       .ind-popup::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
       .ind-setting-label { display:inline-flex; align-items:center; gap:5px; min-width:0; }
       .ind-info-button { width:15px; height:15px; min-width:15px; display:inline-flex; align-items:center; justify-content:center; position:relative; color:#a7adba; cursor:help; }
@@ -2265,6 +2315,12 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     ? 'SUPER - SUPERTREND'
     : popupKey === 'statisticalTrailingStop'
       ? 'STS - Statistical Trailing Stop'
+    : popupKey === 'atrTrailingEmaSignal'
+      ? 'ATR Trailing EMA Signal'
+    : popupKey === 'atrTrailingStopOrigin'
+      ? 'ATR Trailing Stop-origin'
+    : popupKey === 'bbMtfKalmanSignal'
+      ? 'BB MTF Kalman Signal'
     : popupKey === 'zeroLagMaTrendLevels'
       ? 'ZLMA - Zero-Lag MA Trend Levels'
     : popupKey === 'bb'
@@ -2281,12 +2337,16 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
       ? 'ATR - Average True Range'
     : popupKey === 'cvd'
       ? 'CVD - Cumulative Volume Delta'
+    : popupKey === 'footprint'
+      ? 'Footprint'
+    : popupKey === 'fixedRangeVolumeProfile'
+      ? 'Fixed Range Volume Profile'
       : popupKey.toUpperCase();
   hdr.innerHTML = `<span>${headerTitle}</span>`;
   const xb = document.createElement('button');
-  xb.textContent = '×';
+  xb.innerHTML = modalCloseSvgIcon;
   xb.setAttribute('aria-label', '닫기');
-  xb.style.cssText = 'width:34px;height:34px;min-width:34px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;border-radius:8px;color:#d7dfef;cursor:pointer;font-size:28px;line-height:1;outline:none;padding:0;';
+  xb.style.cssText = 'width:30px;height:30px;min-width:30px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;border-radius:8px;color:#d7dfef;cursor:pointer;line-height:1;outline:none;padding:0;';
   xb.addEventListener('click', () => popup.remove());
   hdr.appendChild(xb); popup.appendChild(hdr);
 
@@ -2294,6 +2354,9 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     maShort: ['value'], maLong: ['value'], ma60: ['value'], ma120: ['value'], ma200: ['value'], ma: [], ema: [], hma: ['period'], bb: [],
     supertrend: ['period', 'factor'],
     statisticalTrailingStop: ['dataLength', 'distributionLength', 'baseLevel'],
+    atrTrailingEmaSignal: ['sensitivity', 'atrPeriod', 'signalEmaLength', 'trendEmaLength'],
+    atrTrailingStopOrigin: ['sensitivity', 'atrPeriod', 'trendEmaLength'],
+    bbMtfKalmanSignal: ['ltfLength', 'ltfMult', 'ltfBBLinewidth', 'htfLength', 'htfMult', 'htfBBLinewidth', 'minOpacity', 'maxOpacity'],
     zeroLagMaTrendLevels: ['length'],
     williamsFractal: ['span'],
     parabolicSar: ['start', 'increment', 'maximum'],
@@ -2301,11 +2364,25 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     rsi: ['period'], dmi: ['period'], macd: ['fast','slow','signal'],
     stochF: ['kPeriod','dPeriod'], stochS: ['kPeriod','dPeriod'],
     cci: ['period'], atr: ['period'], ichimoku: ['tenkan','kijun','senkou'],
-    envelope: ['period','pct'], vwap: [], volumeProfile: ['rows', 'widthPct'], vpvr: [], obv: [], cvd: [], volume: [],
+    envelope: ['period','pct'], vwap: [], footprint: [], fixedRangeVolumeProfile: [], volumeProfile: ['rows', 'widthPct'], vpvr: [], obv: [], cvd: [], volume: [],
   };
   const LABELS: Record<string, string> = {
     value: '값', period: '기간', stdDev: '표준편차',
     factor: 'Factor',
+    sensitivity: 'Sensitivity',
+    atrPeriod: 'ATR Period',
+    signalEmaLength: 'Signal EMA',
+    trendEmaLength: 'Trend EMA',
+    ltfLength: 'LTF Length',
+    ltfMult: 'LTF Multiplier',
+    ltfBBLinewidth: 'LTF Linewidth',
+    htfLength: 'HTF Length',
+    htfMult: 'HTF Multiplier',
+    htfBBLinewidth: 'HTF Linewidth',
+    htfTimeframe: 'HTF Timeframe',
+    colorOption: 'Color Option',
+    minOpacity: 'Opacity Min',
+    maxOpacity: 'Opacity Max',
     dataLength: 'Data Length',
     distributionLength: 'Distribution Length',
     baseLevel: 'Base Level',
@@ -2337,6 +2414,10 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     tenkan: '전환선', kijun: '기준선', senkou: '선행스팬 B', pct: '편차 (%)',
     rows: '행 개수 / 행당 틱', widthPct: '폭 (%)', valueAreaVolume: 'Value Area 비율(%)',
     upOpacity: '상승 투명도 (%)', downOpacity: '하락 투명도 (%)', pocOpacity: 'POC 투명도 (%)',
+    maxLevels: '표시 가격 레벨 수',
+    priceStep: '호가 묶음 단위',
+    showSummary: 'Delta / Total 표시',
+    rowSize: '행 개수',
   };
   const INFO_TEXTS: Record<string, string> = {
     'smartMoneyConcepts.orderBlockFilter': '변동성이 과도한 오더블록을 걸러내는 방식입니다. 데이터가 적을 때는 누적 평균 범위(Cumulative Mean Range) 방식을 사용하는 것을 권장합니다.',
@@ -3237,6 +3318,155 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     return;
   }
 
+  if (popupKey === 'atrTrailingEmaSignal') {
+    const modeRow = document.createElement('div');
+    modeRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+    const modeLabel = createSettingLabel('Mode', 'mode');
+    modeLabel.style.color = '#84898e';
+    const modeSelect = document.createElement('select');
+    modeSelect.style.cssText = 'width:112px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:3px 7px;font-size:12px;';
+    modeSelect.innerHTML = '<option value="basic">Basic</option><option value="filtered">Filtered</option>';
+    modeSelect.value = ind.mode === 'filtered' ? 'filtered' : 'basic';
+    modeSelect.addEventListener('change', () => {
+      ind.mode = modeSelect.value === 'filtered' ? 'filtered' : 'basic';
+      chart.draw();
+      onUpdate();
+    });
+    modeRow.append(modeLabel, modeSelect);
+    popup.appendChild(modeRow);
+
+    const addToggleRow = (field: string, labelText: string, fallback: boolean) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+      const label = createSettingLabel(labelText, field);
+      label.style.color = '#84898e';
+      const sw = createSwitch(ind[field] == null ? fallback : Boolean(ind[field]), (next) => {
+        ind[field] = next;
+        chart.draw();
+        onUpdate();
+      });
+      row.append(label, sw.button);
+      popup.appendChild(row);
+    };
+    addToggleRow('showTrendEma', 'Show Trend EMA', true);
+    addToggleRow('showAtrStop', 'Show ATR Stop', false);
+    addToggleRow('showSignals', 'Show Signals', true);
+  }
+
+  if (popupKey === 'atrTrailingStopOrigin') {
+    const addToggleRow = (field: string, labelText: string, fallback: boolean) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+      const label = createSettingLabel(labelText, field);
+      label.style.color = '#84898e';
+      const sw = createSwitch(ind[field] == null ? fallback : Boolean(ind[field]), (next) => {
+        ind[field] = next;
+        chart.draw();
+        onUpdate();
+      });
+      row.append(label, sw.button);
+      popup.appendChild(row);
+    };
+    addToggleRow('showTrendEma', 'Show Trend EMA', true);
+    addToggleRow('showAtrStop', 'Show ATR Stop', false);
+    addToggleRow('showSignals', 'Show Signals', true);
+  }
+
+  if (popupKey === 'bbMtfKalmanSignal') {
+    popup.style.minWidth = 'min(330px, calc(100vw - 16px))';
+    const timeframeRow = document.createElement('div');
+    timeframeRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+    const timeframeLabel = createSettingLabel(LABELS.htfTimeframe, 'htfTimeframe');
+    timeframeLabel.style.color = '#84898e';
+    const timeframeSelect = document.createElement('select');
+    timeframeSelect.style.cssText = 'width:118px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:3px 7px;font-size:12px;';
+    [
+      ['15m', '15m'],
+      ['30m', '30m'],
+      ['1h', '1h'],
+      ['2h', '2h'],
+      ['3h', '3h'],
+      ['4h', '4h'],
+      ['1d', '1D'],
+      ['1w', '1W'],
+      ['1M', '1M'],
+    ].forEach(([value, label]) => {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      if ((ind.htfTimeframe ?? '4h') === value) opt.selected = true;
+      timeframeSelect.appendChild(opt);
+    });
+    timeframeSelect.addEventListener('change', () => {
+      ind.htfTimeframe = timeframeSelect.value;
+      chart.draw();
+      onUpdate();
+    });
+    timeframeRow.append(timeframeLabel, timeframeSelect);
+    popup.appendChild(timeframeRow);
+
+    const colorRow = document.createElement('div');
+    colorRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+    const colorLabel = createSettingLabel(LABELS.colorOption, 'colorOption');
+    colorLabel.style.color = '#84898e';
+    const colorSelect = document.createElement('select');
+    colorSelect.style.cssText = 'width:118px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:3px 7px;font-size:12px;';
+    ['Gradient', 'Solid', 'None'].forEach((value) => {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = value;
+      if ((ind.colorOption ?? 'Gradient') === value) opt.selected = true;
+      colorSelect.appendChild(opt);
+    });
+    colorSelect.addEventListener('change', () => {
+      ind.colorOption = colorSelect.value;
+      chart.draw();
+      onUpdate();
+    });
+    colorRow.append(colorLabel, colorSelect);
+    popup.appendChild(colorRow);
+
+    const addToggleRow = (field: string, labelText: string, fallback: boolean) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+      const label = createSettingLabel(labelText, field);
+      label.style.color = '#84898e';
+      const sw = createSwitch(ind[field] == null ? fallback : Boolean(ind[field]), (next) => {
+        ind[field] = next;
+        chart.draw();
+        onUpdate();
+      });
+      row.append(label, sw.button);
+      popup.appendChild(row);
+    };
+    addToggleRow('plotLtfBb', 'Plot LTF BB', true);
+    addToggleRow('plotHtfBb', 'Plot HTF BB', true);
+    addToggleRow('signalsEnabled', 'Display Signals', true);
+    addToggleRow('plotLabels', 'Plot HTF Labels', false);
+    addToggleRow('showErrors', 'Show Errors', true);
+
+    const addColorRow = (field: string, labelText: string, fallback: string) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+      const label = createSettingLabel(labelText, field);
+      label.style.color = '#84898e';
+      const color = document.createElement('input');
+      color.type = 'color';
+      color.value = toHexColor(String(ind[field] ?? fallback));
+      color.style.cssText = 'width:34px;height:24px;padding:0;border:1px solid #363a45;border-radius:4px;background:#131722;cursor:pointer;';
+      color.addEventListener('input', () => {
+        ind[field] = color.value;
+        chart.draw();
+        onUpdate();
+      });
+      row.append(label, color);
+      popup.appendChild(row);
+    };
+    addColorRow('bullishColor', 'Bullish Color', '#089981');
+    addColorRow('bearishColor', 'Bearish Color', '#f23645');
+    addColorRow('textColor', 'Text Color', '#ffffff');
+  }
+
   (FIELDS[popupKey] || []).forEach(field => {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
@@ -3255,6 +3485,40 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
       } else if (field === 'baseLevel') {
         inp.min = '0';
         inp.max = '3';
+        inp.step = '1';
+      }
+    } else if (popupKey === 'atrTrailingEmaSignal') {
+      if (field === 'sensitivity') {
+        inp.min = '0.1';
+        inp.step = '0.1';
+      } else {
+        inp.min = '1';
+        inp.step = '1';
+      }
+    } else if (popupKey === 'atrTrailingStopOrigin') {
+      if (field === 'sensitivity') {
+        inp.min = '0.1';
+        inp.step = '0.1';
+      } else {
+        inp.min = '1';
+        inp.step = '1';
+      }
+    } else if (popupKey === 'bbMtfKalmanSignal') {
+      if (field === 'ltfMult' || field === 'htfMult') {
+        inp.min = '0.1';
+        inp.max = '5';
+        inp.step = '0.05';
+      } else if (field === 'ltfBBLinewidth' || field === 'htfBBLinewidth') {
+        inp.min = '1';
+        inp.max = '10';
+        inp.step = '1';
+      } else if (field === 'minOpacity' || field === 'maxOpacity') {
+        inp.min = '0';
+        inp.max = '100';
+        inp.step = '1';
+      } else {
+        inp.min = '1';
+        inp.max = '500';
         inp.step = '1';
       }
     } else if (popupKey === 'zeroLagMaTrendLevels' && field === 'length') {
@@ -3285,6 +3549,26 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
         if (field === 'dataLength') next = Math.max(1, Math.floor(Number(next) || 10));
         if (field === 'distributionLength') next = Math.max(10, Math.min(5000, Math.floor(Number(next) || 100)));
         if (field === 'baseLevel') next = Math.max(0, Math.min(3, Math.floor(Number(next) || 2)));
+      } else if (popupKey === 'atrTrailingEmaSignal') {
+        if (field === 'sensitivity') next = Math.max(0.1, Number.isFinite(next) ? next : 3);
+        else if (field === 'atrPeriod') next = Math.max(1, Math.floor(Number(next) || 2));
+        else if (field === 'signalEmaLength') next = Math.max(1, Math.floor(Number(next) || 1));
+        else if (field === 'trendEmaLength') next = Math.max(1, Math.floor(Number(next) || 240));
+      } else if (popupKey === 'atrTrailingStopOrigin') {
+        if (field === 'sensitivity') next = Math.max(0.1, Number.isFinite(next) ? next : 3);
+        else if (field === 'atrPeriod') next = Math.max(1, Math.floor(Number(next) || 2));
+        else if (field === 'trendEmaLength') next = Math.max(1, Math.floor(Number(next) || 240));
+      } else if (popupKey === 'bbMtfKalmanSignal') {
+        if (field === 'ltfMult') next = Math.max(0.1, Math.min(5, Number.isFinite(next) ? next : 2));
+        else if (field === 'htfMult') next = Math.max(0.1, Math.min(5, Number.isFinite(next) ? next : 2.25));
+        else if (field === 'ltfBBLinewidth') next = Math.max(1, Math.min(10, Math.floor(Number(next) || 1)));
+        else if (field === 'htfBBLinewidth') next = Math.max(1, Math.min(10, Math.floor(Number(next) || 1)));
+        else if (field === 'ltfLength') next = Math.max(1, Math.min(500, Math.floor(Number(next) || 20)));
+        else if (field === 'htfLength') next = Math.max(1, Math.min(500, Math.floor(Number(next) || 20)));
+        else if (field === 'minOpacity') next = Math.max(0, Math.min(100, Math.floor(Number(next) || 55)));
+        else if (field === 'maxOpacity') next = Math.max(0, Math.min(100, Math.floor(Number(next) || 99)));
+        if (field === 'minOpacity' && Number(ind.maxOpacity) < next) ind.maxOpacity = next;
+        if (field === 'maxOpacity' && Number(ind.minOpacity) > next) ind.minOpacity = next;
       } else if (popupKey === 'zeroLagMaTrendLevels' && field === 'length') {
         next = Math.max(1, Math.floor(Number(next) || 15));
       } else if (popupKey === 'williamsFractal' && field === 'span') {
@@ -3502,6 +3786,232 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     barRow.appendChild(barLabel);
     barRow.appendChild(barSwitch);
     popup.appendChild(barRow);
+  }
+
+  if (popupKey === 'footprint') {
+    if (typeof ind.showSummary !== 'boolean') ind.showSummary = true;
+    if (!Number.isFinite(Number(ind.maxLevels)) || Number(ind.maxLevels) < 1) ind.maxLevels = 18;
+    if (!Number.isFinite(Number(ind.priceStep)) || Number(ind.priceStep) < 0) ind.priceStep = 1000;
+
+    const summaryRow = document.createElement('div');
+    summaryRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+    const summaryLabel = document.createElement('span');
+    summaryLabel.textContent = LABELS.showSummary;
+    summaryLabel.style.color = '#84898e';
+    const { button: summarySwitch } = createSwitch(Boolean(ind.showSummary), (next) => {
+      ind.showSummary = next;
+      chart.draw();
+      onUpdate();
+    }, { on: '표시', off: '숨김' });
+    summaryRow.appendChild(summaryLabel);
+    summaryRow.appendChild(summarySwitch);
+    popup.appendChild(summaryRow);
+
+    const levelRow = document.createElement('div');
+    levelRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;';
+    const levelLabel = document.createElement('span');
+    levelLabel.textContent = LABELS.maxLevels;
+    levelLabel.style.color = '#84898e';
+    const levelInput = document.createElement('input');
+    levelInput.type = 'number';
+    levelInput.min = '4';
+    levelInput.max = '40';
+    levelInput.step = '1';
+    levelInput.value = String(Math.max(1, Math.min(40, Math.floor(Number(ind.maxLevels) || 18))));
+    levelInput.style.cssText = 'width:74px;background:#111827;border:1px solid #374151;border-radius:6px;color:#f8fafc;padding:5px 7px;font-size:12px;';
+    levelInput.addEventListener('change', () => {
+      const next = Math.max(1, Math.min(40, Math.floor(Number(levelInput.value) || 18)));
+      ind.maxLevels = next;
+      levelInput.value = String(next);
+      chart.draw();
+      onUpdate();
+    });
+    levelRow.appendChild(levelLabel);
+    levelRow.appendChild(levelInput);
+    popup.appendChild(levelRow);
+
+    const priceStepRow = document.createElement('div');
+    priceStepRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;';
+    const priceStepLabel = document.createElement('span');
+    priceStepLabel.textContent = LABELS.priceStep;
+    priceStepLabel.style.color = '#84898e';
+    const priceStepInput = document.createElement('input');
+    priceStepInput.type = 'number';
+    priceStepInput.min = '0';
+    priceStepInput.step = '10';
+    priceStepInput.value = String(Math.max(0, Number(ind.priceStep) || 0));
+    priceStepInput.style.cssText = 'width:88px;background:#111827;border:1px solid #374151;border-radius:6px;color:#f8fafc;padding:5px 7px;font-size:12px;';
+    priceStepInput.addEventListener('change', () => {
+      const next = Math.max(0, Number(priceStepInput.value) || 0);
+      ind.priceStep = next;
+      priceStepInput.value = String(next);
+      chart.draw();
+      onUpdate();
+    });
+    priceStepRow.appendChild(priceStepLabel);
+    priceStepRow.appendChild(priceStepInput);
+    popup.appendChild(priceStepRow);
+  }
+
+  if (popupKey === 'fixedRangeVolumeProfile') {
+    const defaults = {
+      rowSize: 50,
+      volumeMode: 'up_down',
+      valueAreaVolume: 70,
+      widthPct: 30,
+      showPoc: true,
+      showVahVal: true,
+      showVaBackground: true,
+      showRangeBox: true,
+      showRangeHandles: true,
+      showInfo: true,
+      upColor: '#26a69a',
+      downColor: '#ef5350',
+      totalColor: '#7f8aa3',
+      deltaPosColor: '#26a69a',
+      deltaNegColor: '#ef5350',
+      pocColor: '#ffc107',
+      vahValColor: '#8ab4ff',
+      vaBgColor: '#3a5f94',
+      rangeBgColor: '#94a3b8',
+      rangeLineColor: '#dbe3f4',
+      upOpacity: 45,
+      downOpacity: 45,
+      totalOpacity: 38,
+      deltaOpacity: 50,
+      vaBgOpacity: 16,
+      rangeBgOpacity: 8,
+    } as const;
+    Object.entries(defaults).forEach(([k, v]) => {
+      if (ind[k] == null || (typeof v === 'number' && !Number.isFinite(Number(ind[k])))) ind[k] = v;
+    });
+
+    const sec = document.createElement('div');
+    sec.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px solid #363a45;';
+
+    const rangeBtn = document.createElement('button');
+    rangeBtn.type = 'button';
+    rangeBtn.textContent = '현재 화면을 고정 범위로 지정';
+    rangeBtn.style.cssText = 'width:100%;height:30px;border:1px solid #4b5563;background:#243044;color:#e5edf8;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:10px;';
+    rangeBtn.addEventListener('click', () => {
+      chart.setFixedRangeVolumeProfileToVisibleRange?.();
+      onUpdate();
+      popup.remove();
+    });
+    sec.appendChild(rangeBtn);
+
+    const rangeInfo = document.createElement('div');
+    const startText = Number.isFinite(Number(ind.rangeStartTime)) ? new Date(Number(ind.rangeStartTime) * 1000).toLocaleString() : '미지정';
+    const endText = Number.isFinite(Number(ind.rangeEndTime)) ? new Date(Number(ind.rangeEndTime) * 1000).toLocaleString() : '미지정';
+    rangeInfo.textContent = `${startText} ~ ${endText}`;
+    rangeInfo.style.cssText = 'font-size:11px;line-height:1.35;color:#8f9bb2;margin-bottom:10px;word-break:break-word;';
+    sec.appendChild(rangeInfo);
+
+    const mkRow = () => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;';
+      return row;
+    };
+    const mkLabel = (text: string) => {
+      const lbl = document.createElement('span');
+      lbl.textContent = text;
+      lbl.style.cssText = 'color:#c0c4cc;';
+      return lbl;
+    };
+    const mkNumber = (keyName: string, min: number, max: number, step = 1, width = 82) => {
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.min = String(min);
+      inp.max = String(max);
+      inp.step = String(step);
+      inp.value = String(Math.max(min, Math.min(max, Number(ind[keyName]) || Number(defaults[keyName as keyof typeof defaults]) || min)));
+      inp.style.cssText = `width:${width}px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:4px 6px;text-align:right;font-size:12px;box-sizing:border-box;`;
+      inp.addEventListener('change', () => {
+        const next = Math.max(min, Math.min(max, Number(inp.value) || min));
+        ind[keyName] = next;
+        inp.value = String(next);
+        chart.draw();
+        onUpdate();
+      });
+      return inp;
+    };
+
+    const rowSizeRow = mkRow();
+    rowSizeRow.append(mkLabel(LABELS.rowSize), withTouchStepper(mkNumber('rowSize', 4, 450, 1)));
+    sec.appendChild(rowSizeRow);
+
+    const widthRow = mkRow();
+    widthRow.append(mkLabel('폭 (%)'), withTouchStepper(mkNumber('widthPct', 5, 65, 1)));
+    sec.appendChild(widthRow);
+
+    const vaRow = mkRow();
+    vaRow.append(mkLabel(LABELS.valueAreaVolume), withTouchStepper(mkNumber('valueAreaVolume', 1, 100, 1)));
+    sec.appendChild(vaRow);
+
+    const modeRow = mkRow();
+    const modeSelect = document.createElement('select');
+    modeSelect.style.cssText = 'width:112px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:4px 6px;font-size:12px;';
+    [
+      ['up_down', 'Bid / Ask'],
+      ['total', 'Total'],
+      ['delta', 'Delta'],
+    ].forEach(([value, label]) => {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      if (ind.volumeMode === value) opt.selected = true;
+      modeSelect.appendChild(opt);
+    });
+    modeSelect.addEventListener('change', () => {
+      ind.volumeMode = modeSelect.value;
+      chart.draw();
+      onUpdate();
+    });
+    modeRow.append(mkLabel('표시 방식'), modeSelect);
+    sec.appendChild(modeRow);
+
+    const makeSwitchRow = (labelText: string, keyName: string) => {
+      const row = mkRow();
+      const { button } = createSwitch(ind[keyName] !== false, (next) => {
+        ind[keyName] = next;
+        chart.draw();
+        onUpdate();
+      }, { on: '표시', off: '숨김' });
+      row.append(mkLabel(labelText), button);
+      sec.appendChild(row);
+    };
+    makeSwitchRow('POC', 'showPoc');
+    makeSwitchRow('VAH / VAL', 'showVahVal');
+    makeSwitchRow('범위 배경', 'showRangeBox');
+    makeSwitchRow('정보 라벨', 'showInfo');
+
+    const colorTitle = document.createElement('div');
+    colorTitle.textContent = '색상 / 투명도';
+    colorTitle.style.cssText = 'font-size:11px;color:#84898e;font-weight:700;margin:12px 0 8px;';
+    sec.appendChild(colorTitle);
+    const makeColorOpacityRow = (labelText: string, colorKey: string, opacityKey: string) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:grid;grid-template-columns:68px 34px 82px;align-items:center;gap:8px;margin-bottom:8px;';
+      const lbl = mkLabel(labelText);
+      const color = document.createElement('input');
+      color.type = 'color';
+      color.value = toHexColor(String(ind[colorKey] ?? defaults[colorKey as keyof typeof defaults] ?? '#ffffff'));
+      color.style.cssText = 'width:28px;height:24px;padding:0;border:1px solid #363a45;border-radius:4px;background:#131722;cursor:pointer;';
+      color.addEventListener('input', () => {
+        ind[colorKey] = color.value;
+        chart.draw();
+        onUpdate();
+      });
+      row.append(lbl, color, withTouchStepper(mkNumber(opacityKey, 0, 100, 1, 82)));
+      sec.appendChild(row);
+    };
+    makeColorOpacityRow('Ask/Up', 'upColor', 'upOpacity');
+    makeColorOpacityRow('Bid/Down', 'downColor', 'downOpacity');
+    makeColorOpacityRow('Total', 'totalColor', 'totalOpacity');
+    makeColorOpacityRow('Delta', 'deltaPosColor', 'deltaOpacity');
+    makeColorOpacityRow('VA', 'vaBgColor', 'vaBgOpacity');
+
+    popup.appendChild(sec);
   }
 
   if (popupKey === 'dmi') {
@@ -4264,7 +4774,7 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     popup.appendChild(sec);
   }
 
-  const styleTargets = (popupKey === 'supertrend' || popupKey === 'statisticalTrailingStop' || popupKey === 'volumeProfile' || popupKey === 'vpvr')
+  const styleTargets = (popupKey === 'supertrend' || popupKey === 'statisticalTrailingStop' || popupKey === 'volumeProfile' || popupKey === 'fixedRangeVolumeProfile' || popupKey === 'vpvr')
     ? []
     : (INDICATOR_STYLE_TARGETS[popupKey] ?? []);
   if (styleTargets.length) {

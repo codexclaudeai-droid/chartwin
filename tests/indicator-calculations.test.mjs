@@ -8,6 +8,9 @@ import {
   calculateEma,
   calculateEnvelope,
   calculateAtr,
+  calculateAtrTrailingEmaSignal,
+  calculateAtrTrailingStopOrigin,
+  calculateBbMtfKalmanSignal,
   calculateHma,
   calculateIchimoku,
   calculateMacd,
@@ -73,6 +76,132 @@ test('indicator modules calculate ATR using Wilder smoothing', () => {
   assert.deepEqual(atr.slice(0, 2), [null, null]);
   assert.equal(Math.round((atr[2] ?? 0) * 100) / 100, 3.33);
   assert.equal(Math.round((atr[3] ?? 0) * 100) / 100, 3.89);
+});
+
+test('indicator modules calculate ATR Trailing EMA Signal basic and filtered modes', () => {
+  const candles = [
+    candle(100, 101, 99, 100),
+    candle(96, 97, 95, 96),
+    candle(90, 91, 89, 90),
+    candle(98, 99, 97, 98),
+    candle(102, 103, 101, 102),
+    candle(106, 107, 105, 106),
+    candle(110, 111, 109, 110),
+  ];
+
+  const basic = calculateAtrTrailingEmaSignal(candles, {
+    mode: 'basic',
+    sensitivity: 1,
+    atrPeriod: 2,
+    signalEmaLength: 1,
+    trendEmaLength: 5,
+  });
+  const filtered = calculateAtrTrailingEmaSignal(candles, {
+    mode: 'filtered',
+    sensitivity: 1,
+    atrPeriod: 2,
+    signalEmaLength: 1,
+    trendEmaLength: 5,
+  });
+
+  assert.equal(basic.buySignal[3], true);
+  assert.equal(filtered.buySignal[3], false);
+  assert.equal(basic.sellSignal[2], true);
+  assert.equal(basic.atrStop.length, candles.length);
+  assert.equal(basic.trendEma.length, candles.length);
+  assert.equal(Math.round((basic.trendEma[4] ?? 0) * 100) / 100, 97.2);
+});
+
+test('indicator modules calculate ATR Trailing Stop origin with canonical stop branch and close trend EMA', () => {
+  const candles = [
+    candle(100, 101, 99, 100),
+    candle(96, 97, 95, 96),
+    candle(90, 91, 89, 90),
+    candle(98, 99, 97, 98),
+    candle(102, 103, 101, 102),
+    candle(106, 107, 105, 106),
+    candle(110, 111, 109, 110),
+  ];
+
+  const origin = calculateAtrTrailingStopOrigin(candles, {
+    sensitivity: 1,
+    atrPeriod: 2,
+    trendEmaLength: 5,
+  });
+  const improved = calculateAtrTrailingEmaSignal(candles, {
+    mode: 'basic',
+    sensitivity: 1,
+    atrPeriod: 2,
+    signalEmaLength: 1,
+    trendEmaLength: 5,
+  });
+
+  assert.equal(origin.buySignal[3], true);
+  assert.equal(origin.sellSignal[2], true);
+  assert.equal(improved.buySignal[3], true);
+  assert.equal(origin.atrStop[2], 95.25);
+  assert.equal(improved.atrStop[2], 95.25);
+  assert.equal(Math.round((origin.trendEma[4] ?? 0) * 100) / 100, 97.2);
+});
+
+test('indicator modules calculate BB MTF Kalman Signal with confirmed HTF mapping', () => {
+  const candles = Array.from({ length: 24 }, (_, index) => {
+    const close = 100 + index;
+    return {
+      ...candle(close - 0.5, close + 1, close - 1, close),
+      time: index * 3600,
+    };
+  });
+
+  const result = calculateBbMtfKalmanSignal(candles, {
+    chartTimeframe: '1h',
+    htfTimeframe: '4h',
+    ltfLength: 3,
+    ltfMult: 2,
+    htfLength: 3,
+    htfMult: 2,
+  });
+
+  assert.equal(result.warning, null);
+  assert.deepEqual(result.htfCandleStartIndex.slice(0, 8), [0, 0, 0, 0, 4, 4, 4, 4]);
+  assert.equal(result.htfRawBasis[10], null);
+  assert.equal(Math.round((result.htfRawBasis[11] ?? 0) * 100) / 100, 107);
+  assert.equal(Math.round((result.htfBasis[13] ?? 0) * 100) / 100, 107);
+  assert.equal(result.ltfBasis.length, candles.length);
+});
+
+test('indicator modules calculate BB MTF Kalman reversal signals and invalid timeframe warning', () => {
+  const closes = [
+    100, 100, 100, 100,
+    100, 100, 100, 100,
+    100, 100, 100, 100,
+    114, 116, 118, 120,
+    119, 118, 117, 116,
+    115, 114, 113, 112,
+  ];
+  const candles = closes.map((close, index) => ({
+    ...candle(close - 0.4, close + 1, close - 1, close),
+    time: index * 3600,
+  }));
+
+  const result = calculateBbMtfKalmanSignal(candles, {
+    chartTimeframe: '1h',
+    htfTimeframe: '4h',
+    ltfLength: 3,
+    ltfMult: 1,
+    htfLength: 3,
+    htfMult: 1,
+  });
+  const invalid = calculateBbMtfKalmanSignal(candles, {
+    chartTimeframe: '1h',
+    htfTimeframe: '30m',
+  });
+
+  assert.equal(result.sellSignal.some(Boolean), true);
+  assert.equal(result.sellSignal.filter(Boolean).length, 1);
+  assert.equal(result.buySignal.some(Boolean), false);
+  assert.equal(invalid.warning, 'HTF timeframe must be higher than chart timeframe');
+  assert.equal(invalid.htfUpper.every((value) => value == null), true);
 });
 
 test('indicator modules calculate Envelope bands from moving average and percentage', () => {

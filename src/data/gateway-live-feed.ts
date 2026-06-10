@@ -128,6 +128,10 @@ export function inferGatewayMarket(symbol: string): 'futures' | 'index' | 'commo
   return 'futures';
 }
 
+export function inferGatewayReportMarket(symbol: string): 'crypto' | 'futures' | 'index' | 'commodity' | 'fx' {
+  return isCryptoLikeSymbol(symbol) ? 'crypto' : inferGatewayMarket(symbol);
+}
+
 function resolveGatewayBaseUrl(): string {
   const win = window as Window & { __DATA_GATEWAY_URL__?: string };
   const fromWindow = typeof win.__DATA_GATEWAY_URL__ === 'string' ? win.__DATA_GATEWAY_URL__.trim() : '';
@@ -198,6 +202,38 @@ async function fetchGatewayCandles(
   });
   if (!response.ok) {
     throw new Error(`Gateway candles error: ${response.status}`);
+  }
+  const json = await response.json() as { candles?: unknown };
+  return sanitizeCandles(json.candles);
+}
+
+export async function fetchGatewayReportCandles(args: {
+  symbol: string;
+  timeframe: TimeframeKey;
+  limit: number;
+  fromSec?: number | null;
+  toSec?: number | null;
+  signal?: AbortSignal;
+}): Promise<CandleDataLike[]> {
+  const market = inferGatewayReportMarket(args.symbol);
+  const limit = Math.max(1, Math.floor(Number(args.limit) || 0));
+  const cappedLimit = Math.min(100000, limit);
+  const query = new URLSearchParams({
+    market,
+    symbol: normalizeSymbol(args.symbol),
+    timeframe: args.timeframe,
+    limit: String(cappedLimit),
+  });
+  if (Number.isFinite(Number(args.fromSec))) query.set('from', String(Math.floor(Number(args.fromSec))));
+  if (Number.isFinite(Number(args.toSec))) query.set('to', String(Math.floor(Number(args.toSec))));
+
+  const response = await fetch(`${resolveGatewayBaseUrl()}/report/candles?${query.toString()}`, {
+    method: 'GET',
+    cache: 'no-store',
+    signal: args.signal,
+  });
+  if (!response.ok) {
+    throw new Error(`Gateway report candles error: ${response.status}`);
   }
   const json = await response.json() as { candles?: unknown };
   return sanitizeCandles(json.candles);

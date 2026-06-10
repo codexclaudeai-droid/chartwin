@@ -15,6 +15,10 @@ import {
   renderSingleMainLine,
 } from './main-line-renderer.ts';
 import { renderEnvelopeLines } from './envelope-renderer.ts';
+import type { AtrTrailingEmaSignalResult } from '../indicators/atr-trailing-ema-signal.ts';
+import { renderAtrTrailingEmaSignal } from './atr-trailing-ema-signal-renderer.ts';
+import type { BbMtfKalmanSignalResult } from '../indicators/bb-mtf-kalman-signal.ts';
+import { applyBbMtfKalmanLinewidth, renderBbMtfKalmanSignal } from './bb-mtf-kalman-signal-renderer.ts';
 import type { SmartMoneyConceptsResult } from '../indicators/smart-money-concepts.ts';
 import { renderSmartMoneyConcepts } from './smart-money-concepts-renderer.ts';
 import { renderParabolicSar } from './parabolic-sar-renderer.ts';
@@ -110,6 +114,31 @@ export interface MainIndicatorSettings extends SubPanelIndicatorSettings {
     trailMarkLocation?: string;
     showPanelLabel?: boolean;
   };
+  atrTrailingEmaSignal?: {
+    show: boolean;
+    showTrendEma?: boolean;
+    showAtrStop?: boolean;
+    showSignals?: boolean;
+  };
+  atrTrailingStopOrigin?: {
+    show: boolean;
+    showTrendEma?: boolean;
+    showAtrStop?: boolean;
+    showSignals?: boolean;
+  };
+  bbMtfKalmanSignal?: {
+    show: boolean;
+    plotLtfBb?: boolean;
+    plotHtfBb?: boolean;
+    plotLabels?: boolean;
+    signalsEnabled?: boolean;
+    showErrors?: boolean;
+    bullishColor?: string;
+    bearishColor?: string;
+    textColor?: string;
+    ltfBBLinewidth?: number;
+    htfBBLinewidth?: number;
+  };
   envelope: { show: boolean };
   maShort?: { show: boolean };
   maLong?: { show: boolean };
@@ -158,6 +187,9 @@ export interface RenderMainIndicatorsParams {
   statisticalTrailingStopD: Required<Pick<StatisticalTrailingStopRenderData, 'level' | 'anchor' | 'bias' | 'extreme'>> & {
     newTrail: boolean[];
   };
+  atrTrailingEmaSignalD: AtrTrailingEmaSignalResult;
+  atrTrailingStopOriginD: AtrTrailingEmaSignalResult;
+  bbMtfKalmanSignalD: BbMtfKalmanSignalResult;
   envD: EnvelopeResult | null;
   line: DrawSeriesLine;
   showLine: (key: string) => boolean;
@@ -206,6 +238,9 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     zeroLagStates,
     supertrendD,
     statisticalTrailingStopD,
+    atrTrailingEmaSignalD,
+    atrTrailingStopOriginD,
+    bbMtfKalmanSignalD,
     envD,
     line,
     showLine,
@@ -428,6 +463,116 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
       showDownLine: showLine('supertrendDown'),
       drawLine: line,
       getY,
+    });
+  }
+
+  if (indicatorLayerOn && ind.atrTrailingEmaSignal?.show) {
+    const trendEmaStyle = resolveStyle('atrTrailingEmaSignalTrendEma', '#fcfc6c', 2);
+    const atrStopStyle = resolveStyle('atrTrailingEmaSignalAtrStop', '#8ab4ff', 1.4, [5, 4]);
+    const buyStyle = resolveStyle('atrTrailingEmaSignalBuy', '#00ff55', 1);
+    const sellStyle = resolveStyle('atrTrailingEmaSignalSell', '#ff0040', 1);
+    renderAtrTrailingEmaSignal({
+      ctx,
+      data: atrTrailingEmaSignalD,
+      displayData,
+      startIndex,
+      visLength: visData.length,
+      effectiveChartLeft,
+      totalSp,
+      candleW,
+      top: R.top,
+      bottom: mainH,
+      trendEmaStyle,
+      atrStopStyle,
+      buyStyle,
+      sellStyle,
+      showTrendEma: ind.atrTrailingEmaSignal.showTrendEma !== false && showLine('atrTrailingEmaSignalTrendEma'),
+      showAtrStop: ind.atrTrailingEmaSignal.showAtrStop === true && showLine('atrTrailingEmaSignalAtrStop'),
+      showBuySignal: ind.atrTrailingEmaSignal.showSignals !== false && showLine('atrTrailingEmaSignalBuy'),
+      showSellSignal: ind.atrTrailingEmaSignal.showSignals !== false && showLine('atrTrailingEmaSignalSell'),
+      drawLine: line,
+      getY,
+      fontStack,
+    });
+  }
+
+  if (indicatorLayerOn && ind.atrTrailingStopOrigin?.show) {
+    const trendEmaStyle = resolveStyle('atrTrailingStopOriginTrendEma', '#fcfc6c', 3);
+    const atrStopStyle = resolveStyle('atrTrailingStopOriginAtrStop', '#8ab4ff', 1.4, [5, 4]);
+    const buyStyle = resolveStyle('atrTrailingStopOriginBuy', '#00ff55', 1);
+    const sellStyle = resolveStyle('atrTrailingStopOriginSell', '#ff0040', 1);
+    renderAtrTrailingEmaSignal({
+      ctx,
+      data: atrTrailingStopOriginD,
+      displayData,
+      startIndex,
+      visLength: visData.length,
+      effectiveChartLeft,
+      totalSp,
+      candleW,
+      top: R.top,
+      bottom: mainH,
+      trendEmaStyle,
+      atrStopStyle,
+      buyStyle,
+      sellStyle,
+      showTrendEma: ind.atrTrailingStopOrigin.showTrendEma !== false && showLine('atrTrailingStopOriginTrendEma'),
+      showAtrStop: ind.atrTrailingStopOrigin.showAtrStop === true && showLine('atrTrailingStopOriginAtrStop'),
+      showBuySignal: ind.atrTrailingStopOrigin.showSignals !== false && showLine('atrTrailingStopOriginBuy'),
+      showSellSignal: ind.atrTrailingStopOrigin.showSignals !== false && showLine('atrTrailingStopOriginSell'),
+      drawLine: line,
+      getY,
+      fontStack,
+    });
+  }
+
+  if (indicatorLayerOn && ind.bbMtfKalmanSignal?.show) {
+    const ltfLinewidth = Number(ind.bbMtfKalmanSignal.ltfBBLinewidth ?? 1);
+    const htfLinewidth = Number(ind.bbMtfKalmanSignal.htfBBLinewidth ?? 1);
+    const ltfBasisStyle = applyBbMtfKalmanLinewidth(resolveStyle('bbMtfKalmanLtfBasis', '#2962ff', 1), ltfLinewidth);
+    const ltfUpperStyle = applyBbMtfKalmanLinewidth(resolveStyle('bbMtfKalmanLtfUpper', '#f23645', 1), ltfLinewidth);
+    const ltfLowerStyle = applyBbMtfKalmanLinewidth(resolveStyle('bbMtfKalmanLtfLower', '#089981', 1), ltfLinewidth);
+    const htfUpperStyle = applyBbMtfKalmanLinewidth(resolveStyle('bbMtfKalmanHtfUpper', '#ffffff', 1), htfLinewidth);
+    const htfLowerStyle = applyBbMtfKalmanLinewidth(resolveStyle('bbMtfKalmanHtfLower', '#ffffff', 1), htfLinewidth);
+    const buyStyle = resolveStyle('bbMtfKalmanBuy', ind.bbMtfKalmanSignal.bullishColor || '#089981', 1);
+    const sellStyle = resolveStyle('bbMtfKalmanSell', ind.bbMtfKalmanSignal.bearishColor || '#f23645', 1);
+    renderBbMtfKalmanSignal({
+      ctx,
+      data: bbMtfKalmanSignalD,
+      displayData,
+      startIndex,
+      visLength: visData.length,
+      effectiveChartLeft,
+      chartRight,
+      totalSp,
+      candleW,
+      top: R.top,
+      bottom: mainH,
+      ltfBasisStyle,
+      ltfUpperStyle,
+      ltfLowerStyle,
+      htfUpperStyle,
+      htfLowerStyle,
+      buyStyle,
+      sellStyle,
+      bullishColor: ind.bbMtfKalmanSignal.bullishColor || '#089981',
+      bearishColor: ind.bbMtfKalmanSignal.bearishColor || '#f23645',
+      textColor: ind.bbMtfKalmanSignal.textColor || '#ffffff',
+      plotLtfBb: ind.bbMtfKalmanSignal.plotLtfBb !== false,
+      plotHtfBb: ind.bbMtfKalmanSignal.plotHtfBb !== false,
+      plotLabels: ind.bbMtfKalmanSignal.plotLabels === true,
+      signalsEnabled: ind.bbMtfKalmanSignal.signalsEnabled !== false,
+      showErrors: ind.bbMtfKalmanSignal.showErrors !== false,
+      showLtfBasis: showLine('bbMtfKalmanLtfBasis'),
+      showLtfUpper: showLine('bbMtfKalmanLtfUpper'),
+      showLtfLower: showLine('bbMtfKalmanLtfLower'),
+      showHtfUpper: showLine('bbMtfKalmanHtfUpper'),
+      showHtfLower: showLine('bbMtfKalmanHtfLower'),
+      showBuySignal: showLine('bbMtfKalmanBuy'),
+      showSellSignal: showLine('bbMtfKalmanSell'),
+      drawLine: line,
+      getY,
+      fontStack,
     });
   }
 

@@ -91,6 +91,14 @@ import {
   calculateEma,
   calculateEnvelope,
   calculateAtr,
+  calculateAtrTrailingEmaSignal,
+  calculateAtrTrailingStopOrigin,
+  type AtrTrailingEmaSignalMode,
+  type AtrTrailingEmaSignalResult,
+  type AtrTrailingStopOriginOptions,
+  calculateBbMtfKalmanSignal,
+  type BbMtfKalmanColorOption,
+  type BbMtfKalmanSignalResult,
   calculateHma,
   calculateIchimoku,
   calculateMacd,
@@ -124,6 +132,7 @@ import { shouldShowCrosshairGuides } from './interaction/crosshair-guide-visibil
 import { resolveSubIndicatorAlertMouseDown } from './interaction/sub-indicator-alert-interaction.ts';
 import { resolveWheelInteraction } from './interaction/wheel-interaction.ts';
 import { renderCandles } from './renderers/candle-renderer.ts';
+import { renderFootprintOverlay } from './renderers/footprint-renderer.ts';
 import {
   buildIndicatorRenderInput,
   buildIndicatorRenderParams,
@@ -197,6 +206,24 @@ type ActiveDrawingToolId = DrawingToolId | 'eraser';
 type DrawingMagnetMode = 'off' | 'soft' | 'strong';
 type VwapAnchorSelection = {
   active: boolean;
+};
+type SubPanelCrosshairData = {
+  dmiD: {
+    plusDI: Array<number | null>;
+    minusDI: Array<number | null>;
+    adx: Array<number | null>;
+  };
+  macdD: {
+    hist: Array<number | null>;
+    macdLine: Array<number | null>;
+    sigLine: Array<number | null>;
+  };
+  cciD: Array<number | null>;
+  atrD: Array<number | null>;
+  obvD: number[];
+  obvSignal9: Array<number | null>;
+  cvdD: number[];
+  cvdSignal9: Array<number | null>;
 };
 
 export const X_AXIS_HEIGHT = 22;
@@ -297,6 +324,10 @@ type StrategyReportArgs = {
   rangeStartSec: number | null;
   rangeEndSec: number | null;
   sideFilter: 'all' | 'long' | 'short';
+};
+
+type StrategyReportFromCandlesArgs = StrategyReportArgs & {
+  candles: CandleData[];
 };
 
 type StrategyReportTrade = {
@@ -628,11 +659,25 @@ export class SimpleChart {
       atr:      { show: false, period: 14 },
       obv:      { show: false },
       cvd:      { show: false, barMode: true },
+      footprint: { show: false, showSummary: true, maxLevels: 18, priceStep: 1000 },
       vwap:     { show: false, anchorPeriod: 'session', source: 'hlc3', offset: 0, hideOnDailyOrAbove: false, sessionTimezone: 'auto', bandMode: 'standard-deviation', showFill: true, fillColor: '#ff9800', fillOpacity: 8, showUpperBand1: true, showLowerBand1: true, bandMultiplier1: 1, showUpperBand2: false, showLowerBand2: false, bandMultiplier2: 2, showUpperBand3: false, showLowerBand3: false, bandMultiplier3: 3 },
       williamsFractal: { show: false, span: 2 },
       parabolicSar: { show: false, start: 0.02, increment: 0.02, maximum: 0.2 },
       smartMoneyConcepts: { ...DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS },
       volumeProfile: { show: false, rows: 24, widthPct: 22, upOpacity: 45, downOpacity: 45, pocOpacity: 95 },
+      fixedRangeVolumeProfile: {
+        show: false,
+        rowSize: 50,
+        volumeMode: 'up_down',
+        valueAreaVolume: 70,
+        widthPct: 30,
+        showPoc: true,
+        showVahVal: true,
+        showVaBackground: true,
+        showRangeBox: true,
+        showRangeHandles: true,
+        showInfo: true,
+      },
       vpvr: {
         show: false,
         rowsLayout: 'number_of_rows',
@@ -684,6 +729,48 @@ export class SimpleChart {
         trailMarkStyle: 'circle',
         trailMarkLocation: 'absolute',
         showPanelLabel: false,
+      },
+      atrTrailingEmaSignal: {
+        show: false,
+        mode: 'basic' as AtrTrailingEmaSignalMode,
+        sensitivity: 3,
+        atrPeriod: 2,
+        signalEmaLength: 1,
+        trendEmaLength: 240,
+        showTrendEma: true,
+        showAtrStop: false,
+        showSignals: true,
+      },
+      atrTrailingStopOrigin: {
+        show: false,
+        sensitivity: 3,
+        atrPeriod: 2,
+        trendEmaLength: 240,
+        showTrendEma: true,
+        showAtrStop: false,
+        showSignals: true,
+      },
+      bbMtfKalmanSignal: {
+        show: false,
+        htfTimeframe: '4h',
+        ltfLength: 20,
+        ltfMult: 2,
+        htfLength: 20,
+        htfMult: 2.25,
+        ltfBBLinewidth: 1,
+        htfBBLinewidth: 1,
+        plotLtfBb: true,
+        plotHtfBb: true,
+        plotLabels: false,
+        signalsEnabled: true,
+        colorOption: 'Gradient' as BbMtfKalmanColorOption,
+        minOpacity: 55,
+        maxOpacity: 99,
+        bullishColor: '#089981',
+        bearishColor: '#f23645',
+        showErrors: true,
+        showTable: false,
+        textColor: '#ffffff',
       },
       zeroLagMaTrendLevels: {
         show: false,
@@ -1386,6 +1473,18 @@ export class SimpleChart {
     this.indicatorsVisible = visible;
     if (!visible) this.dmiScaleRange = null;
     this.draw();
+  }
+
+  public setFixedRangeVolumeProfileToVisibleRange(): boolean {
+    const ind = (this.config.indicators as any).fixedRangeVolumeProfile;
+    if (!ind || this.data.length === 0) return false;
+    const start = Math.max(0, Math.min(this.data.length - 1, this.startIndex));
+    const end = Math.max(start, Math.min(this.data.length - 1, this.endIndex - 1));
+    ind.rangeStartTime = this.data[start]?.time;
+    ind.rangeEndTime = this.data[end]?.time;
+    ind.show = true;
+    this.draw();
+    return true;
   }
 
   public setPatternBoxesVisible(visible: boolean): void {
@@ -2690,11 +2789,8 @@ export class SimpleChart {
   public setStrategySignalVisible(visible: boolean): void {
     if (this.strategySignalVisible === visible) return;
     this.strategySignalVisible = visible;
-    if (visible) {
-      this.requestSignalLayerDraw();
-    } else {
-      this.clearSignalLayer();
-    }
+    this.clearSignalLayer();
+    this.requestSignalLayerDraw();
     this.updateSignalAnimationLoop();
   }
 
@@ -3970,6 +4066,115 @@ export class SimpleChart {
     };
   }
 
+  private computeStrategySignalsForCandles(candles: CandleData[]): StrategySignal[] {
+    const strategy = this.getActiveStrategy();
+    if (!strategy || !candles.length) return [];
+
+    if (strategy.id === DOUBLE_BREAK_STRATEGY_ID) {
+      try {
+        this.syncDoubleBreakConfigFromParams();
+        const result = new DoubleBreakStrategy(this.doubleBreakConfig).run(candles);
+        const signals = new Array<StrategySignal>(candles.length).fill(0);
+        result.longSignals.forEach((signal) => {
+          if (signal.index >= 0 && signal.index < signals.length) signals[signal.index] = 1;
+        });
+        result.shortSignals.forEach((signal) => {
+          if (signal.index >= 0 && signal.index < signals.length) signals[signal.index] = -1;
+        });
+        return signals;
+      } catch {
+        return [];
+      }
+    }
+
+    const toSignal = (raw: unknown): StrategySignal => {
+      if (typeof raw === 'number') return raw > 0 ? 1 : raw < 0 ? -1 : 0;
+      if (typeof raw === 'boolean') return raw ? 1 : 0;
+      if (raw && typeof raw === 'object') {
+        const value = raw as { buy?: unknown; sell?: unknown };
+        if (value.buy) return 1;
+        if (value.sell) return -1;
+      }
+      return 0;
+    };
+    const ta = {
+      sma(series: number[], period: number, index: number) {
+        if (period <= 0 || index < period - 1) return null;
+        let sum = 0;
+        for (let i = index - period + 1; i <= index; i += 1) sum += series[i];
+        return sum / period;
+      },
+      crossover(a: number[], b: number[], index: number) {
+        if (index <= 0) return false;
+        return a[index - 1] <= b[index - 1] && a[index] > b[index];
+      },
+      crossunder(a: number[], b: number[], index: number) {
+        if (index <= 0) return false;
+        return a[index - 1] >= b[index - 1] && a[index] < b[index];
+      },
+    };
+
+    try {
+      const strategyFn = new Function('return (' + (strategy.obfuscatedJs || strategy.compiledJs) + ');')();
+      const context = {
+        open: candles.map((candle) => Number(candle.open)),
+        high: candles.map((candle) => Number(candle.high)),
+        low: candles.map((candle) => Number(candle.low)),
+        close: candles.map((candle) => Number(candle.close)),
+        volume: candles.map((candle) => Number(candle.volume)),
+        __doubleBreakConfig: this.getDoubleBreakConfig(),
+        __strategyParams: strategy.params ?? {},
+        __symbol: this.config.symbol,
+      };
+      return candles.map((_, index) => toSignal(strategyFn(context, index, ta)));
+    } catch {
+      return [];
+    }
+  }
+
+  public buildStrategyReportFromCandles(args: StrategyReportFromCandlesArgs): StrategyReportResult | null {
+    const candles = args.candles
+      .map((candle) => ({
+        time: Math.floor(Number(candle.time)),
+        open: Number(candle.open),
+        high: Number(candle.high),
+        low: Number(candle.low),
+        close: Number(candle.close),
+        volume: Number(candle.volume),
+      }))
+      .filter((candle) => (
+        Number.isFinite(candle.time)
+        && Number.isFinite(candle.open)
+        && Number.isFinite(candle.high)
+        && Number.isFinite(candle.low)
+        && Number.isFinite(candle.close)
+        && Number.isFinite(candle.volume)
+      ))
+      .sort((a, b) => a.time - b.time);
+    if (!candles.length) return null;
+
+    const previousData = this.data;
+    const previousSignals = this.strategySignals;
+    const previousLatestStrategySignalIndex = this.latestStrategySignalIndex;
+    try {
+      this.data = candles;
+      this.strategySignals = this.computeStrategySignalsForCandles(candles);
+      this.latestStrategySignalIndex = this.computeLatestSignalIndex(this.strategySignals);
+      return this.buildStrategyReport({
+        feeBps: args.feeBps,
+        slippageBps: args.slippageBps,
+        periodBars: args.periodBars,
+        rangeStartSec: args.rangeStartSec,
+        rangeEndSec: args.rangeEndSec,
+        sideFilter: args.sideFilter,
+      });
+    } finally {
+      this.data = previousData;
+      this.strategySignals = previousSignals;
+      this.latestStrategySignalIndex = previousLatestStrategySignalIndex;
+    }
+  }
+
   public buildStrategyReport(args: StrategyReportArgs): StrategyReportResult | null {
     const gridMartingale = this.buildGridMartingaleReport(args);
     if (gridMartingale) return gridMartingale;
@@ -4361,6 +4566,7 @@ export class SimpleChart {
     axisSide: 'left' | 'right';
     totalSp: number;
     candleW: number;
+    candleSlotOffset: number;
     mainH: number;
     minP: number;
     maxP: number;
@@ -4370,6 +4576,7 @@ export class SimpleChart {
     panelTops: Record<string, number>;
     subPanelHeights: Record<string, number>;
     subAxisStart: number;
+    subPanelCrosshairData: SubPanelCrosshairData;
   } = null;
 
   private buildSignalRiskDetails(startIndex = 0, endIndex = this.strategySignals.length): Map<number, {
@@ -5894,6 +6101,68 @@ export class SimpleChart {
     return calculateEnvelope(this.getIndicatorSourceData(), period, pct);
   }
 
+  private getEmptyAtrTrailingEmaSignalResult(): AtrTrailingEmaSignalResult {
+    return {
+      atr: [],
+      atrStop: [],
+      signalEma: [],
+      trendEma: [],
+      position: [],
+      buySignal: [],
+      sellSignal: [],
+    };
+  }
+
+  private calcAtrTrailingEmaSignal(settings: {
+    mode?: AtrTrailingEmaSignalMode;
+    sensitivity?: number;
+    atrPeriod?: number;
+    signalEmaLength?: number;
+    trendEmaLength?: number;
+  }): AtrTrailingEmaSignalResult {
+    return calculateAtrTrailingEmaSignal(this.getIndicatorSourceData(), settings);
+  }
+
+  private calcAtrTrailingStopOrigin(settings: AtrTrailingStopOriginOptions): AtrTrailingEmaSignalResult {
+    return calculateAtrTrailingStopOrigin(this.getIndicatorSourceData(), settings);
+  }
+
+  private getEmptyBbMtfKalmanSignalResult(): BbMtfKalmanSignalResult {
+    return {
+      ltfBasis: [],
+      ltfUpper: [],
+      ltfLower: [],
+      htfBasis: [],
+      htfUpper: [],
+      htfLower: [],
+      htfRawBasis: [],
+      htfRawUpper: [],
+      htfRawLower: [],
+      buySignal: [],
+      sellSignal: [],
+      upperFillOpacity: [],
+      lowerFillOpacity: [],
+      htfCandleStartIndex: [],
+      warning: null,
+    };
+  }
+
+  private calcBbMtfKalmanSignal(settings: {
+    htfTimeframe?: string;
+    ltfLength?: number;
+    ltfMult?: number;
+    htfLength?: number;
+    htfMult?: number;
+    minOpacity?: number;
+    maxOpacity?: number;
+    colorOption?: BbMtfKalmanColorOption;
+  }): BbMtfKalmanSignalResult {
+    return calculateBbMtfKalmanSignal(this.getIndicatorSourceData(), {
+      ...settings,
+      chartTimeframe: this.config.timeframe,
+    });
+  }
+
   private calcSmartMoneyConcepts(settings: SmartMoneyConceptsSettings): SmartMoneyConceptsResult {
     if (!settings.show) return EMPTY_SMART_MONEY_CONCEPTS_RESULT;
     const cacheKey = buildSmartMoneyConceptsCacheKey(this.data, settings);
@@ -6334,11 +6603,16 @@ export class SimpleChart {
       return;
     }
 
+    const footprintLayoutEnabled = Boolean(indicatorLayerOn && (ind as any).footprint?.show);
+    const footprintSpacingMultiplier = footprintLayoutEnabled ? 2.55 : 1;
     const gapBars = Math.min(Math.max(0, this.config.layout.rightGapBars ?? 0), 50 / Math.max(1, chartW / Math.max(1, visibleSlots)));
     const leftGap = Math.max(0, this.leftPanBars);
-    const totalSp = chartW / (visibleSlots + gapBars + leftGap);
-    const effectiveChartLeft = chartLeft + leftGap * totalSp;
-    const candleW = Math.max(totalSp * 0.8, 1);
+    const totalSp = chartW / Math.max(1, (visibleSlots + gapBars + leftGap) / footprintSpacingMultiplier);
+    const candleW = footprintLayoutEnabled
+      ? Math.max(3, Math.min(10, totalSp * 0.16))
+      : Math.max(totalSp * 0.8, 1);
+    const candleSlotOffset = footprintLayoutEnabled ? Math.max(0, (totalSp - candleW) / 2) : 0;
+    const effectiveChartLeft = chartLeft + leftGap * totalSp + candleSlotOffset;
     const targetPx = 110;
     const rawStepCandles = targetPx / Math.max(totalSp, 1);
     const stepCandles = pickAxisStepCandles(rawStepCandles, this.config.timeframe);
@@ -6426,6 +6700,25 @@ export class SimpleChart {
     if (typeof ind.zeroLagMaTrendLevels.upColor !== 'string' || !ind.zeroLagMaTrendLevels.upColor) ind.zeroLagMaTrendLevels.upColor = '#30d453';
     if (typeof ind.zeroLagMaTrendLevels.downColor !== 'string' || !ind.zeroLagMaTrendLevels.downColor) ind.zeroLagMaTrendLevels.downColor = '#4043f1';
     if (!ind.volumeProfile) ind.volumeProfile = { show: false, rows: 24, widthPct: 22, upOpacity: 45, downOpacity: 45, pocOpacity: 95 };
+    if (!ind.fixedRangeVolumeProfile) {
+      ind.fixedRangeVolumeProfile = {
+        show: false,
+        rowSize: 50,
+        volumeMode: 'up_down',
+        valueAreaVolume: 70,
+        widthPct: 30,
+        showPoc: true,
+        showVahVal: true,
+        showVaBackground: true,
+        showRangeBox: true,
+        showRangeHandles: true,
+        showInfo: true,
+      };
+    }
+    if (!Number.isFinite(Number(ind.fixedRangeVolumeProfile.rowSize)) || Number(ind.fixedRangeVolumeProfile.rowSize) < 1) ind.fixedRangeVolumeProfile.rowSize = 50;
+    if (!Number.isFinite(Number(ind.fixedRangeVolumeProfile.valueAreaVolume))) ind.fixedRangeVolumeProfile.valueAreaVolume = 70;
+    if (!Number.isFinite(Number(ind.fixedRangeVolumeProfile.widthPct))) ind.fixedRangeVolumeProfile.widthPct = 30;
+    if (typeof ind.fixedRangeVolumeProfile.showInfo !== 'boolean') ind.fixedRangeVolumeProfile.showInfo = true;
     if (!ind.statisticalTrailingStop) {
       ind.statisticalTrailingStop = {
         show: false,
@@ -6444,6 +6737,91 @@ export class SimpleChart {
     if (typeof ind.statisticalTrailingStop.trailMarkStyle !== 'string' || !ind.statisticalTrailingStop.trailMarkStyle) ind.statisticalTrailingStop.trailMarkStyle = 'circle';
     if (typeof ind.statisticalTrailingStop.trailMarkLocation !== 'string' || !ind.statisticalTrailingStop.trailMarkLocation) ind.statisticalTrailingStop.trailMarkLocation = 'absolute';
     if (typeof ind.statisticalTrailingStop.showPanelLabel !== 'boolean') ind.statisticalTrailingStop.showPanelLabel = false;
+    if (!ind.atrTrailingEmaSignal) {
+      ind.atrTrailingEmaSignal = {
+        show: false,
+        mode: 'basic',
+        sensitivity: 3,
+        atrPeriod: 2,
+        signalEmaLength: 1,
+        trendEmaLength: 240,
+        showTrendEma: true,
+        showAtrStop: false,
+        showSignals: true,
+      };
+    }
+    if (ind.atrTrailingEmaSignal.mode !== 'filtered') ind.atrTrailingEmaSignal.mode = 'basic';
+    if (!Number.isFinite(Number(ind.atrTrailingEmaSignal.sensitivity)) || Number(ind.atrTrailingEmaSignal.sensitivity) <= 0) ind.atrTrailingEmaSignal.sensitivity = 3;
+    if (!Number.isFinite(Number(ind.atrTrailingEmaSignal.atrPeriod)) || Number(ind.atrTrailingEmaSignal.atrPeriod) < 1) ind.atrTrailingEmaSignal.atrPeriod = 2;
+    if (!Number.isFinite(Number(ind.atrTrailingEmaSignal.signalEmaLength)) || Number(ind.atrTrailingEmaSignal.signalEmaLength) < 1) ind.atrTrailingEmaSignal.signalEmaLength = 1;
+    if (!Number.isFinite(Number(ind.atrTrailingEmaSignal.trendEmaLength)) || Number(ind.atrTrailingEmaSignal.trendEmaLength) < 1) ind.atrTrailingEmaSignal.trendEmaLength = 240;
+    if (typeof ind.atrTrailingEmaSignal.showTrendEma !== 'boolean') ind.atrTrailingEmaSignal.showTrendEma = true;
+    if (typeof ind.atrTrailingEmaSignal.showAtrStop !== 'boolean') ind.atrTrailingEmaSignal.showAtrStop = false;
+    if (typeof ind.atrTrailingEmaSignal.showSignals !== 'boolean') ind.atrTrailingEmaSignal.showSignals = true;
+    if (!ind.atrTrailingStopOrigin) {
+      ind.atrTrailingStopOrigin = {
+        show: false,
+        sensitivity: 3,
+        atrPeriod: 2,
+        trendEmaLength: 240,
+        showTrendEma: true,
+        showAtrStop: false,
+        showSignals: true,
+      };
+    }
+    if (!Number.isFinite(Number(ind.atrTrailingStopOrigin.sensitivity)) || Number(ind.atrTrailingStopOrigin.sensitivity) <= 0) ind.atrTrailingStopOrigin.sensitivity = 3;
+    if (!Number.isFinite(Number(ind.atrTrailingStopOrigin.atrPeriod)) || Number(ind.atrTrailingStopOrigin.atrPeriod) < 1) ind.atrTrailingStopOrigin.atrPeriod = 2;
+    if (!Number.isFinite(Number(ind.atrTrailingStopOrigin.trendEmaLength)) || Number(ind.atrTrailingStopOrigin.trendEmaLength) < 1) ind.atrTrailingStopOrigin.trendEmaLength = 240;
+    if (typeof ind.atrTrailingStopOrigin.showTrendEma !== 'boolean') ind.atrTrailingStopOrigin.showTrendEma = true;
+    if (typeof ind.atrTrailingStopOrigin.showAtrStop !== 'boolean') ind.atrTrailingStopOrigin.showAtrStop = false;
+    if (typeof ind.atrTrailingStopOrigin.showSignals !== 'boolean') ind.atrTrailingStopOrigin.showSignals = true;
+    if (!ind.bbMtfKalmanSignal) {
+      ind.bbMtfKalmanSignal = {
+        show: false,
+        htfTimeframe: '4h',
+        ltfLength: 20,
+        ltfMult: 2,
+        htfLength: 20,
+        htfMult: 2.25,
+        ltfBBLinewidth: 1,
+        htfBBLinewidth: 1,
+        plotLtfBb: true,
+        plotHtfBb: true,
+        plotLabels: false,
+        signalsEnabled: true,
+        colorOption: 'Gradient',
+        minOpacity: 55,
+        maxOpacity: 99,
+        bullishColor: '#089981',
+        bearishColor: '#f23645',
+        showErrors: true,
+        showTable: false,
+        textColor: '#ffffff',
+      };
+    }
+    if (typeof ind.bbMtfKalmanSignal.htfTimeframe !== 'string' || !ind.bbMtfKalmanSignal.htfTimeframe) ind.bbMtfKalmanSignal.htfTimeframe = '4h';
+    if (!Number.isFinite(Number(ind.bbMtfKalmanSignal.ltfLength)) || Number(ind.bbMtfKalmanSignal.ltfLength) < 1) ind.bbMtfKalmanSignal.ltfLength = 20;
+    if (!Number.isFinite(Number(ind.bbMtfKalmanSignal.ltfMult)) || Number(ind.bbMtfKalmanSignal.ltfMult) <= 0) ind.bbMtfKalmanSignal.ltfMult = 2;
+    if (!Number.isFinite(Number(ind.bbMtfKalmanSignal.htfLength)) || Number(ind.bbMtfKalmanSignal.htfLength) < 1) ind.bbMtfKalmanSignal.htfLength = 20;
+    if (!Number.isFinite(Number(ind.bbMtfKalmanSignal.htfMult)) || Number(ind.bbMtfKalmanSignal.htfMult) <= 0) ind.bbMtfKalmanSignal.htfMult = 2.25;
+    if (!Number.isFinite(Number(ind.bbMtfKalmanSignal.ltfBBLinewidth)) || Number(ind.bbMtfKalmanSignal.ltfBBLinewidth) < 1) ind.bbMtfKalmanSignal.ltfBBLinewidth = 1;
+    if (!Number.isFinite(Number(ind.bbMtfKalmanSignal.htfBBLinewidth)) || Number(ind.bbMtfKalmanSignal.htfBBLinewidth) < 1) ind.bbMtfKalmanSignal.htfBBLinewidth = 1;
+    ind.bbMtfKalmanSignal.ltfBBLinewidth = Math.max(1, Math.floor(Number(ind.bbMtfKalmanSignal.ltfBBLinewidth)));
+    ind.bbMtfKalmanSignal.htfBBLinewidth = Math.max(1, Math.floor(Number(ind.bbMtfKalmanSignal.htfBBLinewidth)));
+    if (typeof ind.bbMtfKalmanSignal.plotLtfBb !== 'boolean') ind.bbMtfKalmanSignal.plotLtfBb = true;
+    if (typeof ind.bbMtfKalmanSignal.plotHtfBb !== 'boolean') ind.bbMtfKalmanSignal.plotHtfBb = true;
+    if (typeof ind.bbMtfKalmanSignal.plotLabels !== 'boolean') ind.bbMtfKalmanSignal.plotLabels = false;
+    if (typeof ind.bbMtfKalmanSignal.signalsEnabled !== 'boolean') ind.bbMtfKalmanSignal.signalsEnabled = true;
+    if (!['Gradient', 'Solid', 'None'].includes(String(ind.bbMtfKalmanSignal.colorOption))) ind.bbMtfKalmanSignal.colorOption = 'Gradient';
+    if (!Number.isFinite(Number(ind.bbMtfKalmanSignal.minOpacity))) ind.bbMtfKalmanSignal.minOpacity = 55;
+    if (!Number.isFinite(Number(ind.bbMtfKalmanSignal.maxOpacity))) ind.bbMtfKalmanSignal.maxOpacity = 99;
+    ind.bbMtfKalmanSignal.minOpacity = Math.max(0, Math.min(100, Number(ind.bbMtfKalmanSignal.minOpacity)));
+    ind.bbMtfKalmanSignal.maxOpacity = Math.max(ind.bbMtfKalmanSignal.minOpacity, Math.min(100, Number(ind.bbMtfKalmanSignal.maxOpacity)));
+    if (typeof ind.bbMtfKalmanSignal.bullishColor !== 'string' || !ind.bbMtfKalmanSignal.bullishColor) ind.bbMtfKalmanSignal.bullishColor = '#089981';
+    if (typeof ind.bbMtfKalmanSignal.bearishColor !== 'string' || !ind.bbMtfKalmanSignal.bearishColor) ind.bbMtfKalmanSignal.bearishColor = '#f23645';
+    if (typeof ind.bbMtfKalmanSignal.showErrors !== 'boolean') ind.bbMtfKalmanSignal.showErrors = true;
+    if (typeof ind.bbMtfKalmanSignal.showTable !== 'boolean') ind.bbMtfKalmanSignal.showTable = false;
+    if (typeof ind.bbMtfKalmanSignal.textColor !== 'string' || !ind.bbMtfKalmanSignal.textColor) ind.bbMtfKalmanSignal.textColor = '#ffffff';
     if (!ind.vpvr) {
       ind.vpvr = {
         show: false,
@@ -6477,6 +6855,12 @@ export class SimpleChart {
         valuesTextColor: '#cfd8ea',
       };
     }
+    if (!ind.footprint) {
+      ind.footprint = { show: false, showSummary: true, maxLevels: 18, priceStep: 1000 };
+    }
+    if (typeof ind.footprint.showSummary !== 'boolean') ind.footprint.showSummary = true;
+    if (!Number.isFinite(Number(ind.footprint.maxLevels)) || Number(ind.footprint.maxLevels) < 1) ind.footprint.maxLevels = 18;
+    if (!Number.isFinite(Number(ind.footprint.priceStep)) || Number(ind.footprint.priceStep) < 0) ind.footprint.priceStep = 1000;
     const volumeProfileConfig = ind.volumeProfile;
     const volumeProfileRows = Math.max(8, Math.min(120, Math.floor(Number(volumeProfileConfig.rows ?? 24) || 24)));
     const volumeProfileWidthRatio = Math.max(0.05, Math.min(0.45, (Number(volumeProfileConfig.widthPct ?? 22) || 22) / 100));
@@ -6522,6 +6906,34 @@ export class SimpleChart {
         bias: [] as (number | null)[],
         newTrail: [] as boolean[],
       };
+    const atrTrailingEmaSignalD = indicatorLayerOn && ind.atrTrailingEmaSignal.show
+      ? this.calcAtrTrailingEmaSignal({
+        mode: ind.atrTrailingEmaSignal.mode,
+        sensitivity: ind.atrTrailingEmaSignal.sensitivity,
+        atrPeriod: ind.atrTrailingEmaSignal.atrPeriod,
+        signalEmaLength: ind.atrTrailingEmaSignal.signalEmaLength,
+        trendEmaLength: ind.atrTrailingEmaSignal.trendEmaLength,
+      })
+      : this.getEmptyAtrTrailingEmaSignalResult();
+    const atrTrailingStopOriginD = indicatorLayerOn && ind.atrTrailingStopOrigin.show
+      ? this.calcAtrTrailingStopOrigin({
+        sensitivity: ind.atrTrailingStopOrigin.sensitivity,
+        atrPeriod: ind.atrTrailingStopOrigin.atrPeriod,
+        trendEmaLength: ind.atrTrailingStopOrigin.trendEmaLength,
+      })
+      : this.getEmptyAtrTrailingEmaSignalResult();
+    const bbMtfKalmanSignalD = indicatorLayerOn && ind.bbMtfKalmanSignal.show
+      ? this.calcBbMtfKalmanSignal({
+        htfTimeframe: ind.bbMtfKalmanSignal.htfTimeframe,
+        ltfLength: ind.bbMtfKalmanSignal.ltfLength,
+        ltfMult: ind.bbMtfKalmanSignal.ltfMult,
+        htfLength: ind.bbMtfKalmanSignal.htfLength,
+        htfMult: ind.bbMtfKalmanSignal.htfMult,
+        minOpacity: ind.bbMtfKalmanSignal.minOpacity,
+        maxOpacity: ind.bbMtfKalmanSignal.maxOpacity,
+        colorOption: ind.bbMtfKalmanSignal.colorOption,
+      })
+      : this.getEmptyBbMtfKalmanSignalResult();
     const ichiD  = indicatorLayerOn && ind.ichimoku.show ? this.calcIchimoku(ind.ichimoku.tenkan, ind.ichimoku.kijun, ind.ichimoku.senkou) : null;
     const envD   = indicatorLayerOn && ind.envelope.show ? this.calcEnvelope(ind.envelope.period, ind.envelope.pct) : null;
     const doubleBreakResult = this.getDoubleBreakResult();
@@ -6565,6 +6977,34 @@ export class SimpleChart {
         minP = Math.min(minP, statisticalTrailingStopD.anchor[gi]!);
         maxP = Math.max(maxP, statisticalTrailingStopD.anchor[gi]!);
       }
+      if (atrTrailingEmaSignalD.trendEma[gi] != null) {
+        minP = Math.min(minP, atrTrailingEmaSignalD.trendEma[gi]!);
+        maxP = Math.max(maxP, atrTrailingEmaSignalD.trendEma[gi]!);
+      }
+      if (atrTrailingEmaSignalD.atrStop[gi] != null) {
+        minP = Math.min(minP, atrTrailingEmaSignalD.atrStop[gi]!);
+        maxP = Math.max(maxP, atrTrailingEmaSignalD.atrStop[gi]!);
+      }
+      if (atrTrailingStopOriginD.trendEma[gi] != null) {
+        minP = Math.min(minP, atrTrailingStopOriginD.trendEma[gi]!);
+        maxP = Math.max(maxP, atrTrailingStopOriginD.trendEma[gi]!);
+      }
+      if (atrTrailingStopOriginD.atrStop[gi] != null) {
+        minP = Math.min(minP, atrTrailingStopOriginD.atrStop[gi]!);
+        maxP = Math.max(maxP, atrTrailingStopOriginD.atrStop[gi]!);
+      }
+      [
+        bbMtfKalmanSignalD.ltfBasis[gi],
+        bbMtfKalmanSignalD.ltfUpper[gi],
+        bbMtfKalmanSignalD.ltfLower[gi],
+        bbMtfKalmanSignalD.htfUpper[gi],
+        bbMtfKalmanSignalD.htfLower[gi],
+      ].forEach((v) => {
+        if (v != null) {
+          minP = Math.min(minP, v);
+          maxP = Math.max(maxP, v);
+        }
+      });
       if (ind.zeroLagMaTrendLevels.show && ind.zeroLagMaTrendLevels.showLevels) {
         zeroLagMaTrendLevelsD.boxes.forEach((box) => {
           if (gi >= box.left && gi <= box.right) {
@@ -6730,6 +7170,7 @@ export class SimpleChart {
       indicatorLayerOn,
       indicators: ind,
       candles: visData,
+      allCandles: this.data,
       startIndex: this.startIndex,
       bbSeries,
       vwapBands: vwapBandsD,
@@ -6788,6 +7229,24 @@ export class SimpleChart {
       downColor: this.config.candleStyle?.downColor ?? '#f23645',
     });
 
+    if (indicatorLayerOn && ind.footprint.show) {
+      renderFootprintOverlay({
+        ctx,
+        candles: visData,
+        chartLeft,
+        chartRight,
+        effectiveChartLeft,
+        totalSpacing: totalSp,
+        candleWidth: candleW,
+        mainHeight: mainH,
+        getY,
+        fontStack: CHART_FONT_STACK,
+        maxLevels: Math.max(1, Math.min(40, Math.floor(Number(ind.footprint.maxLevels) || 18))),
+        priceStep: Math.max(0, Number(ind.footprint.priceStep) || 0),
+        showSummary: ind.footprint.showSummary !== false,
+      });
+    }
+
     const isMobileIndicatorViewport = (window.matchMedia?.('(pointer: coarse)').matches ?? false) || window.innerWidth <= 768;
     const indicatorRenderInput: IndicatorRenderGroupedInput = {
       shared: {
@@ -6822,6 +7281,9 @@ export class SimpleChart {
         zeroLagStates,
         supertrendD,
         statisticalTrailingStopD,
+        atrTrailingEmaSignalD,
+        atrTrailingStopOriginD,
+        bbMtfKalmanSignalD,
         envD,
         line,
         getY,
@@ -6955,6 +7417,7 @@ export class SimpleChart {
       axisSide: geometry.side,
       totalSp,
       candleW,
+      candleSlotOffset,
       mainH,
       minP,
       maxP,
@@ -6964,6 +7427,16 @@ export class SimpleChart {
       panelTops,
       subPanelHeights: Object.fromEntries(panels.map((id) => [id, plotHeight * this.getPanelRatio(id)])),
       subAxisStart,
+      subPanelCrosshairData: {
+        dmiD,
+        macdD,
+        cciD,
+        atrD,
+        obvD,
+        obvSignal9,
+        cvdD,
+        cvdSignal9,
+      },
     };
     this.updateLogBtnPosition();
     this.drawConfirmedPatternBoxes(this.lastDrawMeta);
@@ -8064,8 +8537,9 @@ export class SimpleChart {
     const totalSp = this.lastDrawMeta.totalSp;
     const candleW = this.lastDrawMeta.candleW;
     const leftGap = this.lastDrawMeta.leftGap ?? 0;
+    const candleSlotOffset = this.lastDrawMeta.candleSlotOffset ?? 0;
     const range = this.lastDrawMeta.maxP - this.lastDrawMeta.minP || 1;
-    const effectiveChartLeft = geometry.chartLeft + leftGap * totalSp;
+    const effectiveChartLeft = geometry.chartLeft + leftGap * totalSp + candleSlotOffset;
     const contentRight = this.isYAxisBackgroundTransparent() ? width : geometry.chartRight;
     return {
       chartLeft: geometry.chartLeft,
@@ -8080,6 +8554,7 @@ export class SimpleChart {
       top,
       totalSp,
       candleW,
+      candleSlotOffset,
       leftGap,
       minP: this.lastDrawMeta.minP,
       maxP: this.lastDrawMeta.maxP,
@@ -8105,7 +8580,8 @@ export class SimpleChart {
   private xForIndex(index: number, totalSp: number, candleW: number): number {
     const chartLeft = this.lastDrawMeta?.chartLeft ?? 0;
     const leftGap = this.lastDrawMeta?.leftGap ?? 0;
-    return chartLeft + (leftGap + index - this.startIndex) * totalSp + candleW / 2;
+    const candleSlotOffset = this.lastDrawMeta?.candleSlotOffset ?? 0;
+    return chartLeft + (leftGap + index - this.startIndex) * totalSp + candleSlotOffset + candleW / 2;
   }
 
   /** 앵커 가격을 캔들 OHLC 중 가장 가까운 값으로 자석 스냅 (약한 자석: 12px 이내) */
@@ -8740,11 +9216,12 @@ export class SimpleChart {
     });
 
     const visibleCount = Math.max(1, this.endIndex - this.startIndex);
-    const gapBars = Math.min(Math.max(0, this.config.layout.rightGapBars ?? 0), 50 / Math.max(1, chartW / Math.max(1, this.endIndex - this.startIndex)));
     const leftGap = Math.max(0, this.lastDrawMeta?.leftGap ?? 0);
-    const totalSp = chartW / (visibleCount + gapBars + leftGap);
-    const effectiveChartLeft = chartLeft + leftGap * totalSp;
-    const candleW = Math.max(totalSp * 0.8, 1);
+    const totalSp = this.lastDrawMeta?.totalSp ?? (chartW / Math.max(1, visibleCount + leftGap));
+    const candleW = this.lastDrawMeta?.candleW ?? Math.max(totalSp * 0.8, 1);
+    const candleSlotOffset = this.lastDrawMeta?.candleSlotOffset ?? 0;
+    const effectiveChartLeft = chartLeft + leftGap * totalSp + candleSlotOffset;
+    const subPanelCrosshairData = this.lastDrawMeta?.subPanelCrosshairData;
 
     renderTradeFocusOverlay({
       ctx,
@@ -8952,12 +9429,14 @@ export class SimpleChart {
           dmiScaleRange: this.dmiScaleRange,
           getSubPanelScaledRange: (panelId, lo, hi) => this.getSubPanelScaledRange(panelId, lo, hi),
           resolveColor: (styleKey, fallbackColor) => this.resolveStyle(styleKey, fallbackColor).color,
-          calcDMI: (period) => this.calcDMI(period),
-          calcMACD: (fast, slow, signal) => this.calcMACD(fast, slow, signal),
-          calcCCI: (period) => this.calcCCI(period),
-          calcATR: (period) => this.calcATR(period),
-          calcOBV: () => this.calcOBV(),
-          calcCVD: () => this.calcCVD(),
+          calcDMI: () => subPanelCrosshairData?.dmiD ?? { plusDI: [], minusDI: [], adx: [] },
+          calcMACD: () => subPanelCrosshairData?.macdD ?? { hist: [], macdLine: [], sigLine: [] },
+          calcCCI: () => subPanelCrosshairData?.cciD ?? [],
+          calcATR: () => subPanelCrosshairData?.atrD ?? [],
+          calcOBV: () => subPanelCrosshairData?.obvD ?? [],
+          calcOBVSignal: () => subPanelCrosshairData?.obvSignal9 ?? [],
+          calcCVD: () => subPanelCrosshairData?.cvdD ?? [],
+          calcCVDSignal: () => subPanelCrosshairData?.cvdSignal9 ?? [],
           sma: (source, period) => this.sma(source, period),
           formatKUnit: (value, digits) => formatKUnit(value, digits),
         });
@@ -9010,12 +9489,6 @@ export class SimpleChart {
       formatPrice: (value) => formatWithComma(value, symbolPriceDigits),
     });
 
-    const hoveredTrendline = this.hoveredDrawingId
-      ? this.drawings.find((shape) => shape.id === this.hoveredDrawingId && this.isTrendlineShape(shape))
-      : null;
-    if (hoveredTrendline && this.isMouseOver) {
-      this.requestOverlayDraw();
-    }
   }
 
   // 마우스/휠 이벤트 핸들러

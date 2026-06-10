@@ -1,3 +1,4 @@
+import '../server/load-local-env.mjs';
 import {
   createNodePgPostgresQueryExecutor,
   resolvePostgresConnectionSettings,
@@ -18,4 +19,3 @@ try {
 } finally {
   await executor.close();
 }
-

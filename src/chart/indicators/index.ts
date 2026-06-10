@@ -1,5 +1,20 @@
 export { calculateBb, type BollingerBandsResult } from './bollinger.ts';
 export { calculateAtr } from './atr.ts';
+export {
+  calculateAtrTrailingEmaSignal,
+  calculateAtrTrailingStopOrigin,
+  type AtrTrailingEmaSignalMode,
+  type AtrTrailingEmaSignalOptions,
+  type AtrTrailingEmaSignalResult,
+  type AtrTrailingStopOriginOptions,
+} from './atr-trailing-ema-signal.ts';
+export {
+  calculateBbMtfKalmanSignal,
+  parseIndicatorTimeframeSeconds,
+  type BbMtfKalmanColorOption,
+  type BbMtfKalmanSignalOptions,
+  type BbMtfKalmanSignalResult,
+} from './bb-mtf-kalman-signal.ts';
 export type { IndicatorCandle, NullableSeries } from './types.ts';
 export { calculateCci } from './cci.ts';
 export { calculateDmi, type DmiResult } from './dmi.ts';

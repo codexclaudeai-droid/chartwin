@@ -8,6 +8,15 @@ export interface CandleData {
   buyVolume?: number;
   sellVolume?: number;
   volumeDelta?: number;
+  footprint?: FootprintPriceLevel[];
+}
+
+export interface FootprintPriceLevel {
+  price: number;
+  buyVolume: number;
+  sellVolume: number;
+  volumeDelta: number;
+  totalVolume: number;
 }
 
 export interface IndicatorConfig {

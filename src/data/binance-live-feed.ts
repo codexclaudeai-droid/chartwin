@@ -1,4 +1,10 @@
 import { TIMEFRAME_SECONDS, type TimeframeKey } from '../catalog/time';
+import {
+  applyFootprintTrade,
+  getFootprintTradeSide,
+  type FootprintTradeSide,
+} from '../chart/footprint/footprint-aggregation.ts';
+import type { FootprintPriceLevel } from '../types.ts';
 
 export type CandleDataLike = {
   time: number;
@@ -10,6 +16,7 @@ export type CandleDataLike = {
   buyVolume?: number;
   sellVolume?: number;
   volumeDelta?: number;
+  footprint?: FootprintPriceLevel[];
 };
 
 type ChartLike = {
@@ -20,7 +27,7 @@ type ChartLike = {
   setData: (candles: CandleDataLike[]) => void;
   getCandles: () => CandleDataLike[];
   addNewCandle: (candle: CandleDataLike) => void;
-  updateLastCandle: (patch: Partial<Pick<CandleDataLike, 'close' | 'high' | 'low' | 'volume' | 'buyVolume' | 'sellVolume' | 'volumeDelta'>>) => void;
+  updateLastCandle: (patch: Partial<Pick<CandleDataLike, 'close' | 'high' | 'low' | 'volume' | 'buyVolume' | 'sellVolume' | 'volumeDelta' | 'footprint'>>) => void;
 };
 
 type CreateBinanceLiveFeedArgs = {
@@ -179,6 +186,19 @@ function getTradeDelta(qty: number, isBuyerMaker: boolean | null): { buyVolume: 
     return { buyVolume: qty, sellVolume: 0, volumeDelta: qty };
   }
   return { buyVolume: 0, sellVolume: 0, volumeDelta: 0 };
+}
+
+function applyTradeFootprint(
+  levels: FootprintPriceLevel[] | undefined,
+  price: number,
+  qty: number,
+  side: FootprintTradeSide,
+): FootprintPriceLevel[] {
+  return applyFootprintTrade(levels, {
+    price,
+    quantity: qty,
+    side,
+  });
 }
 
 function bucketTradeTimeSec(timeSec: number, timeframe: TimeframeKey): number {
@@ -424,6 +444,7 @@ export function createBinanceLiveFeed({
     if (!Number.isFinite(price) || !Number.isFinite(qty) || !Number.isFinite(tradeTimeSec)) return;
     const bucketTimeSec = bucketTradeTimeSec(tradeTimeSec, chart.config.timeframe);
     const delta = getTradeDelta(qty, isBuyerMaker);
+    const side = getFootprintTradeSide(isBuyerMaker);
     const candles = chart.getCandles();
     const last = candles[candles.length - 1];
     if (!last) {
@@ -437,6 +458,7 @@ export function createBinanceLiveFeed({
         buyVolume: delta.buyVolume,
         sellVolume: delta.sellVolume,
         volumeDelta: delta.volumeDelta,
+        footprint: applyTradeFootprint(undefined, price, qty, side),
       };
       chart.setData([first]);
       onDataApplied?.([first]);
@@ -470,6 +492,7 @@ export function createBinanceLiveFeed({
         buyVolume: delta.buyVolume,
         sellVolume: delta.sellVolume,
         volumeDelta: delta.volumeDelta,
+        footprint: applyTradeFootprint(undefined, price, qty, side),
       });
       onLiveTick?.();
       return;
@@ -483,6 +506,7 @@ export function createBinanceLiveFeed({
         buyVolume: (last.buyVolume ?? 0) + delta.buyVolume,
         sellVolume: (last.sellVolume ?? 0) + delta.sellVolume,
         volumeDelta: (last.volumeDelta ?? 0) + delta.volumeDelta,
+        footprint: applyTradeFootprint(last.footprint, price, qty, side),
       });
       onLiveTick?.();
     }

@@ -1,3 +1,4 @@
+import '../server/load-local-env.mjs';
 import {
   bootstrapAsyncChartServiceRepository,
   createNodePgPostgresQueryExecutor,

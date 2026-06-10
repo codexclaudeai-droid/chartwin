@@ -10,6 +10,7 @@ export type DatabaseColumn = {
 export type DatabaseTable = {
   name: string;
   columns: Record<string, DatabaseColumn>;
+  primaryKey?: string[];
   indexes?: Array<{
     name: string;
     columns: string[];
@@ -469,6 +470,27 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       ],
     },
     {
+      name: 'market_candles',
+      columns: {
+        market: { type: 'text' },
+        symbol: { type: 'text' },
+        timeframe: { type: 'text' },
+        time: { type: 'timestamptz' },
+        open: { type: 'numeric' },
+        high: { type: 'numeric' },
+        low: { type: 'numeric' },
+        close: { type: 'numeric' },
+        volume: { type: 'numeric', default: '0' },
+        created_at: { type: 'timestamptz', default: 'now()' },
+        updated_at: { type: 'timestamptz', default: 'now()' },
+      },
+      primaryKey: ['market', 'symbol', 'timeframe', 'time'],
+      indexes: [
+        { name: 'idx_market_candles_symbol_time', columns: ['market', 'symbol', 'time'] },
+        { name: 'idx_market_candles_timeframe_time', columns: ['market', 'symbol', 'timeframe', 'time'] },
+      ],
+    },
+    {
       name: 'notifications',
       columns: {
         id: { type: 'text', primaryKey: true },
@@ -536,9 +558,12 @@ export function renderChartServicePostgresSchema(): string {
         const [targetTable, targetColumn] = column.references!.split('.');
         return `  foreign key (${name}) references ${targetTable}(${targetColumn})`;
       });
+    const compositePrimaryKey = table.primaryKey?.length
+      ? [`  primary key (${table.primaryKey.join(', ')})`]
+      : [];
     const tableSql = [
       `create table if not exists ${table.name} (`,
-      [...columnLines, ...checks, ...foreignKeys].join(',\n'),
+      [...columnLines, ...checks, ...foreignKeys, ...compositePrimaryKey].join(',\n'),
       ');',
     ].join('\n');
     const indexSql = (table.indexes ?? []).map((index) => (
@@ -553,6 +578,7 @@ export function renderChartServicePostgresSchema(): string {
 function getChartServiceSchemaUpgradeStatements(): string[] {
   return [
     'alter table if exists notifications add column if not exists archived_at timestamptz;',
+    'alter table if exists market_candles enable row level security;',
     'alter table if exists payment_requests add column if not exists support_thread_id text;',
     'alter table if exists payment_requests add column if not exists transaction_id text;',
     "alter table if exists payment_requests add column if not exists transaction_verification_status text;",

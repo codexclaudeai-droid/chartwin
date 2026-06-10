@@ -140,7 +140,7 @@ test('trade focus remains active during normal desktop mouse movement', () => {
 test('trade focus disables latest signal animation until the focus is cleared', () => {
   assert.match(
     source,
-    /const shouldAnimate = this\.strategySignalVisible && this\.latestStrategySignalIndex >= 0 && this\.focusedTradeRange == null;/,
+    /const shouldAnimate = this\.strategySignalVisible\s*&& latestIsVisible\s*&& this\.focusedTradeRange == null;/,
     'latest signal animation should pause while a trade focus overlay is active',
   );
   assert.match(

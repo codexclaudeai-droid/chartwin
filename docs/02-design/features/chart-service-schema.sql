@@ -36,6 +36,22 @@ create index if not exists idx_auth_sessions_user_id on auth_sessions (user_id);
 
 create index if not exists idx_auth_sessions_expires_at on auth_sessions (expires_at);
 
+create table if not exists push_subscriptions (
+  endpoint text primary key,
+  user_id text not null,
+  p256dh text not null,
+  auth text not null,
+  expiration_time numeric,
+  user_agent text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  foreign key (user_id) references users(id)
+);
+
+create index if not exists idx_push_subscriptions_user_id on push_subscriptions (user_id);
+
+create index if not exists idx_push_subscriptions_updated_at on push_subscriptions (updated_at);
+
 create table if not exists social_auth_accounts (
   id text primary key,
   provider text not null,
@@ -182,6 +198,8 @@ create table if not exists support_messages (
 
 create index if not exists idx_support_messages_thread_id on support_messages (thread_id);
 
+create index if not exists idx_support_messages_author_user_id on support_messages (author_user_id);
+
 create table if not exists payment_requests (
   id text primary key,
   user_id text not null,
@@ -237,6 +255,10 @@ create table if not exists referral_ledgers (
   foreign key (referred_user_id) references users(id),
   foreign key (payment_request_id) references payment_requests(id)
 );
+
+create index if not exists idx_referral_ledgers_referrer_user_id on referral_ledgers (referrer_user_id);
+
+create index if not exists idx_referral_ledgers_referred_user_id on referral_ledgers (referred_user_id);
 
 create index if not exists idx_referral_ledgers_payment_request_id on referral_ledgers (payment_request_id);
 
@@ -383,6 +405,25 @@ create index if not exists idx_signup_agreements_user_id on signup_agreements (u
 
 create index if not exists idx_signup_agreements_created_at on signup_agreements (created_at);
 
+create table if not exists market_candles (
+  market text not null,
+  symbol text not null,
+  timeframe text not null,
+  time timestamptz not null,
+  open numeric not null,
+  high numeric not null,
+  low numeric not null,
+  close numeric not null,
+  volume numeric not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (market, symbol, timeframe, time)
+);
+
+create index if not exists idx_market_candles_symbol_time on market_candles (market, symbol, time);
+
+create index if not exists idx_market_candles_timeframe_time on market_candles (market, symbol, timeframe, time);
+
 create table if not exists notifications (
   id text primary key,
   user_id text not null,
@@ -434,6 +475,8 @@ create index if not exists idx_audit_logs_target on audit_logs (target_type, tar
 
 alter table if exists notifications add column if not exists archived_at timestamptz;
 
+alter table if exists market_candles enable row level security;
+
 alter table if exists payment_requests add column if not exists support_thread_id text;
 
 alter table if exists payment_requests add column if not exists transaction_id text;
@@ -476,11 +519,41 @@ create unique index if not exists idx_social_auth_accounts_provider_user on soci
 
 create index if not exists idx_social_auth_accounts_user_id on social_auth_accounts (user_id);
 
+create table if not exists push_subscriptions (endpoint text primary key, user_id text not null references users(id), p256dh text not null, auth text not null, expiration_time numeric, user_agent text, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+
+alter table if exists push_subscriptions add column if not exists user_id text;
+
+alter table if exists push_subscriptions add column if not exists p256dh text;
+
+alter table if exists push_subscriptions add column if not exists auth text;
+
+alter table if exists push_subscriptions add column if not exists expiration_time numeric;
+
+alter table if exists push_subscriptions add column if not exists user_agent text;
+
+alter table if exists push_subscriptions add column if not exists created_at timestamptz;
+
+alter table if exists push_subscriptions add column if not exists updated_at timestamptz;
+
+update push_subscriptions set created_at = now() where created_at is null;
+
+update push_subscriptions set updated_at = now() where updated_at is null;
+
+create index if not exists idx_push_subscriptions_user_id on push_subscriptions (user_id);
+
+create index if not exists idx_push_subscriptions_updated_at on push_subscriptions (updated_at);
+
 create table if not exists email_verification_tokens (id text primary key, user_id text not null references users(id), token_hash text not null, created_at timestamptz not null, expires_at timestamptz not null, used_at timestamptz);
 
 create index if not exists idx_email_verification_tokens_token_hash on email_verification_tokens (token_hash);
 
 create index if not exists idx_email_verification_tokens_user_id on email_verification_tokens (user_id);
+
+create index if not exists idx_referral_ledgers_referrer_user_id on referral_ledgers (referrer_user_id);
+
+create index if not exists idx_referral_ledgers_referred_user_id on referral_ledgers (referred_user_id);
+
+create index if not exists idx_support_messages_author_user_id on support_messages (author_user_id);
 
 alter table if exists email_outbox add column if not exists sender_email text;
 

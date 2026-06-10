@@ -33,6 +33,9 @@ export type MainIndicatorsLike = {
     smartMoneyConcepts?: { show: boolean };
     supertrend: { show: boolean };
     statisticalTrailingStop: { show: boolean };
+    atrTrailingEmaSignal?: { show: boolean };
+    atrTrailingStopOrigin?: { show: boolean };
+    bbMtfKalmanSignal?: { show: boolean };
     zeroLagMaTrendLevels: { show: boolean };
     ichimoku: { show: boolean };
     envelope: { show: boolean };
@@ -56,6 +59,9 @@ export function collectMainIndicatorNames(config: MainIndicatorsLike): string[] 
   if (config.indicators.smartMoneyConcepts?.show) names.push('SMC');
   if (config.indicators.supertrend.show) names.push('ST');
   if (config.indicators.statisticalTrailingStop.show) names.push('STS');
+  if (config.indicators.atrTrailingEmaSignal?.show) names.push('ATR EMA');
+  if (config.indicators.atrTrailingStopOrigin?.show) names.push('ATR origin');
+  if (config.indicators.bbMtfKalmanSignal?.show) names.push('BB MTF');
   if (config.indicators.zeroLagMaTrendLevels.show) names.push('ZLMA');
   if (config.indicators.ichimoku.show) names.push('ICHI');
   if (config.indicators.envelope.show) names.push('ENV');

@@ -19,6 +19,7 @@ import {
 } from '../src/chart/renderers/vpvr-renderer.ts';
 import { renderVolumeProfileBackground } from '../src/chart/renderers/volume-profile-renderer.ts';
 import { getWilliamsFractalMarkerGeometry } from '../src/chart/renderers/williams-fractal-renderer.ts';
+import { applyBbMtfKalmanLinewidth } from '../src/chart/renderers/bb-mtf-kalman-signal-renderer.ts';
 
 test('Williams Fractal marker geometry scales with candle width and clamps size', () => {
   assert.deepEqual(getWilliamsFractalMarkerGeometry(8), { markerSize: 5, markerOffset: 8 });
@@ -170,6 +171,13 @@ test('Bollinger renderer draws only visible band fills', () => {
     ['lineTo', 112, 90],
     ['lineTo', 102, 91],
   ]);
+});
+
+test('BB MTF Kalman renderer applies grouped TradingView linewidth settings', () => {
+  const style = { color: '#fff', width: 1, dash: [4, 2] };
+
+  assert.deepEqual(applyBbMtfKalmanLinewidth(style, 3), { color: '#fff', width: 3, dash: [4, 2] });
+  assert.deepEqual(applyBbMtfKalmanLinewidth(style, 0), { color: '#fff', width: 1, dash: [4, 2] });
 });
 
 test('Volume Profile renderer buckets visible candles and draws POC', () => {

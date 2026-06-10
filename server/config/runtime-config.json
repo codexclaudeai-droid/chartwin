@@ -12,5 +12,12 @@
     "index": {
       "NQ1!": "webhook"
     }
+  },
+  "binance": {
+    "storedSymbols": [
+      "BTCUSDT"
+    ],
+    "backfillLimit": 3000,
+    "reconnectMs": 5000
   }
 }

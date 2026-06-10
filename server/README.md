@@ -32,6 +32,11 @@ npm run backend:dev
     "fx": "webhook"
   },
   "symbolProviders": {},
+  "binance": {
+    "storedSymbols": ["BTCUSDT"],
+    "backfillLimit": 3000,
+    "reconnectMs": 5000
+  },
   "kis": {
     "symbols": {
       "NDX": { "code": "DNASNDX" },
@@ -43,6 +48,12 @@ npm run backend:dev
 ```
 
 캔들 데이터는 `server/data/candles-db.json`에 자동 저장되며, 백엔드 재시작 시 자동 복구됩니다.
+
+Binance 저장형 수집은 `binance.storedSymbols`에 명시한 심볼만 켜집니다. 기본 MVP 대상은 `BTCUSDT`이며, 서버 시작 시 최근 1분봉을 백필한 뒤 Binance 1분 kline WebSocket으로 `crypto:BTCUSDT:1m`을 계속 갱신합니다.
+
+Postgres가 설정된 환경(`CHART_SERVICE_REPOSITORY=postgres`, `CHART_SERVICE_DATABASE_URL`)에서는 gateway가 수신/집계한 모든 종목의 OHLCV를 공통 `market_candles` 테이블에도 함께 저장합니다. BTCUSDT는 첫 수집 대상일 뿐이며, 전략리포트용 DB 저장 구조는 `market + symbol + timeframe + time` 기준으로 모든 종목에 공통 적용됩니다.
+
+로컬 실행 시 gateway와 Postgres migration/bootstrap 스크립트는 프로젝트 루트의 `.env.local`을 자동으로 읽습니다. 실제 Supabase 저장을 켜려면 `.env.local`에 `CHART_SERVICE_REPOSITORY=postgres`, `CHART_SERVICE_DATABASE_URL=<supabase-postgres-url>`, `CHART_SERVICE_DATABASE_SSL_MODE=require`를 설정한 뒤 `npm.cmd run backend:dev`를 실행합니다. `.env.local`은 `.gitignore`의 `*.local` 규칙으로 커밋 대상에서 제외됩니다.
 
 KIS 웹소켓은 `symbolProviders`에서 특정 심볼을 `kis`로 지정하고, `KIS_APP_KEY`/`KIS_APP_SECRET` 환경변수로 웹소켓 접속키를 자동 발급받거나 `KIS_WS_APPROVAL_KEY`를 직접 넣으면 시작됩니다.
 KIS에서 수신한 tick은 완성된 1분봉을 기다리지 않고 현재 1분 bucket의 `high/low/close`를 즉시 갱신합니다.

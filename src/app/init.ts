@@ -855,6 +855,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     chart: SimpleChart;
     tfSelect: HTMLSelectElement;
     refreshChartUi: () => void;
+    refreshSignalVisibilityUi: () => void;
     refreshHeader: () => void;
     startLive: () => void;
     stopLive: () => void;
@@ -925,6 +926,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   let refreshTopControlIcons = () => {};
   let refreshStrategyReport = (_paneChanged = false) => {};
   let forceRefreshStrategyReport = () => {};
+  let canRefreshStrategyReport = () => false;
   let markStrategyReportStale = () => {};
   let refreshStrategyReportOnNewSignal = (_paneId: number) => {};
   let setTopBarSignalNotification = (_count: number) => {};
@@ -952,6 +954,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     if (pendingStrategyReportRefreshByPane.get(paneId) !== true) return false;
     pendingStrategyReportRefreshByPane.delete(paneId);
     if (paneId !== paneState.activePaneId || !chart.getActiveStrategyName()) return false;
+    if (strategyReportOpenByPane.get(paneId) !== true && !canRefreshStrategyReport()) return false;
     forceRefreshStrategyReport();
     return true;
   };
@@ -1373,6 +1376,12 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     };
     const shouldApplyDisplayCurrency = (): boolean => !isNoFxIndexSymbol(chart.config.symbol);
     const convertPrice = (price: number): number => (shouldApplyDisplayCurrency() ? price * currencyRate : price);
+    const toDisplayFootprint = (levels: CandleData['footprint']): CandleData['footprint'] => (
+      levels?.map((level) => ({
+        ...level,
+        price: convertPrice(level.price),
+      }))
+    );
     const toDisplayCandles = (candles: CandleData[]): CandleData[] => {
       return candles.map((c) => ({
         ...c,
@@ -1380,6 +1389,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         high: convertPrice(c.high),
         low: convertPrice(c.low),
         close: convertPrice(c.close),
+        footprint: toDisplayFootprint(c.footprint),
       }));
     };
     const applyDisplayCurrencyToChart = () => {
@@ -1425,7 +1435,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     const refreshOverlay = createIndicatorOverlay(chartArea, chart, () => {
       refreshChartUi();
       persistChartUserSettingsForChart(chart);
+    }, () => {
+      refreshSignalVisibilityUi();
     });
+    const refreshSignalVisibilityUi = () => {
+      refreshStrategySignalDesktopButton();
+      refreshOverlay();
+    };
     dividerManager.setOnAfterResize(() => {
       refreshOverlay();
       persistChartUserSettingsForChart(chart);
@@ -1448,7 +1464,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         style: 'height:22px;width:22px;min-width:22px;background:#1f2533;color:#dce6f7;border:none;border-radius:4px;padding:0;cursor:pointer;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;',
         syncBorder: false,
         onAfterToggle: () => {
-          refreshChartUi();
+          refreshSignalVisibilityUi();
         },
       });
       strategySignalDesktopBtn.addEventListener('mouseenter', () => {
@@ -1677,6 +1693,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             high: convertPrice(candle.high),
             low: convertPrice(candle.low),
             close: convertPrice(candle.close),
+            footprint: toDisplayFootprint(candle.footprint),
           });
           markStrategyReportStale();
         },
@@ -1729,6 +1746,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             high: convertPrice(candle.high),
             low: convertPrice(candle.low),
             close: convertPrice(candle.close),
+            footprint: toDisplayFootprint(candle.footprint),
           });
           markStrategyReportStale();
         },
@@ -1742,6 +1760,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           if (Number.isFinite(patch.buyVolume)) last.buyVolume = patch.buyVolume;
           if (Number.isFinite(patch.sellVolume)) last.sellVolume = patch.sellVolume;
           if (Number.isFinite(patch.volumeDelta)) last.volumeDelta = patch.volumeDelta;
+          if (patch.footprint) last.footprint = patch.footprint;
           if (gapMode === 'smooth') {
             applyDisplayCurrencyToChart();
             markStrategyReportStale();
@@ -1755,6 +1774,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             buyVolume: last.buyVolume,
             sellVolume: last.sellVolume,
             volumeDelta: last.volumeDelta,
+            footprint: toDisplayFootprint(last.footprint),
           });
           markStrategyReportStale();
         },
@@ -2015,6 +2035,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       chart,
       tfSelect,
       refreshChartUi,
+      refreshSignalVisibilityUi,
       refreshHeader,
       startLive,
       stopLive,
@@ -2470,7 +2491,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         size: 17,
         style: MOBILE_BAR_BTN,
         onAfterToggle: () => {
-          getActivePane().refreshChartUi();
+          getActivePane().refreshSignalVisibilityUi();
         },
       });
       signalMobileBtn.addEventListener('touchstart', () => {
@@ -2774,6 +2795,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       },
       onModeChange: (mode, prevMode) => {
         const paneId = paneState.activePaneId;
+        strategyReportOpenByPane.set(paneId, mode !== 'collapsed');
         const shouldCollapseIndicators = (prevMode === 'collapsed' && mode !== 'collapsed')
           || (mode === 'expanded' && prevMode !== 'expanded');
         if (shouldCollapseIndicators) {
@@ -2785,7 +2807,14 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         }
       },
     });
-    forceRefreshStrategyReport = () => strategyReport.refresh();
+    canRefreshStrategyReport = () => strategyReport.canRefresh();
+    forceRefreshStrategyReport = () => {
+      if (!strategyReport.canRefresh()) {
+        strategyReport.markStale();
+        return;
+      }
+      strategyReport.refresh();
+    };
     const announcedSignalKeys = new Set<string>();
     const signalNoticeBaselineKeyByPane = new Map<number, string>();
     const signalNoticeSuppressNextReadyComputeByPane = new Set<number>();
@@ -3179,12 +3208,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           strategyReport.setVisible(true);
         }
         prevStrategyActiveByPane.set(activePaneId, true);
-        if (!wasActive) {
-          strategyReport.refresh();
-          requestStrategyReportAfterNextCompute(activePaneId);
-        } else {
-          strategyReport.syncContext({ clearResult: paneChanged, stale: true });
-        }
+        strategyReport.syncContext({ clearResult: paneChanged, stale: true });
       }
       refreshSignalNotification();
     };

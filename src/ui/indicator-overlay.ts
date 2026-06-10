@@ -11,7 +11,12 @@ const OVERLAY_ICON_TOOLTIP = { placement: 'top' as const, align: 'center' as con
 const X_AXIS_HEIGHT = 22;
 const CHART_FONT_STACK = `'Inter','Segoe UI','Noto Sans KR','Apple SD Gothic Neo',sans-serif`;
 
-export function createIndicatorOverlay(container: HTMLElement, chart: any, onOverlayChange?: () => void): () => void {
+export function createIndicatorOverlay(
+  container: HTMLElement,
+  chart: any,
+  onOverlayChange?: () => void,
+  onSignalVisibilityChange?: () => void,
+): () => void {
   const betaVariant = isBetaAppVariant();
   const devVariant = isDevAppVariant();
   if (!document.getElementById('indicator-panel-control-motion-style')) {
@@ -198,6 +203,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
   };
 
   const applyHoveredPanel = (nextId: string | null) => {
+    if (hoveredPanelId === nextId) return;
     hoveredPanelId = nextId;
     panelHoverControllers.forEach((controller) => {
       controller.setExpanded(controller.id === hoveredPanelId);
@@ -270,9 +276,10 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
     overlay.style.gap = '0px';
 
     const indicatorVisibilityTargetKeys = [
-      'ma','ema','hma','maShort','maLong','ma60','ma120','ma200','bb','vwap','volumeProfile','vpvr','ichimoku','envelope',
+      'ma','ema','hma','maShort','maLong','ma60','ma120','ma200','bb','vwap','volumeProfile','fixedRangeVolumeProfile','vpvr','ichimoku','envelope',
+      'footprint',
       'williamsFractal','parabolicSar','smartMoneyConcepts',
-      'supertrend','statisticalTrailingStop','zeroLagMaTrendLevels',
+      'supertrend','statisticalTrailingStop','atrTrailingEmaSignal','atrTrailingStopOrigin','bbMtfKalmanSignal','zeroLagMaTrendLevels',
       'rsi','dmi','macd','stochF','stochS','cci','atr','obv','cvd','volume',
     ];
 
@@ -560,6 +567,7 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         const nextVisible = !(chart.isStrategySignalVisible?.() !== false);
         chart.setStrategySignalVisible?.(nextVisible);
         refreshVisibilityButton();
+        onSignalVisibilityChange?.();
       });
 
       const stratSettingsSvgSz = eyeSvgSz;
@@ -759,12 +767,22 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         envelope: () => `Envelope(${i.envelope.period}, ${i.envelope.pct}%)`,
         supertrend: () => `Supertrend(${i.supertrend.period}, ${i.supertrend.factor})`,
         statisticalTrailingStop: () => `STS(${i.statisticalTrailingStop.dataLength}, ${i.statisticalTrailingStop.distributionLength}, L${i.statisticalTrailingStop.baseLevel})`,
+        atrTrailingEmaSignal: () => `ATR EMA Signal(${i.atrTrailingEmaSignal?.mode === 'filtered' ? 'Filtered' : 'Basic'}, ${Number(i.atrTrailingEmaSignal?.atrPeriod ?? 2)}, ${Number(i.atrTrailingEmaSignal?.trendEmaLength ?? 240)})`,
+        atrTrailingStopOrigin: () => `ATR Stop Origin(${Number(i.atrTrailingStopOrigin?.atrPeriod ?? 2)}, ${Number(i.atrTrailingStopOrigin?.trendEmaLength ?? 240)})`,
+        bbMtfKalmanSignal: () => `BB MTF Kalman(${String(i.bbMtfKalmanSignal?.htfTimeframe ?? '4h')}, ${Number(i.bbMtfKalmanSignal?.ltfLength ?? 20)}, ${Number(i.bbMtfKalmanSignal?.htfLength ?? 20)})`,
         zeroLagMaTrendLevels: () => `ZLMA(${Number(i.zeroLagMaTrendLevels?.length ?? 15)})`,
+        footprint: () => `Footprint(${Number(i.footprint?.priceStep ?? 1000)})`,
         volumeProfile: () => {
           const cfg = i.volumeProfile;
           const rows = Number(cfg?.rows ?? 24);
           const widthPct = Number(cfg?.widthPct ?? 22);
           return `매물대(${rows}, ${widthPct}%)`;
+        },
+        fixedRangeVolumeProfile: () => {
+          const cfg = i.fixedRangeVolumeProfile;
+          const rows = Number(cfg?.rowSize ?? 50);
+          const widthPct = Number(cfg?.widthPct ?? 30);
+          return `Fixed VP(${rows}, ${widthPct}%)`;
         },
         vpvr: () => {
           const cfg = i.vpvr;
@@ -798,8 +816,13 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
       envelope: getLineStyle(chart.config.panelState, 'envelopeUpper', { color: 'rgba(255,200,50,0.95)', width: 1, dash: [] }).color,
       supertrend: getLineStyle(chart.config.panelState, 'supertrendUp', { color: '#26a69a', width: 1.7, dash: [] }).color,
       statisticalTrailingStop: getLineStyle(chart.config.panelState, 'statisticalTrailingStopBull', { color: '#26a69a', width: 1.7, dash: [] }).color,
+      atrTrailingEmaSignal: getLineStyle(chart.config.panelState, 'atrTrailingEmaSignalTrendEma', { color: '#fcfc6c', width: 2, dash: [] }).color,
+      atrTrailingStopOrigin: getLineStyle(chart.config.panelState, 'atrTrailingStopOriginTrendEma', { color: '#fcfc6c', width: 3, dash: [] }).color,
+      bbMtfKalmanSignal: getLineStyle(chart.config.panelState, 'bbMtfKalmanLtfBasis', { color: '#2962ff', width: 1, dash: [] }).color,
       zeroLagMaTrendLevels: getLineStyle(chart.config.panelState, 'zeroLagMaTrendLevelsZlma', { color: '#30d453', width: 1, dash: [] }).color,
+      footprint: '#22ab94',
       volumeProfile: getLineStyle(chart.config.panelState, 'volumeProfilePoc', { color: 'rgba(255,193,7,0.95)', width: 1.2, dash: [4, 3] }).color,
+      fixedRangeVolumeProfile: getLineStyle(chart.config.panelState, 'fixedRangeVolumeProfilePoc', { color: 'rgba(255,193,7,0.95)', width: 1.2, dash: [4, 3] }).color,
       vpvr: String((chart.config.indicators as any).vpvr?.pocColor ?? '#ffc107'),
       rsi: getLineStyle(chart.config.panelState, 'rsi', { color: '#ffeb3b', width: 1.5, dash: [] }).color,
       dmi: getLineStyle(chart.config.panelState, 'dmiPlus', { color: '#26a69a', width: 1.5, dash: [] }).color,
@@ -856,6 +879,15 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
         ];
         return makeRichTag(parts, key, '#dbe3f4');
       }
+      if (key === 'fixedRangeVolumeProfile') {
+        const cfg = chartIndicators.fixedRangeVolumeProfile;
+        const parts = [
+          { text: 'Fixed VP', color: '#dbe3f4' },
+          { text: String(Number(cfg?.rowSize ?? 50)), color: colorMap.fixedRangeVolumeProfile },
+          { text: `${Number(cfg?.widthPct ?? 30)}%`, color: colorMap.fixedRangeVolumeProfile },
+        ];
+        return makeRichTag(parts, key, '#dbe3f4');
+      }
       if (key === 'vpvr') {
         const cfg = chartIndicators.vpvr ?? {};
         const rowLabel = cfg.rowsLayout === 'ticks_per_row'
@@ -890,7 +922,11 @@ export function createIndicatorOverlay(container: HTMLElement, chart: any, onOve
           case 'envelope': return [{ text: 'Env', color: '#dbe3f4' }, { text: String(i.envelope?.period ?? ''), color: c }, { text: `${i.envelope?.pct ?? ''}%`, color: c }];
           case 'supertrend': return [{ text: 'ST', color: '#dbe3f4' }, { text: String(i.supertrend?.period ?? ''), color: c }, { text: String(i.supertrend?.factor ?? ''), color: c }];
           case 'statisticalTrailingStop': return [{ text: 'STS', color: '#dbe3f4' }, { text: String(i.statisticalTrailingStop?.dataLength ?? ''), color: c }, { text: String(i.statisticalTrailingStop?.distributionLength ?? ''), color: c }, { text: `L${i.statisticalTrailingStop?.baseLevel ?? ''}`, color: c }];
+          case 'atrTrailingEmaSignal': return [{ text: 'ATR EMA', color: '#dbe3f4' }, { text: i.atrTrailingEmaSignal?.mode === 'filtered' ? 'F' : 'B', color: c }, { text: String(Number(i.atrTrailingEmaSignal?.trendEmaLength ?? 240)), color: c }];
+          case 'atrTrailingStopOrigin': return [{ text: 'ATR origin', color: '#dbe3f4' }, { text: String(Number(i.atrTrailingStopOrigin?.atrPeriod ?? 2)), color: c }, { text: String(Number(i.atrTrailingStopOrigin?.trendEmaLength ?? 240)), color: c }];
+          case 'bbMtfKalmanSignal': return [{ text: 'BB MTF', color: '#dbe3f4' }, { text: String(i.bbMtfKalmanSignal?.htfTimeframe ?? '4h'), color: c }, { text: String(Number(i.bbMtfKalmanSignal?.ltfLength ?? 20)), color: c }];
           case 'zeroLagMaTrendLevels': return [{ text: 'ZLMA', color: '#dbe3f4' }, { text: String(Number(i.zeroLagMaTrendLevels?.length ?? 15)), color: c }];
+          case 'footprint': return [{ text: 'Footprint', color: '#dbe3f4' }, { text: String(Number(i.footprint?.priceStep ?? 1000)), color: c }];
           case 'rsi':    return [{ text: 'RSI',  color: '#dbe3f4' }, { text: String(i.rsi?.period ?? ''),  color: c }];
           case 'dmi':    return [{ text: 'DMI',  color: '#dbe3f4' }, { text: String(i.dmi?.period ?? ''),  color: c }];
           case 'macd':   return [{ text: 'MACD', color: '#dbe3f4' }, { text: String(i.macd?.fast ?? ''), color: c }, { text: String(i.macd?.slow ?? ''), color: c }, { text: String(i.macd?.signal ?? ''), color: c }];

@@ -1,6 +1,7 @@
 ﻿import { getCandleCountForPeriod } from '../../chart/axis-utils';
 import type { TimeframeKey } from '../../catalog/time';
 import { isBetaAppVariant } from '../../app/runtime';
+import { fetchGatewayReportCandles } from '../../data/gateway-live-feed';
 import { getSymbolPricePrecision } from '../../data/market-data-sources';
 import type { DisplayCurrency } from '../../types/market';
 import { bindTooltipBadge } from './tooltip-badge';
@@ -9,7 +10,11 @@ const REPORT_ICON_TOOLTIP = { align: 'center' as const, offset: 8 };
 
 type CandleLike = {
   time?: number;
+  open?: number;
+  high?: number;
+  low?: number;
   close: number;
+  volume?: number;
 };
 
 type StrategyReportChartLike = {
@@ -36,6 +41,15 @@ type StrategyReportChartLike = {
     },
   ) => void;
   buildStrategyReport?: (args: {
+    feeBps: number;
+    slippageBps: number;
+    periodBars: number;
+    rangeStartSec: number | null;
+    rangeEndSec: number | null;
+    sideFilter: SideFilter;
+  }) => ReportResult | null;
+  buildStrategyReportFromCandles?: (args: {
+    candles: CandleLike[];
     feeBps: number;
     slippageBps: number;
     periodBars: number;
@@ -553,6 +567,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   openTradesTab: () => void;
   openSettings: () => void;
   collapse: () => void;
+  canRefresh: () => boolean;
   markStale: () => void;
   syncContext: (options?: { clearResult?: boolean; stale?: boolean }) => void;
   setTradeViewAlertActive: (active: boolean) => void;
@@ -615,6 +630,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   let lastRenderedTradesPriceDigits = -1;
   let reportStale = false;
   let lastRefreshSignature = '';
+  let storedReportAbortController: AbortController | null = null;
   const getHeaderTooltipPlacement = (): 'top' | 'bottom' => (panelMode === 'expanded' ? 'bottom' : 'top');
   const sectionOpen: Record<Exclude<WidgetKey, 'equity'>, boolean> = {
     performance: true,
@@ -2050,6 +2066,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     renderAll();
   });
 
+  const canRefresh = (): boolean => panelVisible && panelMode !== 'collapsed';
+
   const syncContext = (options: { clearResult?: boolean; stale?: boolean } = {}) => {
     syncLatestMetaFromActiveChart();
     if (options.clearResult) {
@@ -2060,7 +2078,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     if (typeof options.stale === 'boolean') {
       reportStale = options.stale;
     }
-    if (panelVisible) renderAll();
+    if (canRefresh()) renderAll();
   };
 
   const buildCurrentReportSignature = (): string => {
@@ -2130,8 +2148,89 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     ].join('|');
   };
 
+  const selectReportTimes = (candles: CandleLike[]): number[] => {
+    const times = candles.map((c) => Number(c.time ?? NaN));
+    const nAll = times.length;
+    let start = 0;
+    let end = nAll;
+
+    if (periodStartSec != null || periodEndSec != null) {
+      while (start < nAll) {
+        const ts = times[start];
+        if (!Number.isFinite(ts) || (periodStartSec != null && ts < periodStartSec)) {
+          start += 1;
+          continue;
+        }
+        break;
+      }
+      while (end > start) {
+        const ts = times[end - 1];
+        if (!Number.isFinite(ts) || (periodEndSec != null && ts > periodEndSec)) {
+          end -= 1;
+          continue;
+        }
+        break;
+      }
+    }
+
+    if (periodBars > 0 && periodBars < end - start) start = end - periodBars;
+    return times.slice(start, end).map((t) => (Number.isFinite(t) ? t : NaN));
+  };
+
+  const getStoredReportLimit = (currentLength: number): number => {
+    if (periodBars > 0) return Math.min(100000, Math.max(currentLength, periodBars + 500, 1000));
+    return 100000;
+  };
+
+  const refreshFromStoredCandles = async (requestId: number, candles: CandleLike[]) => {
+    const chart = getActiveChart();
+    const buildFromCandles = chart.buildStrategyReportFromCandles;
+    if (!buildFromCandles) return;
+
+    storedReportAbortController?.abort();
+    const abortController = new AbortController();
+    storedReportAbortController = abortController;
+
+    try {
+      const storedCandles = await fetchGatewayReportCandles({
+        symbol: chart.config.symbol,
+        timeframe: chart.config.timeframe as TimeframeKey,
+        limit: getStoredReportLimit(candles.length),
+        fromSec: periodStartSec,
+        toSec: periodEndSec,
+        signal: abortController.signal,
+      });
+      if (abortController.signal.aborted || requestId < lastAppliedRequestId) return;
+      if (!(storedCandles.length > candles.length)) return;
+
+      const override = buildFromCandles({
+        candles: storedCandles,
+        feeBps,
+        slippageBps,
+        periodBars,
+        rangeStartSec: periodStartSec,
+        rangeEndSec: periodEndSec,
+        sideFilter,
+      });
+      if (!override || requestId < lastAppliedRequestId) return;
+
+      lastAppliedRequestId = requestId;
+      latestResult = applyCapitalBasedRatios(override);
+      timelineTimes = selectReportTimes(storedCandles);
+      netProfitPctBase = Number.isFinite(initialCapital) && initialCapital > 0 ? initialCapital : null;
+      reportStale = false;
+      renderAll();
+    } catch (error) {
+      if ((error as Error)?.name !== 'AbortError') {
+        // Stored candles are optional; keep the current chart-data report if the gateway is unavailable.
+      }
+    } finally {
+      if (storedReportAbortController === abortController) storedReportAbortController = null;
+    }
+  };
+
   const refresh = () => {
-    if (!panelVisible || panelMode === 'collapsed') return;
+    if (!canRefresh()) return;
     reportStale = false;
     const chart = getActiveChart();
     syncLatestMetaFromActiveChart();
@@ -2197,8 +2296,9 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
     // 이미 슬라이스된 배열을 전달 — worker 내부에서 재필터링 불필요
     nextRequestId += 1;
+    const requestId = nextRequestId;
     worker.postMessage({
-      requestId: nextRequestId,
+      requestId,
       closes: slicedCloses,
       times: slicedTimes,
       signals: slicedSignals,
@@ -2209,16 +2309,21 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       rangeEndSec: null,
       sideFilter,
     });
+    void refreshFromStoredCandles(requestId, candles);
 
     renderAll();
   };
 
   const markStale = () => {
+    if (!canRefresh()) {
+      reportStale = true;
+      return;
+    }
     if (reportStale) return;
     const nextSignature = buildCurrentReportSignature();
     if (nextSignature === lastRefreshSignature) return;
     reportStale = true;
-    if (panelVisible) renderAll();
+    renderAll();
   };
 
   periodMenu.querySelectorAll<HTMLButtonElement>('button[data-days]').forEach((btn) => {
@@ -2441,6 +2546,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
       openSettingsMenu();
     },
     collapse: () => applyPanelMode('collapsed'),
+    canRefresh,
     markStale,
     syncContext,
     setTradeViewAlertActive: (active: boolean) => {

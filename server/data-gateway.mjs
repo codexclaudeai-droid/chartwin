@@ -1,9 +1,12 @@
 ﻿import { createServer } from 'node:http';
+import './load-local-env.mjs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
+import { createBinanceWebSocketCollector, mergeBinanceCollectorConfig } from './binance-websocket-collector.mjs';
 import { createKisWebSocketCollector, hasKisCredentials } from './kis-websocket-collector.mjs';
+import { createMarketCandlePostgresStoreFromEnv } from './market-candle-postgres-store.mjs';
 import { getPreferredSymbolProviders, resolveProviderForSymbol } from './provider-routing.mjs';
 
 const PORT = Number(process.env.DATA_GATEWAY_PORT || 8787);
@@ -25,7 +28,7 @@ const DEFAULT_SYMBOL_PROVIDER_BY_MARKET = getPreferredSymbolProviders();
 
 /** @typedef {{time:number,open:number,high:number,low:number,close:number,volume:number}} Candle */
 
-/** @type {{adminToken:string, webhookPassphrase:string, providers: Record<string, string>, symbolProviders: Record<string, Record<string, string>>, kis?: Record<string, unknown>}} */
+/** @type {{adminToken:string, webhookPassphrase:string, providers: Record<string, string>, symbolProviders: Record<string, Record<string, string>>, binance?: {storedSymbols?: string[], backfillLimit?: number, reconnectMs?: number}, kis?: Record<string, unknown>}} */
 let runtimeConfig;
 
 /** @type {Map<string, Candle[]>} */
@@ -33,6 +36,8 @@ const candleStore = new Map();
 const streamClients = new Set();
 let persistTimer = null;
 let kisCollector = null;
+let binanceCollector = null;
+let marketCandlePostgresStore = null;
 
 function splitCandleKey(key) {
   const parts = String(key || '').split(':');
@@ -61,6 +66,15 @@ function schedulePersistCandleStore() {
       console.error('[data-gateway] persist candle store failed:', error);
     });
   }, 200);
+}
+
+function persistMarketCandlesToPostgres(market, symbol, timeframe, incomingCandles) {
+  if (!marketCandlePostgresStore || !Array.isArray(incomingCandles) || !incomingCandles.length) return;
+  void marketCandlePostgresStore
+    .tryUpsertCandles(market, symbol, timeframe, incomingCandles)
+    .catch((error) => {
+      console.warn('[data-gateway] postgres market candle persist failed:', error.message);
+    });
 }
 
 function clampLimit(limitRaw) {
@@ -370,6 +384,7 @@ function upsertCandles(market, symbol, timeframe, incomingCandles) {
     .slice(-MAX_CANDLES_PER_KEY);
   candleStore.set(key, merged);
   schedulePersistCandleStore();
+  persistMarketCandlesToPostgres(market, symbol, timeframe, incomingCandles);
   return merged;
 }
 
@@ -412,6 +427,7 @@ function applyLiveCandle(market, symbol, timeframe, incomingCandle) {
   const trimmed = nextRows.slice(-MAX_CANDLES_PER_KEY);
   candleStore.set(key, trimmed);
   schedulePersistCandleStore();
+  persistMarketCandlesToPostgres(market, canonicalSymbol, timeframe, [incoming]);
   return trimmed;
 }
 
@@ -427,6 +443,7 @@ async function loadRuntimeConfig() {
       webhookPassphrase: 'change-me-webhook-passphrase',
       providers: { ...DEFAULT_PROVIDER_BY_MARKET },
       symbolProviders: structuredClone(DEFAULT_SYMBOL_PROVIDER_BY_MARKET),
+      binance: mergeBinanceCollectorConfig(),
       kis: {},
     };
     await persistRuntimeConfig();
@@ -442,6 +459,7 @@ async function loadRuntimeConfig() {
       ...(parsed.providers && typeof parsed.providers === 'object' ? parsed.providers : {}),
     },
     symbolProviders: mergeSymbolProviders(parsed.symbolProviders),
+    binance: mergeBinanceCollectorConfig(parsed.binance),
     kis: parsed.kis && typeof parsed.kis === 'object' ? parsed.kis : {},
   };
 }
@@ -515,6 +533,10 @@ function getKisEnabledSymbols() {
     .map(([symbol]) => canonicalizeSymbolByMarket('index', symbol));
 }
 
+function getBinanceStoredSymbols() {
+  return mergeBinanceCollectorConfig(runtimeConfig.binance).storedSymbols;
+}
+
 function handleHealth(req, res) {
   sendJson(res, 200, {
     ok: true,
@@ -522,6 +544,10 @@ function handleHealth(req, res) {
     now: new Date().toISOString(),
     markets: runtimeConfig.providers,
     symbolProviders: runtimeConfig.symbolProviders,
+    binance: binanceCollector?.getStatus?.() || {
+      enabledSymbols: getBinanceStoredSymbols(),
+      activeSockets: [],
+    },
     kis: {
       enabledSymbols: getKisEnabledSymbols(),
       credentialsSet: hasKisCredentials(runtimeConfig.kis),
@@ -716,6 +742,57 @@ function handleGetCandles(req, res, url) {
   });
 }
 
+async function handleGetReportCandles(req, res, url) {
+  const market = normalizeMarket(url.searchParams.get('market'));
+  const symbol = canonicalizeSymbolByMarket(market, url.searchParams.get('symbol'));
+  const timeframe = normalizeTimeframe(url.searchParams.get('timeframe') || '1m');
+  const limit = Math.max(1, Math.min(100000, Math.floor(Number(url.searchParams.get('limit')) || 5000)));
+  const fromSec = url.searchParams.get('from');
+  const toSec = url.searchParams.get('to');
+
+  if (!market || !symbol || !timeframe) {
+    sendJson(res, 400, {
+      ok: false,
+      message: 'market/symbol/timeframe query is required',
+    });
+    return;
+  }
+
+  if (!marketCandlePostgresStore) {
+    sendJson(res, 503, {
+      ok: false,
+      message: 'postgres market candle store is not configured',
+    });
+    return;
+  }
+
+  try {
+    const candles = await marketCandlePostgresStore.selectCandles({
+      market,
+      symbol,
+      timeframe,
+      fromSec,
+      toSec,
+      limit,
+    });
+    sendJson(res, 200, {
+      ok: true,
+      market,
+      symbol,
+      timeframe,
+      source: 'postgres_market_candles',
+      total: candles.length,
+      candles,
+    });
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: 'postgres market candle query failed',
+      detail: error.message,
+    });
+  }
+}
+
 function handleDeleteCandles(req, res, url) {
   if (!checkAdmin(req)) {
     sendJson(res, 401, { ok: false, message: 'unauthorized' });
@@ -760,6 +837,7 @@ function handleNotFound(res) {
       'POST /ingest/webhook/tradingview',
       'POST /ingest/api/candles',
       'GET /candles?market=index&symbol=NQ1!&timeframe=1m&limit=300',
+      'GET /report/candles?market=crypto&symbol=BTCUSDT&timeframe=1m&limit=5000',
       'DELETE /admin/candles?market=index&symbol=NDX&timeframe=1m',
     ],
   });
@@ -812,6 +890,23 @@ function handleWebSocketUpgrade(req, socket) {
 await loadRuntimeConfig();
 await loadCandleStore();
 
+try {
+  marketCandlePostgresStore = await createMarketCandlePostgresStoreFromEnv(process.env);
+} catch (error) {
+  console.warn('[data-gateway] postgres market candle store disabled:', error.message);
+  marketCandlePostgresStore = null;
+}
+
+binanceCollector = createBinanceWebSocketCollector({
+  config: runtimeConfig.binance,
+  getStoredSymbols: getBinanceStoredSymbols,
+  applyHistoricalCandles: upsertCandles,
+  applyLiveCandle,
+});
+if (getBinanceStoredSymbols().length) {
+  binanceCollector.start();
+}
+
 kisCollector = createKisWebSocketCollector({
   config: runtimeConfig.kis,
   getEnabledSymbols: getKisEnabledSymbols,
@@ -863,6 +958,11 @@ const server = createServer(async (req, res) => {
 
   if (req.method === 'GET' && url.pathname === '/candles') {
     handleGetCandles(req, res, url);
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/report/candles') {
+    await handleGetReportCandles(req, res, url);
     return;
   }
 

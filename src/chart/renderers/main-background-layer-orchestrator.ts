@@ -10,8 +10,10 @@ import { renderBollingerBandFills, type BollingerBandRenderSeries } from './boll
 import { renderEnvelopeFill } from './envelope-renderer.ts';
 import { renderIchimoku } from './ichimoku-renderer.ts';
 import type { IndicatorLineStyle } from './main-line-renderer.ts';
+import { renderFixedRangeVolumeProfile } from './fixed-range-volume-profile-renderer.ts';
 import { renderVolumeProfileBackground } from './volume-profile-renderer.ts';
 import { renderVpvrBackground } from './vpvr-renderer.ts';
+import type { CandleData } from '../../types.ts';
 
 type DrawMainLine = (
   data: Array<number | null>,
@@ -26,6 +28,7 @@ export interface RenderMainBackgroundLayersParams {
   indicatorLayerOn: boolean;
   indicators: any;
   candles: IndicatorCandle[];
+  allCandles: CandleData[];
   startIndex: number;
   bbSeries: BollingerBandRenderSeries[];
   vwapBands: VwapBands;
@@ -133,6 +136,7 @@ export function renderMainBackgroundLayers(params: RenderMainBackgroundLayersPar
     indicatorLayerOn,
     indicators,
     candles,
+    allCandles,
     startIndex,
     bbSeries,
     vwapBands,
@@ -262,6 +266,39 @@ export function renderMainBackgroundLayers(params: RenderMainBackgroundLayersPar
     plotBottom,
     symbolPriceDigits,
     fontStack,
+    formatPrice,
+    formatVolume,
+    getY,
+  });
+
+  const fixedRangeProfileUpStyle = resolveStyle('fixedRangeVolumeProfileUp', String(indicators.fixedRangeVolumeProfile?.upColor ?? '#26a69a'), 1);
+  const fixedRangeProfileDownStyle = resolveStyle('fixedRangeVolumeProfileDown', String(indicators.fixedRangeVolumeProfile?.downColor ?? '#ef5350'), 1);
+  const fixedRangeProfilePocStyle = resolveStyle('fixedRangeVolumeProfilePoc', String(indicators.fixedRangeVolumeProfile?.pocColor ?? '#ffc107'), 1.2, [4, 3]);
+  renderFixedRangeVolumeProfile({
+    ctx,
+    enabled: indicatorLayerOn && indicators.fixedRangeVolumeProfile?.show && showLine('fixedRangeVolumeProfilePoc'),
+    config: {
+      ...indicators.fixedRangeVolumeProfile,
+      upColor: fixedRangeProfileUpStyle.color,
+      downColor: fixedRangeProfileDownStyle.color,
+      pocColor: fixedRangeProfilePocStyle.color,
+      pocWidth: fixedRangeProfilePocStyle.width,
+      pocLineStyle: fixedRangeProfilePocStyle.dash.length ? 'dashed' : 'solid',
+    },
+    allCandles,
+    startIndex,
+    minPrice,
+    maxPrice,
+    chartLeft,
+    chartRight,
+    chartWidth,
+    plotTop,
+    plotBottom,
+    effectiveChartLeft,
+    totalSpacing: totalSp,
+    candleWidth: candleW,
+    fontStack,
+    symbolPriceDigits,
     formatPrice,
     formatVolume,
     getY,
