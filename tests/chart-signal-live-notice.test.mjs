@@ -14,8 +14,10 @@ test('chart signal notice runs immediately after strategy computation', () => {
 
 test('chart signal notice primes existing daily signals instead of replaying backlog', () => {
   assert.match(initSource, /const signalNoticeBaselineKeyByPane = new Map<number, string>\(\);/);
+  assert.match(initSource, /const signalNoticeLiveAfterTimeSecByPane = new Map<number, number>\(\);/);
   assert.match(initSource, /const markExistingTodaySignalsAnnounced = \(paneId: number\) => \{/);
   assert.match(initSource, /const isSignalNoticeSnapshotReady = \(paneId: number\): boolean => \{/);
+  assert.match(initSource, /const getSignalNoticeLatestCandleTimeSec = \(paneId: number\): number => \{/);
   assert.match(
     initSource,
     /if \(!isSignalNoticeSnapshotReady\(paneId\)\) return \[\];/,
@@ -35,6 +37,10 @@ test('chart signal notice suppresses reload backlogs and only announces the late
   );
   assert.match(
     initSource,
+    /suppressSignalNoticesUntilNextReadyCompute = \(paneId: number\) => \{[\s\S]*?signalNoticeLiveAfterTimeSecByPane\.delete\(paneId\);[\s\S]*?\};/,
+  );
+  assert.match(
+    initSource,
     /const reloadLiveData = async \(\) => \{[\s\S]*?suppressSignalNoticesUntilNextReadyCompute\(paneId\);[\s\S]*?const ok = await selectedFeed\.reload\(\);/,
   );
   assert.match(
@@ -48,6 +54,21 @@ test('chart signal notice suppresses reload backlogs and only announces the late
   assert.match(initSource, /if \(!latestSignal\) return;/);
   assert.match(initSource, /showSignalNoticePopup\(latestSignal\);/);
   assert.match(initSource, /speakSignalNotice\(latestSignal\.side\);/);
+});
+
+test('chart signal notice only announces signals after the primed live candle watermark', () => {
+  assert.match(
+    initSource,
+    /const liveAfterTimeSec = getSignalNoticeLatestCandleTimeSec\(paneId\);[\s\S]*?signalNoticeLiveAfterTimeSecByPane\.set\(paneId, liveAfterTimeSec\);/,
+  );
+  assert.match(
+    initSource,
+    /const liveAfterTimeSec = signalNoticeLiveAfterTimeSecByPane\.get\(paneId\);[\s\S]*?if \(!Number\.isFinite\(liveAfterTimeSec\)\) \{[\s\S]*?markExistingTodaySignalsAnnounced\(paneId\);[\s\S]*?return \[\];[\s\S]*?\}/,
+  );
+  assert.match(
+    initSource,
+    /if \(item\.timeSec <= liveAfterTimeSec\) \{[\s\S]*?announcedSignalKeys\.add\(item\.key\);[\s\S]*?return false;[\s\S]*?\}/,
+  );
 });
 
 test('chart signal notice posts new buy sell signals to Telegram alert API', () => {
