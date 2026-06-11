@@ -42,11 +42,12 @@ test('Hyperdrive setup script can bind a pre-created config without Cloudflare A
   ]);
 });
 
-test('Hyperdrive setup script refreshes existing config origin when deployment credentials are available', () => {
+test('Hyperdrive setup script does not refresh existing config origins unless explicitly enabled', () => {
   const source = fs.readFileSync(new URL('../scripts/ensure-cloudflare-hyperdrive.mjs', import.meta.url), 'utf8');
 
-  assert.match(source, /ensureConfiguredHyperdrive/);
+  assert.match(source, /CLOUDFLARE_HYPERDRIVE_SYNC_ORIGIN/);
+  assert.match(source, /const hyperdrive = configuredHyperdriveId[\s\S]*\? \{ id: configuredHyperdriveId \}/);
+  assert.match(source, /if \(!shouldSyncOrigin\) return existingConfig;/);
   assert.match(source, /updateHyperdrive/);
   assert.match(source, /cloudflareRequest\('PATCH'/);
-  assert.match(source, /origin synchronized/);
 });
