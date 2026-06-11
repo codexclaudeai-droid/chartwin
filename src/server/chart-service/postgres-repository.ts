@@ -150,6 +150,14 @@ export function createPostgresAsyncChartServiceRepository(
   const execute = async (statement: PostgresStatement): Promise<void> => {
     await executor.query(statement);
   };
+  let telegramAlertTablesReady = false;
+  const ensureTelegramAlertTables = async (): Promise<void> => {
+    if (telegramAlertTablesReady) return;
+    for (const sql of TELEGRAM_ALERT_TABLE_STATEMENTS) {
+      await executor.query({ sql, values: [] });
+    }
+    telegramAlertTablesReady = true;
+  };
 
   return {
     async nextId(prefix: string): Promise<string> {
@@ -430,15 +438,18 @@ export function createPostgresAsyncChartServiceRepository(
       ));
     },
     async listTelegramBotProfiles(): Promise<TelegramBotProfileRecord[]> {
+      await ensureTelegramAlertTables();
       return selectMany('telegram_bot_profiles', mapTelegramBotProfileFromPostgresRow, {}, {
         orderBy: ['created_at'],
         direction: 'asc',
       });
     },
     async getTelegramBotProfileById(id: string): Promise<TelegramBotProfileRecord | null> {
+      await ensureTelegramAlertTables();
       return selectOne('telegram_bot_profiles', mapTelegramBotProfileFromPostgresRow, { id });
     },
     async saveTelegramBotProfile(profile: TelegramBotProfileRecord): Promise<void> {
+      await ensureTelegramAlertTables();
       await execute(createPostgresUpsertStatement(
         'telegram_bot_profiles',
         mapTelegramBotProfileToPostgresRow(profile),
@@ -446,9 +457,11 @@ export function createPostgresAsyncChartServiceRepository(
       ));
     },
     async deleteTelegramBotProfile(id: string): Promise<void> {
+      await ensureTelegramAlertTables();
       await execute(createPostgresDeleteStatement('telegram_bot_profiles', { id }));
     },
     async listTelegramDeliveryLogs(limit = 50): Promise<TelegramDeliveryLogRecord[]> {
+      await ensureTelegramAlertTables();
       const logs = await selectMany('telegram_delivery_logs', mapTelegramDeliveryLogFromPostgresRow, {}, {
         orderBy: ['created_at'],
         direction: 'desc',
@@ -456,6 +469,7 @@ export function createPostgresAsyncChartServiceRepository(
       return logs.slice(0, Math.max(0, Math.floor(limit)));
     },
     async saveTelegramDeliveryLog(log: TelegramDeliveryLogRecord): Promise<void> {
+      await ensureTelegramAlertTables();
       await execute(createPostgresUpsertStatement(
         'telegram_delivery_logs',
         mapTelegramDeliveryLogToPostgresRow(log),
@@ -572,6 +586,46 @@ export function createPostgresAsyncChartServiceRepository(
     },
   };
 }
+
+const TELEGRAM_ALERT_TABLE_STATEMENTS = [
+  `create table if not exists telegram_bot_profiles (
+    id text primary key,
+    name text,
+    bot_token text,
+    chat_id text,
+    is_enabled boolean default true,
+    event_types_json jsonb default '[]'::jsonb,
+    strategy_ids_json jsonb default '[]'::jsonb,
+    symbol_ids_json jsonb default '[]'::jsonb,
+    timeframe_ids_json jsonb default '[]'::jsonb,
+    last_tested_at timestamptz,
+    last_test_status text,
+    last_test_error text,
+    created_at timestamptz default now(),
+    updated_at timestamptz default now(),
+    check (last_test_status is null or last_test_status in ('success', 'failed'))
+  )`,
+  'create index if not exists idx_telegram_bot_profiles_is_enabled on telegram_bot_profiles (is_enabled)',
+  'create index if not exists idx_telegram_bot_profiles_updated_at on telegram_bot_profiles (updated_at)',
+  `create table if not exists telegram_delivery_logs (
+    id text primary key,
+    profile_id text,
+    event_type text,
+    strategy_id text,
+    symbol_id text,
+    message text,
+    status text,
+    telegram_message_id text,
+    error_message text,
+    created_at timestamptz default now(),
+    foreign key (profile_id) references telegram_bot_profiles(id),
+    check (event_type in ('buy', 'sell', 'stop_loss', 'take_profit')),
+    check (status in ('sent', 'failed'))
+  )`,
+  'create index if not exists idx_telegram_delivery_logs_profile_id on telegram_delivery_logs (profile_id)',
+  'create index if not exists idx_telegram_delivery_logs_created_at on telegram_delivery_logs (created_at)',
+  'create index if not exists idx_telegram_delivery_logs_symbol_id on telegram_delivery_logs (symbol_id)',
+] as const;
 
 function normalizeIdPrefix(prefix: string): string {
   const normalized = prefix.trim().replace(/[^a-z0-9_]/gi, '_');

@@ -5,6 +5,7 @@ import test from 'node:test';
 import {
   createMockChartServiceRepository,
   createAsyncChartServiceRepository,
+  createPostgresAsyncChartServiceRepository,
   formatTelegramSignalMessage,
   getEnabledTelegramProfilesForSignal,
   maskTelegramBotToken,
@@ -237,6 +238,32 @@ test('database schema includes Telegram profile and delivery log tables', () => 
   assert.match(schemaSource, /bot_token/);
   assert.match(schemaSource, /chat_id/);
   assert.match(schemaSource, /timeframe_ids_json/);
+});
+
+test('postgres Telegram repository lazily creates alert tables without touching existing data tables', async () => {
+  const statements = [];
+  const repository = createPostgresAsyncChartServiceRepository({
+    async query(statement) {
+      statements.push(statement.sql);
+      return { rows: [] };
+    },
+  });
+
+  await repository.listTelegramBotProfiles();
+  await repository.listTelegramDeliveryLogs();
+
+  assert.equal(
+    statements.filter((sql) => /create table if not exists telegram_bot_profiles/i.test(sql)).length,
+    1,
+  );
+  assert.equal(
+    statements.filter((sql) => /create table if not exists telegram_delivery_logs/i.test(sql)).length,
+    1,
+  );
+  assert.equal(
+    statements.some((sql) => /create table if not exists users/i.test(sql) || /delete from/i.test(sql)),
+    false,
+  );
 });
 
 test('admin Telegram panel supports profile management and test sends without exposing raw saved tokens', () => {
