@@ -1,4 +1,5 @@
 import {
+  getChartServiceRepositoryConfigFromEnv,
   resolveChartServiceRepositoryAdapter,
   type ResolvedChartServiceRepositoryAdapter,
   type ChartServiceRepositoryRuntimeEnv,
@@ -285,7 +286,16 @@ function renderDatabaseSslMessage(
 }
 
 function getRuntimeEnv(): ChartServiceRuntimeEnv {
-  return ((globalThis as typeof globalThis & {
+  const processEnv: ChartServiceRuntimeEnv = ((globalThis as typeof globalThis & {
     process?: { env?: ChartServiceRuntimeEnv };
   }).process?.env) ?? {};
+  const repositoryConfig = getChartServiceRepositoryConfigFromEnv();
+
+  return {
+    ...processEnv,
+    CHART_SERVICE_REPOSITORY: repositoryConfig.adapter ?? processEnv.CHART_SERVICE_REPOSITORY,
+    CHART_SERVICE_DATABASE_URL: repositoryConfig.databaseUrl ?? processEnv.CHART_SERVICE_DATABASE_URL,
+    CHART_SERVICE_DATABASE_SSL_MODE: repositoryConfig.databaseSslMode ?? processEnv.CHART_SERVICE_DATABASE_SSL_MODE,
+    CHART_SERVICE_RUNTIME_TARGET: repositoryConfig.runtimeTarget ?? processEnv.CHART_SERVICE_RUNTIME_TARGET,
+  };
 }

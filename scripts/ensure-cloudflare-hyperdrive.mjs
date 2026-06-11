@@ -4,9 +4,12 @@ import path from 'node:path';
 const hyperdriveName = process.env.CLOUDFLARE_HYPERDRIVE_NAME || 'tradingcore-hyperdrive';
 const bindingName = process.env.CLOUDFLARE_HYPERDRIVE_BINDING || 'HYPERDRIVE';
 const configuredHyperdriveId = process.env.CLOUDFLARE_HYPERDRIVE_ID?.trim();
+const targetDatabaseUrl = process.env.CHART_SERVICE_DATABASE_URL?.trim()
+  ? normalizeSupabaseDirectUrl(process.env.CHART_SERVICE_DATABASE_URL)
+  : null;
 
 const hyperdrive = configuredHyperdriveId
-  ? { id: configuredHyperdriveId }
+  ? await ensureConfiguredHyperdrive(configuredHyperdriveId, hyperdriveName, targetDatabaseUrl)
   : await ensureHyperdriveConfig(hyperdriveName, normalizeSupabaseDirectUrl(requireEnv('CHART_SERVICE_DATABASE_URL')));
 
 patchWranglerConfig(hyperdrive.id, bindingName);
@@ -43,9 +46,18 @@ async function findHyperdriveByName(name) {
   return result?.find((config) => config.name === name) ?? null;
 }
 
+async function ensureConfiguredHyperdrive(id, name, url) {
+  if (!url || !process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID) {
+    return { id };
+  }
+  return await updateHyperdrive(id, name, url);
+}
+
 async function ensureHyperdriveConfig(name, url) {
   const existingConfig = await findHyperdriveByName(name);
-  return existingConfig ?? await createHyperdrive(name, url);
+  return existingConfig
+    ? await updateHyperdrive(existingConfig.id, name, url)
+    : await createHyperdrive(name, url);
 }
 
 async function createHyperdrive(name, url) {
@@ -67,6 +79,29 @@ async function createHyperdrive(name, url) {
     },
     origin_connection_limit: 5,
   });
+}
+
+async function updateHyperdrive(id, name, url) {
+  const updated = await cloudflareRequest('PATCH', `${getCloudflareAccountPath()}/hyperdrive/configs/${id}`, {
+    name,
+    origin: {
+      scheme: normalizeScheme(url.protocol),
+      host: url.hostname,
+      port: Number(url.port || '5432'),
+      database: decodeURIComponent(url.pathname.replace(/^\/+/, '')),
+      user: decodeURIComponent(url.username),
+      password: decodeURIComponent(url.password),
+    },
+    mtls: {
+      sslmode: 'require',
+    },
+    caching: {
+      disabled: true,
+    },
+    origin_connection_limit: 5,
+  });
+  console.log(`[HYPERDRIVE UPDATED] ${name} (${id}) origin synchronized.`);
+  return updated;
 }
 
 function getCloudflareAccountPath() {
