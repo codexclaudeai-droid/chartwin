@@ -503,6 +503,27 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       ],
     },
     {
+      name: 'telegram_signal_watch_states',
+      columns: {
+        key: { type: 'text', primaryKey: true },
+        strategy_id: { type: 'text' },
+        symbol_id: { type: 'text' },
+        timeframe: { type: 'text' },
+        last_checked_candle_time: { type: 'bigint', default: '0' },
+        last_signal_candle_time: { type: 'bigint', nullable: true },
+        last_signal_event_type: {
+          type: 'text',
+          nullable: true,
+          check: "last_signal_event_type is null or last_signal_event_type in ('buy', 'sell', 'stop_loss', 'take_profit')",
+        },
+        updated_at: { type: 'timestamptz', default: 'now()' },
+      },
+      indexes: [
+        { name: 'idx_telegram_signal_watch_states_updated_at', columns: ['updated_at'] },
+        { name: 'idx_telegram_signal_watch_states_symbol', columns: ['symbol_id', 'timeframe'] },
+      ],
+    },
+    {
       name: 'signup_agreements',
       columns: {
         id: { type: 'text', primaryKey: true },

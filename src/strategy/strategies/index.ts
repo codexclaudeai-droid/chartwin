@@ -1,22 +1,22 @@
-export { smaCrossJs }              from './sma-cross-js';
-export { smaCrossPine }            from './sma-cross-pine';
-export { bollingerDirectedPine }   from './bollinger-directed-pine';
-export { doubleBreakJs }           from './double-break-js';
-export { shayhuangVwapJs }         from './shayhuang-vwap-js';
-export { gridMartingaleJs }        from './grid-martingale-js';
-export { gridAtrBnfSrouterV1 }    from './grid-atr-bnf-srouter-v1';
-export { xauGridLongJs }          from './xau-grid-long-js';
-export { mtf1mScalperJs }         from './mtf-1m-scalper-js';
+export { smaCrossJs }              from './sma-cross-js.ts';
+export { smaCrossPine }            from './sma-cross-pine.ts';
+export { bollingerDirectedPine }   from './bollinger-directed-pine.ts';
+export { doubleBreakJs }           from './double-break-js.ts';
+export { shayhuangVwapJs }         from './shayhuang-vwap-js.ts';
+export { gridMartingaleJs }        from './grid-martingale-js.ts';
+export { gridAtrBnfSrouterV1 }    from './grid-atr-bnf-srouter-v1.ts';
+export { xauGridLongJs }          from './xau-grid-long-js.ts';
+export { mtf1mScalperJs }         from './mtf-1m-scalper-js.ts';
 
-import { smaCrossJs }              from './sma-cross-js';
-import { smaCrossPine }            from './sma-cross-pine';
-import { bollingerDirectedPine }   from './bollinger-directed-pine';
-import { doubleBreakJs }           from './double-break-js';
-import { shayhuangVwapJs }         from './shayhuang-vwap-js';
-import { gridMartingaleJs }        from './grid-martingale-js';
-import { gridAtrBnfSrouterV1 }    from './grid-atr-bnf-srouter-v1';
-import { xauGridLongJs }          from './xau-grid-long-js';
-import { mtf1mScalperJs }         from './mtf-1m-scalper-js';
+import { smaCrossJs }              from './sma-cross-js.ts';
+import { smaCrossPine }            from './sma-cross-pine.ts';
+import { bollingerDirectedPine }   from './bollinger-directed-pine.ts';
+import { doubleBreakJs }           from './double-break-js.ts';
+import { shayhuangVwapJs }         from './shayhuang-vwap-js.ts';
+import { gridMartingaleJs }        from './grid-martingale-js.ts';
+import { gridAtrBnfSrouterV1 }    from './grid-atr-bnf-srouter-v1.ts';
+import { xauGridLongJs }          from './xau-grid-long-js.ts';
+import { mtf1mScalperJs }         from './mtf-1m-scalper-js.ts';
 
 export const ALL_STRATEGIES = [
   smaCrossJs,

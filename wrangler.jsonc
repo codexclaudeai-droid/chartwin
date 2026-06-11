@@ -3,7 +3,7 @@
   "name": "chartwin",
   "compatibility_date": "2026-05-20",
   "compatibility_flags": ["nodejs_compat"],
-  "main": ".open-next/worker.js",
+  "main": "./cloudflare-worker.ts",
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -29,5 +29,8 @@
   ],
   "observability": {
     "enabled": true
+  },
+  "triggers": {
+    "crons": ["* * * * *"]
   }
 }

@@ -225,6 +225,17 @@ export type TelegramDeliveryLogRecord = {
   createdAt: string;
 };
 
+export type TelegramSignalWatchStateRecord = {
+  key: string;
+  strategyId: string;
+  symbolId: string;
+  timeframe: string;
+  lastCheckedCandleTime: number;
+  lastSignalCandleTime: number | null;
+  lastSignalEventType: TelegramSignalEventType | null;
+  updatedAt: string;
+};
+
 export type SignupAgreementRecord = {
   id: string;
   userId: string;
@@ -327,6 +338,8 @@ export type ChartServiceRepository = {
   deleteTelegramBotProfile(id: string): void;
   listTelegramDeliveryLogs(limit?: number): TelegramDeliveryLogRecord[];
   saveTelegramDeliveryLog(log: TelegramDeliveryLogRecord): void;
+  getTelegramSignalWatchState(key: string): TelegramSignalWatchStateRecord | null;
+  saveTelegramSignalWatchState(state: TelegramSignalWatchStateRecord): void;
   listSignupAgreementsByUserId(userId: string): SignupAgreementRecord[];
   saveSignupAgreement(agreement: SignupAgreementRecord): void;
   listReferralLedgersByPaymentId(paymentRequestId: string): ReferralLedgerRecord[];

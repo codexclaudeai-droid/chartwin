@@ -29,6 +29,7 @@ import type {
   SocialAuthAccountRecord,
   TelegramBotProfileRecord,
   TelegramDeliveryLogRecord,
+  TelegramSignalWatchStateRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 import { createStableFallbackReferralCode } from './referral-codes.ts';
@@ -615,6 +616,32 @@ export function mapTelegramDeliveryLogToPostgresRow(record: TelegramDeliveryLogR
     telegram_message_id: record.telegramMessageId,
     error_message: record.errorMessage,
     created_at: record.createdAt,
+  };
+}
+
+export function mapTelegramSignalWatchStateFromPostgresRow(row: PostgresRow): TelegramSignalWatchStateRecord {
+  return {
+    key: readString(row.key),
+    strategyId: readString(row.strategy_id),
+    symbolId: readString(row.symbol_id),
+    timeframe: readString(row.timeframe),
+    lastCheckedCandleTime: readNumber(row.last_checked_candle_time),
+    lastSignalCandleTime: readNullableNumber(row.last_signal_candle_time),
+    lastSignalEventType: readNullableString(row.last_signal_event_type) as TelegramSignalWatchStateRecord['lastSignalEventType'],
+    updatedAt: readIsoString(row.updated_at),
+  };
+}
+
+export function mapTelegramSignalWatchStateToPostgresRow(record: TelegramSignalWatchStateRecord): PostgresRow {
+  return {
+    key: record.key,
+    strategy_id: record.strategyId,
+    symbol_id: record.symbolId,
+    timeframe: record.timeframe,
+    last_checked_candle_time: record.lastCheckedCandleTime,
+    last_signal_candle_time: record.lastSignalCandleTime,
+    last_signal_event_type: record.lastSignalEventType,
+    updated_at: record.updatedAt,
   };
 }
 

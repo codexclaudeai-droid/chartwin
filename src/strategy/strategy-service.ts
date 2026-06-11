@@ -1,5 +1,5 @@
-﻿import { parsePineProgram } from '../pine-parser';
-import { ALL_STRATEGIES } from './strategies';
+﻿import { parsePineProgram } from '../pine-parser.ts';
+import { ALL_STRATEGIES } from './strategies/index.ts';
 
 export type StrategyLang = 'javascript' | 'pine';
 export type StrategySignal = -1 | 0 | 1;

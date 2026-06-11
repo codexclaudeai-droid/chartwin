@@ -36,6 +36,7 @@ test('chart service database schema covers repository-backed core tables', () =>
     'signal_admin_settings',
     'telegram_bot_profiles',
     'telegram_delivery_logs',
+    'telegram_signal_watch_states',
     'signup_agreements',
     'market_candles',
     'notifications',

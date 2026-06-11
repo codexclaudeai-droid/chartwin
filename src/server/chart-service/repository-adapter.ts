@@ -30,6 +30,7 @@ const MEMORY_REPOSITORY_SCHEMA_VERSION = [
   'email-outbox-v1',
   'sales-teams-v1',
   'payment-transfer-settings-v1',
+  'telegram-signal-watch-state-v1',
 ].join('-');
 
 export type ChartServiceRepositoryAdapterKind = 'memory' | 'postgres';
@@ -40,6 +41,7 @@ export type ChartServiceRepositoryRuntimeEnv = {
   CHART_SERVICE_DATABASE_URL?: string;
   CHART_SERVICE_DATABASE_SSL_MODE?: string;
   CHART_SERVICE_RUNTIME_TARGET?: string;
+  HYPERDRIVE?: { connectionString?: string };
 };
 
 export type ChartServiceRepositoryAdapterConfig = {
@@ -64,7 +66,7 @@ export function getChartServiceRepositoryConfigFromEnv(
 ): ChartServiceRepositoryAdapterConfig {
   return {
     adapter: env.CHART_SERVICE_REPOSITORY,
-    databaseUrl: env.CHART_SERVICE_DATABASE_URL,
+    databaseUrl: env.HYPERDRIVE?.connectionString ?? env.CHART_SERVICE_DATABASE_URL,
     databaseSslMode: env.CHART_SERVICE_DATABASE_SSL_MODE,
     runtimeTarget: env.CHART_SERVICE_RUNTIME_TARGET,
     runtimeMode: env.NODE_ENV,

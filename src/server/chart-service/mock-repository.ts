@@ -38,6 +38,7 @@ import type {
   SocialAuthProvider,
   TelegramBotProfileRecord,
   TelegramDeliveryLogRecord,
+  TelegramSignalWatchStateRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 import { getDefaultChartServiceSubscriptionPlans } from './bootstrap.ts';
@@ -68,6 +69,7 @@ export type MockChartServiceState = {
   signalAdminSettings: SignalAdminSettingsRecord[];
   telegramBotProfiles: TelegramBotProfileRecord[];
   telegramDeliveryLogs: TelegramDeliveryLogRecord[];
+  telegramSignalWatchStates: TelegramSignalWatchStateRecord[];
   signupAgreements: SignupAgreementRecord[];
   publicBoardPosts: PublicBoardPostRecord[];
   noticePopups: NoticePopupRecord[];
@@ -155,6 +157,7 @@ export function createMockChartServiceState(): MockChartServiceState {
     signalAdminSettings: [],
     telegramBotProfiles: [],
     telegramDeliveryLogs: [],
+    telegramSignalWatchStates: [],
     signupAgreements: [],
     publicBoardPosts: getDefaultPublicBoardPosts(),
     noticePopups: [],
@@ -248,6 +251,7 @@ export function createMockChartServiceRepository(
   state.signalAdminSettings ??= [];
   state.telegramBotProfiles ??= [];
   state.telegramDeliveryLogs ??= [];
+  state.telegramSignalWatchStates ??= [];
   state.signupAgreements ??= [];
   state.publicBoardPosts ??= getDefaultPublicBoardPosts();
   state.noticePopups ??= [];
@@ -470,6 +474,17 @@ export function createMockChartServiceRepository(
     },
     saveTelegramDeliveryLog(log) {
       upsertById(state.telegramDeliveryLogs, log);
+    },
+    getTelegramSignalWatchState(key) {
+      return cloneOrNull(state.telegramSignalWatchStates.find((watchState) => watchState.key === key));
+    },
+    saveTelegramSignalWatchState(watchState) {
+      const index = state.telegramSignalWatchStates.findIndex((item) => item.key === watchState.key);
+      if (index >= 0) {
+        state.telegramSignalWatchStates[index] = structuredClone(watchState);
+      } else {
+        state.telegramSignalWatchStates.push(structuredClone(watchState));
+      }
     },
     listSignupAgreementsByUserId(userId) {
       return state.signupAgreements

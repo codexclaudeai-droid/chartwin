@@ -24,6 +24,7 @@ import type {
   SignalAdminSettingsRecord,
   TelegramBotProfileRecord,
   TelegramDeliveryLogRecord,
+  TelegramSignalWatchStateRecord,
 } from './repository.ts';
 import { getDefaultPublicBoardPosts } from './public-board.ts';
 
@@ -104,6 +105,8 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
     typeof persistence.repository.deleteTelegramBotProfile === 'function' &&
     typeof persistence.repository.listTelegramDeliveryLogs === 'function' &&
     typeof persistence.repository.saveTelegramDeliveryLog === 'function' &&
+    typeof persistence.repository.getTelegramSignalWatchState === 'function' &&
+    typeof persistence.repository.saveTelegramSignalWatchState === 'function' &&
     typeof persistence.repository.getSupportMessageById === 'function' &&
     typeof persistence.repository.listSupportMessagesByThreadId === 'function' &&
     typeof persistence.repository.deleteSupportMessage === 'function' &&
@@ -131,6 +134,8 @@ function hasMemoryRepositoryCapabilities(repository: ChartServiceRepository): bo
     typeof repository.deleteTelegramBotProfile === 'function' &&
     typeof repository.listTelegramDeliveryLogs === 'function' &&
     typeof repository.saveTelegramDeliveryLog === 'function' &&
+    typeof repository.getTelegramSignalWatchState === 'function' &&
+    typeof repository.saveTelegramSignalWatchState === 'function' &&
     typeof repository.listSupportMessagesByThreadId === 'function' &&
     typeof repository.deleteSupportMessage === 'function' &&
     typeof repository.deleteSupportMessagesByThreadId === 'function';
@@ -183,6 +188,10 @@ function copyRecoverableMemoryRepositoryRecords(
   if (signalAdminSettings) target.saveSignalAdminSettings(signalAdminSettings);
   copyRecords(() => source.listTelegramBotProfiles?.() ?? [], target.saveTelegramBotProfile);
   copyRecords(() => source.listTelegramDeliveryLogs?.(1000) ?? [], target.saveTelegramDeliveryLog);
+  const fallbackSource = source as Partial<ChartServiceRepository> & {
+    __fallbackTelegramSignalWatchStates?: TelegramSignalWatchStateRecord[];
+  };
+  copyRecords(() => fallbackSource.__fallbackTelegramSignalWatchStates ?? [], target.saveTelegramSignalWatchState);
 }
 
 function copyRecords<RecordType>(
@@ -221,6 +230,7 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
     __fallbackSignalAdminSettings?: SignalAdminSettingsRecord[];
     __fallbackTelegramBotProfiles?: TelegramBotProfileRecord[];
     __fallbackTelegramDeliveryLogs?: TelegramDeliveryLogRecord[];
+    __fallbackTelegramSignalWatchStates?: TelegramSignalWatchStateRecord[];
     __fallbackPaymentTransferSettings?: PaymentTransferSettingsRecord | null;
     __fallbackPublicBoardPosts?: PublicBoardPostRecord[];
     __fallbackNoticePopups?: NoticePopupRecord[];
@@ -235,6 +245,7 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
   mutableRepository.__fallbackSignalAdminSettings ??= [];
   mutableRepository.__fallbackTelegramBotProfiles ??= [];
   mutableRepository.__fallbackTelegramDeliveryLogs ??= [];
+  mutableRepository.__fallbackTelegramSignalWatchStates ??= [];
   mutableRepository.__fallbackPaymentTransferSettings ??= null;
   mutableRepository.__fallbackPublicBoardPosts ??= getDefaultPublicBoardPosts();
   mutableRepository.__fallbackNoticePopups ??= [];
@@ -496,6 +507,27 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
         rows.push(structuredClone(log));
       }
       mutableRepository.__fallbackTelegramDeliveryLogs = rows;
+    };
+  }
+
+  if (typeof mutableRepository.getTelegramSignalWatchState !== 'function') {
+    mutableRepository.getTelegramSignalWatchState = (key) => {
+      const watchState = (mutableRepository.__fallbackTelegramSignalWatchStates ?? [])
+        .find((item) => item.key === key);
+      return watchState ? structuredClone(watchState) : null;
+    };
+  }
+
+  if (typeof mutableRepository.saveTelegramSignalWatchState !== 'function') {
+    mutableRepository.saveTelegramSignalWatchState = (watchState) => {
+      const rows = mutableRepository.__fallbackTelegramSignalWatchStates ?? [];
+      const index = rows.findIndex((item) => item.key === watchState.key);
+      if (index >= 0) {
+        rows[index] = structuredClone(watchState);
+      } else {
+        rows.push(structuredClone(watchState));
+      }
+      mutableRepository.__fallbackTelegramSignalWatchStates = rows;
     };
   }
 

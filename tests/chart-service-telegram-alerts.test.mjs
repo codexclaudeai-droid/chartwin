@@ -6,10 +6,13 @@ import {
   createMockChartServiceRepository,
   createAsyncChartServiceRepository,
   createPostgresAsyncChartServiceRepository,
+  buildStrategyDefinition,
   formatTelegramSignalMessage,
   getEnabledTelegramProfilesForSignal,
   maskTelegramBotToken,
+  runTelegramSignalMonitorOnce,
   sendAsyncTelegramAlertForSignal,
+  sendAsyncTelegramAlertForSignalWithWatchState,
   sendTelegramAlertForSignal,
   toPublicTelegramBotProfile,
 } from '../src/server/chart-service/index.ts';
@@ -235,6 +238,7 @@ test('database schema includes Telegram profile and delivery log tables', () => 
 
   assert.match(schemaSource, /telegram_bot_profiles/);
   assert.match(schemaSource, /telegram_delivery_logs/);
+  assert.match(schemaSource, /telegram_signal_watch_states/);
   assert.match(schemaSource, /bot_token/);
   assert.match(schemaSource, /chat_id/);
   assert.match(schemaSource, /timeframe_ids_json/);
@@ -264,6 +268,160 @@ test('postgres Telegram repository lazily creates alert tables without touching 
     statements.some((sql) => /create table if not exists users/i.test(sql) || /delete from/i.test(sql)),
     false,
   );
+});
+
+test('server Telegram monitor seeds existing latest signal before sending realtime signals once', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const strategy = buildStrategyDefinition({
+    id: 'strategy_test_green_candle',
+    name: 'Green Candle Test',
+    description: 'Signals buy on bullish candles',
+    language: 'javascript',
+    sourceCode: `(
+      function(context, index) {
+        return context.close[index] > context.open[index] ? 1 : 0;
+      }
+    )`,
+  });
+  await repository.saveTelegramBotProfile(createProfile({
+    id: 'telegram_profile_server_monitor',
+    strategyIds: [strategy.id],
+    symbolIds: ['BTCUSDT'],
+    timeframeIds: ['1m'],
+  }));
+
+  const candleSets = [
+    [
+      { time: 100, open: 10, high: 12, low: 9, close: 11, volume: 1 },
+      { time: 160, open: 11, high: 13, low: 10, close: 12, volume: 1 },
+    ],
+    [
+      { time: 160, open: 11, high: 13, low: 10, close: 12, volume: 1 },
+      { time: 220, open: 12, high: 14, low: 11, close: 13, volume: 1 },
+      { time: 280, open: 13, high: 15, low: 12, close: 14, volume: 1 },
+    ],
+    [
+      { time: 160, open: 11, high: 13, low: 10, close: 12, volume: 1 },
+      { time: 220, open: 12, high: 14, low: 11, close: 13, volume: 1 },
+      { time: 280, open: 13, high: 15, low: 12, close: 14, volume: 1 },
+    ],
+  ];
+  let fetchIndex = 0;
+  const sentMessages = [];
+  const options = {
+    now: '1970-01-01T00:06:00.000Z',
+    strategies: [strategy],
+    candleProvider: async () => candleSets[Math.min(fetchIndex++, candleSets.length - 1)],
+    telegramFetch: async (_url, init) => {
+      sentMessages.push(JSON.parse(init.body).text);
+      return { ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: sentMessages.length } }) };
+    },
+  };
+
+  const seed = await runTelegramSignalMonitorOnce(repository, options);
+  const realtime = await runTelegramSignalMonitorOnce(repository, options);
+  const duplicate = await runTelegramSignalMonitorOnce(repository, options);
+
+  assert.equal(seed.seededCount, 1);
+  assert.equal(seed.sentCount, 0);
+  assert.equal(realtime.sentCount, 1);
+  assert.equal(duplicate.sentCount, 0);
+  assert.equal(sentMessages.length, 1);
+  assert.match(sentMessages[0], /BUY BTCUSDT/);
+  assert.match(sentMessages[0], /TF: 1m/);
+});
+
+test('server Telegram monitor ignores still-open candles', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const strategy = buildStrategyDefinition({
+    id: 'strategy_test_always_buy',
+    name: 'Always Buy Test',
+    description: 'Signals every candle',
+    language: 'javascript',
+    sourceCode: '(function() { return 1; })',
+  });
+  await repository.saveTelegramBotProfile(createProfile({
+    id: 'telegram_profile_open_candle',
+    strategyIds: [strategy.id],
+    symbolIds: ['BTCUSDT'],
+    timeframeIds: ['1m'],
+  }));
+  await repository.saveTelegramSignalWatchState({
+    key: `${strategy.id}:BTCUSDT:1m`,
+    strategyId: strategy.id,
+    symbolId: 'BTCUSDT',
+    timeframe: '1m',
+    lastCheckedCandleTime: 220,
+    lastSignalCandleTime: 220,
+    lastSignalEventType: 'buy',
+    updatedAt: '1970-01-01T00:04:00.000Z',
+  });
+
+  const result = await runTelegramSignalMonitorOnce(repository, {
+    now: '1970-01-01T00:05:10.000Z',
+    strategies: [strategy],
+    candleProvider: async () => [
+      { time: 220, open: 10, high: 12, low: 9, close: 11, volume: 1 },
+      { time: 280, open: 11, high: 13, low: 10, close: 12, volume: 1 },
+      { time: 340, open: 12, high: 14, low: 11, close: 13, volume: 1 },
+    ],
+    telegramFetch: async () => {
+      throw new Error('open candle should not be sent');
+    },
+  });
+
+  assert.equal(result.sentCount, 0);
+  assert.equal(result.skippedOpenCandleCount, 1);
+});
+
+test('browser Telegram signal API shares watch state to suppress server monitor duplicates', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  await repository.saveTelegramBotProfile(createProfile({
+    id: 'telegram_profile_shared_state',
+    strategyIds: ['strategy_js_grid_martingale'],
+    symbolIds: ['BTCUSDT'],
+    timeframeIds: ['1m'],
+  }));
+  await repository.saveTelegramSignalWatchState({
+    key: 'strategy_js_grid_martingale:BTCUSDT:1m',
+    strategyId: 'strategy_js_grid_martingale',
+    symbolId: 'BTCUSDT',
+    timeframe: '1m',
+    lastCheckedCandleTime: 60,
+    lastSignalCandleTime: 60,
+    lastSignalEventType: 'buy',
+    updatedAt: '1970-01-01T00:01:00.000Z',
+  });
+
+  const result = await sendAsyncTelegramAlertForSignalWithWatchState(repository, {
+    eventType: 'buy',
+    strategyId: 'strategy_js_grid_martingale',
+    symbolId: 'BTCUSDT',
+    timeframe: '1m',
+    price: 100,
+    occurredAt: '1970-01-01T00:01:00.000Z',
+  }, async () => {
+    throw new Error('duplicate signal should not reach Telegram');
+  });
+
+  assert.equal(result.suppressedCount, 1);
+  assert.equal(result.sentCount, 0);
+  assert.equal(syncRepository.listTelegramDeliveryLogs().length, 0);
+});
+
+test('Cloudflare deploy config registers Telegram monitor cron and custom scheduled worker', () => {
+  const wranglerConfig = fs.readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
+  const customWorker = fs.readFileSync(new URL('../cloudflare-worker.ts', import.meta.url), 'utf8');
+
+  assert.match(wranglerConfig, /"main"\s*:\s*"\.\/cloudflare-worker\.ts"/);
+  assert.match(wranglerConfig, /"triggers"\s*:/);
+  assert.match(wranglerConfig, /"crons"\s*:\s*\[\s*"\* \* \* \* \*"/);
+  assert.match(customWorker, /from '\.\/\.open-next\/worker\.js'/);
+  assert.match(customWorker, /scheduled/);
+  assert.match(customWorker, /runScheduledTelegramSignalMonitor/);
 });
 
 test('admin Telegram panel supports profile management and test sends without exposing raw saved tokens', () => {

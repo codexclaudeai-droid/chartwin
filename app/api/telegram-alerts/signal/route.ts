@@ -5,7 +5,7 @@ import {
   getAsyncChartServicePersistence,
   getAuthenticatedMutationErrorStatus,
   guardMutationRequest,
-  sendAsyncTelegramAlertForSignal,
+  sendAsyncTelegramAlertForSignalWithWatchState,
   type TelegramSignalEvent,
   type TelegramSignalEventType,
 } from '../../../../src/server/chart-service/index.ts';
@@ -37,13 +37,14 @@ export async function POST(request: NextRequest) {
   try {
     const result = await persistence.runMutation(async (repository) => {
       await getActorFromAsyncRequest(repository, request, new Date().toISOString());
-      return await sendAsyncTelegramAlertForSignal(repository, event);
+      return await sendAsyncTelegramAlertForSignalWithWatchState(repository, event);
     });
 
     return NextResponse.json({
       ok: true,
       sentCount: result.sentCount,
       failedCount: result.failedCount,
+      suppressedCount: result.suppressedCount,
     });
   } catch (error) {
     return NextResponse.json({

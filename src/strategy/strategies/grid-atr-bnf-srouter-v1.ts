@@ -1,4 +1,4 @@
-import { MARKET_STATE_DETECTOR_FUNCTION_SOURCE } from '../MarketStateDetector';
+import { MARKET_STATE_DETECTOR_FUNCTION_SOURCE } from '../MarketStateDetector.ts';
 import { resolveSrouterBreakoutLevels } from './grid-atr-bnf-srouter-levels.js';
 
 export const GRID_ATR_BNF_SROUTER_PRESETS = {

@@ -69,6 +69,8 @@ import {
   mapTelegramBotProfileToPostgresRow,
   mapTelegramDeliveryLogFromPostgresRow,
   mapTelegramDeliveryLogToPostgresRow,
+  mapTelegramSignalWatchStateFromPostgresRow,
+  mapTelegramSignalWatchStateToPostgresRow,
   mapUserFromPostgresRow,
   mapUserToPostgresRow,
   mapWebInfoSettingsFromPostgresRow,
@@ -100,6 +102,7 @@ import type {
   SocialAuthProvider,
   TelegramBotProfileRecord,
   TelegramDeliveryLogRecord,
+  TelegramSignalWatchStateRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 
@@ -476,6 +479,18 @@ export function createPostgresAsyncChartServiceRepository(
         ['id'],
       ));
     },
+    async getTelegramSignalWatchState(key: string): Promise<TelegramSignalWatchStateRecord | null> {
+      await ensureTelegramAlertTables();
+      return selectOne('telegram_signal_watch_states', mapTelegramSignalWatchStateFromPostgresRow, { key });
+    },
+    async saveTelegramSignalWatchState(state: TelegramSignalWatchStateRecord): Promise<void> {
+      await ensureTelegramAlertTables();
+      await execute(createPostgresUpsertStatement(
+        'telegram_signal_watch_states',
+        mapTelegramSignalWatchStateToPostgresRow(state),
+        ['key'],
+      ));
+    },
     async listSignupAgreementsByUserId(userId: string): Promise<SignupAgreementRecord[]> {
       return selectMany('signup_agreements', mapSignupAgreementFromPostgresRow, { user_id: userId }, {
         orderBy: ['created_at'],
@@ -625,6 +640,19 @@ const TELEGRAM_ALERT_TABLE_STATEMENTS = [
   'create index if not exists idx_telegram_delivery_logs_profile_id on telegram_delivery_logs (profile_id)',
   'create index if not exists idx_telegram_delivery_logs_created_at on telegram_delivery_logs (created_at)',
   'create index if not exists idx_telegram_delivery_logs_symbol_id on telegram_delivery_logs (symbol_id)',
+  `create table if not exists telegram_signal_watch_states (
+    key text primary key,
+    strategy_id text,
+    symbol_id text,
+    timeframe text,
+    last_checked_candle_time bigint default 0,
+    last_signal_candle_time bigint,
+    last_signal_event_type text,
+    updated_at timestamptz default now(),
+    check (last_signal_event_type is null or last_signal_event_type in ('buy', 'sell', 'stop_loss', 'take_profit'))
+  )`,
+  'create index if not exists idx_telegram_signal_watch_states_updated_at on telegram_signal_watch_states (updated_at)',
+  'create index if not exists idx_telegram_signal_watch_states_symbol on telegram_signal_watch_states (symbol_id, timeframe)',
 ] as const;
 
 function normalizeIdPrefix(prefix: string): string {
