@@ -12,6 +12,8 @@ import { AuditLogPanel } from './audit-log-panel';
 import { SupportAdminPanel } from './support-admin-panel';
 import { UserAdminPanel } from './user-admin-panel';
 
+export const dynamic = 'force-dynamic';
+
 export default function AdminPage() {
   return (
     <main className="page admin-page">

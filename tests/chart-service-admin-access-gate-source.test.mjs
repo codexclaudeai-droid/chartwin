@@ -11,6 +11,10 @@ test('admin page wraps operations panels in the access gate', () => {
   assert.match(pageSource, /<\/AdminAccessGate>/);
 });
 
+test('admin page avoids static prerender caching', () => {
+  assert.match(pageSource, /export const dynamic = 'force-dynamic'/);
+});
+
 test('admin access gate redirects unauthenticated visitors to login entry', () => {
   assert.match(gateSource, /useRouter/);
   assert.match(gateSource, /router\.replace\('\/login\?redirect=\/admin'\)/);
