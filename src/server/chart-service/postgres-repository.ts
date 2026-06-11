@@ -65,6 +65,10 @@ import {
   mapSupportMessageToPostgresRow,
   mapSupportThreadFromPostgresRow,
   mapSupportThreadToPostgresRow,
+  mapTelegramBotProfileFromPostgresRow,
+  mapTelegramBotProfileToPostgresRow,
+  mapTelegramDeliveryLogFromPostgresRow,
+  mapTelegramDeliveryLogToPostgresRow,
   mapUserFromPostgresRow,
   mapUserToPostgresRow,
   mapWebInfoSettingsFromPostgresRow,
@@ -94,6 +98,8 @@ import type {
   SignalAdminSettingsRecord,
   SocialAuthAccountRecord,
   SocialAuthProvider,
+  TelegramBotProfileRecord,
+  TelegramDeliveryLogRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 
@@ -420,6 +426,39 @@ export function createPostgresAsyncChartServiceRepository(
       await execute(createPostgresUpsertStatement(
         'signal_admin_settings',
         mapSignalAdminSettingsToPostgresRow(settings),
+        ['id'],
+      ));
+    },
+    async listTelegramBotProfiles(): Promise<TelegramBotProfileRecord[]> {
+      return selectMany('telegram_bot_profiles', mapTelegramBotProfileFromPostgresRow, {}, {
+        orderBy: ['created_at'],
+        direction: 'asc',
+      });
+    },
+    async getTelegramBotProfileById(id: string): Promise<TelegramBotProfileRecord | null> {
+      return selectOne('telegram_bot_profiles', mapTelegramBotProfileFromPostgresRow, { id });
+    },
+    async saveTelegramBotProfile(profile: TelegramBotProfileRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'telegram_bot_profiles',
+        mapTelegramBotProfileToPostgresRow(profile),
+        ['id'],
+      ));
+    },
+    async deleteTelegramBotProfile(id: string): Promise<void> {
+      await execute(createPostgresDeleteStatement('telegram_bot_profiles', { id }));
+    },
+    async listTelegramDeliveryLogs(limit = 50): Promise<TelegramDeliveryLogRecord[]> {
+      const logs = await selectMany('telegram_delivery_logs', mapTelegramDeliveryLogFromPostgresRow, {}, {
+        orderBy: ['created_at'],
+        direction: 'desc',
+      });
+      return logs.slice(0, Math.max(0, Math.floor(limit)));
+    },
+    async saveTelegramDeliveryLog(log: TelegramDeliveryLogRecord): Promise<void> {
+      await execute(createPostgresUpsertStatement(
+        'telegram_delivery_logs',
+        mapTelegramDeliveryLogToPostgresRow(log),
         ['id'],
       ));
     },

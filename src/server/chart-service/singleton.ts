@@ -22,6 +22,8 @@ import type {
   SalesTeamRecord,
   SignupAgreementRecord,
   SignalAdminSettingsRecord,
+  TelegramBotProfileRecord,
+  TelegramDeliveryLogRecord,
 } from './repository.ts';
 import { getDefaultPublicBoardPosts } from './public-board.ts';
 
@@ -96,6 +98,12 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
     typeof persistence.repository.saveChartUserSettings === 'function' &&
     typeof persistence.repository.getSignalAdminSettings === 'function' &&
     typeof persistence.repository.saveSignalAdminSettings === 'function' &&
+    typeof persistence.repository.listTelegramBotProfiles === 'function' &&
+    typeof persistence.repository.getTelegramBotProfileById === 'function' &&
+    typeof persistence.repository.saveTelegramBotProfile === 'function' &&
+    typeof persistence.repository.deleteTelegramBotProfile === 'function' &&
+    typeof persistence.repository.listTelegramDeliveryLogs === 'function' &&
+    typeof persistence.repository.saveTelegramDeliveryLog === 'function' &&
     typeof persistence.repository.getSupportMessageById === 'function' &&
     typeof persistence.repository.listSupportMessagesByThreadId === 'function' &&
     typeof persistence.repository.deleteSupportMessage === 'function' &&
@@ -117,6 +125,12 @@ function hasMemoryRepositoryCapabilities(repository: ChartServiceRepository): bo
     typeof repository.saveChartUserSettings === 'function' &&
     typeof repository.getSignalAdminSettings === 'function' &&
     typeof repository.saveSignalAdminSettings === 'function' &&
+    typeof repository.listTelegramBotProfiles === 'function' &&
+    typeof repository.getTelegramBotProfileById === 'function' &&
+    typeof repository.saveTelegramBotProfile === 'function' &&
+    typeof repository.deleteTelegramBotProfile === 'function' &&
+    typeof repository.listTelegramDeliveryLogs === 'function' &&
+    typeof repository.saveTelegramDeliveryLog === 'function' &&
     typeof repository.listSupportMessagesByThreadId === 'function' &&
     typeof repository.deleteSupportMessage === 'function' &&
     typeof repository.deleteSupportMessagesByThreadId === 'function';
@@ -167,6 +181,8 @@ function copyRecoverableMemoryRepositoryRecords(
   if (webInfoSettings) target.saveWebInfoSettings(webInfoSettings);
   const signalAdminSettings = readOptionalRecord(() => source.getSignalAdminSettings?.('default') ?? null);
   if (signalAdminSettings) target.saveSignalAdminSettings(signalAdminSettings);
+  copyRecords(() => source.listTelegramBotProfiles?.() ?? [], target.saveTelegramBotProfile);
+  copyRecords(() => source.listTelegramDeliveryLogs?.(1000) ?? [], target.saveTelegramDeliveryLog);
 }
 
 function copyRecords<RecordType>(
@@ -203,6 +219,8 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
     __fallbackFreeTrialUsageRecords?: FreeTrialUsageRecord[];
     __fallbackChartUserSettings?: ChartUserSettingsRecord[];
     __fallbackSignalAdminSettings?: SignalAdminSettingsRecord[];
+    __fallbackTelegramBotProfiles?: TelegramBotProfileRecord[];
+    __fallbackTelegramDeliveryLogs?: TelegramDeliveryLogRecord[];
     __fallbackPaymentTransferSettings?: PaymentTransferSettingsRecord | null;
     __fallbackPublicBoardPosts?: PublicBoardPostRecord[];
     __fallbackNoticePopups?: NoticePopupRecord[];
@@ -215,6 +233,8 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
   mutableRepository.__fallbackFreeTrialUsageRecords ??= [];
   mutableRepository.__fallbackChartUserSettings ??= [];
   mutableRepository.__fallbackSignalAdminSettings ??= [];
+  mutableRepository.__fallbackTelegramBotProfiles ??= [];
+  mutableRepository.__fallbackTelegramDeliveryLogs ??= [];
   mutableRepository.__fallbackPaymentTransferSettings ??= null;
   mutableRepository.__fallbackPublicBoardPosts ??= getDefaultPublicBoardPosts();
   mutableRepository.__fallbackNoticePopups ??= [];
@@ -416,6 +436,66 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
         rows.push(structuredClone(settings));
       }
       mutableRepository.__fallbackSignalAdminSettings = rows;
+    };
+  }
+
+  if (typeof mutableRepository.listTelegramBotProfiles !== 'function') {
+    mutableRepository.listTelegramBotProfiles = () => (
+      mutableRepository.__fallbackTelegramBotProfiles ?? []
+    )
+      .slice()
+      .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+      .map((profile) => structuredClone(profile));
+  }
+
+  if (typeof mutableRepository.getTelegramBotProfileById !== 'function') {
+    mutableRepository.getTelegramBotProfileById = (id) => {
+      const profile = (mutableRepository.__fallbackTelegramBotProfiles ?? [])
+        .find((item) => item.id === id);
+      return profile ? structuredClone(profile) : null;
+    };
+  }
+
+  if (typeof mutableRepository.saveTelegramBotProfile !== 'function') {
+    mutableRepository.saveTelegramBotProfile = (profile) => {
+      const rows = mutableRepository.__fallbackTelegramBotProfiles ?? [];
+      const index = rows.findIndex((item) => item.id === profile.id);
+      if (index >= 0) {
+        rows[index] = structuredClone(profile);
+      } else {
+        rows.push(structuredClone(profile));
+      }
+      mutableRepository.__fallbackTelegramBotProfiles = rows;
+    };
+  }
+
+  if (typeof mutableRepository.deleteTelegramBotProfile !== 'function') {
+    mutableRepository.deleteTelegramBotProfile = (id) => {
+      mutableRepository.__fallbackTelegramBotProfiles = (mutableRepository.__fallbackTelegramBotProfiles ?? [])
+        .filter((profile) => profile.id !== id);
+    };
+  }
+
+  if (typeof mutableRepository.listTelegramDeliveryLogs !== 'function') {
+    mutableRepository.listTelegramDeliveryLogs = (limit = 50) => (
+      mutableRepository.__fallbackTelegramDeliveryLogs ?? []
+    )
+      .slice()
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, Math.max(0, Math.floor(limit)))
+      .map((log) => structuredClone(log));
+  }
+
+  if (typeof mutableRepository.saveTelegramDeliveryLog !== 'function') {
+    mutableRepository.saveTelegramDeliveryLog = (log) => {
+      const rows = mutableRepository.__fallbackTelegramDeliveryLogs ?? [];
+      const index = rows.findIndex((item) => item.id === log.id);
+      if (index >= 0) {
+        rows[index] = structuredClone(log);
+      } else {
+        rows.push(structuredClone(log));
+      }
+      mutableRepository.__fallbackTelegramDeliveryLogs = rows;
     };
   }
 

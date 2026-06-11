@@ -27,6 +27,7 @@ test('admin dashboard sections include sales management menu entry', () => {
     'overview',
     'webInfo',
     'symbols',
+    'telegramAlerts',
     'users',
     'support',
     'payments',

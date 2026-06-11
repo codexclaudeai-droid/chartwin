@@ -2,6 +2,7 @@ export type AdminDashboardSectionKey =
   | 'overview'
   | 'webInfo'
   | 'symbols'
+  | 'telegramAlerts'
   | 'statistics'
   | 'sales'
   | 'users'
@@ -58,6 +59,13 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
     label: '종목관리',
     description: 'TC Chart에서 제공할 종목, 티커, 카테고리, 아이콘 정보를 관리합니다.',
     href: '#admin-symbols',
+  },
+  telegramAlerts: {
+    key: 'telegramAlerts',
+    eyebrow: 'Telegram Alerts',
+    label: 'Telegram',
+    description: 'Manage Telegram bot profiles, signal filters, test sends, and delivery logs.',
+    href: '#admin-telegram-alerts',
   },
   support: {
     key: 'support',
@@ -123,6 +131,7 @@ export const ADMIN_DASHBOARD_SECTIONS: AdminDashboardSection[] = [
   ADMIN_DASHBOARD_SECTION_META.overview,
   ADMIN_DASHBOARD_SECTION_META.webInfo,
   ADMIN_DASHBOARD_SECTION_META.symbols,
+  ADMIN_DASHBOARD_SECTION_META.telegramAlerts,
   ADMIN_DASHBOARD_SECTION_META.users,
   ADMIN_DASHBOARD_SECTION_META.support,
   ADMIN_DASHBOARD_SECTION_META.payments,
@@ -181,6 +190,10 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
 
   if (targetId === 'admin-symbols' || targetId.startsWith('admin-symbol-')) {
     return 'symbols';
+  }
+
+  if (targetId === 'admin-telegram-alerts' || targetId.startsWith('admin-telegram-alert-')) {
+    return 'telegramAlerts';
   }
 
   if (targetId === 'admin-statistics' || targetId.startsWith('admin-statistics-')) {

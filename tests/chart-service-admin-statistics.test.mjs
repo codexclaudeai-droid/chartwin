@@ -19,6 +19,7 @@ test('admin dashboard sections include a statistics menu entry', () => {
     'overview',
     'webInfo',
     'symbols',
+    'telegramAlerts',
     'users',
     'support',
     'payments',

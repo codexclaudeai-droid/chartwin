@@ -37,6 +37,8 @@ import {
   mapSupportMessageToPostgresRow,
   mapSupportThreadFromPostgresRow,
   mapSupportThreadToPostgresRow,
+  mapTelegramBotProfileFromPostgresRow,
+  mapTelegramBotProfileToPostgresRow,
   mapUserFromPostgresRow,
   mapUserToPostgresRow,
   mapWebInfoSettingsFromPostgresRow,
@@ -462,6 +464,43 @@ test('postgres web info settings mapper preserves signup policy content', () => 
     },
     updated_by_admin_id: 'admin_1',
     updated_at: '2026-05-25T05:00:00.000Z',
+  });
+});
+
+test('postgres Telegram bot profile mapper serializes JSONB array filters', () => {
+  const profile = mapTelegramBotProfileFromPostgresRow({
+    id: 'telegram_profile_1',
+    name: 'Test Bot',
+    bot_token: '123456789:AA_TEST_TOKEN',
+    chat_id: '-1001234567890',
+    is_enabled: true,
+    event_types_json: ['buy', 'take_profit'],
+    strategy_ids_json: ['strategy_js_grid_martingale'],
+    symbol_ids_json: ['BTCUSDT'],
+    timeframe_ids_json: ['1m'],
+    last_tested_at: null,
+    last_test_status: null,
+    last_test_error: null,
+    created_at: '2026-06-11T00:00:00.000Z',
+    updated_at: '2026-06-11T00:01:00.000Z',
+  });
+
+  assert.deepEqual(profile.eventTypes, ['buy', 'take_profit']);
+  assert.deepEqual(mapTelegramBotProfileToPostgresRow(profile), {
+    id: 'telegram_profile_1',
+    name: 'Test Bot',
+    bot_token: '123456789:AA_TEST_TOKEN',
+    chat_id: '-1001234567890',
+    is_enabled: true,
+    event_types_json: '["buy","take_profit"]',
+    strategy_ids_json: '["strategy_js_grid_martingale"]',
+    symbol_ids_json: '["BTCUSDT"]',
+    timeframe_ids_json: '["1m"]',
+    last_tested_at: null,
+    last_test_status: null,
+    last_test_error: null,
+    created_at: '2026-06-11T00:00:00.000Z',
+    updated_at: '2026-06-11T00:01:00.000Z',
   });
 });
 

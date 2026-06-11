@@ -13,6 +13,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Repeat,
+  Send,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -35,6 +36,7 @@ const ADMIN_DASHBOARD_SECTION_ICONS: Record<AdminDashboardSectionKey, LucideIcon
   overview: LayoutDashboard,
   webInfo: Globe,
   symbols: List,
+  telegramAlerts: Send,
   users: Users,
   support: MessageCircle,
   payments: CreditCard,

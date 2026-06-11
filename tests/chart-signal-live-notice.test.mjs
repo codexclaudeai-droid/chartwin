@@ -49,3 +49,19 @@ test('chart signal notice suppresses reload backlogs and only announces the late
   assert.match(initSource, /showSignalNoticePopup\(latestSignal\);/);
   assert.match(initSource, /speakSignalNotice\(latestSignal\.side\);/);
 });
+
+test('chart signal notice posts new buy sell signals to Telegram alert API', () => {
+  assert.match(initSource, /const postTelegramSignalAlert = \(paneId: number, signal: \{/);
+  assert.match(initSource, /fetch\('\/api\/telegram-alerts\/signal'/);
+  assert.match(initSource, /eventType: signal\.side === 'LONG' \? 'buy' : 'sell'/);
+  assert.match(initSource, /strategyId/);
+  assert.match(initSource, /strategyName/);
+  assert.match(initSource, /postTelegramSignalAlert\(paneId, latestSignal\);/);
+});
+
+test('chart signal notice refreshes the open strategy report after a new signal', () => {
+  assert.match(
+    initSource,
+    /refreshStrategyReportOnNewSignal = \(paneId: number\) => \{[\s\S]*?strategyReportOpenByPane\.get\(paneId\) !== true[\s\S]*?forceRefreshStrategyReport\(\);[\s\S]*?refreshSignalNotification\(\);[\s\S]*?\};/,
+  );
+});

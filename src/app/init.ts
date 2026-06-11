@@ -2909,6 +2909,40 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       closeBtn?.addEventListener('click', closeCard);
       window.setTimeout(closeCard, 13000);
     };
+    const postTelegramSignalAlert = (paneId: number, signal: {
+      side: 'LONG' | 'SHORT';
+      symbol: string;
+      entry: number;
+      timeSec: number;
+      timezone: string;
+      stopLossPrice?: number;
+      takeProfitPrices?: number[];
+    }) => {
+      const pane = paneControllers.get(paneId) ?? ensurePane(paneId);
+      const strategyId = pane.chart.getActiveStrategyId();
+      if (!strategyId) return;
+
+      const strategyName = pane.chart.getActiveStrategyName() ?? strategyId;
+      const occurredAt = Number.isFinite(signal.timeSec)
+        ? new Date(signal.timeSec * 1000).toISOString()
+        : new Date().toISOString();
+      void fetch('/api/telegram-alerts/signal', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({
+          eventType: signal.side === 'LONG' ? 'buy' : 'sell',
+          strategyId,
+          strategyName,
+          symbolId: signal.symbol,
+          timeframe: pane.chart.config.timeframe,
+          price: signal.entry,
+          stopLossPrice: signal.stopLossPrice,
+          takeProfitPrices: signal.takeProfitPrices,
+          occurredAt,
+        }),
+      }).catch(() => {});
+    };
     const announcedHistoryWarningKeys = new Set<string>();
     notifyInsufficientStrategyHistory = (args: {
       symbol: string;
@@ -3080,6 +3114,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         .sort((a, b) => a.timeSec - b.timeSec)
         .at(-1);
       if (!latestSignal) return;
+      postTelegramSignalAlert(paneId, latestSignal);
+      if (document.visibilityState !== 'visible') return;
       showSignalNoticePopup(latestSignal);
       speakSignalNotice(latestSignal.side);
       if (paneId === paneState.activePaneId) {
@@ -3225,7 +3261,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (strategyReportOpenByPane.get(paneId) !== true) return;
       const activePane = getActivePane();
       if (!activePane.chart.getActiveStrategyName()) return;
-      strategyReport.markStale();
+      forceRefreshStrategyReport();
       refreshSignalNotification();
     };
     startManagedInterval(() => {

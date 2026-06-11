@@ -189,6 +189,42 @@ export type SignalAdminSettingsRecord = {
   updatedAt: string;
 };
 
+export type TelegramSignalEventType = 'buy' | 'sell' | 'stop_loss' | 'take_profit';
+
+export type TelegramConnectionTestStatus = 'success' | 'failed';
+
+export type TelegramDeliveryStatus = 'sent' | 'failed';
+
+export type TelegramBotProfileRecord = {
+  id: string;
+  name: string;
+  botToken: string;
+  chatId: string;
+  isEnabled: boolean;
+  eventTypes: TelegramSignalEventType[];
+  strategyIds: string[];
+  symbolIds: string[];
+  timeframeIds: string[];
+  lastTestedAt: string | null;
+  lastTestStatus: TelegramConnectionTestStatus | null;
+  lastTestError: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TelegramDeliveryLogRecord = {
+  id: string;
+  profileId: string;
+  eventType: TelegramSignalEventType;
+  strategyId: string;
+  symbolId: string;
+  message: string;
+  status: TelegramDeliveryStatus;
+  telegramMessageId: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+};
+
 export type SignupAgreementRecord = {
   id: string;
   userId: string;
@@ -285,6 +321,12 @@ export type ChartServiceRepository = {
   saveChartUserSettings(settings: ChartUserSettingsRecord): void;
   getSignalAdminSettings(id: string): SignalAdminSettingsRecord | null;
   saveSignalAdminSettings(settings: SignalAdminSettingsRecord): void;
+  listTelegramBotProfiles(): TelegramBotProfileRecord[];
+  getTelegramBotProfileById(id: string): TelegramBotProfileRecord | null;
+  saveTelegramBotProfile(profile: TelegramBotProfileRecord): void;
+  deleteTelegramBotProfile(id: string): void;
+  listTelegramDeliveryLogs(limit?: number): TelegramDeliveryLogRecord[];
+  saveTelegramDeliveryLog(log: TelegramDeliveryLogRecord): void;
   listSignupAgreementsByUserId(userId: string): SignupAgreementRecord[];
   saveSignupAgreement(agreement: SignupAgreementRecord): void;
   listReferralLedgersByPaymentId(paymentRequestId: string): ReferralLedgerRecord[];

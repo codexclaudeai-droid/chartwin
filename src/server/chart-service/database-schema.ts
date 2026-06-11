@@ -450,6 +450,59 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       },
     },
     {
+      name: 'telegram_bot_profiles',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        name: { type: 'text' },
+        bot_token: { type: 'text' },
+        chat_id: { type: 'text' },
+        is_enabled: { type: 'boolean', default: 'true' },
+          event_types_json: { type: 'jsonb', default: "'[]'::jsonb" },
+          strategy_ids_json: { type: 'jsonb', default: "'[]'::jsonb" },
+          symbol_ids_json: { type: 'jsonb', default: "'[]'::jsonb" },
+          timeframe_ids_json: { type: 'jsonb', default: "'[]'::jsonb" },
+          last_tested_at: { type: 'timestamptz', nullable: true },
+        last_test_status: {
+          type: 'text',
+          nullable: true,
+          check: "last_test_status is null or last_test_status in ('success', 'failed')",
+        },
+        last_test_error: { type: 'text', nullable: true },
+        created_at: { type: 'timestamptz', default: 'now()' },
+        updated_at: { type: 'timestamptz', default: 'now()' },
+      },
+      indexes: [
+        { name: 'idx_telegram_bot_profiles_is_enabled', columns: ['is_enabled'] },
+        { name: 'idx_telegram_bot_profiles_updated_at', columns: ['updated_at'] },
+      ],
+    },
+    {
+      name: 'telegram_delivery_logs',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        profile_id: { type: 'text', references: 'telegram_bot_profiles.id' },
+        event_type: {
+          type: 'text',
+          check: "event_type in ('buy', 'sell', 'stop_loss', 'take_profit')",
+        },
+        strategy_id: { type: 'text' },
+        symbol_id: { type: 'text' },
+        message: { type: 'text' },
+        status: {
+          type: 'text',
+          check: "status in ('sent', 'failed')",
+        },
+        telegram_message_id: { type: 'text', nullable: true },
+        error_message: { type: 'text', nullable: true },
+        created_at: { type: 'timestamptz', default: 'now()' },
+      },
+      indexes: [
+        { name: 'idx_telegram_delivery_logs_profile_id', columns: ['profile_id'] },
+        { name: 'idx_telegram_delivery_logs_created_at', columns: ['created_at'] },
+        { name: 'idx_telegram_delivery_logs_symbol_id', columns: ['symbol_id'] },
+      ],
+    },
+    {
       name: 'signup_agreements',
       columns: {
         id: { type: 'text', primaryKey: true },

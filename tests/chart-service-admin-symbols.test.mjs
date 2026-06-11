@@ -12,6 +12,7 @@ test('admin dashboard exposes symbol management as its own section', () => {
     'overview',
     'webInfo',
     'symbols',
+    'telegramAlerts',
     'users',
     'support',
     'payments',

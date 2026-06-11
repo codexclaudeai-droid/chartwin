@@ -5,6 +5,7 @@ import { AdminSalesPanel } from './admin-sales-panel';
 import { AdminStatisticsPanel } from './admin-statistics-panel';
 import { AdminSubscriptionSection } from './admin-subscription-section';
 import { AdminSymbolsPanel } from './admin-symbols-panel';
+import { AdminTelegramAlertsPanel } from './admin-telegram-alerts-panel';
 import { AdminWebInfoSection } from './admin-web-info-section';
 import { AdminPanel } from './admin-panel';
 import { AuditLogPanel } from './audit-log-panel';
@@ -33,6 +34,9 @@ export default function AdminPage() {
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="symbols">
             <AdminSymbolsPanel />
+          </AdminDashboardShellSection>
+          <AdminDashboardShellSection sectionKey="telegramAlerts">
+            <AdminTelegramAlertsPanel />
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="users">
             <UserAdminPanel />

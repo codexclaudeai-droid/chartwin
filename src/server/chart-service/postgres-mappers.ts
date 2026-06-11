@@ -27,6 +27,8 @@ import type {
   SignupAgreementRecord,
   SignalAdminSettingsRecord,
   SocialAuthAccountRecord,
+  TelegramBotProfileRecord,
+  TelegramDeliveryLogRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 import { createStableFallbackReferralCode } from './referral-codes.ts';
@@ -548,6 +550,74 @@ export function mapSignalAdminSettingsToPostgresRow(record: SignalAdminSettingsR
   };
 }
 
+export function mapTelegramBotProfileFromPostgresRow(row: PostgresRow): TelegramBotProfileRecord {
+  return {
+    id: readString(row.id),
+    name: readString(row.name),
+    botToken: readString(row.bot_token),
+    chatId: readString(row.chat_id),
+    isEnabled: readBoolean(row.is_enabled),
+    eventTypes: readStringArray(row.event_types_json) as TelegramBotProfileRecord['eventTypes'],
+    strategyIds: readStringArray(row.strategy_ids_json),
+    symbolIds: readStringArray(row.symbol_ids_json),
+    timeframeIds: readNullableStringArray(row.timeframe_ids_json) ?? [],
+    lastTestedAt: readNullableIsoString(row.last_tested_at),
+    lastTestStatus: readNullableString(row.last_test_status) as TelegramBotProfileRecord['lastTestStatus'],
+    lastTestError: readNullableString(row.last_test_error),
+    createdAt: readIsoString(row.created_at),
+    updatedAt: readIsoString(row.updated_at),
+  };
+}
+
+export function mapTelegramBotProfileToPostgresRow(record: TelegramBotProfileRecord): PostgresRow {
+  return {
+    id: record.id,
+    name: record.name,
+    bot_token: record.botToken,
+    chat_id: record.chatId,
+    is_enabled: record.isEnabled,
+    event_types_json: JSON.stringify(record.eventTypes),
+    strategy_ids_json: JSON.stringify(record.strategyIds),
+    symbol_ids_json: JSON.stringify(record.symbolIds),
+    timeframe_ids_json: JSON.stringify(record.timeframeIds),
+    last_tested_at: record.lastTestedAt,
+    last_test_status: record.lastTestStatus,
+    last_test_error: record.lastTestError,
+    created_at: record.createdAt,
+    updated_at: record.updatedAt,
+  };
+}
+
+export function mapTelegramDeliveryLogFromPostgresRow(row: PostgresRow): TelegramDeliveryLogRecord {
+  return {
+    id: readString(row.id),
+    profileId: readString(row.profile_id),
+    eventType: readString(row.event_type) as TelegramDeliveryLogRecord['eventType'],
+    strategyId: readString(row.strategy_id),
+    symbolId: readString(row.symbol_id),
+    message: readString(row.message),
+    status: readString(row.status) as TelegramDeliveryLogRecord['status'],
+    telegramMessageId: readNullableString(row.telegram_message_id),
+    errorMessage: readNullableString(row.error_message),
+    createdAt: readIsoString(row.created_at),
+  };
+}
+
+export function mapTelegramDeliveryLogToPostgresRow(record: TelegramDeliveryLogRecord): PostgresRow {
+  return {
+    id: record.id,
+    profile_id: record.profileId,
+    event_type: record.eventType,
+    strategy_id: record.strategyId,
+    symbol_id: record.symbolId,
+    message: record.message,
+    status: record.status,
+    telegram_message_id: record.telegramMessageId,
+    error_message: record.errorMessage,
+    created_at: record.createdAt,
+  };
+}
+
 export function mapSignupAgreementFromPostgresRow(row: PostgresRow): SignupAgreementRecord {
   return {
     id: readString(row.id),
@@ -894,6 +964,10 @@ function readStringArray(value: unknown): string[] {
     throw new Error('Expected postgres json string array value');
   }
   return [...parsedValue];
+}
+
+function readNullableStringArray(value: unknown): string[] | null {
+  return value == null ? null : readStringArray(value);
 }
 
 function readPlanServices(value: unknown): Record<string, string[]> {

@@ -36,6 +36,8 @@ import type {
   SignalAdminSettingsRecord,
   SocialAuthAccountRecord,
   SocialAuthProvider,
+  TelegramBotProfileRecord,
+  TelegramDeliveryLogRecord,
   WebInfoSettingsRecord,
 } from './repository.ts';
 import { getDefaultChartServiceSubscriptionPlans } from './bootstrap.ts';
@@ -64,6 +66,8 @@ export type MockChartServiceState = {
   webInfoSettings: WebInfoSettingsRecord | null;
   chartUserSettings: ChartUserSettingsRecord[];
   signalAdminSettings: SignalAdminSettingsRecord[];
+  telegramBotProfiles: TelegramBotProfileRecord[];
+  telegramDeliveryLogs: TelegramDeliveryLogRecord[];
   signupAgreements: SignupAgreementRecord[];
   publicBoardPosts: PublicBoardPostRecord[];
   noticePopups: NoticePopupRecord[];
@@ -149,6 +153,8 @@ export function createMockChartServiceState(): MockChartServiceState {
     webInfoSettings: null,
     chartUserSettings: [],
     signalAdminSettings: [],
+    telegramBotProfiles: [],
+    telegramDeliveryLogs: [],
     signupAgreements: [],
     publicBoardPosts: getDefaultPublicBoardPosts(),
     noticePopups: [],
@@ -240,6 +246,8 @@ export function createMockChartServiceRepository(
   state.webInfoSettings ??= null;
   state.chartUserSettings ??= [];
   state.signalAdminSettings ??= [];
+  state.telegramBotProfiles ??= [];
+  state.telegramDeliveryLogs ??= [];
   state.signupAgreements ??= [];
   state.publicBoardPosts ??= getDefaultPublicBoardPosts();
   state.noticePopups ??= [];
@@ -437,6 +445,31 @@ export function createMockChartServiceRepository(
     },
     saveSignalAdminSettings(settings) {
       upsertById(state.signalAdminSettings, settings);
+    },
+    listTelegramBotProfiles() {
+      return state.telegramBotProfiles
+        .slice()
+        .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+        .map((profile) => structuredClone(profile));
+    },
+    getTelegramBotProfileById(id) {
+      return cloneOrNull(state.telegramBotProfiles.find((profile) => profile.id === id));
+    },
+    saveTelegramBotProfile(profile) {
+      upsertById(state.telegramBotProfiles, profile);
+    },
+    deleteTelegramBotProfile(id) {
+      state.telegramBotProfiles = state.telegramBotProfiles.filter((profile) => profile.id !== id);
+    },
+    listTelegramDeliveryLogs(limit = 50) {
+      return state.telegramDeliveryLogs
+        .slice()
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+        .slice(0, Math.max(0, Math.floor(limit)))
+        .map((log) => structuredClone(log));
+    },
+    saveTelegramDeliveryLog(log) {
+      upsertById(state.telegramDeliveryLogs, log);
     },
     listSignupAgreementsByUserId(userId) {
       return state.signupAgreements
