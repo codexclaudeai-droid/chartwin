@@ -7,6 +7,7 @@ export { gridMartingaleJs }        from './grid-martingale-js.ts';
 export { gridAtrBnfSrouterV1 }    from './grid-atr-bnf-srouter-v1.ts';
 export { xauGridLongJs }          from './xau-grid-long-js.ts';
 export { mtf1mScalperJs }         from './mtf-1m-scalper-js.ts';
+export { autoTrendlineChannelJs } from './auto-trendline-channel-js.ts';
 
 import { smaCrossJs }              from './sma-cross-js.ts';
 import { smaCrossPine }            from './sma-cross-pine.ts';
@@ -17,6 +18,7 @@ import { gridMartingaleJs }        from './grid-martingale-js.ts';
 import { gridAtrBnfSrouterV1 }    from './grid-atr-bnf-srouter-v1.ts';
 import { xauGridLongJs }          from './xau-grid-long-js.ts';
 import { mtf1mScalperJs }         from './mtf-1m-scalper-js.ts';
+import { autoTrendlineChannelJs } from './auto-trendline-channel-js.ts';
 
 export const ALL_STRATEGIES = [
   smaCrossJs,
@@ -28,4 +30,5 @@ export const ALL_STRATEGIES = [
   gridAtrBnfSrouterV1,
   xauGridLongJs,
   mtf1mScalperJs,
+  autoTrendlineChannelJs,
 ] as const;

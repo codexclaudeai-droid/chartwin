@@ -22,6 +22,11 @@ import {
   type StrategySignal,
 } from '../strategy/strategy-service';
 import {
+  calculateAutoTrendlineChannel,
+  simulateAutoTrendlineChannelStrategy,
+  type AutoTrendlineChannelResult,
+} from '../strategy/strategies/auto-trendline-channel-runtime.ts';
+import {
   DEFAULT_CONFIG as DOUBLE_BREAK_DEFAULT_CONFIG,
   DoubleBreakStrategy,
   type DoubleBreakConfig,
@@ -132,6 +137,7 @@ import { shouldShowCrosshairGuides } from './interaction/crosshair-guide-visibil
 import { resolveSubIndicatorAlertMouseDown } from './interaction/sub-indicator-alert-interaction.ts';
 import { resolveWheelInteraction } from './interaction/wheel-interaction.ts';
 import { renderCandles } from './renderers/candle-renderer.ts';
+import { renderAutoTrendlineChannel } from './renderers/auto-trendline-channel-renderer.ts';
 import { renderFootprintOverlay } from './renderers/footprint-renderer.ts';
 import {
   buildIndicatorRenderInput,
@@ -303,6 +309,7 @@ const BOLLINGER_RISK_DEFAULT_CONFIG: BollingerRiskConfig = {
 
 const DOUBLE_BREAK_STRATEGY_ID = 'strategy_js_double_break';
 const MTF_1M_SCALPER_STRATEGY_ID = 'strategy_js_mtf_1m_scalper';
+const AUTO_TRENDLINE_CHANNEL_STRATEGY_ID = 'strategy_js_auto_trendline_channel';
 const DOUBLE_BREAK_PARAM_DEFAULT_KEY = '__double_break_config_default__';
 const DOUBLE_BREAK_PARAM_SYMBOL_PREFIX = '__double_break_config_symbol__';
 const STRATEGY_RISK_LINES_VISIBLE_STORAGE_KEY = 'my-chart-lib-strategy-risk-lines-visible-v1';
@@ -4671,6 +4678,22 @@ export class SimpleChart {
       }
     }
 
+    if (this.activeStrategyId === AUTO_TRENDLINE_CHANNEL_STRATEGY_ID) {
+      const result = simulateAutoTrendlineChannelStrategy(this.data, this.getActiveStrategy()?.params ?? {});
+      for (let i = start; i < end; i += 1) {
+        const signal = this.strategySignals[i] ?? 0;
+        if (!signal) continue;
+        const stop = result.stopLoss[i];
+        const target = result.takeProfit[i];
+        if (target == null) continue;
+        details.set(i, {
+          side: signal > 0 ? 'LONG' : 'SHORT',
+          stopLoss: stop,
+          takeProfits: [target],
+        });
+      }
+    }
+
     return details;
   }
 
@@ -6936,6 +6959,12 @@ export class SimpleChart {
       : this.getEmptyBbMtfKalmanSignalResult();
     const ichiD  = indicatorLayerOn && ind.ichimoku.show ? this.calcIchimoku(ind.ichimoku.tenkan, ind.ichimoku.kijun, ind.ichimoku.senkou) : null;
     const envD   = indicatorLayerOn && ind.envelope.show ? this.calcEnvelope(ind.envelope.period, ind.envelope.pct) : null;
+    const autoTrendlineChannelD: AutoTrendlineChannelResult | null = (
+      this.activeStrategyId === AUTO_TRENDLINE_CHANNEL_STRATEGY_ID
+      && this.strategySignalVisible
+    )
+      ? calculateAutoTrendlineChannel(this.data, this.getActiveStrategy()?.params ?? {})
+      : null;
     const doubleBreakResult = this.getDoubleBreakResult();
     const doubleBreakExitLevels = new Map<number, number[]>();
     if (doubleBreakResult) {
@@ -6999,6 +7028,9 @@ export class SimpleChart {
         bbMtfKalmanSignalD.ltfLower[gi],
         bbMtfKalmanSignalD.htfUpper[gi],
         bbMtfKalmanSignalD.htfLower[gi],
+        autoTrendlineChannelD?.upper[gi],
+        autoTrendlineChannelD?.basis[gi],
+        autoTrendlineChannelD?.lower[gi],
       ].forEach((v) => {
         if (v != null) {
           minP = Math.min(minP, v);
@@ -7227,6 +7259,21 @@ export class SimpleChart {
       snapSize: (value, minCssPx) => this.snapSize(value, minCssPx),
       upColor: this.config.candleStyle?.upColor ?? '#22ab94',
       downColor: this.config.candleStyle?.downColor ?? '#f23645',
+    });
+
+    renderAutoTrendlineChannel({
+      ctx,
+      data: autoTrendlineChannelD,
+      startIndex: this.startIndex,
+      visLength: visData.length,
+      chartLeft,
+      chartRight,
+      plotTop: R.top,
+      plotBottom: mainH,
+      effectiveChartLeft,
+      totalSp,
+      candleW,
+      getY,
     });
 
     if (indicatorLayerOn && ind.footprint.show) {
