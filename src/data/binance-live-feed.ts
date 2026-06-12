@@ -354,9 +354,12 @@ export function createBinanceLiveFeed({
   let reconnectTimer: number | null = null;
   let abortController: AbortController | null = null;
   let olderAbortController: AbortController | null = null;
+  let catchupAbortController: AbortController | null = null;
   let running = false;
   let connecting = false;
   let loadingOlder = false;
+  let catchupInFlight = false;
+  let resumeListenersAttached = false;
   let secondMode = false;
 
   const cleanupSocket = () => {
@@ -391,12 +394,174 @@ export function createBinanceLiveFeed({
     olderAbortController = null;
   };
 
+  const cleanupCatchupFetch = () => {
+    if (!catchupAbortController) return;
+    catchupAbortController.abort();
+    catchupAbortController = null;
+  };
+
   const scheduleReconnect = () => {
     cleanupReconnectTimer();
     reconnectTimer = window.setTimeout(() => {
       if (!running) return;
       void restart(false);
     }, 1500);
+  };
+
+  const getCurrentBucketTimeSec = (): number => (
+    bucketTradeTimeSec(Math.floor(Date.now() / 1000), chart.config.timeframe)
+  );
+
+  const hasCandleTimeGap = (targetTimeSec = getCurrentBucketTimeSec()): boolean => {
+    const current = chart.getCandles();
+    const last = current[current.length - 1];
+    if (!last || !Number.isFinite(last.time) || !Number.isFinite(targetTimeSec)) return false;
+    const bucketSec = TIMEFRAME_SECONDS[chart.config.timeframe] ?? 60;
+    return targetTimeSec > last.time + bucketSec;
+  };
+
+  const getCatchupLimit = (): number => {
+    const current = chart.getCandles();
+    const last = current[current.length - 1];
+    const bucketSec = TIMEFRAME_SECONDS[chart.config.timeframe] ?? 60;
+    const currentBucket = getCurrentBucketTimeSec();
+    const missingBars = last && Number.isFinite(last.time)
+      ? Math.ceil(Math.max(0, currentBucket - last.time) / Math.max(1, bucketSec)) + 3
+      : limit;
+    return Math.min(
+      BINANCE_DIRECT_INITIAL_HISTORY_LIMIT,
+      Math.max(100, missingBars),
+    );
+  };
+
+  const mergeCatchupCandles = (incomingCandles: CandleDataLike[]): boolean => {
+    const incoming = dedupeCandles(incomingCandles);
+    if (!incoming.length) return false;
+
+    const current = chart.getCandles();
+    if (!current.length) {
+      const next = incoming.slice(-Math.max(1, limit));
+      chart.setData(next);
+      onDataApplied?.(next);
+      onLiveTick?.();
+      return true;
+    }
+
+    const byTime = new Map<number, CandleDataLike>();
+    current.forEach((candle) => {
+      byTime.set(candle.time, candle);
+    });
+
+    let changed = false;
+    incoming.forEach((candle) => {
+      const existing = byTime.get(candle.time);
+      if (
+        !existing
+        || existing.open !== candle.open
+        || existing.high !== candle.high
+        || existing.low !== candle.low
+        || existing.close !== candle.close
+        || existing.volume !== candle.volume
+      ) {
+        changed = true;
+      }
+
+      const merged: CandleDataLike = existing
+        ? { ...existing, ...candle }
+        : { ...candle };
+      if (existing) {
+        merged.buyVolume = candle.buyVolume ?? existing.buyVolume;
+        merged.sellVolume = candle.sellVolume ?? existing.sellVolume;
+        merged.volumeDelta = candle.volumeDelta ?? existing.volumeDelta;
+        merged.footprint = candle.footprint ?? existing.footprint;
+      }
+      byTime.set(candle.time, merged);
+    });
+
+    if (!changed) return false;
+
+    const maxCandles = Math.min(
+      BINANCE_DIRECT_MAX_HISTORY_CANDLES,
+      Math.max(current.length, limit),
+    );
+    const merged = Array.from(byTime.values())
+      .sort((a, b) => a.time - b.time)
+      .slice(-Math.max(1, maxCandles));
+    chart.setData(merged);
+    onDataApplied?.(merged);
+    onLiveTick?.();
+    return true;
+  };
+
+  const syncRecentHistory = async (): Promise<boolean> => {
+    if (!running || catchupInFlight) return false;
+    const resolved = resolveBinanceMarketSymbol(chart.config.symbol);
+    const symbol = resolved.symbol;
+    const interval = timeframeToInterval(chart.config.timeframe);
+    if (!symbol || !interval) return false;
+
+    catchupInFlight = true;
+    cleanupCatchupFetch();
+    catchupAbortController = new AbortController();
+    try {
+      const catchupLimit = getCatchupLimit();
+      const candles = chart.config.timeframe === '1s'
+        ? buildSecondCandlesFromTrades(await fetchRecentTradesHistory(
+          resolved.market,
+          symbol,
+          Math.max(catchupLimit, 6000),
+          catchupAbortController.signal,
+        ))
+        : await fetchBinanceKlinesHistory(
+          resolved.market,
+          symbol,
+          interval,
+          catchupLimit,
+          catchupAbortController.signal,
+        );
+      if (!running) return false;
+      return mergeCatchupCandles(candles);
+    } catch {
+      return false;
+    } finally {
+      catchupInFlight = false;
+      catchupAbortController = null;
+    }
+  };
+
+  const handleResumeSync = () => {
+    if (!running) return;
+    if (document.visibilityState === 'hidden') return;
+    if (hasCandleTimeGap()) {
+      void syncRecentHistory();
+    }
+    const socketState = socket?.readyState;
+    if (!socket || socketState === WebSocket.CLOSING || socketState === WebSocket.CLOSED) {
+      scheduleReconnect();
+    }
+  };
+
+  const handleVisibilitySync = () => {
+    if (document.visibilityState !== 'visible') return;
+    handleResumeSync();
+  };
+
+  const attachResumeListeners = () => {
+    if (resumeListenersAttached) return;
+    resumeListenersAttached = true;
+    window.addEventListener('focus', handleResumeSync);
+    window.addEventListener('online', handleResumeSync);
+    window.addEventListener('pageshow', handleResumeSync);
+    document.addEventListener('visibilitychange', handleVisibilitySync);
+  };
+
+  const detachResumeListeners = () => {
+    if (!resumeListenersAttached) return;
+    resumeListenersAttached = false;
+    window.removeEventListener('focus', handleResumeSync);
+    window.removeEventListener('online', handleResumeSync);
+    window.removeEventListener('pageshow', handleResumeSync);
+    document.removeEventListener('visibilitychange', handleVisibilitySync);
   };
 
   const applyLiveKline = (kline: Record<string, unknown>) => {
@@ -425,6 +590,10 @@ export function createBinanceLiveFeed({
       return;
     }
     if (nextCandle.time > last.time) {
+      if (hasCandleTimeGap(nextCandle.time)) {
+        void syncRecentHistory();
+        return;
+      }
       chart.addNewCandle(nextCandle);
       onLiveTick?.();
       return;
@@ -468,19 +637,8 @@ export function createBinanceLiveFeed({
     if (bucketTimeSec > last.time) {
       const bucketSec = TIMEFRAME_SECONDS[chart.config.timeframe] ?? 60;
       if (bucketTimeSec > last.time + bucketSec) {
-        for (let sec = last.time + bucketSec; sec < bucketTimeSec; sec += bucketSec) {
-          chart.addNewCandle({
-            time: sec,
-            open: last.close,
-            high: last.close,
-            low: last.close,
-            close: last.close,
-            volume: 0,
-            buyVolume: 0,
-            sellVolume: 0,
-            volumeDelta: 0,
-          });
-        }
+        void syncRecentHistory();
+        return;
       }
       chart.addNewCandle({
         time: bucketTimeSec,
@@ -579,6 +737,7 @@ export function createBinanceLiveFeed({
     cleanupReconnectTimer();
     cleanupSocket();
     cleanupFetch();
+    if (reloadHistory) cleanupCatchupFetch();
 
     const resolved = resolveBinanceMarketSymbol(chart.config.symbol);
     const symbol = resolved.symbol;
@@ -599,6 +758,8 @@ export function createBinanceLiveFeed({
           : await fetchBinanceKlinesHistory(resolved.market, symbol, interval, limit, abortController.signal);
         chart.setData(candles);
         onDataApplied?.(candles);
+      } else {
+        await syncRecentHistory();
       }
       if (!running) {
         connecting = false;
@@ -619,11 +780,13 @@ export function createBinanceLiveFeed({
 
   const start = async (): Promise<boolean> => {
     running = true;
+    attachResumeListeners();
     return restart(true);
   };
 
   const reload = async (): Promise<boolean> => {
     running = true;
+    attachResumeListeners();
     return restart(true);
   };
 
@@ -668,6 +831,8 @@ export function createBinanceLiveFeed({
     cleanupSocket();
     cleanupFetch();
     cleanupOlderFetch();
+    cleanupCatchupFetch();
+    detachResumeListeners();
     onStatusChange?.('idle');
   };
 
