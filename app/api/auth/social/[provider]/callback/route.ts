@@ -26,6 +26,7 @@ export async function GET(request: NextRequest, context: SocialAuthRouteContext)
   if (!code || !state || !cookieState || state !== cookieState) {
     return NextResponse.json({ ok: false, message: 'Invalid social auth callback state' }, { status: 400 });
   }
+  const socialAuthStartedFromSignup = state.startsWith('signup.');
 
   try {
     const env = await getSocialAuthRuntimeEnvAsync();
@@ -40,7 +41,12 @@ export async function GET(request: NextRequest, context: SocialAuthRouteContext)
       profile,
       createdAt: new Date().toISOString(),
     }));
-    const response = NextResponse.redirect(new URL('/main', request.url));
+    const redirectPath = result.userLifecycle === 'created' || result.userLifecycle === 'reactivated'
+      ? '/main?signup=complete'
+      : socialAuthStartedFromSignup
+        ? '/main?signup=existing'
+        : '/main';
+    const response = NextResponse.redirect(new URL(redirectPath, request.url));
     response.headers.append('Set-Cookie', result.cookie);
     response.headers.append('Set-Cookie', createClearSocialAuthStateCookie(providerInput));
     return response;

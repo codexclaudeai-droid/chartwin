@@ -55,6 +55,8 @@ export function SignupPanel() {
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [webInfoSettings, setWebInfoSettings] = useState<WebInfoSettings>(defaultWebInfoSettings);
   const [message, setMessage] = useState('회원가입 정보를 입력하고 약관에 동의해 주세요.');
+  const [showSignupCompleteModal, setShowSignupCompleteModal] = useState(false);
+  const [signupCompleteRequiresEmailVerification, setSignupCompleteRequiresEmailVerification] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isCheckingReferral, setIsCheckingReferral] = useState(false);
@@ -96,6 +98,8 @@ export function SignupPanel() {
 
   async function signup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setShowSignupCompleteModal(false);
+    setSignupCompleteRequiresEmailVerification(false);
     const validation = validateSignupForm();
     if (validation.ok === false) {
       setMessage(validation.message);
@@ -158,12 +162,16 @@ export function SignupPanel() {
       setMessage(verificationRequired
         ? `${payload.user.email} 이메일 인증이 필요합니다. 발송된 인증 메일을 확인해 주세요.`
         : `${payload.user.email} 회원가입이 정상 완료되었습니다.`);
+      setSignupCompleteRequiresEmailVerification(verificationRequired);
+      setShowSignupCompleteModal(true);
       return;
     }
     setMessage(payload.message || '회원가입에 실패했습니다.');
   }
 
   function announceSocialAuthPreparation(providerName: string) {
+    setShowSignupCompleteModal(false);
+    setSignupCompleteRequiresEmailVerification(false);
     setMessage(`${providerName} 간편가입은 서비스 준비중입니다.`);
   }
 
@@ -439,14 +447,14 @@ export function SignupPanel() {
         <div className="social-auth-actions signup-social-auth-actions" aria-label="간편가입">
           <a
             className="social-auth-button social-auth-button-google"
-            href="/api/auth/social/google/start"
+            href="/api/auth/social/google/start?intent=signup"
           >
             <span className="social-auth-logo" aria-hidden="true">{renderGoogleLogo()}</span>
             <span>Google로 가입</span>
           </a>
           <a
             className="social-auth-button social-auth-button-naver"
-            href="/api/auth/social/naver/start"
+            href="/api/auth/social/naver/start?intent=signup"
           >
             <span className="social-auth-logo" aria-hidden="true">{renderNaverLogo()}</span>
             <span>네이버로 가입</span>
@@ -462,6 +470,34 @@ export function SignupPanel() {
         </div>
       </form>
       <p className="notice">{message}</p>
+      {showSignupCompleteModal && (
+        <div
+          className="pricing-auth-modal-backdrop signup-complete-modal-backdrop"
+          role="presentation"
+          onClick={() => setShowSignupCompleteModal(false)}
+        >
+          <div
+            aria-labelledby="signup-complete-modal-title"
+            aria-modal="true"
+            className="pricing-auth-modal signup-complete-modal"
+            role="dialog"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="signup-complete-modal-title">회원가입이 완료되었습니다</h3>
+            <p>TradingCore에 오신 것을 환영합니다.</p>
+            <p>
+              {signupCompleteRequiresEmailVerification
+                ? '이메일 인증 후 로그인할 수 있습니다. 메일함에서 인증 링크를 확인해 주세요.'
+                : '바로 로그인할 수 있습니다.'}
+            </p>
+            <div className="pricing-auth-modal-actions single">
+              <button className="button" type="button" onClick={() => setShowSignupCompleteModal(false)}>
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

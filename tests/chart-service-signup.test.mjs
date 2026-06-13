@@ -668,6 +668,19 @@ test('signup panel confirms email verification instead of logging in immediately
   assert.doesNotMatch(panelSource, /window\.location\.assign\(nextPath\)/);
 });
 
+test('signup panel shows a friendly completion modal after successful signup', () => {
+  const panelSource = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /showSignupCompleteModal/);
+  assert.match(panelSource, /signupCompleteRequiresEmailVerification/);
+  assert.match(panelSource, /signup-complete-modal-title/);
+  assert.match(panelSource, /회원가입이 완료되었습니다/);
+  assert.match(panelSource, /TradingCore에 오신 것을 환영합니다/);
+  assert.match(panelSource, /이메일 인증 후 로그인할 수 있습니다/);
+  assert.match(panelSource, /바로 로그인할 수 있습니다/);
+  assert.match(panelSource, /확인/);
+});
+
 test('signup panel labels referral code input as optional', () => {
   const source = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
   const referralField = source.match(/id="signupReferralCode"[\s\S]*?\/>/)?.[0] ?? '';

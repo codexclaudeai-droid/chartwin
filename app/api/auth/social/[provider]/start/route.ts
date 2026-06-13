@@ -29,7 +29,8 @@ export async function GET(request: NextRequest, context: SocialAuthRouteContext)
       return NextResponse.redirect(canonicalStartUrl);
     }
 
-    const state = createSocialAuthState();
+    const intent = request.nextUrl.searchParams.get('intent') === 'signup' ? 'signup' : 'login';
+    const state = `${intent}.${createSocialAuthState()}`;
     const authorizationUrl = createSocialAuthAuthorizationUrl({
       provider: providerInput,
       requestUrl: request.url,

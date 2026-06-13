@@ -4658,9 +4658,11 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   display: flex;
   inset: 0;
   justify-content: center;
-  padding: 20px;
+  min-height: 100dvh;
+  padding: clamp(18px, 4vw, 32px);
   position: fixed;
-  z-index: 2200;
+  width: 100dvw;
+  z-index: 2147483000;
 }
 
 .pricing-auth-modal {
@@ -4672,7 +4674,10 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   box-shadow: 0 28px 80px rgba(0, 11, 35, 0.48);
   display: grid;
   gap: 12px;
+  margin: 0 auto;
+  max-height: calc(100dvh - 40px);
   max-width: 460px;
+  overflow: auto;
   padding: 22px;
   width: min(100%, 460px);
 }

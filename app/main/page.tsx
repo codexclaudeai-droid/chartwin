@@ -15,6 +15,7 @@ import { FreeTrialRequestButton } from '../shared/free-trial-request-button';
 import { SiteFooter } from '../shared/site-footer';
 import { formatPlanPriceParts } from '../shared/plan-price-format.ts';
 import { createPricingPlanHref } from '../pricing/plan-selection.ts';
+import { SocialSignupCompleteModal } from './social-signup-complete-modal';
 import type { SubscriptionPlan } from '../../src/domain/chart-service/index.ts';
 import {
   getAsyncChartServicePersistence,
@@ -35,6 +36,10 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = 'force-dynamic';
+
+type HomePageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
 const tcChartFeatures = [
   {
@@ -259,7 +264,10 @@ function getLandingPlanFeatures(plan: SubscriptionPlan): string[] {
   return landingPlanFeaturesById[plan.id] ?? ['실시간 알고리즘 시그널', 'TC Chart 분석 도구', '구독 확인 및 이용'];
 }
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const resolvedSearchParams = await searchParams;
+  const signupComplete = resolvedSearchParams?.signup === 'complete';
+  const signupExisting = resolvedSearchParams?.signup === 'existing';
   const persistence = getAsyncChartServicePersistence();
   const { plans, webInfoSettings } = await persistence.runRead(async (repository) => ({
     plans: (await repository.listPlans()).filter((plan) => plan.isActive),
@@ -455,6 +463,7 @@ export default async function HomePage() {
       <LandingScrollTopButton />
 
       <SiteFooter />
+      <SocialSignupCompleteModal show={signupComplete || signupExisting} isExistingAccount={signupExisting} />
     </main>
   );
 }

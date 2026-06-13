@@ -41,6 +41,8 @@ export type SocialAuthRuntimeEnv = {
   CHART_SERVICE_KAKAO_CLIENT_SECRET?: string;
 };
 
+export type SocialAuthUserLifecycle = 'created' | 'reactivated' | 'existing';
+
 const SOCIAL_AUTH_ENV_KEYS = [
   'CHART_SERVICE_BASE_URL',
   'CHART_SERVICE_GOOGLE_CLIENT_ID',
@@ -170,7 +172,11 @@ export function createCanonicalSocialAuthStartUrl(input: {
   if (!canonicalOrigin) return null;
   const requestUrl = new URL(input.requestUrl);
   if (requestUrl.origin === canonicalOrigin) return null;
-  return `${canonicalOrigin}/api/auth/social/${input.provider}/start`;
+  const canonicalUrl = new URL(`${canonicalOrigin}/api/auth/social/${input.provider}/start`);
+  if (requestUrl.searchParams.get('intent') === 'signup') {
+    canonicalUrl.searchParams.set('intent', 'signup');
+  }
+  return canonicalUrl.toString();
 }
 
 export async function completeAsyncSocialAuth(
@@ -179,7 +185,12 @@ export async function completeAsyncSocialAuth(
     profile: SocialAuthProfile;
     createdAt: string;
   },
-): Promise<{ user: ServiceUserRecord; session: AuthSessionRecord; cookie: string }> {
+): Promise<{
+  user: ServiceUserRecord;
+  session: AuthSessionRecord;
+  cookie: string;
+  userLifecycle: SocialAuthUserLifecycle;
+}> {
   const email = normalizeSocialEmail(input.profile.email);
   const providerUserId = input.profile.providerUserId.trim();
   if (!providerUserId) throw new Error('Social provider user id required');
@@ -188,6 +199,9 @@ export async function completeAsyncSocialAuth(
   const existingUser = existingAccount
     ? await repository.getUserById(existingAccount.userId)
     : await repository.getUserByEmail(email);
+  const userLifecycle: SocialAuthUserLifecycle = existingUser
+    ? isWithdrawnMemberAccount(existingUser) ? 'reactivated' : 'existing'
+    : 'created';
   const user = existingUser
     ? await updateExistingSocialUser(repository, existingUser, {
       verifiedAt: input.createdAt,
@@ -215,7 +229,7 @@ export async function completeAsyncSocialAuth(
     createdAt: input.createdAt,
   });
 
-  return { user, session, cookie };
+  return { user, session, cookie, userLifecycle };
 }
 
 export async function exchangeSocialAuthCode(

@@ -791,6 +791,10 @@ test('landing page exposes a completed premium design layer', () => {
   assert.match(cssSource, /\.landing-page \.landing-hero-control\s*\{[^}]*width: 34px/s);
   assert.match(cssSource, /\.landing-page \.landing-hero-control\.active\s*\{[^}]*width: clamp\(154px, 18vw, 218px\)/s);
   assert.match(cssSource, /\.landing-page \.landing-hero-control\.active strong\s*\{[^}]*opacity: 1/s);
+  assert.match(cssSource, /\.pricing-auth-modal-backdrop\s*\{[^}]*width: 100dvw/s);
+  assert.match(cssSource, /\.pricing-auth-modal-backdrop\s*\{[^}]*min-height: 100dvh/s);
+  assert.match(cssSource, /\.pricing-auth-modal-backdrop\s*\{[^}]*z-index: 2147483000/s);
+  assert.match(cssSource, /\.pricing-auth-modal\s*\{[^}]*margin: 0 auto/s);
   assert.match(cssSource, /Anchor navigation final blue glass pass/);
   assert.match(cssSource, /\.landing-page \.landing-anchor-nav\s*\{[^}]*rgba\(8, 17, 31, 0\.82\)/s);
   assert.match(cssSource, /\.landing-page \.landing-anchor-nav\s*\{[^}]*rgba\(125, 183, 255, 0\.2\)/s);
@@ -1060,6 +1064,21 @@ test('login page aligns login and logout actions to the right', () => {
   assert.match(panelSource, /actions compact login-actions/);
   assert.match(panelSource, /window\.location\.assign\('\/main'\)/);
   assert.match(cssSource, /\.auth-card \.login-actions\s*\{[\s\S]*?justify-content:\s*flex-end/);
+});
+
+test('main page shows a one-time social signup completion modal from the callback query', () => {
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
+  const modalSource = fs.readFileSync(new URL('../app/main/social-signup-complete-modal.tsx', import.meta.url), 'utf8');
+
+  assert.match(pageSource, /searchParams/);
+  assert.match(pageSource, /signupComplete/);
+  assert.match(pageSource, /SocialSignupCompleteModal/);
+  assert.match(modalSource, /회원가입이 완료되었습니다/);
+  assert.match(modalSource, /이미 가입된 계정입니다/);
+  assert.match(modalSource, /로그인되었습니다/);
+  assert.match(modalSource, /TradingCore에 오신 것을 환영합니다/);
+  assert.match(modalSource, /확인/);
+  assert.match(modalSource, /router\.replace\('\/main'/);
 });
 
 test('landing page presents TC Chart feature capabilities under the TradingCore website brand', () => {

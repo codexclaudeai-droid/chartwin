@@ -108,6 +108,14 @@ test('social auth start URL canonicalizes before issuing state cookies', () => {
   assert.equal(
     createCanonicalSocialAuthStartUrl({
       provider: 'google',
+      requestUrl: 'https://www.tradingcore.co/api/auth/social/google/start?intent=signup',
+      env,
+    }),
+    'https://tradingcore.co/api/auth/social/google/start?intent=signup',
+  );
+  assert.equal(
+    createCanonicalSocialAuthStartUrl({
+      provider: 'google',
       requestUrl: 'https://chartwin.thankpxp.workers.dev/api/auth/social/google/start',
       env,
     }),
@@ -200,6 +208,7 @@ test('social auth completion creates a verified member account with provider pho
   assert.equal(linkedAccounts[0].provider, 'kakao');
   assert.equal(linkedAccounts[0].providerUserId, 'kakao-123');
   assert.equal(parseSessionCookie(result.cookie), result.session.id);
+  assert.equal(result.userLifecycle, 'created');
 });
 
 test('social auth completion reactivates a withdrawn linked member account', async () => {
@@ -240,6 +249,36 @@ test('social auth completion reactivates a withdrawn linked member account', asy
   assert.equal(result.user.phoneNumber, '010-1111-2222');
   assert.equal(saved?.accountStatus, 'active');
   assert.equal(parseSessionCookie(result.cookie), result.session.id);
+  assert.equal(result.userLifecycle, 'reactivated');
+});
+
+test('social auth completion keeps existing linked accounts as login-only', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const existing = syncRepository.getUserByEmail('member@example.com');
+  assert.ok(existing);
+  syncRepository.saveSocialAuthAccount({
+    id: 'social_auth_existing',
+    provider: 'naver',
+    providerUserId: 'naver-member',
+    userId: existing.id,
+    email: existing.email,
+    createdAt: '2026-05-01T00:00:00.000Z',
+    updatedAt: '2026-05-01T00:00:00.000Z',
+  });
+
+  const result = await completeAsyncSocialAuth(repository, {
+    profile: {
+      provider: 'naver',
+      providerUserId: 'naver-member',
+      email: existing.email,
+      name: 'Existing Social Member',
+    },
+    createdAt: '2026-06-14T10:00:00.000Z',
+  });
+
+  assert.equal(result.user.id, existing.id);
+  assert.equal(result.userLifecycle, 'existing');
 });
 
 test('social auth runtime env keeps OAuth secret values when Cloudflare bindings are partial', async () => {
@@ -282,8 +321,8 @@ test('signup and login panels wire Google and Naver auth while keeping Kakao pre
   assert.match(signupSource, /네이버로 가입/);
   assert.match(signupSource, /카카오로 가입/);
   assert.match(signupSource, /간편가입은 서비스 준비중입니다/);
-  assert.match(signupSource, /href="\/api\/auth\/social\/google\/start"/);
-  assert.match(signupSource, /href="\/api\/auth\/social\/naver\/start"/);
+  assert.match(signupSource, /href="\/api\/auth\/social\/google\/start\?intent=signup"/);
+  assert.match(signupSource, /href="\/api\/auth\/social\/naver\/start\?intent=signup"/);
   assert.match(loginSource, /login-social-auth-actions/);
   assert.match(loginSource, /social-auth-icon-google/);
   assert.match(loginSource, /google-logo-svg/);
@@ -298,8 +337,12 @@ test('signup and login panels wire Google and Naver auth while keeping Kakao pre
   assert.match(startRouteSource, /createCanonicalSocialAuthStartUrl/);
   assert.match(startRouteSource, /createSocialAuthStateCookie/);
   assert.match(startRouteSource, /getSocialAuthRuntimeEnvAsync/);
+  assert.match(startRouteSource, /intent/);
   assert.match(callbackRouteSource, /exchangeSocialAuthCode/);
   assert.match(callbackRouteSource, /completeAsyncSocialAuth/);
   assert.match(callbackRouteSource, /getSocialAuthRuntimeEnvAsync/);
-  assert.match(callbackRouteSource, /new URL\('\/main', request\.url\)/);
+  assert.match(callbackRouteSource, /socialAuthStartedFromSignup/);
+  assert.match(callbackRouteSource, /signup=complete/);
+  assert.match(callbackRouteSource, /signup=existing/);
+  assert.match(callbackRouteSource, /userLifecycle/);
 });
