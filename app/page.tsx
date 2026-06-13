@@ -154,6 +154,24 @@ const faqItems = [
   },
 ];
 
+const footerLegalLinks = [
+  {
+    title: '이용약관',
+    href: '/terms',
+    body: '구독 서비스 이용, 차트 열람, 시그널 제공, 무료체험 및 결제 요청과 관련한 운영 원칙을 안내합니다.',
+  },
+  {
+    title: '개인정보보호정책',
+    href: '/privacy',
+    body: '회원가입, 구독 신청, 입금 확인 요청, 고객센터 응대에 필요한 개인정보 처리 기준을 안내합니다.',
+  },
+  {
+    title: '고객센터',
+    href: '/support',
+    body: '서비스 이용, 구독 상태, 차트 기능, 알림 설정 관련 문의를 고객센터에서 접수합니다.',
+  },
+];
+
 const landingStructuredData = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
@@ -461,10 +479,18 @@ export default async function HomePage() {
             <small>© TradingCore. All rights reserved.</small>
           </div>
           <div className="landing-footer-links">
-            <Link href="/support">고객센터</Link>
             <Link href="/terms">이용약관</Link>
             <Link href="/privacy">개인정보보호정책</Link>
+            <Link href="/support">고객센터</Link>
           </div>
+        </div>
+        <div className="landing-footer-notices" aria-label="서비스 정책 및 고지 링크">
+          {footerLegalLinks.map((item) => (
+            <Link href={item.href} key={item.href}>
+              <strong>{item.title}</strong>
+              <span>{item.body}</span>
+            </Link>
+          ))}
         </div>
       </footer>
     </main>

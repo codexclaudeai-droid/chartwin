@@ -2821,20 +2821,32 @@ a {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.landing-footer-notices details {
+.landing-footer-notices a {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 18px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.78);
+  display: grid;
+  gap: 8px;
   padding: 16px;
+  transition: border-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
-.landing-footer-notices summary {
-  cursor: pointer;
+.landing-footer-notices a:hover {
+  border-color: rgba(125, 183, 255, 0.36);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.landing-footer-notices strong {
+  color: #ffffff;
   font-weight: 900;
+  letter-spacing: 0;
 }
 
-.landing-footer-notices p {
+.landing-footer-notices span {
   font-size: 13px;
+  line-height: 1.65;
   margin-bottom: 0;
 }
 
@@ -7503,7 +7515,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .landing-footer-links a,
-.landing-footer-notices details {
+.landing-footer-notices a {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.13);
 }
@@ -8592,7 +8604,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .landing-page .landing-footer-links a,
-.landing-page .landing-footer-notices details {
+.landing-page .landing-footer-notices a {
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(19, 89, 255, 0.03)),
     rgba(8, 17, 31, 0.9);
@@ -8602,7 +8614,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 
 .landing-page .landing-footer p,
 .landing-page .landing-footer small,
-.landing-page .landing-footer-notices p {
+.landing-page .landing-footer-notices span {
   color: rgba(216, 236, 255, 0.78);
 }
 
