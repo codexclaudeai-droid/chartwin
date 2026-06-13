@@ -149,6 +149,7 @@ test('Naver auth request omits scope and sends callback state during token excha
         id: 'naver-123',
         email: 'Naver@Example.com',
         name: 'Naver User',
+        mobile: '010-1234-5678',
       },
     });
   };
@@ -166,12 +167,13 @@ test('Naver auth request omits scope and sends callback state during token excha
     assert.equal(profile.provider, 'naver');
     assert.equal(profile.providerUserId, 'naver-123');
     assert.equal(profile.email, 'naver@example.com');
+    assert.equal(profile.phoneNumber, '010-1234-5678');
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test('social auth completion creates a verified member account and session', async () => {
+test('social auth completion creates a verified member account with provider phone and session', async () => {
   const syncRepository = createMockChartServiceRepository();
   const repository = createAsyncChartServiceRepository(syncRepository);
 
@@ -181,6 +183,7 @@ test('social auth completion creates a verified member account and session', asy
       providerUserId: 'kakao-123',
       email: 'Social@Example.com',
       name: 'Social User',
+      phoneNumber: '010-9876-5432',
     },
     createdAt: '2026-06-01T10:00:00.000Z',
   });
@@ -189,6 +192,7 @@ test('social auth completion creates a verified member account and session', asy
 
   assert.equal(result.user.email, 'social@example.com');
   assert.equal(result.user.role, 'member');
+  assert.equal(result.user.phoneNumber, '010-9876-5432');
   assert.equal(result.user.passwordHash, null);
   assert.equal(result.user.emailVerifiedAt, '2026-06-01T10:00:00.000Z');
   assert.equal(user?.id, result.user.id);

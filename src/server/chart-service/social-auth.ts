@@ -18,6 +18,7 @@ export type SocialAuthProfile = {
   providerUserId: string;
   email: string;
   name: string;
+  phoneNumber?: string | null;
 };
 
 export type SocialAuthProviderConfig = {
@@ -187,10 +188,14 @@ export async function completeAsyncSocialAuth(
     ? await repository.getUserById(existingAccount.userId)
     : await repository.getUserByEmail(email);
   const user = existingUser
-    ? await updateExistingSocialUser(repository, existingUser, input.createdAt)
+    ? await updateExistingSocialUser(repository, existingUser, {
+      verifiedAt: input.createdAt,
+      phoneNumber: input.profile.phoneNumber,
+    })
     : await createSocialUser(repository, {
       email,
       name: input.profile.name,
+      phoneNumber: input.profile.phoneNumber,
       createdAt: input.createdAt,
     });
 
@@ -309,6 +314,7 @@ function mapSocialAuthProfile(provider: SocialAuthProvider, payload: Record<stri
       providerUserId: readString(payload.sub),
       email: normalizeSocialEmail(readString(payload.email)),
       name: readString(payload.name) || readString(payload.email),
+      phoneNumber: normalizeSocialPhoneNumber(readString(payload.phone_number)),
     };
   }
   if (provider === 'naver') {
@@ -318,6 +324,7 @@ function mapSocialAuthProfile(provider: SocialAuthProvider, payload: Record<stri
       providerUserId: readString(response.id),
       email: normalizeSocialEmail(readString(response.email)),
       name: readString(response.name) || readString(response.nickname) || readString(response.email),
+      phoneNumber: normalizeSocialPhoneNumber(readString(response.mobile) || readString(response.mobile_e164)),
     };
   }
 
@@ -328,12 +335,13 @@ function mapSocialAuthProfile(provider: SocialAuthProvider, payload: Record<stri
     providerUserId: readString(payload.id),
     email: normalizeSocialEmail(readString(kakaoAccount.email)),
     name: readString(profile.nickname) || readString(kakaoAccount.email),
+    phoneNumber: normalizeSocialPhoneNumber(readString(kakaoAccount.phone_number)),
   };
 }
 
 async function createSocialUser(
   repository: AsyncChartServiceRepository,
-  input: { email: string; name: string; createdAt: string },
+  input: { email: string; name: string; phoneNumber?: string | null; createdAt: string },
 ): Promise<ServiceUserRecord> {
   const user: ServiceUserRecord = {
     id: await repository.nextId('user'),
@@ -341,7 +349,7 @@ async function createSocialUser(
     name: input.name.trim() || input.email,
     role: USER_ROLES.member,
     accountStatus: USER_ACCOUNT_STATUSES.active,
-    phoneNumber: null,
+    phoneNumber: normalizeSocialPhoneNumber(input.phoneNumber),
     profileImageDataUrl: null,
     referralCode: '',
     referredByUserId: null,
@@ -357,13 +365,17 @@ async function createSocialUser(
 async function updateExistingSocialUser(
   repository: AsyncChartServiceRepository,
   user: ServiceUserRecord,
-  verifiedAt: string,
+  input: { verifiedAt: string; phoneNumber?: string | null },
 ): Promise<ServiceUserRecord> {
-  if (user.emailVerifiedAt) return user;
+  const phoneNumber = normalizeSocialPhoneNumber(input.phoneNumber);
   const updatedUser = {
     ...user,
-    emailVerifiedAt: verifiedAt,
+    emailVerifiedAt: user.emailVerifiedAt ?? input.verifiedAt,
+    phoneNumber: user.phoneNumber ?? phoneNumber,
   };
+  if (updatedUser.emailVerifiedAt === user.emailVerifiedAt && updatedUser.phoneNumber === user.phoneNumber) {
+    return user;
+  }
   await repository.saveUser(updatedUser);
   return updatedUser;
 }
@@ -374,6 +386,15 @@ function normalizeSocialEmail(value: string): string {
     throw new Error('Social email required');
   }
   return email;
+}
+
+function normalizeSocialPhoneNumber(value: string | null | undefined): string | null {
+  const phoneNumber = String(value ?? '').trim();
+  if (!phoneNumber) return null;
+  if (phoneNumber.length > 30 || !/^[0-9+\-().\s]{7,30}$/.test(phoneNumber)) {
+    return null;
+  }
+  return phoneNumber;
 }
 
 function requireSocialEnv(env: Record<string, string | undefined>, key: string): string {
