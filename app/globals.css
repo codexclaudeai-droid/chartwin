@@ -2838,6 +2838,48 @@ a {
   margin-bottom: 0;
 }
 
+.legal-page {
+  display: grid;
+  gap: 22px;
+}
+
+.legal-page-hero {
+  background:
+    linear-gradient(135deg, rgba(25, 199, 184, 0.1), transparent 46%),
+    var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 28px;
+}
+
+.legal-page-hero h1 {
+  font-size: clamp(30px, 5vw, 52px);
+  margin: 10px 0;
+}
+
+.legal-document {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  display: grid;
+  gap: 14px;
+  line-height: 1.8;
+  padding: 28px;
+  white-space: pre-line;
+}
+
+.legal-document p {
+  margin: 0;
+}
+
+.legal-page-links {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .status-panel {
   background: var(--panel);
   border: 1px solid var(--line);

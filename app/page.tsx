@@ -462,21 +462,9 @@ export default async function HomePage() {
           </div>
           <div className="landing-footer-links">
             <Link href="/support">고객센터</Link>
+            <Link href="/terms">이용약관</Link>
+            <Link href="/privacy">개인정보보호정책</Link>
           </div>
-        </div>
-        <div className="landing-footer-notices">
-          <details id="landing-terms">
-            <summary>이용약관</summary>
-            <p>구독 서비스 이용, 차트 열람, 시그널 제공, 무료체험 및 결제 요청과 관련한 운영 원칙과 관리자 확인 절차를 안내합니다.</p>
-          </details>
-          <details id="landing-privacy">
-            <summary>개인정보보호정책</summary>
-            <p>회원가입, 구독 신청, 입금 확인 요청, 고객센터 응대에 필요한 최소 정보를 수집하고 처리 목적 범위 내에서 안전하게 관리합니다.</p>
-          </details>
-          <details id="landing-business">
-            <summary>사업자 정보 고지</summary>
-            <p>상호, 대표자, 사업자등록번호, 통신판매 신고번호, 환불 기준과 고객센터 연락처는 정식 운영 정보에 맞춰 고지합니다.</p>
-          </details>
         </div>
       </footer>
     </main>
