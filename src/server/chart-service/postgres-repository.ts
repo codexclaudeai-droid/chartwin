@@ -251,11 +251,29 @@ export function createPostgresAsyncChartServiceRepository(
       return selectMany('social_auth_accounts', mapSocialAuthAccountFromPostgresRow, { user_id: userId });
     },
     async saveSocialAuthAccount(account: SocialAuthAccountRecord): Promise<void> {
-      await execute(createPostgresUpsertStatement(
-        'social_auth_accounts',
-        mapSocialAuthAccountToPostgresRow(account),
-        ['provider', 'provider_user_id'],
-      ));
+      const row = mapSocialAuthAccountToPostgresRow(account);
+      await execute({
+        sql: [
+          'with updated as (',
+          'update social_auth_accounts',
+          'set user_id = $3, email = $4, updated_at = $6',
+          'where provider = $1 and provider_user_id = $2',
+          'returning id',
+          ')',
+          'insert into social_auth_accounts (id, provider, provider_user_id, user_id, email, created_at, updated_at)',
+          'select $7, $1, $2, $3, $4, $5, $6',
+          'where not exists (select 1 from updated)',
+        ].join(' '),
+        values: [
+          row.provider,
+          row.provider_user_id,
+          row.user_id,
+          row.email,
+          row.created_at,
+          row.updated_at,
+          row.id,
+        ],
+      });
     },
     async getSessionById(id: string): Promise<AuthSessionRecord | null> {
       return selectOne('auth_sessions', mapAuthSessionFromPostgresRow, { id });

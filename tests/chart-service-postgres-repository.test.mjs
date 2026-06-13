@@ -147,6 +147,42 @@ test('postgres async repository appends audit logs with insert-only SQL', async 
   assert.deepEqual(calls[0].values.slice(0, 4), ['admin_1', 'payment.confirm', 'payment', 'pay_1']);
 });
 
+test('postgres async repository saves social auth accounts without provider conflict upsert', async () => {
+  const { createPostgresAsyncChartServiceRepository } = await import('../src/server/chart-service/index.ts');
+  const calls = [];
+  const executor = {
+    async query(statement) {
+      calls.push(statement);
+      return { rows: [] };
+    },
+  };
+  const repository = createPostgresAsyncChartServiceRepository(executor);
+
+  await repository.saveSocialAuthAccount({
+    id: 'social_auth_1',
+    provider: 'google',
+    providerUserId: 'google-123',
+    userId: 'user_1',
+    email: 'member@example.com',
+    createdAt: '2026-06-14T00:00:00.000Z',
+    updatedAt: '2026-06-14T00:00:00.000Z',
+  });
+
+  assert.match(calls[0].sql, /^with updated as \( update social_auth_accounts/i);
+  assert.match(calls[0].sql, /where provider = \$1 and provider_user_id = \$2/i);
+  assert.match(calls[0].sql, /where not exists \(select 1 from updated\)/i);
+  assert.doesNotMatch(calls[0].sql, /on conflict/i);
+  assert.deepEqual(calls[0].values, [
+    'google',
+    'google-123',
+    'user_1',
+    'member@example.com',
+    '2026-06-14T00:00:00.000Z',
+    '2026-06-14T00:00:00.000Z',
+    'social_auth_1',
+  ]);
+});
+
 test('postgres async repository persists sales team records with upsert SQL', async () => {
   const { createPostgresAsyncChartServiceRepository } = await import('../src/server/chart-service/index.ts');
   const calls = [];
