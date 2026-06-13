@@ -55,6 +55,7 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'social_auth_accounts')?.columns.provider.type, 'text');
   assert.equal(tables.find((table) => table.name === 'social_auth_accounts')?.columns.provider_user_id.type, 'text');
   assert.equal(tables.find((table) => table.name === 'social_auth_accounts')?.columns.user_id.references, 'users.id');
+  assert.equal(tables.find((table) => table.name === 'social_auth_accounts')?.indexes?.find((index) => index.name === 'idx_social_auth_accounts_provider_user')?.unique, true);
   assert.equal(tables.find((table) => table.name === 'password_reset_tokens')?.columns.token_hash.type, 'text');
   assert.equal(tables.find((table) => table.name === 'password_reset_tokens')?.columns.user_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'email_verification_tokens')?.columns.token_hash.type, 'text');
@@ -212,6 +213,10 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /referral_code !~ '\^\[A-Z0-9\]\{6\}\$'/i);
   assert.match(sql, /alter table if exists users add column if not exists referred_by_user_id text/i);
   assert.match(sql, /alter table if exists users add column if not exists created_at timestamptz/i);
+  assert.doesNotMatch(sql, /create index if not exists idx_social_auth_accounts_provider_user on social_auth_accounts/i);
+  assert.match(sql, /create unique index if not exists idx_social_auth_accounts_provider_user on social_auth_accounts \(provider, provider_user_id\)/i);
+  assert.match(sql, /delete from social_auth_accounts victim/i);
+  assert.match(sql, /drop index if exists idx_social_auth_accounts_provider_user/i);
   assert.match(sql, /create table if not exists email_outbox/i);
   assert.match(sql, /create index if not exists idx_email_outbox_status_created_at/i);
   assert.match(sql, /create index if not exists idx_referral_ledgers_referrer_user_id/i);

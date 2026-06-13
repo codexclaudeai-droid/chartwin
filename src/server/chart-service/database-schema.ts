@@ -14,6 +14,7 @@ export type DatabaseTable = {
   indexes?: Array<{
     name: string;
     columns: string[];
+    unique?: boolean;
   }>;
 };
 
@@ -88,7 +89,7 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
         updated_at: { type: 'timestamptz' },
       },
       indexes: [
-        { name: 'idx_social_auth_accounts_provider_user', columns: ['provider', 'provider_user_id'] },
+        { name: 'idx_social_auth_accounts_provider_user', columns: ['provider', 'provider_user_id'], unique: true },
         { name: 'idx_social_auth_accounts_user_id', columns: ['user_id'] },
       ],
     },
@@ -641,7 +642,7 @@ export function renderChartServicePostgresSchema(): string {
       ');',
     ].join('\n');
     const indexSql = (table.indexes ?? []).map((index) => (
-      `create index if not exists ${index.name} on ${table.name} (${index.columns.join(', ')});`
+      `create ${index.unique ? 'unique ' : ''}index if not exists ${index.name} on ${table.name} (${index.columns.join(', ')});`
     ));
     return [tableSql, ...indexSql];
   });
@@ -672,6 +673,8 @@ function getChartServiceSchemaUpgradeStatements(): string[] {
     'create index if not exists idx_users_referral_code on users (referral_code);',
     'create index if not exists idx_users_referred_by_user_id on users (referred_by_user_id);',
     "create table if not exists social_auth_accounts (id text primary key, provider text not null, provider_user_id text not null, user_id text not null references users(id), email text not null, created_at timestamptz not null, updated_at timestamptz not null, constraint chk_social_auth_accounts_provider check (provider in ('google', 'naver', 'kakao')));",
+    'delete from social_auth_accounts victim using social_auth_accounts keeper where victim.provider = keeper.provider and victim.provider_user_id = keeper.provider_user_id and (victim.updated_at < keeper.updated_at or (victim.updated_at = keeper.updated_at and victim.id < keeper.id));',
+    'drop index if exists idx_social_auth_accounts_provider_user;',
     'create unique index if not exists idx_social_auth_accounts_provider_user on social_auth_accounts (provider, provider_user_id);',
     'create index if not exists idx_social_auth_accounts_user_id on social_auth_accounts (user_id);',
     'create table if not exists push_subscriptions (endpoint text primary key, user_id text not null references users(id), p256dh text not null, auth text not null, expiration_time numeric, user_agent text, created_at timestamptz not null default now(), updated_at timestamptz not null default now());',

@@ -124,7 +124,7 @@ export function getSocialAuthProviderConfig(
       authorizationEndpoint: 'https://nid.naver.com/oauth2.0/authorize',
       tokenEndpoint: 'https://nid.naver.com/oauth2.0/token',
       userInfoEndpoint: 'https://openapi.naver.com/v1/nid/me',
-      scope: 'name email',
+      scope: '',
     };
   }
 
@@ -151,7 +151,9 @@ export function createSocialAuthAuthorizationUrl(input: {
   url.searchParams.set('client_id', config.clientId);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('state', input.state);
-  url.searchParams.set('scope', config.scope);
+  if (config.scope.trim()) {
+    url.searchParams.set('scope', config.scope);
+  }
   return url.toString();
 }
 
@@ -201,21 +203,26 @@ export async function exchangeSocialAuthCode(
   input: {
     code: string;
     requestUrl: string;
+    state?: string;
     env?: SocialAuthRuntimeEnv;
   },
 ): Promise<SocialAuthProfile> {
   const config = getSocialAuthProviderConfig(provider, input.env);
   const redirectUri = createSocialAuthRedirectUri(input.requestUrl, provider);
+  const body = new URLSearchParams({
+    grant_type: 'authorization_code',
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    redirect_uri: redirectUri,
+    code: input.code,
+  });
+  if (input.state) {
+    body.set('state', input.state);
+  }
   const tokenResponse = await fetch(config.tokenEndpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
-      redirect_uri: redirectUri,
-      code: input.code,
-    }),
+    body,
   });
   const tokenPayload = await tokenResponse.json();
   if (!tokenResponse.ok || !tokenPayload.access_token) {

@@ -64,7 +64,7 @@ create table if not exists social_auth_accounts (
   foreign key (user_id) references users(id)
 );
 
-create index if not exists idx_social_auth_accounts_provider_user on social_auth_accounts (provider, provider_user_id);
+create unique index if not exists idx_social_auth_accounts_provider_user on social_auth_accounts (provider, provider_user_id);
 
 create index if not exists idx_social_auth_accounts_user_id on social_auth_accounts (user_id);
 
@@ -386,6 +386,66 @@ create table if not exists signal_admin_settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists telegram_bot_profiles (
+  id text primary key,
+  name text not null,
+  bot_token text not null,
+  chat_id text not null,
+  is_enabled boolean not null default true,
+  event_types_json jsonb not null default '[]'::jsonb,
+  strategy_ids_json jsonb not null default '[]'::jsonb,
+  symbol_ids_json jsonb not null default '[]'::jsonb,
+  timeframe_ids_json jsonb not null default '[]'::jsonb,
+  last_tested_at timestamptz,
+  last_test_status text,
+  last_test_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint chk_telegram_bot_profiles_last_test_status check (last_test_status is null or last_test_status in ('success', 'failed'))
+);
+
+create index if not exists idx_telegram_bot_profiles_is_enabled on telegram_bot_profiles (is_enabled);
+
+create index if not exists idx_telegram_bot_profiles_updated_at on telegram_bot_profiles (updated_at);
+
+create table if not exists telegram_delivery_logs (
+  id text primary key,
+  profile_id text not null,
+  event_type text not null,
+  strategy_id text not null,
+  symbol_id text not null,
+  message text not null,
+  status text not null,
+  telegram_message_id text,
+  error_message text,
+  created_at timestamptz not null default now(),
+  constraint chk_telegram_delivery_logs_event_type check (event_type in ('buy', 'sell', 'stop_loss', 'take_profit')),
+  constraint chk_telegram_delivery_logs_status check (status in ('sent', 'failed')),
+  foreign key (profile_id) references telegram_bot_profiles(id)
+);
+
+create index if not exists idx_telegram_delivery_logs_profile_id on telegram_delivery_logs (profile_id);
+
+create index if not exists idx_telegram_delivery_logs_created_at on telegram_delivery_logs (created_at);
+
+create index if not exists idx_telegram_delivery_logs_symbol_id on telegram_delivery_logs (symbol_id);
+
+create table if not exists telegram_signal_watch_states (
+  key text primary key,
+  strategy_id text not null,
+  symbol_id text not null,
+  timeframe text not null,
+  last_checked_candle_time bigint not null default 0,
+  last_signal_candle_time bigint,
+  last_signal_event_type text,
+  updated_at timestamptz not null default now(),
+  constraint chk_telegram_signal_watch_states_last_signal_event_type check (last_signal_event_type is null or last_signal_event_type in ('buy', 'sell', 'stop_loss', 'take_profit'))
+);
+
+create index if not exists idx_telegram_signal_watch_states_updated_at on telegram_signal_watch_states (updated_at);
+
+create index if not exists idx_telegram_signal_watch_states_symbol on telegram_signal_watch_states (symbol_id, timeframe);
+
 create table if not exists signup_agreements (
   id text primary key,
   user_id text not null,
@@ -514,6 +574,10 @@ create index if not exists idx_users_referral_code on users (referral_code);
 create index if not exists idx_users_referred_by_user_id on users (referred_by_user_id);
 
 create table if not exists social_auth_accounts (id text primary key, provider text not null, provider_user_id text not null, user_id text not null references users(id), email text not null, created_at timestamptz not null, updated_at timestamptz not null, constraint chk_social_auth_accounts_provider check (provider in ('google', 'naver', 'kakao')));
+
+delete from social_auth_accounts victim using social_auth_accounts keeper where victim.provider = keeper.provider and victim.provider_user_id = keeper.provider_user_id and (victim.updated_at < keeper.updated_at or (victim.updated_at = keeper.updated_at and victim.id < keeper.id));
+
+drop index if exists idx_social_auth_accounts_provider_user;
 
 create unique index if not exists idx_social_auth_accounts_provider_user on social_auth_accounts (provider, provider_user_id);
 

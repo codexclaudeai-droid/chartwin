@@ -8,6 +8,7 @@ import {
   getSocialAuthRuntimeEnv,
   getSocialAuthRuntimeEnvAsync,
   createSocialAuthAuthorizationUrl,
+  exchangeSocialAuthCode,
   getSocialAuthProviderConfig,
   parseSessionCookie,
   SOCIAL_AUTH_PROVIDERS,
@@ -37,6 +38,54 @@ test('social auth provider config uses provider-specific OAuth endpoints', () =>
   assert.equal(googleUrl.searchParams.get('client_id'), 'google-client');
   assert.equal(googleUrl.searchParams.get('redirect_uri'), 'http://localhost:3000/api/auth/social/google/callback');
   assert.equal(googleUrl.searchParams.get('state'), 'state_1');
+});
+
+test('Naver auth request omits scope and sends callback state during token exchange', async () => {
+  const env = {
+    CHART_SERVICE_NAVER_CLIENT_ID: 'naver-client',
+    CHART_SERVICE_NAVER_CLIENT_SECRET: 'naver-secret',
+  };
+  const authorizationUrl = new URL(createSocialAuthAuthorizationUrl({
+    provider: 'naver',
+    requestUrl: 'https://tradingcore.co/api/auth/social/naver/start',
+    state: 'state_1',
+    env,
+  }));
+  const fetchRequests = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    fetchRequests.push({
+      url: String(url),
+      body: String(options?.body ?? ''),
+    });
+    if (String(url).includes('/oauth2.0/token')) {
+      return Response.json({ access_token: 'naver-access-token' });
+    }
+    return Response.json({
+      response: {
+        id: 'naver-123',
+        email: 'Naver@Example.com',
+        name: 'Naver User',
+      },
+    });
+  };
+
+  try {
+    const profile = await exchangeSocialAuthCode('naver', {
+      code: 'code_1',
+      requestUrl: 'https://tradingcore.co/api/auth/social/naver/callback',
+      state: 'state_1',
+      env,
+    });
+
+    assert.equal(authorizationUrl.searchParams.has('scope'), false);
+    assert.match(fetchRequests[0].body, /state=state_1/);
+    assert.equal(profile.provider, 'naver');
+    assert.equal(profile.providerUserId, 'naver-123');
+    assert.equal(profile.email, 'naver@example.com');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('social auth completion creates a verified member account and session', async () => {

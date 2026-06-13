@@ -32,6 +32,7 @@ export async function GET(request: NextRequest, context: SocialAuthRouteContext)
     const profile = await exchangeSocialAuthCode(providerInput, {
       code,
       requestUrl: request.url,
+      state,
       env,
     });
     const persistence = getAsyncChartServicePersistence();
