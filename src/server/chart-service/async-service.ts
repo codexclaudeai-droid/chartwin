@@ -1266,7 +1266,9 @@ export async function getAsyncAdminDashboardSummary(
     users: {
       totalCount: users.length,
       activeCount: users.filter((user) => user.accountStatus === USER_ACCOUNT_STATUSES.active).length,
-      suspendedCount: users.filter((user) => user.accountStatus === USER_ACCOUNT_STATUSES.suspended).length,
+      suspendedCount: users.filter((user) => (
+        user.accountStatus === USER_ACCOUNT_STATUSES.suspended && !isWithdrawnMemberAccount(user)
+      )).length,
       adminCount: users.filter((user) => user.role === USER_ROLES.admin || user.role === USER_ROLES.superAdmin).length,
     },
     payments: {

@@ -41,11 +41,18 @@ test('admin dashboard summary counts operational queues and service state', () =
     accountStatus: 'suspended',
     reason: 'risk review',
   });
+  const withdrawn = repository.getUserById('user_trial');
+  assert.ok(withdrawn);
+  repository.saveUser({
+    ...withdrawn,
+    accountStatus: 'suspended',
+    passwordHash: null,
+  });
 
   const summary = getAdminDashboardSummary(repository);
 
   assert.equal(summary.users.totalCount, 5);
-  assert.equal(summary.users.activeCount, 4);
+  assert.equal(summary.users.activeCount, 3);
   assert.equal(summary.users.suspendedCount, 1);
   assert.equal(summary.users.adminCount, 2);
   assert.equal(summary.payments.totalCount, 2);

@@ -1281,7 +1281,7 @@ function getUserDirectorySummary(items: AdminUserDirectoryItem[]): UserDirectory
   return items.reduce<UserDirectorySummary>((summary, item) => {
     summary.totalCount += 1;
     if (item.user.accountStatus === 'active') summary.activeCount += 1;
-    if (item.user.accountStatus === 'suspended') summary.suspendedCount += 1;
+    if (item.user.accountStatus === 'suspended' && !isWithdrawnUser(item.user)) summary.suspendedCount += 1;
     if (item.user.role === 'salesperson') summary.salespersonCount += 1;
     if (item.user.role === 'admin' || item.user.role === 'super_admin') summary.adminCount += 1;
     if (isWithdrawnUser(item.user)) summary.withdrawnCount += 1;
