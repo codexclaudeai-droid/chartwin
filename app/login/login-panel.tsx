@@ -111,12 +111,11 @@ export function LoginPanel() {
         <div className="social-auth-divider" role="separator" aria-label="간편로그인"></div>
         <p className="social-auth-helper">SNS(소셜네트워크 서비스) 계정으로 간편 로그인</p>
         <div className="login-social-auth-actions" aria-label="간편로그인">
-          <button
+          <a
             aria-label="Google 간편로그인"
             className="social-auth-icon-button social-auth-icon-google"
-            onClick={() => announceSocialAuthPreparation('Google')}
+            href="/api/auth/social/google/start"
             title="Google"
-            type="button"
           >
             <svg className="social-auth-logo-svg google-logo-svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
               <path fill="#4285f4" d="M23.5 12.27c0-.82-.07-1.43-.22-2.06H12v4.08h6.62c-.13 1.04-.85 2.61-2.45 3.66l-.02.14 3.56 2.67.25.02c2.3-2.06 3.54-5.08 3.54-8.51Z" />
@@ -124,7 +123,7 @@ export function LoginPanel() {
               <path fill="#fbbc05" d="M5.09 14.56A7.2 7.2 0 0 1 4.7 12c0-.89.14-1.75.37-2.56l-.01-.17-3.74-2.81-.12.06A11.76 11.76 0 0 0 0 12c0 1.97.49 3.83 1.34 5.46l3.75-2.9Z" />
               <path fill="#eb4335" d="M12 4.57c2.29 0 3.84.96 4.72 1.76l3.45-3.27C18.05 1.14 15.29 0 12 0A12.15 12.15 0 0 0 1.3 6.52l3.75 2.92A7.34 7.34 0 0 1 12 4.57Z" />
             </svg>
-          </button>
+          </a>
           <button
             aria-label="네이버 간편로그인"
             className="social-auth-icon-button social-auth-icon-naver"

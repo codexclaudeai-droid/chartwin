@@ -64,7 +64,7 @@ test('social auth completion creates a verified member account and session', asy
   assert.equal(parseSessionCookie(result.cookie), result.session.id);
 });
 
-test('signup and login panels present social auth as preparation-only actions', () => {
+test('signup and login panels wire Google auth while keeping other providers preparation-only', () => {
   const signupSource = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
   const loginSource = readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
   const startRouteSource = readFileSync(new URL('../app/api/auth/social/[provider]/start/route.ts', import.meta.url), 'utf8');
@@ -84,10 +84,11 @@ test('signup and login panels present social auth as preparation-only actions', 
   assert.match(signupSource, /네이버로 가입/);
   assert.match(signupSource, /카카오로 가입/);
   assert.match(signupSource, /간편가입은 서비스 준비중입니다/);
-  assert.doesNotMatch(signupSource, /\/api\/auth\/social\/google\/start/);
+  assert.match(signupSource, /href="\/api\/auth\/social\/google\/start"/);
   assert.match(loginSource, /login-social-auth-actions/);
   assert.match(loginSource, /social-auth-icon-google/);
   assert.match(loginSource, /google-logo-svg/);
+  assert.match(loginSource, /href="\/api\/auth\/social\/google\/start"/);
   assert.match(loginSource, /social-auth-icon-naver/);
   assert.match(loginSource, /naver-logo-svg/);
   assert.match(loginSource, /social-auth-icon-kakao/);

@@ -437,14 +437,13 @@ export function SignupPanel() {
         </button>
         <div className="social-auth-divider" role="separator" aria-label="간편가입"></div>
         <div className="social-auth-actions signup-social-auth-actions" aria-label="간편가입">
-          <button
+          <a
             className="social-auth-button social-auth-button-google"
-            onClick={() => announceSocialAuthPreparation('Google')}
-            type="button"
+            href="/api/auth/social/google/start"
           >
             <span className="social-auth-logo" aria-hidden="true">{renderGoogleLogo()}</span>
             <span>Google로 가입</span>
-          </button>
+          </a>
           <button
             className="social-auth-button social-auth-button-naver"
             onClick={() => announceSocialAuthPreparation('네이버')}
