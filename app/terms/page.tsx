@@ -3,6 +3,7 @@ import {
   getAsyncChartServicePersistence,
   getAsyncWebInfoSettingsForDisplay,
 } from '../../src/server/chart-service/index.ts';
+import LandingScrollTopButton from '../landing-scroll-top-button.tsx';
 
 export const metadata: Metadata = {
   title: '이용약관 | TradingCore',
@@ -60,6 +61,8 @@ export default async function TermsPage() {
           </div>
         </article>
       </section>
+
+      <LandingScrollTopButton />
     </main>
   );
 }

@@ -3,6 +3,7 @@ import {
   getAsyncChartServicePersistence,
   getAsyncWebInfoSettingsForDisplay,
 } from '../../src/server/chart-service/index.ts';
+import LandingScrollTopButton from '../landing-scroll-top-button.tsx';
 
 export const metadata: Metadata = {
   title: '개인정보보호정책 | TradingCore',
@@ -60,6 +61,8 @@ export default async function PrivacyPage() {
           </div>
         </article>
       </section>
+
+      <LandingScrollTopButton />
     </main>
   );
 }

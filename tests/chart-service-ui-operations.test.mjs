@@ -875,10 +875,23 @@ test('landing page shows a bottom-right scroll-to-top jump button after scrollin
   assert.match(scrollButtonSource, /window\.scrollTo\(\{ top: 0, behavior: 'smooth' \}\)/);
   assert.match(scrollButtonSource, /landing-scroll-top-button/);
   assert.match(scrollButtonSource, /aria-label="페이지 상단으로 이동"/);
-  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button\s*\{[\s\S]*?position: fixed/);
-  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button\s*\{[\s\S]*?right: clamp\(18px, 3vw, 34px\)/);
-  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button\s*\{[\s\S]*?bottom: clamp\(22px, 4vw, 42px\)/);
-  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button\.visible\s*\{[\s\S]*?opacity: 1/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button,\s*\.legal-service-page \.landing-scroll-top-button\s*\{[\s\S]*?position: fixed/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button,\s*\.legal-service-page \.landing-scroll-top-button\s*\{[\s\S]*?right: clamp\(18px, 3vw, 34px\)/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button,\s*\.legal-service-page \.landing-scroll-top-button\s*\{[\s\S]*?bottom: clamp\(22px, 4vw, 42px\)/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button\.visible,\s*\.legal-service-page \.landing-scroll-top-button\.visible\s*\{[\s\S]*?opacity: 1/);
+});
+
+test('legal policy pages include the shared scroll-to-top button', () => {
+  const termsSource = fs.readFileSync(new URL('../app/terms/page.tsx', import.meta.url), 'utf8');
+  const privacySource = fs.readFileSync(new URL('../app/privacy/page.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(termsSource, /LandingScrollTopButton/);
+  assert.match(termsSource, /<LandingScrollTopButton \/>/);
+  assert.match(privacySource, /LandingScrollTopButton/);
+  assert.match(privacySource, /<LandingScrollTopButton \/>/);
+  assert.match(cssSource, /\.legal-service-page \.landing-scroll-top-button/);
+  assert.match(cssSource, /\.legal-service-page \.landing-scroll-top-button\.visible/);
 });
 
 test('TradingCore brand identity stays in the shell without duplicating hero stamp content', () => {

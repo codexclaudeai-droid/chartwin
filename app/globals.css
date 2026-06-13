@@ -7790,7 +7790,8 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   color: var(--tradingcore-cyan);
 }
 
-.landing-page .landing-scroll-top-button {
+.landing-page .landing-scroll-top-button,
+.legal-service-page .landing-scroll-top-button {
   align-items: center;
   backdrop-filter: blur(18px);
   background:
@@ -7818,14 +7819,17 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   z-index: 80;
 }
 
-.landing-page .landing-scroll-top-button.visible {
+.landing-page .landing-scroll-top-button.visible,
+.legal-service-page .landing-scroll-top-button.visible {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
 }
 
 .landing-page .landing-scroll-top-button:hover,
-.landing-page .landing-scroll-top-button:focus-visible {
+.landing-page .landing-scroll-top-button:focus-visible,
+.legal-service-page .landing-scroll-top-button:hover,
+.legal-service-page .landing-scroll-top-button:focus-visible {
   border-color: rgba(216, 236, 255, 0.72);
   box-shadow: 0 22px 58px rgba(0, 0, 0, 0.42), 0 0 30px rgba(86, 240, 255, 0.26);
 }
