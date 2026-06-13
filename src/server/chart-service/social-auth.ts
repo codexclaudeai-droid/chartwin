@@ -30,6 +30,7 @@ export type SocialAuthProviderConfig = {
 };
 
 export type SocialAuthRuntimeEnv = {
+  CHART_SERVICE_BASE_URL?: string;
   CHART_SERVICE_GOOGLE_CLIENT_ID?: string;
   CHART_SERVICE_GOOGLE_CLIENT_SECRET?: string;
   CHART_SERVICE_NAVER_CLIENT_ID?: string;
@@ -39,6 +40,7 @@ export type SocialAuthRuntimeEnv = {
 };
 
 const SOCIAL_AUTH_ENV_KEYS = [
+  'CHART_SERVICE_BASE_URL',
   'CHART_SERVICE_GOOGLE_CLIENT_ID',
   'CHART_SERVICE_GOOGLE_CLIENT_SECRET',
   'CHART_SERVICE_NAVER_CLIENT_ID',
@@ -145,7 +147,7 @@ export function createSocialAuthAuthorizationUrl(input: {
   env?: SocialAuthRuntimeEnv;
 }): string {
   const config = getSocialAuthProviderConfig(input.provider, input.env);
-  const redirectUri = createSocialAuthRedirectUri(input.requestUrl, input.provider);
+  const redirectUri = createSocialAuthRedirectUri(input.requestUrl, input.provider, input.env);
   const url = new URL(config.authorizationEndpoint);
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('client_id', config.clientId);
@@ -208,7 +210,7 @@ export async function exchangeSocialAuthCode(
   },
 ): Promise<SocialAuthProfile> {
   const config = getSocialAuthProviderConfig(provider, input.env);
-  const redirectUri = createSocialAuthRedirectUri(input.requestUrl, provider);
+  const redirectUri = createSocialAuthRedirectUri(input.requestUrl, provider, input.env);
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     client_id: config.clientId,
@@ -238,9 +240,14 @@ export async function exchangeSocialAuthCode(
   return mapSocialAuthProfile(provider, profilePayload);
 }
 
-function createSocialAuthRedirectUri(requestUrl: string, provider: SocialAuthProvider): string {
-  const url = new URL(requestUrl);
-  return `${url.origin}/api/auth/social/${provider}/callback`;
+function createSocialAuthRedirectUri(
+  requestUrl: string,
+  provider: SocialAuthProvider,
+  env: SocialAuthRuntimeEnv = {},
+): string {
+  const requestOrigin = new URL(requestUrl).origin;
+  const origin = readSocialAuthBaseOrigin(env.CHART_SERVICE_BASE_URL) ?? requestOrigin;
+  return `${origin}/api/auth/social/${provider}/callback`;
 }
 
 function getCloudflareSocialAuthEnv(): SocialAuthRuntimeEnv {
@@ -369,4 +376,18 @@ function readRecord(value: unknown): Record<string, unknown> {
 
 function readString(value: unknown): string {
   return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+}
+
+function readSocialAuthBaseOrigin(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      throw new Error('unsupported protocol');
+    }
+    return url.origin;
+  } catch {
+    throw new Error('CHART_SERVICE_BASE_URL must be a valid http(s) URL');
+  }
 }

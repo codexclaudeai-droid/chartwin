@@ -40,6 +40,59 @@ test('social auth provider config uses provider-specific OAuth endpoints', () =>
   assert.equal(googleUrl.searchParams.get('state'), 'state_1');
 });
 
+test('social auth redirects use the configured public base URL across domains', async () => {
+  const env = {
+    CHART_SERVICE_BASE_URL: 'https://tradingcore.co',
+    CHART_SERVICE_GOOGLE_CLIENT_ID: 'google-client',
+    CHART_SERVICE_GOOGLE_CLIENT_SECRET: 'google-secret',
+    CHART_SERVICE_NAVER_CLIENT_ID: 'naver-client',
+    CHART_SERVICE_NAVER_CLIENT_SECRET: 'naver-secret',
+  };
+
+  const googleUrl = new URL(createSocialAuthAuthorizationUrl({
+    provider: 'google',
+    requestUrl: 'https://www.tradingcore.co/api/auth/social/google/start',
+    state: 'state_google',
+    env,
+  }));
+  const naverUrl = new URL(createSocialAuthAuthorizationUrl({
+    provider: 'naver',
+    requestUrl: 'https://chartwin.thankpxp.workers.dev/api/auth/social/naver/start',
+    state: 'state_naver',
+    env,
+  }));
+  const fetchRequests = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    fetchRequests.push({
+      url: String(url),
+      body: String(options?.body ?? ''),
+    });
+    if (String(url).includes('/token')) {
+      return Response.json({ access_token: 'google-access-token' });
+    }
+    return Response.json({
+      sub: 'google-123',
+      email: 'Google@Example.com',
+      name: 'Google User',
+    });
+  };
+
+  try {
+    await exchangeSocialAuthCode('google', {
+      code: 'code_1',
+      requestUrl: 'https://www.tradingcore.co/api/auth/social/google/callback',
+      env,
+    });
+
+    assert.equal(googleUrl.searchParams.get('redirect_uri'), 'https://tradingcore.co/api/auth/social/google/callback');
+    assert.equal(naverUrl.searchParams.get('redirect_uri'), 'https://tradingcore.co/api/auth/social/naver/callback');
+    assert.match(fetchRequests[0].body, /redirect_uri=https%3A%2F%2Ftradingcore\.co%2Fapi%2Fauth%2Fsocial%2Fgoogle%2Fcallback/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('Naver auth request omits scope and sends callback state during token exchange', async () => {
   const env = {
     CHART_SERVICE_NAVER_CLIENT_ID: 'naver-client',
