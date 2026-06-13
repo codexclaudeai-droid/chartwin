@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
   createAsyncChartServiceRepository,
+  createEmailVerificationTokenHash,
   createMockChartServiceRepository,
   parseSessionCookie,
   registerAsyncMockUserAccount,
@@ -143,6 +144,64 @@ test('async signup allows blank referral codes without assigning a referrer', as
 
   assert.equal(result.user.referredByUserId, null);
   assert.equal(syncRepository.getUserByEmail('async-no-referral@example.com')?.referredByUserId, null);
+});
+
+test('async signup reactivates a withdrawn member account for email verification', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const withdrawn = syncRepository.getUserByEmail('member@example.com');
+  assert.ok(withdrawn);
+  syncRepository.saveUser({
+    ...withdrawn,
+    accountStatus: 'suspended',
+    phoneNumber: null,
+    passwordHash: null,
+    emailVerifiedAt: '2026-05-01T00:00:00.000Z',
+  });
+
+  const result = await registerAsyncMockUserAccount(repository, {
+    email: 'MEMBER@example.com',
+    name: 'Returned Member',
+    password: 'Aa1!aaaa',
+    phoneNumber: '010-2222-9999',
+    createdAt: '2026-06-14T10:00:00.000Z',
+  });
+  const saved = syncRepository.getUserByEmail('member@example.com');
+
+  assert.equal(result.user.id, withdrawn.id);
+  assert.equal(result.user.accountStatus, 'active');
+  assert.equal(result.user.name, 'Returned Member');
+  assert.equal(result.user.phoneNumber, '010-2222-9999');
+  assert.equal(result.user.emailVerifiedAt, null);
+  assert.match(result.user.passwordHash ?? '', /^pbkdf2_sha256\$/);
+  assert.equal(saved?.accountStatus, 'active');
+  assert.equal(saved?.emailVerifiedAt, null);
+  const verificationRecord = syncRepository.getEmailVerificationTokenByTokenHash(
+    createEmailVerificationTokenHash(result.verification.token),
+  );
+  assert.equal(verificationRecord?.userId, withdrawn.id);
+});
+
+test('async signup keeps admin-suspended password accounts blocked', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const suspended = syncRepository.getUserByEmail('member@example.com');
+  assert.ok(suspended);
+  syncRepository.saveUser({
+    ...suspended,
+    accountStatus: 'suspended',
+    passwordHash: suspended.passwordHash ?? 'pbkdf2_sha256$hash',
+  });
+
+  await assert.rejects(
+    () => registerAsyncMockUserAccount(repository, {
+      email: 'member@example.com',
+      name: 'Blocked Member',
+      password: 'Aa1!aaaa',
+      createdAt: '2026-06-14T10:00:00.000Z',
+    }),
+    /Account suspended/,
+  );
 });
 
 test('signup API stores the referrer from a referral code', async () => {

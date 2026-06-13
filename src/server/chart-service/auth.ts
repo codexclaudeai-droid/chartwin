@@ -78,32 +78,48 @@ export function registerMockUserAccount(
   if (!policy.ok) {
     throw new Error(`Password policy failed: ${policy.missing.join(', ')}`);
   }
-  if (repository.getUserByEmail(email)) {
+  const existingUser = repository.getUserByEmail(email);
+  if (existingUser && !isWithdrawnMemberAccount(existingUser)) {
+    if (existingUser.accountStatus === USER_ACCOUNT_STATUSES.suspended) {
+      throw new Error('Account suspended');
+    }
     throw new Error('Email already registered');
   }
   const referredByUserId = getReferrerUserIdByReferralCode(repository, input.referralCode);
 
   const user: ServiceUserRecord = {
-    id: repository.nextId('user'),
+    id: existingUser?.id ?? repository.nextId('user'),
     email,
     name: input.name.trim() || email,
     role: USER_ROLES.member,
     accountStatus: USER_ACCOUNT_STATUSES.active,
     phoneNumber: normalizeSignupPhoneNumber(input.phoneNumber),
-    profileImageDataUrl: null,
-    referralCode: '',
+    profileImageDataUrl: existingUser?.profileImageDataUrl ?? null,
+    referralCode: existingUser?.referralCode ?? '',
     referredByUserId,
     createdAt: input.createdAt,
     passwordHash: createPasswordHash(input.password),
     emailVerifiedAt: input.createdAt,
   };
-  user.referralCode = createUniqueRandomReferralCode(repository.listUsers().map((item) => item.referralCode));
+  if (!user.referralCode) {
+    user.referralCode = createUniqueRandomReferralCode(repository.listUsers().map((item) => item.referralCode));
+  }
   repository.saveUser(user);
   const { session, cookie } = createSessionForUser(repository, {
     userId: user.id,
     createdAt: input.createdAt,
   });
   return { user, session, cookie };
+}
+
+export function isWithdrawnMemberAccount(
+  user: Pick<ServiceUserRecord, 'accountStatus' | 'passwordHash' | 'role'>,
+): boolean {
+  return (
+    user.role === USER_ROLES.member &&
+    user.accountStatus === USER_ACCOUNT_STATUSES.suspended &&
+    !user.passwordHash
+  );
 }
 
 function getReferrerUserIdByReferralCode(

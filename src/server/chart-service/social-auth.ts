@@ -3,6 +3,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { USER_ACCOUNT_STATUSES, USER_ROLES } from '../../domain/chart-service/index.ts';
 import type { AsyncChartServiceRepository } from './async-repository.ts';
 import { createAsyncSessionForUser } from './async-service.ts';
+import { isWithdrawnMemberAccount } from './auth.ts';
 import { createUniqueRandomReferralCode } from './referral-codes.ts';
 import type {
   AuthSessionRecord,
@@ -368,12 +369,18 @@ async function updateExistingSocialUser(
   input: { verifiedAt: string; phoneNumber?: string | null },
 ): Promise<ServiceUserRecord> {
   const phoneNumber = normalizeSocialPhoneNumber(input.phoneNumber);
+  const isWithdrawn = isWithdrawnMemberAccount(user);
   const updatedUser = {
     ...user,
+    accountStatus: isWithdrawn ? USER_ACCOUNT_STATUSES.active : user.accountStatus,
     emailVerifiedAt: user.emailVerifiedAt ?? input.verifiedAt,
     phoneNumber: user.phoneNumber ?? phoneNumber,
   };
-  if (updatedUser.emailVerifiedAt === user.emailVerifiedAt && updatedUser.phoneNumber === user.phoneNumber) {
+  if (
+    updatedUser.accountStatus === user.accountStatus &&
+    updatedUser.emailVerifiedAt === user.emailVerifiedAt &&
+    updatedUser.phoneNumber === user.phoneNumber
+  ) {
     return user;
   }
   await repository.saveUser(updatedUser);

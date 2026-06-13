@@ -33,7 +33,7 @@ import {
   type UserAccountStatus,
   type UserRole,
 } from '../../domain/chart-service/index.ts';
-import { createSessionCookie, parseSessionCookieClaims } from './auth.ts';
+import { createSessionCookie, isWithdrawnMemberAccount, parseSessionCookieClaims } from './auth.ts';
 import type { AsyncChartServiceRepository } from './async-repository.ts';
 import type {
   AuthSessionRecord,
@@ -731,26 +731,32 @@ export async function registerAsyncMockUserAccount(
   if (!policy.ok) {
     throw new Error(`Password policy failed: ${policy.missing.join(', ')}`);
   }
-  if (await repository.getUserByEmail(email)) {
+  const existingUser = await repository.getUserByEmail(email);
+  if (existingUser && !isWithdrawnMemberAccount(existingUser)) {
+    if (existingUser.accountStatus === USER_ACCOUNT_STATUSES.suspended) {
+      throw new Error('Account suspended');
+    }
     throw new Error('Email already registered');
   }
   const referredByUserId = await getAsyncReferrerUserIdByReferralCode(repository, input.referralCode);
 
   const user: ServiceUserRecord = {
-    id: await repository.nextId('user'),
+    id: existingUser?.id ?? (await repository.nextId('user')),
     email,
     name: input.name.trim() || email,
     role: USER_ROLES.member,
     accountStatus: USER_ACCOUNT_STATUSES.active,
     phoneNumber: normalizeProfilePhoneNumber(input.phoneNumber),
-    profileImageDataUrl: null,
-    referralCode: '',
+    profileImageDataUrl: existingUser?.profileImageDataUrl ?? null,
+    referralCode: existingUser?.referralCode ?? '',
     referredByUserId,
     createdAt: input.createdAt,
     passwordHash: createPasswordHash(input.password),
     emailVerifiedAt: null,
   };
-  user.referralCode = createUniqueRandomReferralCode((await repository.listUsers()).map((item) => item.referralCode));
+  if (!user.referralCode) {
+    user.referralCode = createUniqueRandomReferralCode((await repository.listUsers()).map((item) => item.referralCode));
+  }
   await repository.saveUser(user);
   const verification = await queueAsyncEmailVerification(repository, {
     user,

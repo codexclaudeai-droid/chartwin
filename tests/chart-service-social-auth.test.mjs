@@ -202,6 +202,46 @@ test('social auth completion creates a verified member account with provider pho
   assert.equal(parseSessionCookie(result.cookie), result.session.id);
 });
 
+test('social auth completion reactivates a withdrawn linked member account', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const withdrawn = syncRepository.getUserByEmail('member@example.com');
+  assert.ok(withdrawn);
+  syncRepository.saveUser({
+    ...withdrawn,
+    accountStatus: 'suspended',
+    phoneNumber: null,
+    passwordHash: null,
+  });
+  syncRepository.saveSocialAuthAccount({
+    id: 'social_auth_existing',
+    provider: 'google',
+    providerUserId: 'google-member',
+    userId: withdrawn.id,
+    email: withdrawn.email,
+    createdAt: '2026-05-01T00:00:00.000Z',
+    updatedAt: '2026-05-01T00:00:00.000Z',
+  });
+
+  const result = await completeAsyncSocialAuth(repository, {
+    profile: {
+      provider: 'google',
+      providerUserId: 'google-member',
+      email: 'member@example.com',
+      name: 'Returned Social Member',
+      phoneNumber: '010-1111-2222',
+    },
+    createdAt: '2026-06-14T10:00:00.000Z',
+  });
+  const saved = syncRepository.getUserById(withdrawn.id);
+
+  assert.equal(result.user.id, withdrawn.id);
+  assert.equal(result.user.accountStatus, 'active');
+  assert.equal(result.user.phoneNumber, '010-1111-2222');
+  assert.equal(saved?.accountStatus, 'active');
+  assert.equal(parseSessionCookie(result.cookie), result.session.id);
+});
+
 test('social auth runtime env keeps OAuth secret values when Cloudflare bindings are partial', async () => {
   const env = getSocialAuthRuntimeEnv({
     CHART_SERVICE_GOOGLE_CLIENT_ID: 'google-client',
