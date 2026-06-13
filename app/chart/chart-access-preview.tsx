@@ -72,7 +72,7 @@ export function ChartAccessPreview({
       <div className="chart-preview-actions" aria-label="Chart preview actions">
         {mode === 'landing-entry' ? (
           <>
-            <Link className="button chart-preview-primary" href={mainHref}>메인연결</Link>
+            <Link className="button chart-preview-primary" href={mainHref}>Home</Link>
             <Link className="button chart-preview-secondary" href={loginHref}>로그인</Link>
           </>
         ) : (

@@ -61,7 +61,7 @@ export function MobileNav() {
           <span aria-hidden="true" />
         </button>
         <nav className="mobile-nav-links" aria-label="모바일 메뉴">
-          <Link href="/">
+          <Link href="/main">
             <span className="mobile-nav-link-icon" aria-hidden="true"><Home /></span>
             <span className="mobile-nav-link-label">홈</span>
           </Link>

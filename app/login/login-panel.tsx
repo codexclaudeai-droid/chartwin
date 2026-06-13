@@ -45,7 +45,7 @@ export function LoginPanel() {
         return;
       }
       if (navigateToSafeRedirect(new URLSearchParams(window.location.search))) return;
-      window.location.assign('/');
+      window.location.assign('/main');
       return;
     }
     setMessage(response.ok ? `${payload.user.email} 계정으로 로그인되었습니다.` : payload.message);

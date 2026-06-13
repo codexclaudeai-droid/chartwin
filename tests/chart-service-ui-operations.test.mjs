@@ -690,10 +690,13 @@ test('root page uses the chart intro before entering the landing page', () => {
   const previewSource = fs.readFileSync(new URL('../app/chart/chart-access-preview.tsx', import.meta.url), 'utf8');
 
   assert.match(pageSource, /ChartAccessPreview/);
+  assert.match(pageSource, /getActorFromAsyncRequest/);
+  assert.match(pageSource, /redirect\('\/main'\)/);
+  assert.match(pageSource, /dynamic = 'force-dynamic'/);
   assert.match(pageSource, /mode="landing-entry"/);
   assert.match(pageSource, /mainHref="\/main"/);
-  assert.match(pageSource, /loginHref="\/login"/);
-  assert.match(previewSource, /메인연결/);
+  assert.match(pageSource, /loginHref="\/login\?redirect=\/main"/);
+  assert.match(previewSource, /Home/);
   assert.match(previewSource, /mode === 'landing-entry'/);
 });
 
@@ -901,6 +904,7 @@ test('top navigation links the landing page to the TC Chart route', () => {
   const mobileNavSource = fs.readFileSync(new URL('../app/mobile-nav.tsx', import.meta.url), 'utf8');
 
   assert.match(layoutSource, /<nav className="nav" aria-label="Primary">/);
+  assert.match(layoutSource, /<Link href="\/main">홈<\/Link>/);
   assert.match(layoutSource, /<Link href="\/chart" aria-label="TC Chart 페이지">TC차트<\/Link>/);
   assert.match(layoutSource, /<Link href="\/main#landing-plans">구독플랜<\/Link>/);
   assert.match(layoutSource, /<Link href="\/support">고객센터<\/Link>/);
@@ -912,6 +916,7 @@ test('top navigation links the landing page to the TC Chart route', () => {
     2,
   );
   assert.match(mobileNavSource, /from 'lucide-react'/);
+  assert.match(mobileNavSource, /<Link href="\/main">/);
   assert.match(mobileNavSource, /Home/);
   assert.match(mobileNavSource, /ChartCandlestick/);
   assert.match(mobileNavSource, /ReceiptText/);
@@ -1040,6 +1045,7 @@ test('login page aligns login and logout actions to the right', () => {
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(panelSource, /actions compact login-actions/);
+  assert.match(panelSource, /window\.location\.assign\('\/main'\)/);
   assert.match(cssSource, /\.auth-card \.login-actions\s*\{[\s\S]*?justify-content:\s*flex-end/);
 });
 

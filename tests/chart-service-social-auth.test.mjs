@@ -97,4 +97,5 @@ test('signup and login panels present social auth as preparation-only actions', 
   assert.match(startRouteSource, /createSocialAuthStateCookie/);
   assert.match(callbackRouteSource, /exchangeSocialAuthCode/);
   assert.match(callbackRouteSource, /completeAsyncSocialAuth/);
+  assert.match(callbackRouteSource, /new URL\('\/main', request\.url\)/);
 });

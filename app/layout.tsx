@@ -303,7 +303,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               />
             </Link>
             <nav className="nav" aria-label="Primary">
-              <Link href="/">홈</Link>
+              <Link href="/main">홈</Link>
               <Link href="/chart" aria-label="TC Chart 페이지">TC차트</Link>
               <Link href="/main#landing-plans">구독플랜</Link>
               <Link href="/support">고객센터</Link>

@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, context: SocialAuthRouteContext)
       profile,
       createdAt: new Date().toISOString(),
     }));
-    const response = NextResponse.redirect(new URL('/', request.url));
+    const response = NextResponse.redirect(new URL('/main', request.url));
     response.headers.append('Set-Cookie', result.cookie);
     response.headers.append('Set-Cookie', createClearSocialAuthStateCookie(providerInput));
     return response;
