@@ -11,12 +11,17 @@ import {
   syncExistingBrowserPushSubscriptionForCurrentUser,
 } from '../push-subscription-client';
 
-export function LoginPanel() {
+type LoginPanelProps = {
+  showWithdrawnPrompt?: boolean;
+};
+
+export function LoginPanel({ showWithdrawnPrompt = false }: LoginPanelProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isWithdrawnPromptVisible, setIsWithdrawnPromptVisible] = useState(showWithdrawnPrompt);
 
   async function login(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,6 +51,11 @@ export function LoginPanel() {
       }
       if (navigateToSafeRedirect(new URLSearchParams(window.location.search))) return;
       window.location.assign('/main');
+      return;
+    }
+    if (String(payload.message ?? '').includes('Account suspended')) {
+      setMessage('회원탈퇴로 로그인이 불가합니다.');
+      setIsWithdrawnPromptVisible(true);
       return;
     }
     setMessage(response.ok ? `${payload.user.email} 계정으로 로그인되었습니다.` : payload.message);
@@ -148,6 +158,32 @@ export function LoginPanel() {
         </div>
       </form>
       <p className="notice">{message}</p>
+      {isWithdrawnPromptVisible && (
+        <div
+          className="pricing-auth-modal-backdrop withdrawn-login-modal-backdrop"
+          role="presentation"
+          onClick={() => setIsWithdrawnPromptVisible(false)}
+        >
+          <div
+            aria-labelledby="withdrawn-login-modal-title"
+            aria-modal="true"
+            className="pricing-auth-modal withdrawn-login-modal"
+            role="dialog"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="withdrawn-login-modal-title">회원탈퇴로 로그인이 불가합니다.</h3>
+            <p>회원가입을 다시 하시겠습니까?</p>
+            <div className="pricing-auth-modal-actions">
+              <button className="button" type="button" onClick={() => window.location.assign('/signup')}>
+                네
+              </button>
+              <button className="button secondary" type="button" onClick={() => setIsWithdrawnPromptVisible(false)}>
+                아니오
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

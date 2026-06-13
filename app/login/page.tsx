@@ -8,6 +8,7 @@ type LoginPageProps = {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const resolvedSearchParams = await searchParams;
   const redirectPath = getSearchParamValue(resolvedSearchParams?.redirect);
+  const showWithdrawnPrompt = resolvedSearchParams?.withdrawn === '1';
   const signupHref = redirectPath ? `/signup?redirect=${encodeURIComponent(redirectPath)}` : '/signup';
 
   return (
@@ -15,7 +16,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <section className="login-page-shell">
         <span className="eyebrow">Account Access</span>
         <h1>로그인</h1>
-        <LoginPanel />
+        <LoginPanel showWithdrawnPrompt={showWithdrawnPrompt} />
         <section className="auth-signup-guide" aria-label="회원가입 안내">
           <div>
             <strong>TradingCore 계정이 없나요?</strong>

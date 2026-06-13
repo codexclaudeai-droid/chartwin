@@ -62,9 +62,23 @@ test('login panel sends admin operators to the admin dashboard after authenticat
   assert.match(source, /window\.location\.assign\('\/admin'\)/);
 });
 
+test('login panel prompts withdrawn users to rejoin instead of continuing login', () => {
+  const source = readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
+  const pageSource = readFileSync(new URL('../app/login/page.tsx', import.meta.url), 'utf8');
+
+  assert.match(pageSource, /withdrawn/);
+  assert.match(pageSource, /<LoginPanel showWithdrawnPrompt=\{showWithdrawnPrompt\} \/>/);
+  assert.match(source, /showWithdrawnPrompt/);
+  assert.match(source, /Account suspended/);
+  assert.match(source, /회원탈퇴로 로그인이 불가합니다/);
+  assert.match(source, /회원가입을 다시 하시겠습니까/);
+  assert.match(source, /window\.location\.assign\('\/signup'\)/);
+  assert.match(source, /아니오/);
+});
+
 test('login panel returns normal landing logins to the landing page', () => {
   const source = readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
 
   assert.match(source, /navigateToSafeRedirect\(new URLSearchParams\(window\.location\.search\)\)/);
-  assert.match(source, /window\.location\.assign\('\/'\)/);
+  assert.match(source, /window\.location\.assign\('\/main'\)/);
 });

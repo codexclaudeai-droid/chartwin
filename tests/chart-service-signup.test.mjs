@@ -767,6 +767,8 @@ test('signup panel uses compact agreement rows and required field marks', () => 
   assert.match(cssSource, /\.required-mark/);
   assert.match(cssSource, /\.signup-policy-box\s*\{[\s\S]*?background:\s*transparent/);
   assert.match(cssSource, /\.signup-policy-box details\s*\{[\s\S]*?border:\s*0/);
+  assert.match(cssSource, /\.signup-policy-content\s*\{[\s\S]*?scrollbar-width:\s*thin/);
+  assert.match(cssSource, /\.signup-policy-content::-webkit-scrollbar\s*\{[\s\S]*?width:\s*4px/);
   assert.match(cssSource, /\.checkbox-row\s*\{[\s\S]*?background:\s*transparent/);
   assert.match(cssSource, /\.checkbox-row:is\(:hover, :focus, :focus-visible, :active\)/);
   assert.match(cssSource, /\.checkbox-row:has\(input:focus-visible\)/);

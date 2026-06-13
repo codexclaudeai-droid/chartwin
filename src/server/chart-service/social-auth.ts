@@ -43,6 +43,8 @@ export type SocialAuthRuntimeEnv = {
 
 export type SocialAuthUserLifecycle = 'created' | 'reactivated' | 'existing';
 
+export const SOCIAL_AUTH_WITHDRAWN_LOGIN_ERROR = 'Social account withdrawn';
+
 const SOCIAL_AUTH_ENV_KEYS = [
   'CHART_SERVICE_BASE_URL',
   'CHART_SERVICE_GOOGLE_CLIENT_ID',
@@ -184,6 +186,7 @@ export async function completeAsyncSocialAuth(
   input: {
     profile: SocialAuthProfile;
     createdAt: string;
+    allowWithdrawnReactivation?: boolean;
   },
 ): Promise<{
   user: ServiceUserRecord;
@@ -199,6 +202,9 @@ export async function completeAsyncSocialAuth(
   const existingUser = existingAccount
     ? await repository.getUserById(existingAccount.userId)
     : await repository.getUserByEmail(email);
+  if (existingUser && isWithdrawnMemberAccount(existingUser) && input.allowWithdrawnReactivation === false) {
+    throw new Error(SOCIAL_AUTH_WITHDRAWN_LOGIN_ERROR);
+  }
   const userLifecycle: SocialAuthUserLifecycle = existingUser
     ? isWithdrawnMemberAccount(existingUser) ? 'reactivated' : 'existing'
     : 'created';

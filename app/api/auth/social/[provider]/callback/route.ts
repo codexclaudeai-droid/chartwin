@@ -7,6 +7,7 @@ import {
   getSocialAuthRuntimeEnvAsync,
   isSocialAuthProvider,
   readSocialAuthStateCookie,
+  SOCIAL_AUTH_WITHDRAWN_LOGIN_ERROR,
 } from '../../../../../../src/server/chart-service/index.ts';
 
 type SocialAuthRouteContext = {
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest, context: SocialAuthRouteContext)
     const result = await persistence.runMutation((repository) => completeAsyncSocialAuth(repository, {
       profile,
       createdAt: new Date().toISOString(),
+      allowWithdrawnReactivation: socialAuthStartedFromSignup,
     }));
     const redirectPath = result.userLifecycle === 'created' || result.userLifecycle === 'reactivated'
       ? '/main?signup=complete'
@@ -51,6 +53,11 @@ export async function GET(request: NextRequest, context: SocialAuthRouteContext)
     response.headers.append('Set-Cookie', createClearSocialAuthStateCookie(providerInput));
     return response;
   } catch (error) {
+    if (error instanceof Error && error.message === SOCIAL_AUTH_WITHDRAWN_LOGIN_ERROR) {
+      const response = NextResponse.redirect(new URL('/login?withdrawn=1', request.url));
+      response.headers.append('Set-Cookie', createClearSocialAuthStateCookie(providerInput));
+      return response;
+    }
     return NextResponse.json({
       ok: false,
       message: error instanceof Error ? error.message : 'social auth failed',

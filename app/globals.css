@@ -4068,6 +4068,8 @@ body:has(.landing-page) .site-footer {
 }
 
 .signup-policy-content {
+  scrollbar-color: rgba(125, 183, 255, 0.32) transparent;
+  scrollbar-width: thin;
   color: var(--muted);
   font-family: inherit;
   line-height: 1.6;
@@ -4075,6 +4077,24 @@ body:has(.landing-page) .site-footer {
   max-height: 180px;
   overflow: auto;
   white-space: pre-wrap;
+}
+
+.signup-policy-content::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+
+.signup-policy-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.signup-policy-content::-webkit-scrollbar-thumb {
+  background: rgba(125, 183, 255, 0.28);
+  border-radius: 999px;
+}
+
+.signup-policy-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(125, 183, 255, 0.42);
 }
 
 .signup-policy-content.html {
@@ -11511,6 +11531,8 @@ body:not(:has(.landing-page)) .signup-policy-box summary {
 }
 
 body:not(:has(.landing-page)) .signup-policy-content {
+  scrollbar-color: rgba(125, 183, 255, 0.32) transparent;
+  scrollbar-width: thin;
   color: rgba(216, 236, 255, 0.72);
   font-family: inherit;
   line-height: 1.7;
@@ -13379,6 +13401,12 @@ body:not(:has(.landing-page)) #admin-users .admin-user-account-status.suspended 
   border-color: rgba(255, 191, 95, 0.28);
   background: rgba(255, 191, 95, 0.11);
   color: rgba(255, 225, 180, 0.9);
+}
+
+body:not(:has(.landing-page)) #admin-users .admin-user-account-status.withdrawn {
+  border-color: rgba(255, 132, 132, 0.28);
+  background: rgba(255, 132, 132, 0.1);
+  color: rgba(255, 203, 203, 0.92);
 }
 
 body:not(:has(.landing-page)) #admin-users .admin-user-subscription-cell strong,

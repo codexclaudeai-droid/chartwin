@@ -312,6 +312,9 @@ test('admin user panel renders operator-friendly user state labels', () => {
 
   assert.match(source, /formatUserRoleLabel/);
   assert.match(source, /formatUserAccountStatusLabel/);
+  assert.match(source, /formatUserDirectoryAccountStatusLabel/);
+  assert.match(source, /admin-user-account-status \$\{isWithdrawnUser\(user\) \? 'withdrawn' : user\.accountStatus\}/);
+  assert.match(source, /isWithdrawnUser\(user\) \? '탈퇴' : formatUserAccountStatusLabel\(user\.accountStatus\)/);
   assert.doesNotMatch(source, /\{item\.user\.role\}/);
   assert.doesNotMatch(source, /\{item\.user\.accountStatus\}/);
 });

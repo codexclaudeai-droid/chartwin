@@ -776,8 +776,8 @@ export function UserAdminPanel() {
                 </td>
                 <td className="admin-user-role-cell">
                   <span className="badge admin-user-role-badge">{formatUserRoleLabel(item.user.role)}</span>
-                  <span className={getAccountStatusClassName(item.user.accountStatus)}>
-                    {formatUserAccountStatusLabel(item.user.accountStatus)}
+                  <span className={getAccountStatusClassName(item.user)}>
+                    {formatUserDirectoryAccountStatusLabel(item.user)}
                   </span>
                 </td>
                 <td className="admin-user-subscription-cell">
@@ -843,8 +843,8 @@ export function UserAdminPanel() {
               </button>
             </div>
             <div className="admin-user-mobile-card-status-row">
-              <span className={getAccountStatusClassName(item.user.accountStatus)}>
-                {formatUserAccountStatusLabel(item.user.accountStatus)}
+              <span className={getAccountStatusClassName(item.user)}>
+                {formatUserDirectoryAccountStatusLabel(item.user)}
               </span>
               <span className="badge admin-user-role-badge">{formatUserRoleLabel(item.user.role)}</span>
             </div>
@@ -914,8 +914,8 @@ export function UserAdminPanel() {
                 </div>
                 <h3 className="admin-user-detail-title">{detail.user.name}</h3>
               </div>
-              <span className={getAccountStatusClassName(detail.user.accountStatus)}>
-                {formatUserAccountStatusLabel(detail.user.accountStatus)}
+              <span className={getAccountStatusClassName(detail.user)}>
+                {formatUserDirectoryAccountStatusLabel(detail.user)}
               </span>
             </div>
             <div className="admin-filter-row admin-user-detail-control-grid">
@@ -1250,8 +1250,12 @@ function isProvisionalSaleAdminNote(adminNote: string | null | undefined): boole
     adminNote.includes('가매출');
 }
 
-function getAccountStatusClassName(accountStatus: UserAccountStatus): string {
-  return `admin-user-account-status ${accountStatus}`;
+function getAccountStatusClassName(user: AdminDisplayUser): string {
+  return `admin-user-account-status ${isWithdrawnUser(user) ? 'withdrawn' : user.accountStatus}`;
+}
+
+function formatUserDirectoryAccountStatusLabel(user: AdminDisplayUser): string {
+  return isWithdrawnUser(user) ? '탈퇴' : formatUserAccountStatusLabel(user.accountStatus);
 }
 
 function formatReferralPoints(value: number): string {
@@ -1292,7 +1296,9 @@ function getUserDirectorySummary(items: AdminUserDirectoryItem[]): UserDirectory
   });
 }
 
-function isWithdrawnUser(user: AdminUserDirectoryItem['user']): boolean {
+type AdminDisplayUser = Pick<AdminUserDirectoryItem['user'], 'accountStatus' | 'phoneNumber' | 'role'>;
+
+function isWithdrawnUser(user: AdminDisplayUser): boolean {
   return user.accountStatus === 'suspended' &&
     user.phoneNumber === null &&
     user.role !== 'admin' &&

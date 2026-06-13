@@ -12,6 +12,7 @@ import {
   exchangeSocialAuthCode,
   getSocialAuthProviderConfig,
   parseSessionCookie,
+  SOCIAL_AUTH_WITHDRAWN_LOGIN_ERROR,
   SOCIAL_AUTH_PROVIDERS,
 } from '../src/server/chart-service/index.ts';
 
@@ -252,6 +253,40 @@ test('social auth completion reactivates a withdrawn linked member account', asy
   assert.equal(result.userLifecycle, 'reactivated');
 });
 
+test('social auth completion blocks withdrawn linked accounts during login intent', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const withdrawn = syncRepository.getUserByEmail('member@example.com');
+  assert.ok(withdrawn);
+  syncRepository.saveUser({
+    ...withdrawn,
+    accountStatus: 'suspended',
+    passwordHash: null,
+  });
+  syncRepository.saveSocialAuthAccount({
+    id: 'social_auth_existing',
+    provider: 'google',
+    providerUserId: 'google-member',
+    userId: withdrawn.id,
+    email: withdrawn.email,
+    createdAt: '2026-05-01T00:00:00.000Z',
+    updatedAt: '2026-05-01T00:00:00.000Z',
+  });
+
+  await assert.rejects(() => completeAsyncSocialAuth(repository, {
+    profile: {
+      provider: 'google',
+      providerUserId: 'google-member',
+      email: 'member@example.com',
+      name: 'Withdrawn Social Member',
+    },
+    createdAt: '2026-06-14T10:00:00.000Z',
+    allowWithdrawnReactivation: false,
+  }), new RegExp(SOCIAL_AUTH_WITHDRAWN_LOGIN_ERROR));
+
+  assert.equal(syncRepository.getUserById(withdrawn.id)?.accountStatus, 'suspended');
+});
+
 test('social auth completion keeps existing linked accounts as login-only', async () => {
   const syncRepository = createMockChartServiceRepository();
   const repository = createAsyncChartServiceRepository(syncRepository);
@@ -341,6 +376,8 @@ test('signup and login panels wire Google and Naver auth while keeping Kakao pre
   assert.match(callbackRouteSource, /exchangeSocialAuthCode/);
   assert.match(callbackRouteSource, /completeAsyncSocialAuth/);
   assert.match(callbackRouteSource, /getSocialAuthRuntimeEnvAsync/);
+  assert.match(callbackRouteSource, /allowWithdrawnReactivation: socialAuthStartedFromSignup/);
+  assert.match(callbackRouteSource, /login\?withdrawn=1/);
   assert.match(callbackRouteSource, /socialAuthStartedFromSignup/);
   assert.match(callbackRouteSource, /signup=complete/);
   assert.match(callbackRouteSource, /signup=existing/);
