@@ -82,9 +82,9 @@ export function SignupPanel() {
   useEffect(() => {
     let isMounted = true;
     async function loadWebInfo() {
-      const response = await fetch('/api/web-info');
-      const payload = await response.json();
-      if (!isMounted || !response.ok) return;
+      const response = await fetch('/api/web-info', { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({}));
+      if (!isMounted || !response.ok || !payload.settings) return;
       setWebInfoSettings(payload.settings);
     }
 

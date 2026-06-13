@@ -25,6 +25,6 @@ test('pricing page falls back to the first plan for missing or unknown plan ids'
 test('landing plan links carry the selected plan id into pricing', () => {
   assert.equal(createPricingPlanHref('plan_yearly'), '/pricing?plan=plan_yearly');
 
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   assert.match(pageSource, /href=\{createPricingPlanHref\(plan\.id\)\}/);
 });

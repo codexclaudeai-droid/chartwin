@@ -488,8 +488,9 @@ test('admin payment panel exposes direct anchors for payment queue items', async
 });
 
 test('landing page presents a concrete conversion layout for the subscription service', () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const heroSource = fs.readFileSync(new URL('../app/landing-hero-slider.tsx', import.meta.url), 'utf8');
+  const footerSource = fs.readFileSync(new URL('../app/shared/site-footer.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(pageSource, /getAsyncChartServicePersistence/);
@@ -575,14 +576,15 @@ test('landing page presents a concrete conversion layout for the subscription se
   assert.doesNotMatch(pageSource, /landing-faq-actions/);
   assert.doesNotMatch(pageSource, /고객센터로 문의하기/);
   assert.doesNotMatch(pageSource, /구독 플랜 다시 보기/);
-  assert.match(pageSource, /landing-footer/);
-  assert.match(pageSource, /이용약관/);
-  assert.match(pageSource, /개인정보보호정책/);
-  assert.match(pageSource, /사업자 정보 고지/);
-  assert.match(pageSource, /© TradingCore/);
+  assert.match(pageSource, /SiteFooter/);
+  assert.match(footerSource, /landing-footer/);
+  assert.match(footerSource, /이용약관/);
+  assert.match(footerSource, /개인정보보호정책/);
+  assert.match(footerSource, /고객센터/);
+  assert.match(footerSource, /© TradingCore/);
   assert.match(pageSource, /href="\/pricing"/);
   assert.match(pageSource, /href="\/signup"/);
-  assert.match(pageSource, /href="\/support"/);
+  assert.match(pageSource, /href: '\/support'/);
   assert.match(cssSource, /\.landing-hero/);
   assert.match(cssSource, /\.landing-hero-stage/);
   assert.match(cssSource, /\.landing-hero-bg/);
@@ -608,65 +610,36 @@ test('landing page presents a concrete conversion layout for the subscription se
   assert.match(cssSource, /\.landing-hero-controls/);
   assert.match(cssSource, /\.landing-hero-control/);
   assert.doesNotMatch(heroSource, /LandingLiveCandleCanvas/);
-  assert.match(heroSource, /heroCandleSeed/);
-  assert.match(heroSource, /const heroCandleSpacing = 2/);
-  assert.match(heroSource, /const heroCandleStart = -5/);
-  assert.match(heroSource, /heroCandleTrendRegimes/);
-  assert.match(heroSource, /phase: 'uptrend'/);
-  assert.match(heroSource, /phase: 'range'/);
-  assert.match(heroSource, /phase: 'downtrend'/);
-  assert.match(heroSource, /function getHeroCandleOffset\(index/);
-  assert.match(heroSource, /Math\.sin\(index \* 1\.7\)/);
-  assert.match(heroSource, /offset: getHeroCandleOffset\(index\)/);
-  assert.match(heroSource, /Array\.from\(\{ length: 56 \}/);
-  assert.match(heroSource, /left: `\$\{heroCandleStart \+ index \* heroCandleSpacing\}%`/);
+  assert.match(heroSource, /heroImage/);
+  assert.match(heroSource, /\/images\/hero\/slide-01\.png/);
+  assert.match(heroSource, /\/images\/hero\/slide-02\.png/);
+  assert.match(heroSource, /\/images\/hero\/slide-03\.png/);
+  assert.match(heroSource, /backgroundImage/);
+  assert.match(heroSource, /landing-hero-bg/);
+  assert.match(heroSource, /landing-hero-layout/);
+  assert.match(heroSource, /landingHeroSlides\.map/);
+  assert.doesNotMatch(heroSource, /function getHeroCandleOffset\(index/);
+  assert.doesNotMatch(heroSource, /Array\.from\(\{ length: 56 \}/);
   assert.doesNotMatch(heroSource, /animationDelay: `\$\{candleIndex \* 80\}ms`/);
   assert.doesNotMatch(heroSource, /heroTrendWave/);
-  assert.match(heroSource, /<div className="landing-hero-chart-board" aria-hidden="true">/);
-  assert.match(heroSource, /landing-hero-chart-stream/);
-  assert.match(heroSource, /landing-hero-chart-track/);
-  assert.match(heroSource, /landing-hero-chart-segment/);
-  assert.match(heroSource, /landing-hero-chart-candle/);
-  assert.match(heroSource, /landing-hero-chart-signal/);
+  assert.doesNotMatch(heroSource, /landing-hero-chart-board/);
+  assert.doesNotMatch(heroSource, /landing-hero-chart-stream/);
+  assert.doesNotMatch(heroSource, /landing-hero-chart-candle/);
   assert.doesNotMatch(pageSource, /landing-scroll-transition/);
   assert.doesNotMatch(pageSource, /landing-trend-path/);
   assert.doesNotMatch(pageSource, /landing-trend-line-fill/);
   assert.doesNotMatch(pageSource, /landing-signal-node/);
   assert.doesNotMatch(pageSource, /landing-signal-ripple/);
   assert.doesNotMatch(pageSource, /landing-scroll-wheel/);
-  assert.match(cssSource, /\.landing-hero-chart-board/);
+  assert.match(cssSource, /\.landing-hero-bg/);
   assert.doesNotMatch(cssSource, /padding-block: 34px/);
-  assert.match(cssSource, /\.landing-hero-chart-stream/);
-  assert.match(cssSource, /-webkit-mask-image: linear-gradient\(90deg, transparent 0%, rgba\(0, 0, 0, 0\.3\) 7%, #000 18%, #000 100%\)/);
-  assert.match(cssSource, /mask-image: linear-gradient\(90deg, transparent 0%, rgba\(0, 0, 0, 0\.3\) 7%, #000 18%, #000 100%\)/);
-  assert.match(cssSource, /\.landing-hero-chart-track/);
-  assert.match(cssSource, /\.landing-hero-chart-segment/);
-  assert.match(cssSource, /animation: heroCandleTrackMove 34s linear infinite/);
-  assert.match(cssSource, /@keyframes heroCandleTrackMove/);
-  assert.match(cssSource, /transform: translate3d\(-50%, 0, 0\)/);
-  assert.match(cssSource, /\.landing-hero-chart-candle/);
-  assert.match(cssSource, /left: var\(--candle-left\)/);
-  assert.match(cssSource, /width: var\(--candle-width\)/);
-  assert.match(cssSource, /\.landing-hero-chart-candle\.up\s*\{[^}]*bottom:/s);
-  assert.match(cssSource, /\.landing-hero-chart-candle\.down\s*\{[^}]*top:/s);
+  assert.match(cssSource, /background-repeat: no-repeat/);
+  assert.match(cssSource, /background-size: auto/);
+  assert.match(cssSource, /\.hero-bg-approval/);
+  assert.match(cssSource, /\.hero-bg-deposit/);
+  assert.match(cssSource, /\.hero-bg-workspace/);
   assert.match(cssSource, /position: absolute/);
   assert.doesNotMatch(cssSource, /transition: left 720ms linear/);
-  assert.match(cssSource, /\.landing-hero-chart-candle\.up/);
-  assert.match(cssSource, /\.landing-hero-chart-candle\.down/);
-  assert.match(cssSource, /\.landing-hero-chart-candle\.doji/);
-  assert.match(cssSource, /\.landing-hero-chart-candle\.squeeze/);
-  assert.match(cssSource, /\.landing-hero-chart-candle\.inverted-hammer/);
-  assert.match(cssSource, /\.landing-hero-chart-candle\.marubozu::before/);
-  assert.match(cssSource, /display: none/);
-  assert.match(cssSource, /\.landing-hero-chart-candle\.up::before\s*\{[^}]*linear-gradient\(180deg, rgba\(255, 111, 124, 0\.95\), rgba\(215, 48, 73, 0\.48\)\)/s);
-  assert.match(cssSource, /\.landing-hero-chart-candle\.down::before\s*\{[^}]*linear-gradient\(180deg, rgba\(125, 183, 255, 0\.92\), rgba\(49, 90, 170, 0\.5\)\)/s);
-  assert.match(cssSource, /\.landing-hero-chart-signal/);
-  assert.match(cssSource, /\.landing-hero-chart-signal\.buy/);
-  assert.match(cssSource, /\.landing-hero-chart-signal\.sell/);
-  assert.match(cssSource, /\.landing-hero-chart-candle\.up \.landing-hero-chart-signal\.sell/);
-  assert.match(cssSource, /\.landing-hero-chart-candle\.down \.landing-hero-chart-signal\.buy/);
-  assert.match(cssSource, /@keyframes heroSignalPop/);
-  assert.match(cssSource, /@keyframes heroCandleDraw/);
   assert.doesNotMatch(cssSource, /\.landing-hero-chart-stream\s*\{[^}]*animation:/);
   assert.doesNotMatch(cssSource, /@keyframes heroCandleStream/);
   assert.doesNotMatch(cssSource, /@keyframes heroChartDrift/);
@@ -712,14 +685,28 @@ test('landing page presents a concrete conversion layout for the subscription se
   assert.doesNotMatch(pageSource, /landing-hero-proof-strip/);
 });
 
-test('landing footer uses the header logo image instead of a text wordmark', () => {
+test('root page uses the chart intro before entering the landing page', () => {
   const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const previewSource = fs.readFileSync(new URL('../app/chart/chart-access-preview.tsx', import.meta.url), 'utf8');
+
+  assert.match(pageSource, /ChartAccessPreview/);
+  assert.match(pageSource, /mode="landing-entry"/);
+  assert.match(pageSource, /mainHref="\/main"/);
+  assert.match(pageSource, /loginHref="\/login"/);
+  assert.match(previewSource, /메인연결/);
+  assert.match(previewSource, /mode === 'landing-entry'/);
+});
+
+test('landing footer uses the header logo image instead of a text wordmark', () => {
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
+  const footerSource = fs.readFileSync(new URL('../app/shared/site-footer.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
-  assert.doesNotMatch(pageSource, /<strong>TradingCore<\/strong>/);
-  assert.match(pageSource, /className="landing-footer-logo"/);
-  assert.match(pageSource, /src="\/images\/TC-main-logo\.png"/);
-  assert.match(pageSource, /alt="TradingCore"/);
+  assert.match(pageSource, /<SiteFooter \/>/);
+  assert.doesNotMatch(footerSource, /<strong>TradingCore<\/strong>/);
+  assert.match(footerSource, /className="landing-footer-logo"/);
+  assert.match(footerSource, /src="\/images\/TC-main-logo\.png"/);
+  assert.match(footerSource, /alt="TradingCore"/);
   assert.match(cssSource, /\.landing-footer-logo\s*\{[^}]*height: 24px/s);
   assert.match(cssSource, /\.landing-footer-logo\s*\{[^}]*width: auto/s);
 });
@@ -762,7 +749,7 @@ test('root layout exposes favicon and installable home screen icons', () => {
 });
 
 test('landing page exposes a completed premium design layer', () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const heroSource = fs.readFileSync(new URL('../app/landing-hero-slider.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
@@ -837,11 +824,11 @@ test('landing page exposes a completed premium design layer', () => {
 });
 
 test('landing page applies scroll fade in and out motion to sections and cards', () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const fadeSource = fs.readFileSync(new URL('../app/landing-scroll-fade-motion.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
-  assert.match(pageSource, /import LandingScrollFadeMotion from '\.\/landing-scroll-fade-motion\.tsx'/);
+  assert.match(pageSource, /import LandingScrollFadeMotion from '\.\.\/landing-scroll-fade-motion\.tsx'/);
   assert.match(pageSource, /<LandingScrollFadeMotion \/>/);
   assert.match(fadeSource, /'use client'/);
   assert.match(fadeSource, /IntersectionObserver/);
@@ -874,7 +861,7 @@ test('landing hero removes fine grid overlays from the first viewport', () => {
 });
 
 test('landing page shows a bottom-right scroll-to-top jump button after scrolling', () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const scrollButtonSource = fs.readFileSync(new URL('../app/landing-scroll-top-button.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
@@ -893,7 +880,7 @@ test('landing page shows a bottom-right scroll-to-top jump button after scrollin
 
 test('TradingCore brand identity stays in the shell without duplicating hero stamp content', () => {
   const layoutSource = fs.readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8');
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(layoutSource, /brand-mark/);
@@ -915,13 +902,13 @@ test('top navigation links the landing page to the TC Chart route', () => {
 
   assert.match(layoutSource, /<nav className="nav" aria-label="Primary">/);
   assert.match(layoutSource, /<Link href="\/chart" aria-label="TC Chart 페이지">TC차트<\/Link>/);
-  assert.match(layoutSource, /<Link href="\/#landing-plans">구독플랜<\/Link>/);
+  assert.match(layoutSource, /<Link href="\/main#landing-plans">구독플랜<\/Link>/);
   assert.match(layoutSource, /<Link href="\/support">고객센터<\/Link>/);
   assert.match(layoutSource, /<\/nav>\s*<NotificationNavLink \/>\s*<SessionNav \/>/);
   assert.doesNotMatch(layoutSource, /<ProfileNavLink \/>/);
   assert.match(mobileNavSource, /<ProfileNavLink \/>/);
   assert.equal(
-    ((layoutSource + mobileNavSource).match(/<Link href="\/#landing-plans"/g) ?? []).length,
+    ((layoutSource + mobileNavSource).match(/<Link href="\/main#landing-plans"/g) ?? []).length,
     2,
   );
   assert.match(mobileNavSource, /from 'lucide-react'/);
@@ -1013,7 +1000,7 @@ test('mobile navigation links use lucide concept icons before labels', () => {
   assert.match(profileSource, /mobile-nav-link-icon/);
   assert.match(notificationSource, /mobile-nav-link-icon/);
   assert.match(adminSource, /mobile-nav-link-icon/);
-  assert.match(cssSource, /\.mobile-nav-links a\s*\{[\s\S]*?gap:\s*10px[\s\S]*?justify-content:\s*flex-start/);
+  assert.match(cssSource, /\.mobile-nav-links a,\s*\.mobile-nav-panel \.session a\s*\{[\s\S]*?gap:\s*10px[\s\S]*?justify-content:\s*flex-start/);
   assert.match(cssSource, /\.mobile-nav-links a \.nav-badge\s*\{[\s\S]*?margin-left:\s*auto/);
 });
 
@@ -1057,7 +1044,7 @@ test('login page aligns login and logout actions to the right', () => {
 });
 
 test('landing page presents TC Chart feature capabilities under the TradingCore website brand', () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const landingSpecSource = fs.readFileSync(new URL('../landing-page.md', import.meta.url), 'utf8');
 
@@ -1098,19 +1085,18 @@ test('landing page presents TC Chart feature capabilities under the TradingCore 
   assert.match(cssSource, /\.tc-chart-feature-card li::before/);
 });
 
-test('chart gate page uses TC Chart product copy instead of generic English gate labels', () => {
+test('chart route renders the TC Chart access preview or runtime', () => {
   const chartPageSource = fs.readFileSync(new URL('../app/chart/page.tsx', import.meta.url), 'utf8');
+  const previewSource = fs.readFileSync(new URL('../app/chart/chart-access-preview.tsx', import.meta.url), 'utf8');
 
-  assert.match(chartPageSource, /TC Chart/);
-  assert.match(chartPageSource, /chart-gate-page/);
-  assert.match(chartPageSource, /상단 메뉴 연결 정상/);
-  assert.match(chartPageSource, /차트 페이지 진입 테스트가 가능한 상태입니다/);
-  assert.match(chartPageSource, /차트 이용 권한/);
-  assert.match(chartPageSource, /유료 시그널 열람/);
-  assert.match(chartPageSource, /차트 엔진/);
-  assert.match(chartPageSource, /기존 Vite 기반 TC Chart 코어/);
-  assert.match(chartPageSource, /href="\/pricing"/);
-  assert.match(chartPageSource, /href="\/profile"/);
+  assert.match(chartPageSource, /ChartAccessPreview/);
+  assert.match(chartPageSource, /ChartRuntime/);
+  assert.match(chartPageSource, /audience="member"/);
+  assert.match(chartPageSource, /audience="guest"/);
+  assert.match(previewSource, /TC Chart preview/);
+  assert.match(previewSource, /무료체험 신청/);
+  assert.match(previewSource, /signupHref/);
+  assert.match(previewSource, /loginHref/);
   assert.doesNotMatch(chartPageSource, /TC 차트/);
   assert.doesNotMatch(chartPageSource, /Full chart/);
   assert.doesNotMatch(chartPageSource, /Paid signals/);
@@ -1118,7 +1104,7 @@ test('chart gate page uses TC Chart product copy instead of generic English gate
 });
 
 test('landing hero keeps internal access gate details out of the public view', () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.doesNotMatch(pageSource, /landing-signal-card/);
@@ -1146,7 +1132,7 @@ test('mobile landing hero centers slide artwork between copy and slide controls'
 });
 
 test('landing middle sections present plan details without a workflow section', () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.doesNotMatch(pageSource, /landingFlowCheckpoints/);
@@ -1157,7 +1143,7 @@ test('landing middle sections present plan details without a workflow section', 
   assert.match(pageSource, /getLandingPlanFeatures/);
   assert.match(pageSource, /formatLandingPlanPeriod/);
   assert.match(pageSource, /formatLandingPlanDiscount/);
-  assert.match(pageSource, /\/ 매월/);
+  assert.match(pageSource, /\/1개월/);
   assert.match(pageSource, /\/ 6개월/);
   assert.match(pageSource, /\/ 1년/);
   assert.match(pageSource, /landing-plan-feature-list/);
@@ -1176,8 +1162,8 @@ test('landing middle sections present plan details without a workflow section', 
   assert.doesNotMatch(pageSource, /Subscription unlock/);
   assert.match(pageSource, /당신의 트레이딩 성향에 맞는 완벽한 플랜/);
   assert.match(pageSource, /실시간 온사이트 및 텔레그램 시그널 알림/);
-  assert.match(pageSource, /텔레그램 알림 확장 및 교차 알림 커스텀/);
-  assert.match(pageSource, /VIP 초고속 데이터 대역폭 및 우선 기술 지원/);
+  assert.match(pageSource, /텔레그램 알림 확장 및 시그널 알림 커스텀/);
+  assert.match(pageSource, /VIP 초고급 데이터 대시보드 및 우선 기술 지원/);
   assert.match(pageSource, /★ RECOMMENDED/);
   assert.doesNotMatch(pageSource, /Chart workspace/);
   assert.doesNotMatch(pageSource, /Signal unlock/);
@@ -1198,7 +1184,7 @@ test('landing middle sections present plan details without a workflow section', 
 });
 
 test('landing plan cards use admin configured web info plan services', () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
 
   assert.match(pageSource, /getAsyncWebInfoSettingsForDisplay/);
   assert.match(pageSource, /webInfoSettings: await getAsyncWebInfoSettingsForDisplay\(repository\)/);
@@ -1207,7 +1193,7 @@ test('landing plan cards use admin configured web info plan services', () => {
 });
 
 test('landing and pricing show BASIC plan period with a leading slash', () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const pricingPanelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
 
   assert.match(pageSource, /plan\.id === 'plan_monthly'\) return '\/1개월'/);
@@ -1217,7 +1203,7 @@ test('landing and pricing show BASIC plan period with a leading slash', () => {
 });
 
 test('landing and pricing plan prices format thousands and render decimal as subunit', async () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const pricingPanelSource = fs.readFileSync(new URL('../app/pricing/pricing-panel.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const { formatPlanPriceParts } = await import('../app/shared/plan-price-format.ts');
@@ -1233,7 +1219,7 @@ test('landing and pricing plan prices format thousands and render decimal as sub
 });
 
 test('landing bottom sections end with FAQ and contact actions', () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.doesNotMatch(pageSource, /landingTrustBadges/);
@@ -1265,7 +1251,7 @@ test('landing bottom sections end with FAQ and contact actions', () => {
 });
 
 test('landing page presents Kyrios strategic partnership before contact actions', () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
   const kyriosAssetUrl = new URL('../public/images/partners/kyrios-investment-white.png', import.meta.url);
   const kyriosAssetExists = fs.existsSync(kyriosAssetUrl);
@@ -1322,7 +1308,7 @@ test('landing page presents Kyrios strategic partnership before contact actions'
 });
 
 test('landing page removes start route cards in favor of the TradingCore feature section', () => {
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.doesNotMatch(pageSource, /conversionRouteCards/);
@@ -1340,7 +1326,7 @@ test('landing page removes start route cards in favor of the TradingCore feature
 
 test('landing page uses a premium dark brokerage palette without cloning another layout', () => {
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
-  const pageSource = fs.readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+  const pageSource = fs.readFileSync(new URL('../app/main/page.tsx', import.meta.url), 'utf8');
 
   assert.match(cssSource, /@font-face\s*\{[^}]*font-family: "Pretendard"[^}]*PretendardVariable\.woff2/s);
   assert.match(cssSource, /font-weight: 100 900/);

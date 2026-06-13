@@ -2757,6 +2757,10 @@ a {
   position: relative;
 }
 
+body:has(.landing-page) .site-footer {
+  display: none;
+}
+
 .landing-footer::before {
   background: linear-gradient(90deg, transparent, var(--tradingcore-lime), transparent);
   content: "";
@@ -2815,81 +2819,96 @@ a {
   padding: 9px 12px;
 }
 
-.landing-footer-notices {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.legal-service-page {
+  padding-bottom: 64px;
 }
 
-.landing-footer-notices a {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.78);
-  display: grid;
-  gap: 8px;
-  padding: 16px;
-  transition: border-color 160ms ease, color 160ms ease, transform 160ms ease;
+.legal-policy-summary {
+  margin-top: 0;
 }
 
-.landing-footer-notices a:hover {
-  border-color: rgba(125, 183, 255, 0.36);
-  color: #ffffff;
-  transform: translateY(-1px);
-}
-
-.landing-footer-notices strong {
-  color: #ffffff;
+.legal-section-index {
+  color: var(--tradingcore-azure);
+  font-size: 12px;
   font-weight: 900;
-  letter-spacing: 0;
-}
-
-.landing-footer-notices span {
-  font-size: 13px;
-  line-height: 1.65;
-  margin-bottom: 0;
-}
-
-.legal-page {
-  display: grid;
-  gap: 22px;
-}
-
-.legal-page-hero {
-  background:
-    linear-gradient(135deg, rgba(25, 199, 184, 0.1), transparent 46%),
-    var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 28px;
-}
-
-.legal-page-hero h1 {
-  font-size: clamp(30px, 5vw, 52px);
-  margin: 10px 0;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .legal-document {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  color: var(--text);
   display: grid;
-  gap: 14px;
-  line-height: 1.8;
-  padding: 28px;
-  white-space: pre-line;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
 }
 
-.legal-document p {
+.legal-document-section {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 54px minmax(0, 1fr);
+  padding: 26px;
+}
+
+.legal-document-section + .legal-document-section {
+  border-top: 1px solid rgba(7, 21, 47, 0.09);
+}
+
+.legal-document-section h2 {
+  font-size: 22px;
+  margin: 0 0 12px;
+}
+
+.legal-document-section ul {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.legal-document-section li {
+  line-height: 1.8;
+}
+
+.legal-policy-content {
+  color: rgba(216, 236, 255, 0.78);
+  font-family: inherit;
+  line-height: 1.8;
+  margin: 0;
+  max-width: none;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.legal-policy-content.html {
+  display: grid;
+  gap: 12px;
+  white-space: normal;
+}
+
+.legal-policy-content.html :is(h1, h2, h3, h4) {
+  color: #ffffff;
+  margin: 8px 0 2px;
+}
+
+.legal-policy-content.html p,
+.legal-policy-content.html ul,
+.legal-policy-content.html ol {
   margin: 0;
 }
 
-.legal-page-links {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+.legal-policy-content.html :is(ul, ol) {
+  padding-left: 20px;
+}
+
+.legal-policy-content.html li {
+  line-height: 1.8;
+}
+
+@media (max-width: 760px) {
+  .legal-document-section {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
 }
 
 .status-panel {
@@ -6869,7 +6888,6 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   .landing-operator-ribbon,
   .landing-design-showcase,
   .landing-footer-grid,
-  .landing-footer-notices,
   .landing-trust,
   .band,
   .grid-panel,
@@ -7514,8 +7532,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   color: rgba(255, 255, 255, 0.68);
 }
 
-.landing-footer-links a,
-.landing-footer-notices a {
+.landing-footer-links a {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.13);
 }
@@ -8603,8 +8620,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
   opacity: 0.9;
 }
 
-.landing-page .landing-footer-links a,
-.landing-page .landing-footer-notices a {
+.landing-page .landing-footer-links a {
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(19, 89, 255, 0.03)),
     rgba(8, 17, 31, 0.9);
@@ -8613,8 +8629,7 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .landing-page .landing-footer p,
-.landing-page .landing-footer small,
-.landing-page .landing-footer-notices span {
+.landing-page .landing-footer small {
   color: rgba(216, 236, 255, 0.78);
 }
 
@@ -11119,6 +11134,10 @@ body:not(:has(.landing-page)) .chart-preview-secondary {
 }
 
 body:has(.chart-preview-page) .topbar {
+  display: none;
+}
+
+body:has(.chart-preview-page) .site-footer {
   display: none;
 }
 

@@ -9,7 +9,10 @@ export async function GET() {
 
   try {
     const settings = await persistence.runRead((repository) => getAsyncWebInfoSettingsForDisplay(repository));
-    return NextResponse.json({ ok: true, settings });
+    return NextResponse.json(
+      { ok: true, settings },
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
   } catch (error) {
     return NextResponse.json({
       ok: false,

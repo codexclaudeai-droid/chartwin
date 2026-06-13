@@ -6,6 +6,7 @@ import { MobileNav } from './mobile-nav';
 import { NotificationNavLink } from './notification-nav-link';
 import { NoticePopupViewer } from './notice-popup-viewer';
 import { SessionNav } from './session-nav';
+import { SiteFooter } from './shared/site-footer';
 import './globals.css';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.CF_PAGES_URL || 'http://localhost:3000';
@@ -304,7 +305,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <nav className="nav" aria-label="Primary">
               <Link href="/">홈</Link>
               <Link href="/chart" aria-label="TC Chart 페이지">TC차트</Link>
-              <Link href="/#landing-plans">구독플랜</Link>
+              <Link href="/main#landing-plans">구독플랜</Link>
               <Link href="/support">고객센터</Link>
               <AdminNavLink />
             </nav>
@@ -313,6 +314,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <MobileNav />
           </header>
           {children}
+          <SiteFooter className="site-footer" />
           <NoticePopupViewer />
         </div>
       </body>

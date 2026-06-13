@@ -9,7 +9,6 @@ const scrollFadeSelector = [
   '.landing-page .landing-plan-card',
   '.landing-page .landing-faq-card',
   '.landing-page .landing-contact-card',
-  '.landing-page .landing-footer',
 ].join(', ');
 
 export default function LandingScrollFadeMotion() {

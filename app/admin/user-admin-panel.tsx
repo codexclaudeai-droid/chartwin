@@ -1247,7 +1247,7 @@ function isProvisionalSalePaymentForSubscription(
 
 function isProvisionalSaleAdminNote(adminNote: string | null | undefined): boolean {
   return typeof adminNote === 'string' &&
-    (adminNote.includes('가매출') || adminNote.includes('媛留ㅼ텧'));
+    adminNote.includes('가매출');
 }
 
 function getAccountStatusClassName(accountStatus: UserAccountStatus): string {

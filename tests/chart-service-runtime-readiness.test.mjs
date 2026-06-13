@@ -169,7 +169,7 @@ test('production readiness harness is wired into package scripts and env templat
 
 test('production-facing server pages use async persistence for postgres compatibility', () => {
   for (const pagePath of [
-    '../app/page.tsx',
+    '../app/main/page.tsx',
     '../app/pricing/page.tsx',
     '../app/support/page.tsx',
   ]) {

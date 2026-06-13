@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { FreeTrialRequestButton } from '../shared/free-trial-request-button';
 
@@ -13,6 +14,8 @@ type ChartAccessPreviewProps = {
   audience?: 'guest' | 'member';
   signupHref?: string;
   loginHref?: string;
+  mainHref?: string;
+  mode?: 'chart-access' | 'landing-entry';
 };
 
 const THREE_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
@@ -23,6 +26,8 @@ export function ChartAccessPreview({
   audience = 'guest',
   signupHref = '/signup?redirect=/chart',
   loginHref = '/login?redirect=/chart',
+  mainHref = '/main',
+  mode = 'chart-access',
 }: ChartAccessPreviewProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -65,6 +70,12 @@ export function ChartAccessPreview({
         <img className="chart-preview-logo" src="/images/logo.png" alt="TradingCore" />
       </section>
       <div className="chart-preview-actions" aria-label="Chart preview actions">
+        {mode === 'landing-entry' ? (
+          <>
+            <Link className="button chart-preview-primary" href={mainHref}>메인연결</Link>
+            <Link className="button chart-preview-secondary" href={loginHref}>로그인</Link>
+          </>
+        ) : (
         <FreeTrialRequestButton
           className="button chart-preview-primary"
           confirmTitle={isMember ? '무료체험을 시작할까요?' : '무료체험 신청을 진행할까요?'}
@@ -82,6 +93,7 @@ export function ChartAccessPreview({
         >
           무료체험 신청
         </FreeTrialRequestButton>
+        )}
       </div>
     </main>
   );

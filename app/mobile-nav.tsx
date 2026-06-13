@@ -69,7 +69,7 @@ export function MobileNav() {
             <span className="mobile-nav-link-icon" aria-hidden="true"><ChartCandlestick /></span>
             <span className="mobile-nav-link-label">TC차트</span>
           </Link>
-          <Link href="/#landing-plans">
+          <Link href="/main#landing-plans">
             <span className="mobile-nav-link-icon" aria-hidden="true"><ReceiptText /></span>
             <span className="mobile-nav-link-label">구독플랜</span>
           </Link>
