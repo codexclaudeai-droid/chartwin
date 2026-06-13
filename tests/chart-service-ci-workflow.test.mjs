@@ -53,6 +53,8 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(deployWorkflow, /WEB_PUSH_SUBJECT:\s+\$\{\{ secrets\.WEB_PUSH_SUBJECT \}\}/);
   assert.match(deployWorkflow, /CHART_SERVICE_GOOGLE_CLIENT_ID:\s+\$\{\{ secrets\.CHART_SERVICE_GOOGLE_CLIENT_ID \}\}/);
   assert.match(deployWorkflow, /CHART_SERVICE_GOOGLE_CLIENT_SECRET:\s+\$\{\{ secrets\.CHART_SERVICE_GOOGLE_CLIENT_SECRET \}\}/);
+  assert.match(deployWorkflow, /CHART_SERVICE_NAVER_CLIENT_ID:\s+\$\{\{ secrets\.CHART_SERVICE_NAVER_CLIENT_ID \}\}/);
+  assert.match(deployWorkflow, /CHART_SERVICE_NAVER_CLIENT_SECRET:\s+\$\{\{ secrets\.CHART_SERVICE_NAVER_CLIENT_SECRET \}\}/);
   assert.match(deployWorkflow, /CLOUDFLARE_ACCOUNT_ID/);
   assert.match(deployWorkflow, /CLOUDFLARE_API_TOKEN/);
   assert.match(deployWorkflow, /CLOUDFLARE_EMAIL_API_TOKEN:\s+\$\{\{ secrets\.CLOUDFLARE_EMAIL_API_TOKEN \}\}/);

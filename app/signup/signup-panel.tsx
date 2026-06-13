@@ -444,14 +444,13 @@ export function SignupPanel() {
             <span className="social-auth-logo" aria-hidden="true">{renderGoogleLogo()}</span>
             <span>Google로 가입</span>
           </a>
-          <button
+          <a
             className="social-auth-button social-auth-button-naver"
-            onClick={() => announceSocialAuthPreparation('네이버')}
-            type="button"
+            href="/api/auth/social/naver/start"
           >
             <span className="social-auth-logo" aria-hidden="true">{renderNaverLogo()}</span>
             <span>네이버로 가입</span>
-          </button>
+          </a>
           <button
             className="social-auth-button social-auth-button-kakao"
             onClick={() => announceSocialAuthPreparation('카카오')}

@@ -124,17 +124,16 @@ export function LoginPanel() {
               <path fill="#eb4335" d="M12 4.57c2.29 0 3.84.96 4.72 1.76l3.45-3.27C18.05 1.14 15.29 0 12 0A12.15 12.15 0 0 0 1.3 6.52l3.75 2.92A7.34 7.34 0 0 1 12 4.57Z" />
             </svg>
           </a>
-          <button
+          <a
             aria-label="네이버 간편로그인"
             className="social-auth-icon-button social-auth-icon-naver"
-            onClick={() => announceSocialAuthPreparation('네이버')}
+            href="/api/auth/social/naver/start"
             title="네이버"
-            type="button"
           >
             <svg className="social-auth-logo-svg naver-logo-svg" viewBox="0 0 24 24" role="img" aria-hidden="true">
               <path fill="#ffffff" d="M15.32 12.52 8.42 3H3v18h5.68v-9.52L15.58 21H21V3h-5.68v9.52Z" />
             </svg>
-          </button>
+          </a>
           <button
             aria-label="카카오 간편로그인"
             className="social-auth-icon-button social-auth-icon-kakao"

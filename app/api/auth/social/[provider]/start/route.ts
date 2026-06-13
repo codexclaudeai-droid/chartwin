@@ -3,6 +3,7 @@ import {
   createSocialAuthAuthorizationUrl,
   createSocialAuthState,
   createSocialAuthStateCookie,
+  getSocialAuthRuntimeEnvAsync,
   isSocialAuthProvider,
 } from '../../../../../../src/server/chart-service/index.ts';
 
@@ -18,10 +19,12 @@ export async function GET(request: NextRequest, context: SocialAuthRouteContext)
 
   try {
     const state = createSocialAuthState();
+    const env = await getSocialAuthRuntimeEnvAsync();
     const authorizationUrl = createSocialAuthAuthorizationUrl({
       provider: providerInput,
       requestUrl: request.url,
       state,
+      env,
     });
     const response = NextResponse.redirect(authorizationUrl);
     response.headers.set('Set-Cookie', createSocialAuthStateCookie(providerInput, state));

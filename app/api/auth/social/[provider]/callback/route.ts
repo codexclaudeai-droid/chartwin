@@ -4,6 +4,7 @@ import {
   createClearSocialAuthStateCookie,
   exchangeSocialAuthCode,
   getAsyncChartServicePersistence,
+  getSocialAuthRuntimeEnvAsync,
   isSocialAuthProvider,
   readSocialAuthStateCookie,
 } from '../../../../../../src/server/chart-service/index.ts';
@@ -27,9 +28,11 @@ export async function GET(request: NextRequest, context: SocialAuthRouteContext)
   }
 
   try {
+    const env = await getSocialAuthRuntimeEnvAsync();
     const profile = await exchangeSocialAuthCode(providerInput, {
       code,
       requestUrl: request.url,
+      env,
     });
     const persistence = getAsyncChartServicePersistence();
     const result = await persistence.runMutation((repository) => completeAsyncSocialAuth(repository, {

@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { USER_ACCOUNT_STATUSES, USER_ROLES } from '../../domain/chart-service/index.ts';
 import type { AsyncChartServiceRepository } from './async-repository.ts';
 import { createAsyncSessionForUser } from './async-service.ts';
@@ -27,6 +28,24 @@ export type SocialAuthProviderConfig = {
   userInfoEndpoint: string;
   scope: string;
 };
+
+export type SocialAuthRuntimeEnv = {
+  CHART_SERVICE_GOOGLE_CLIENT_ID?: string;
+  CHART_SERVICE_GOOGLE_CLIENT_SECRET?: string;
+  CHART_SERVICE_NAVER_CLIENT_ID?: string;
+  CHART_SERVICE_NAVER_CLIENT_SECRET?: string;
+  CHART_SERVICE_KAKAO_CLIENT_ID?: string;
+  CHART_SERVICE_KAKAO_CLIENT_SECRET?: string;
+};
+
+const SOCIAL_AUTH_ENV_KEYS = [
+  'CHART_SERVICE_GOOGLE_CLIENT_ID',
+  'CHART_SERVICE_GOOGLE_CLIENT_SECRET',
+  'CHART_SERVICE_NAVER_CLIENT_ID',
+  'CHART_SERVICE_NAVER_CLIENT_SECRET',
+  'CHART_SERVICE_KAKAO_CLIENT_ID',
+  'CHART_SERVICE_KAKAO_CLIENT_SECRET',
+] as const;
 
 export function isSocialAuthProvider(value: string): value is SocialAuthProvider {
   return SOCIAL_AUTH_PROVIDERS.includes(value as SocialAuthProvider);
@@ -70,9 +89,23 @@ export function readSocialAuthStateCookie(cookieHeader: string | null | undefine
   return match ? decodeURIComponent(match.slice(prefix.length)) : null;
 }
 
+export function getSocialAuthRuntimeEnv(
+  env: SocialAuthRuntimeEnv = process.env as SocialAuthRuntimeEnv,
+): SocialAuthRuntimeEnv {
+  const cloudflareEnv = getCloudflareSocialAuthEnv();
+  return mergeSocialAuthRuntimeEnv(env, cloudflareEnv);
+}
+
+export async function getSocialAuthRuntimeEnvAsync(
+  env: SocialAuthRuntimeEnv = process.env as SocialAuthRuntimeEnv,
+): Promise<SocialAuthRuntimeEnv> {
+  const cloudflareEnv = await getCloudflareSocialAuthEnvAsync();
+  return mergeSocialAuthRuntimeEnv(env, cloudflareEnv);
+}
+
 export function getSocialAuthProviderConfig(
   provider: SocialAuthProvider,
-  env: Record<string, string | undefined> = process.env,
+  env: SocialAuthRuntimeEnv = process.env as SocialAuthRuntimeEnv,
 ): SocialAuthProviderConfig {
   if (provider === 'google') {
     return {
@@ -109,7 +142,7 @@ export function createSocialAuthAuthorizationUrl(input: {
   provider: SocialAuthProvider;
   requestUrl: string;
   state: string;
-  env?: Record<string, string | undefined>;
+  env?: SocialAuthRuntimeEnv;
 }): string {
   const config = getSocialAuthProviderConfig(input.provider, input.env);
   const redirectUri = createSocialAuthRedirectUri(input.requestUrl, input.provider);
@@ -168,7 +201,7 @@ export async function exchangeSocialAuthCode(
   input: {
     code: string;
     requestUrl: string;
-    env?: Record<string, string | undefined>;
+    env?: SocialAuthRuntimeEnv;
   },
 ): Promise<SocialAuthProfile> {
   const config = getSocialAuthProviderConfig(provider, input.env);
@@ -201,6 +234,46 @@ export async function exchangeSocialAuthCode(
 function createSocialAuthRedirectUri(requestUrl: string, provider: SocialAuthProvider): string {
   const url = new URL(requestUrl);
   return `${url.origin}/api/auth/social/${provider}/callback`;
+}
+
+function getCloudflareSocialAuthEnv(): SocialAuthRuntimeEnv {
+  try {
+    const context = getCloudflareContext();
+    return pickSocialAuthRuntimeEnv(context.env as SocialAuthRuntimeEnv);
+  } catch {
+    return {};
+  }
+}
+
+async function getCloudflareSocialAuthEnvAsync(): Promise<SocialAuthRuntimeEnv> {
+  try {
+    const context = await getCloudflareContext({ async: true });
+    return pickSocialAuthRuntimeEnv(context.env as SocialAuthRuntimeEnv);
+  } catch {
+    return {};
+  }
+}
+
+function pickSocialAuthRuntimeEnv(env: SocialAuthRuntimeEnv): SocialAuthRuntimeEnv {
+  const picked: SocialAuthRuntimeEnv = {};
+  for (const key of SOCIAL_AUTH_ENV_KEYS) {
+    picked[key] = env[key];
+  }
+  return picked;
+}
+
+function mergeSocialAuthRuntimeEnv(
+  baseEnv: SocialAuthRuntimeEnv,
+  overrideEnv: SocialAuthRuntimeEnv,
+): SocialAuthRuntimeEnv {
+  const merged: SocialAuthRuntimeEnv = { ...baseEnv };
+  for (const key of SOCIAL_AUTH_ENV_KEYS) {
+    const value = overrideEnv[key]?.trim();
+    if (value) {
+      merged[key] = value;
+    }
+  }
+  return merged;
 }
 
 function mapSocialAuthProfile(provider: SocialAuthProvider, payload: Record<string, unknown>): SocialAuthProfile {

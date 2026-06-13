@@ -5,6 +5,8 @@ import {
   completeAsyncSocialAuth,
   createAsyncChartServiceRepository,
   createMockChartServiceRepository,
+  getSocialAuthRuntimeEnv,
+  getSocialAuthRuntimeEnvAsync,
   createSocialAuthAuthorizationUrl,
   getSocialAuthProviderConfig,
   parseSessionCookie,
@@ -64,7 +66,27 @@ test('social auth completion creates a verified member account and session', asy
   assert.equal(parseSessionCookie(result.cookie), result.session.id);
 });
 
-test('signup and login panels wire Google auth while keeping other providers preparation-only', () => {
+test('social auth runtime env keeps OAuth secret values when Cloudflare bindings are partial', async () => {
+  const env = getSocialAuthRuntimeEnv({
+    CHART_SERVICE_GOOGLE_CLIENT_ID: 'google-client',
+    CHART_SERVICE_GOOGLE_CLIENT_SECRET: 'google-secret',
+    CHART_SERVICE_NAVER_CLIENT_ID: 'naver-client',
+    CHART_SERVICE_NAVER_CLIENT_SECRET: 'naver-secret',
+  });
+
+  assert.equal(env.CHART_SERVICE_GOOGLE_CLIENT_ID, 'google-client');
+  assert.equal(env.CHART_SERVICE_GOOGLE_CLIENT_SECRET, 'google-secret');
+  assert.equal(env.CHART_SERVICE_NAVER_CLIENT_ID, 'naver-client');
+  assert.equal(env.CHART_SERVICE_NAVER_CLIENT_SECRET, 'naver-secret');
+
+  const asyncEnv = await getSocialAuthRuntimeEnvAsync(env);
+  assert.equal(asyncEnv.CHART_SERVICE_GOOGLE_CLIENT_ID, 'google-client');
+  assert.equal(asyncEnv.CHART_SERVICE_GOOGLE_CLIENT_SECRET, 'google-secret');
+  assert.equal(asyncEnv.CHART_SERVICE_NAVER_CLIENT_ID, 'naver-client');
+  assert.equal(asyncEnv.CHART_SERVICE_NAVER_CLIENT_SECRET, 'naver-secret');
+});
+
+test('signup and login panels wire Google and Naver auth while keeping Kakao preparation-only', () => {
   const signupSource = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
   const loginSource = readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
   const startRouteSource = readFileSync(new URL('../app/api/auth/social/[provider]/start/route.ts', import.meta.url), 'utf8');
@@ -85,18 +107,22 @@ test('signup and login panels wire Google auth while keeping other providers pre
   assert.match(signupSource, /카카오로 가입/);
   assert.match(signupSource, /간편가입은 서비스 준비중입니다/);
   assert.match(signupSource, /href="\/api\/auth\/social\/google\/start"/);
+  assert.match(signupSource, /href="\/api\/auth\/social\/naver\/start"/);
   assert.match(loginSource, /login-social-auth-actions/);
   assert.match(loginSource, /social-auth-icon-google/);
   assert.match(loginSource, /google-logo-svg/);
   assert.match(loginSource, /href="\/api\/auth\/social\/google\/start"/);
   assert.match(loginSource, /social-auth-icon-naver/);
   assert.match(loginSource, /naver-logo-svg/);
+  assert.match(loginSource, /href="\/api\/auth\/social\/naver\/start"/);
   assert.match(loginSource, /social-auth-icon-kakao/);
   assert.match(loginSource, /kakao-logo-svg/);
   assert.match(loginSource, /간편로그인은 서비스 준비중입니다/);
   assert.match(startRouteSource, /createSocialAuthAuthorizationUrl/);
   assert.match(startRouteSource, /createSocialAuthStateCookie/);
+  assert.match(startRouteSource, /getSocialAuthRuntimeEnvAsync/);
   assert.match(callbackRouteSource, /exchangeSocialAuthCode/);
   assert.match(callbackRouteSource, /completeAsyncSocialAuth/);
+  assert.match(callbackRouteSource, /getSocialAuthRuntimeEnvAsync/);
   assert.match(callbackRouteSource, /new URL\('\/main', request\.url\)/);
 });
