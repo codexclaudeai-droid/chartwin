@@ -159,6 +159,18 @@ export function createSocialAuthAuthorizationUrl(input: {
   return url.toString();
 }
 
+export function createCanonicalSocialAuthStartUrl(input: {
+  provider: SocialAuthProvider;
+  requestUrl: string;
+  env?: SocialAuthRuntimeEnv;
+}): string | null {
+  const canonicalOrigin = readSocialAuthBaseOrigin(input.env?.CHART_SERVICE_BASE_URL);
+  if (!canonicalOrigin) return null;
+  const requestUrl = new URL(input.requestUrl);
+  if (requestUrl.origin === canonicalOrigin) return null;
+  return `${canonicalOrigin}/api/auth/social/${input.provider}/start`;
+}
+
 export async function completeAsyncSocialAuth(
   repository: AsyncChartServiceRepository,
   input: {

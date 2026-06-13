@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server.js';
 import {
+  createCanonicalSocialAuthStartUrl,
   createSocialAuthAuthorizationUrl,
   createSocialAuthState,
   createSocialAuthStateCookie,
@@ -18,8 +19,17 @@ export async function GET(request: NextRequest, context: SocialAuthRouteContext)
   }
 
   try {
-    const state = createSocialAuthState();
     const env = await getSocialAuthRuntimeEnvAsync();
+    const canonicalStartUrl = createCanonicalSocialAuthStartUrl({
+      provider: providerInput,
+      requestUrl: request.url,
+      env,
+    });
+    if (canonicalStartUrl) {
+      return NextResponse.redirect(canonicalStartUrl);
+    }
+
+    const state = createSocialAuthState();
     const authorizationUrl = createSocialAuthAuthorizationUrl({
       provider: providerInput,
       requestUrl: request.url,

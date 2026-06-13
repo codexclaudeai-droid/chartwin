@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   completeAsyncSocialAuth,
   createAsyncChartServiceRepository,
+  createCanonicalSocialAuthStartUrl,
   createMockChartServiceRepository,
   getSocialAuthRuntimeEnv,
   getSocialAuthRuntimeEnvAsync,
@@ -91,6 +92,35 @@ test('social auth redirects use the configured public base URL across domains', 
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('social auth start URL canonicalizes before issuing state cookies', () => {
+  const env = { CHART_SERVICE_BASE_URL: 'https://tradingcore.co' };
+
+  assert.equal(
+    createCanonicalSocialAuthStartUrl({
+      provider: 'naver',
+      requestUrl: 'https://www.tradingcore.co/api/auth/social/naver/start',
+      env,
+    }),
+    'https://tradingcore.co/api/auth/social/naver/start',
+  );
+  assert.equal(
+    createCanonicalSocialAuthStartUrl({
+      provider: 'google',
+      requestUrl: 'https://chartwin.thankpxp.workers.dev/api/auth/social/google/start',
+      env,
+    }),
+    'https://tradingcore.co/api/auth/social/google/start',
+  );
+  assert.equal(
+    createCanonicalSocialAuthStartUrl({
+      provider: 'naver',
+      requestUrl: 'https://tradingcore.co/api/auth/social/naver/start',
+      env,
+    }),
+    null,
+  );
 });
 
 test('Naver auth request omits scope and sends callback state during token exchange', async () => {
@@ -221,6 +251,7 @@ test('signup and login panels wire Google and Naver auth while keeping Kakao pre
   assert.match(loginSource, /kakao-logo-svg/);
   assert.match(loginSource, /간편로그인은 서비스 준비중입니다/);
   assert.match(startRouteSource, /createSocialAuthAuthorizationUrl/);
+  assert.match(startRouteSource, /createCanonicalSocialAuthStartUrl/);
   assert.match(startRouteSource, /createSocialAuthStateCookie/);
   assert.match(startRouteSource, /getSocialAuthRuntimeEnvAsync/);
   assert.match(callbackRouteSource, /exchangeSocialAuthCode/);
