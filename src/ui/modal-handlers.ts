@@ -150,6 +150,23 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
   const GRID_ATR_BNF_SROUTER_ID = 'strategy_js_grid_atr_bnf_srouter_v1';
   const GRID_MARTINGALE_ID = 'strategy_js_grid_martingale';
   const XAU_GRID_LONG_ID = 'strategy_js_xau_grid_long';
+  const DONCHIAN_TREND_FOLLOWING_ID = 'strategy_js_donchian_trend_following';
+  const DONCHIAN_TREND_DEFAULT_PARAMS = {
+    entryMode: 'both',
+    entryPeriod: 20,
+    exitPeriod: 10,
+    atrPeriod: 14,
+    emaPeriod: 50,
+    trendLookback: 20,
+    minEfficiency: 0.35,
+    minChannelAtr: 1.4,
+    middleTouchToleranceAtr: 0.15,
+    setupExpireBars: 20,
+    stopAtrMultiplier: 2,
+    rrRatio: 2,
+    useLong: true,
+    useShort: true,
+  };
   const resolveSrouterPresetForSymbol = () => inferGridAtrBnfSrouterPreset(String(chart.config?.symbol ?? ''));
   const resolveGridMartingalePresetForSymbol = () => inferGridMartingalePreset(String(chart.config?.symbol ?? ''));
   const buildSrouterPresetPatch = (preset: keyof typeof GRID_ATR_BNF_SROUTER_PRESETS) => ({
@@ -379,6 +396,107 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
   strategyRiskLineWrap.appendChild(strategyRiskLineSel);
   strategyRiskLineBox.appendChild(strategyRiskLineWrap);
   listPanel.appendChild(strategyRiskLineBox);
+
+  const donchianTrendBox = document.createElement('div');
+  donchianTrendBox.style.cssText = 'display:none;margin-top:12px;padding:12px;border:1px solid #2f5474;border-radius:8px;background:#101a24;';
+  const donchianTrendTitle = document.createElement('div');
+  donchianTrendTitle.textContent = 'Donchian Trend Following 설정';
+  donchianTrendTitle.style.cssText = 'font-size:13px;font-weight:700;color:#d8ecff;margin-bottom:6px;';
+  donchianTrendBox.appendChild(donchianTrendTitle);
+  const donchianTrendHint = document.createElement('div');
+  donchianTrendHint.textContent = '돌파 진입 또는 상단/하단 터치 후 중심선 지지/저항 확인 진입을 EMA 기울기, 추세 효율, 채널 폭으로 필터링합니다.';
+  donchianTrendHint.style.cssText = 'font-size:11px;color:#a9c7df;line-height:1.5;margin-bottom:8px;';
+  donchianTrendBox.appendChild(donchianTrendHint);
+  const donchianTrendGrid = document.createElement('div');
+  donchianTrendGrid.style.cssText = 'display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:8px;';
+  donchianTrendBox.appendChild(donchianTrendGrid);
+  listPanel.appendChild(donchianTrendBox);
+
+  const createDonchianTrendField = (key: string, labelText: string, step = '1', min = '0') => {
+    const wrap = document.createElement('label');
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+    const label = document.createElement('span');
+    label.textContent = labelText;
+    label.style.cssText = 'font-size:11px;color:#a9c7df;';
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = step;
+    input.min = min;
+    input.style.cssText = 'background:#0b1520;border:1px solid #31516f;border-radius:6px;padding:7px;color:white;font-size:12px;';
+    input.addEventListener('change', () => {
+      const activeId = chart.getActiveStrategyId?.();
+      const value = Number(input.value);
+      if (activeId !== DONCHIAN_TREND_FOLLOWING_ID || !Number.isFinite(value)) return;
+      chart.setStrategyParams?.(activeId, { [key]: value });
+      onApply();
+      render();
+    });
+    wrap.appendChild(label);
+    wrap.appendChild(input);
+    donchianTrendGrid.appendChild(wrap);
+    return input;
+  };
+
+  const createDonchianTrendModeSelect = (key: string, labelText: string) => {
+    const wrap = document.createElement('label');
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+    const label = document.createElement('span');
+    label.textContent = labelText;
+    label.style.cssText = 'font-size:11px;color:#a9c7df;';
+    const select = document.createElement('select');
+    select.style.cssText = 'background:#0b1520;border:1px solid #31516f;border-radius:6px;padding:7px;color:white;font-size:12px;';
+    select.innerHTML = '<option value="both">돌파+눌림</option><option value="pullback">눌림만</option><option value="breakout">돌파만</option>';
+    select.addEventListener('change', () => {
+      const activeId = chart.getActiveStrategyId?.();
+      if (activeId !== DONCHIAN_TREND_FOLLOWING_ID) return;
+      chart.setStrategyParams?.(activeId, { [key]: select.value });
+      onApply();
+      render();
+    });
+    wrap.appendChild(label);
+    wrap.appendChild(select);
+    donchianTrendGrid.appendChild(wrap);
+    return select;
+  };
+
+  const createDonchianTrendBoolSelect = (key: string, labelText: string) => {
+    const wrap = document.createElement('label');
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+    const label = document.createElement('span');
+    label.textContent = labelText;
+    label.style.cssText = 'font-size:11px;color:#a9c7df;';
+    const select = document.createElement('select');
+    select.style.cssText = 'background:#0b1520;border:1px solid #31516f;border-radius:6px;padding:7px;color:white;font-size:12px;';
+    select.innerHTML = '<option value="1">사용</option><option value="0">미사용</option>';
+    select.addEventListener('change', () => {
+      const activeId = chart.getActiveStrategyId?.();
+      if (activeId !== DONCHIAN_TREND_FOLLOWING_ID) return;
+      chart.setStrategyParams?.(activeId, { [key]: select.value === '1' });
+      onApply();
+      render();
+    });
+    wrap.appendChild(label);
+    wrap.appendChild(select);
+    donchianTrendGrid.appendChild(wrap);
+    return select;
+  };
+
+  const donchianEntryModeSel = createDonchianTrendModeSelect('entryMode', 'Entry Mode');
+  const donchianTrendInputs = {
+    entryPeriod: createDonchianTrendField('entryPeriod', 'Entry Period', '1', '2'),
+    exitPeriod: createDonchianTrendField('exitPeriod', 'Exit Period', '1', '1'),
+    atrPeriod: createDonchianTrendField('atrPeriod', 'ATR Period', '1', '1'),
+    emaPeriod: createDonchianTrendField('emaPeriod', 'EMA Period', '1', '1'),
+    trendLookback: createDonchianTrendField('trendLookback', 'Trend Lookback', '1', '2'),
+    minEfficiency: createDonchianTrendField('minEfficiency', 'Min Efficiency', '0.01', '0'),
+    minChannelAtr: createDonchianTrendField('minChannelAtr', 'Min Channel/ATR', '0.1', '0'),
+    middleTouchToleranceAtr: createDonchianTrendField('middleTouchToleranceAtr', 'Middle Tol ATR', '0.01', '0'),
+    setupExpireBars: createDonchianTrendField('setupExpireBars', 'Setup Expire Bars', '1', '1'),
+    stopAtrMultiplier: createDonchianTrendField('stopAtrMultiplier', 'SL ATR x', '0.1', '0.1'),
+    rrRatio: createDonchianTrendField('rrRatio', 'Risk Reward', '0.1', '0.5'),
+  };
+  const donchianUseLongSel = createDonchianTrendBoolSelect('useLong', 'Long Signal');
+  const donchianUseShortSel = createDonchianTrendBoolSelect('useShort', 'Short Signal');
 
   const bollingerRiskBox = document.createElement('div');
   bollingerRiskBox.style.cssText = 'display:none;margin-top:12px;padding:12px;border:1px solid #3d4d33;border-radius:8px;background:#162114;';
@@ -737,7 +855,10 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     const activeIsSrouter = activeId === GRID_ATR_BNF_SROUTER_ID;
     const activeIsGridMartingale = activeId === GRID_MARTINGALE_ID;
     const activeIsXauGridLong = activeId === XAU_GRID_LONG_ID;
-    const activeSupportsRiskLines = activeIsDoubleBreak || (activeIsBollinger && chart.getBollingerRiskConfig?.().enabled);
+    const activeIsDonchianTrend = activeId === DONCHIAN_TREND_FOLLOWING_ID;
+    const activeSupportsRiskLines = activeIsDoubleBreak
+      || activeIsDonchianTrend
+      || (activeIsBollinger && chart.getBollingerRiskConfig?.().enabled);
 
     listWrap.innerHTML = '';
     strategies.forEach((s) => {
@@ -829,6 +950,20 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     strategyRiskLineBox.style.display = activeSupportsRiskLines ? 'block' : 'none';
     if (activeSupportsRiskLines && chart.isStrategyRiskLinesVisible) {
       strategyRiskLineSel.value = chart.isStrategyRiskLinesVisible() ? '1' : '0';
+    }
+
+    donchianTrendBox.style.display = activeIsDonchianTrend ? 'block' : 'none';
+    if (activeIsDonchianTrend && chart.getStrategyParams) {
+      const cfg = {
+        ...DONCHIAN_TREND_DEFAULT_PARAMS,
+        ...chart.getStrategyParams(activeId),
+      };
+      Object.entries(donchianTrendInputs).forEach(([key, input]) => {
+        input.value = String(cfg[key as keyof typeof cfg] ?? '');
+      });
+      donchianEntryModeSel.value = String(cfg.entryMode ?? 'both');
+      donchianUseLongSel.value = cfg.useLong === false ? '0' : '1';
+      donchianUseShortSel.value = cfg.useShort === false ? '0' : '1';
     }
 
     bollingerRiskBox.style.display = activeIsBollinger ? 'block' : 'none';
@@ -2166,7 +2301,7 @@ export function openIndicatorModal(chart: any, refresh: () => void) {
       })
       .forEach(ind => {
         const isMultiMain = ind.id === 'ma' || ind.id === 'ema';
-        const hasSettings = isMultiMain || ind.id === 'smartMoneyConcepts' || ind.id === 'parabolicSar' || ind.id === 'atrTrailingEmaSignal' || ind.id === 'atrTrailingStopOrigin' || ind.id === 'bbMtfKalmanSignal' || ind.id === 'footprint' || ind.id === 'fixedRangeVolumeProfile';
+        const hasSettings = isMultiMain || ind.id === 'smartMoneyConcepts' || ind.id === 'donchianChannel' || ind.id === 'williamsAlligator' || ind.id === 'parabolicSar' || ind.id === 'autoTrendlineChannel' || ind.id === 'atrTrailingEmaSignal' || ind.id === 'atrTrailingStopOrigin' || ind.id === 'bbMtfKalmanSignal' || ind.id === 'kalmanAdjustedAtr' || ind.id === 'footprint' || ind.id === 'fixedRangeVolumeProfile';
         const isOn = isMultiMain
           ? Boolean((chart.config.indicators as any)[ind.id]?.show && (((chart.config.indicators as any)[ind.id]?.lines?.length ?? 0) > 0))
           : ((chart.config.indicators as any)[ind.id]?.show ?? false);
@@ -2313,6 +2448,8 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
   hdr.style.cssText = 'font-weight:700;margin:-4px -4px 12px 0;font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:-14px;background:#1c2030;z-index:2;padding-top:4px;padding-bottom:6px;';
   const headerTitle = popupKey === 'supertrend'
     ? 'SUPER - SUPERTREND'
+    : popupKey === 'autoTrendlineChannel'
+      ? 'Auto Trendline Channel'
     : popupKey === 'statisticalTrailingStop'
       ? 'STS - Statistical Trailing Stop'
     : popupKey === 'atrTrailingEmaSignal'
@@ -2321,14 +2458,20 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
       ? 'ATR Trailing Stop-origin'
     : popupKey === 'bbMtfKalmanSignal'
       ? 'BB MTF Kalman Signal'
+    : popupKey === 'kalmanAdjustedAtr'
+      ? 'Kalman Adjusted ATR'
     : popupKey === 'zeroLagMaTrendLevels'
       ? 'ZLMA - Zero-Lag MA Trend Levels'
     : popupKey === 'bb'
       ? 'Bollinger Band'
+    : popupKey === 'donchianChannel'
+      ? 'Donchian Channel'
     : popupKey === 'hma'
       ? 'HMA - Hull Moving Average'
     : popupKey === 'williamsFractal'
       ? 'Williams Fractal'
+    : popupKey === 'williamsAlligator'
+      ? 'Williams Alligator'
     : popupKey === 'parabolicSar'
       ? 'Parabolic SAR'
     : popupKey === 'smartMoneyConcepts'
@@ -2352,16 +2495,20 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
 
   const FIELDS: Record<string, string[]> = {
     maShort: ['value'], maLong: ['value'], ma60: ['value'], ma120: ['value'], ma200: ['value'], ma: [], ema: [], hma: ['period'], bb: [],
+    donchianChannel: ['period'],
     supertrend: ['period', 'factor'],
+    autoTrendlineChannel: ['channelLength', 'widthMultiplier'],
     statisticalTrailingStop: ['dataLength', 'distributionLength', 'baseLevel'],
     atrTrailingEmaSignal: ['sensitivity', 'atrPeriod', 'signalEmaLength', 'trendEmaLength'],
     atrTrailingStopOrigin: ['sensitivity', 'atrPeriod', 'trendEmaLength'],
     bbMtfKalmanSignal: ['ltfLength', 'ltfMult', 'ltfBBLinewidth', 'htfLength', 'htfMult', 'htfBBLinewidth', 'minOpacity', 'maxOpacity'],
+    kalmanAdjustedAtr: ['atrPeriod', 'factor', 'processNoise', 'measurementNoise', 'filterOrder', 'confirmBars', 'maPeriod', 'almaSigma'],
     zeroLagMaTrendLevels: ['length'],
     williamsFractal: ['span'],
+    williamsAlligator: ['jawLength', 'teethLength', 'lipsLength', 'jawOffset', 'teethOffset', 'lipsOffset'],
     parabolicSar: ['start', 'increment', 'maximum'],
     smartMoneyConcepts: [],
-    rsi: ['period'], dmi: ['period'], macd: ['fast','slow','signal'],
+    rsi: ['period'], mfi: ['period'], momentum: ['period'], dmi: ['period'], macd: ['fast','slow','signal'],
     stochF: ['kPeriod','dPeriod'], stochS: ['kPeriod','dPeriod'],
     cci: ['period'], atr: ['period'], ichimoku: ['tenkan','kijun','senkou'],
     envelope: ['period','pct'], vwap: [], footprint: [], fixedRangeVolumeProfile: [], volumeProfile: ['rows', 'widthPct'], vpvr: [], obv: [], cvd: [], volume: [],
@@ -2369,6 +2516,8 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
   const LABELS: Record<string, string> = {
     value: '값', period: '기간', stdDev: '표준편차',
     factor: 'Factor',
+    channelLength: 'Channel Length',
+    widthMultiplier: 'Width Multiplier',
     sensitivity: 'Sensitivity',
     atrPeriod: 'ATR Period',
     signalEmaLength: 'Signal EMA',
@@ -2383,11 +2532,24 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     colorOption: 'Color Option',
     minOpacity: 'Opacity Min',
     maxOpacity: 'Opacity Max',
+    processNoise: 'Process Noise',
+    measurementNoise: 'Measurement Noise',
+    filterOrder: 'Filter Order',
+    confirmBars: 'Confirm Bars',
+    maPeriod: 'MA Period',
+    maType: 'MA Type',
+    almaSigma: 'Sigma',
     dataLength: 'Data Length',
     distributionLength: 'Distribution Length',
     baseLevel: 'Base Level',
     length: 'Length',
     span: '기간',
+    jawLength: 'Jaw Length',
+    teethLength: 'Teeth Length',
+    lipsLength: 'Lips Length',
+    jawOffset: 'Jaw Offset',
+    teethOffset: 'Teeth Offset',
+    lipsOffset: 'Lips Offset',
     start: 'Start',
     increment: 'Increment',
     maximum: 'Max value',
@@ -3467,6 +3629,82 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     addColorRow('textColor', 'Text Color', '#ffffff');
   }
 
+  if (popupKey === 'kalmanAdjustedAtr') {
+    const appendSelectRow = (
+      field: string,
+      options: Array<{ value: string; label: string }>,
+      fallback: string,
+    ) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:12px;';
+      const label = createSettingLabel(LABELS[field] ?? field, field);
+      label.style.color = '#84898e';
+      const select = document.createElement('select');
+      select.style.cssText = 'width:118px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:4px 7px;font-size:12px;';
+      select.innerHTML = options.map((option) => `<option value="${option.value}">${option.label}</option>`).join('');
+      select.value = String(ind[field] ?? fallback);
+      select.addEventListener('change', () => {
+        ind[field] = select.value;
+        chart.draw();
+        onUpdate();
+      });
+      row.append(label, select);
+      popup.appendChild(row);
+    };
+    const appendToggleRow = (field: string, labelText: string, fallback: boolean) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:12px;';
+      const label = createSettingLabel(labelText, field);
+      label.style.color = '#84898e';
+      const sw = createSwitch(ind[field] == null ? fallback : Boolean(ind[field]), (next) => {
+        ind[field] = next;
+        chart.draw();
+        onUpdate();
+      });
+      row.append(label, sw.button);
+      popup.appendChild(row);
+    };
+    appendSelectRow('source', [
+      { value: 'close', label: 'close' },
+      { value: 'open', label: 'open' },
+      { value: 'high', label: 'high' },
+      { value: 'low', label: 'low' },
+      { value: 'hl2', label: 'hl2' },
+      { value: 'hlc3', label: 'hlc3' },
+      { value: 'ohlc4', label: 'ohlc4' },
+    ], 'close');
+    appendSelectRow('maType', [
+      { value: 'sma', label: 'SMA' },
+      { value: 'hma', label: 'Hull' },
+      { value: 'ema', label: 'Ema' },
+      { value: 'wma', label: 'Wma' },
+      { value: 'dema', label: 'Dema' },
+      { value: 'rma', label: 'RMA' },
+      { value: 'linreg', label: 'LINREG' },
+      { value: 'alma', label: 'ALMA' },
+    ], 'ema');
+    appendToggleRow('showMa', 'Show MA', false);
+    appendToggleRow('showSignals', 'Show Signals', true);
+  }
+
+  if (popupKey === 'autoTrendlineChannel') {
+    const addToggleRow = (field: string, labelText: string, fallback: boolean) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+      const label = createSettingLabel(labelText, field);
+      label.style.color = '#84898e';
+      const sw = createSwitch(ind[field] == null ? fallback : Boolean(ind[field]), (next) => {
+        ind[field] = next;
+        chart.draw();
+        onUpdate();
+      });
+      row.append(label, sw.button);
+      popup.appendChild(row);
+    };
+    addToggleRow('showFill', 'Show Fill', true);
+    addToggleRow('showBasis', 'Show Basis', true);
+  }
+
   (FIELDS[popupKey] || []).forEach(field => {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
@@ -3474,7 +3712,21 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     lbl.style.color = '#84898e';
     const inp = document.createElement('input');
     inp.type = 'number'; inp.value = ind[field] ?? '';
-    if (popupKey === 'statisticalTrailingStop') {
+    if (popupKey === 'autoTrendlineChannel') {
+      if (field === 'channelLength') {
+        inp.min = '1';
+        inp.max = '500';
+        inp.step = '1';
+      } else if (field === 'widthMultiplier') {
+        inp.min = '0.1';
+        inp.max = '10';
+        inp.step = '0.1';
+      }
+    } else if (popupKey === 'donchianChannel') {
+      inp.min = '1';
+      inp.max = '500';
+      inp.step = '1';
+    } else if (popupKey === 'statisticalTrailingStop') {
       if (field === 'dataLength') {
         inp.min = '1';
         inp.step = '1';
@@ -3521,12 +3773,46 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
         inp.max = '500';
         inp.step = '1';
       }
+    } else if (popupKey === 'kalmanAdjustedAtr') {
+      if (field === 'factor') {
+        inp.min = '0.01';
+        inp.max = '10';
+        inp.step = '0.05';
+      } else if (field === 'processNoise') {
+        inp.min = '0.0001';
+        inp.max = '10';
+        inp.step = '0.01';
+      } else if (field === 'measurementNoise') {
+        inp.min = '0.0001';
+        inp.max = '100';
+        inp.step = '0.1';
+      } else if (field === 'filterOrder') {
+        inp.min = '1';
+        inp.max = '20';
+        inp.step = '1';
+      } else if (field === 'confirmBars') {
+        inp.min = '1';
+        inp.max = '20';
+        inp.step = '1';
+      } else if (field === 'almaSigma') {
+        inp.min = '0.0001';
+        inp.max = '20';
+        inp.step = '0.1';
+      } else {
+        inp.min = '1';
+        inp.max = '500';
+        inp.step = '1';
+      }
     } else if (popupKey === 'zeroLagMaTrendLevels' && field === 'length') {
       inp.min = '1';
       inp.step = '1';
     } else if (popupKey === 'williamsFractal' && field === 'span') {
       inp.min = '1';
       inp.max = '20';
+      inp.step = '1';
+    } else if (popupKey === 'williamsAlligator') {
+      inp.min = '0';
+      inp.max = field.endsWith('Offset') ? '50' : '500';
       inp.step = '1';
     } else if (popupKey === 'parabolicSar') {
       inp.min = '0.001';
@@ -3545,7 +3831,12 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
     inp.style.cssText = 'width:64px;background:#131722;color:white;border:1px solid #363a45;border-radius:4px;padding:3px 7px;text-align:right;font-size:12px;';
     inp.addEventListener('change', () => {
       let next = Number(inp.value);
-      if (popupKey === 'statisticalTrailingStop') {
+      if (popupKey === 'autoTrendlineChannel') {
+        if (field === 'channelLength') next = Math.max(1, Math.min(500, Math.floor(Number(next) || 20)));
+        if (field === 'widthMultiplier') next = Math.max(0.1, Math.min(10, Number.isFinite(next) ? next : 1.5));
+      } else if (popupKey === 'donchianChannel') {
+        next = Math.max(1, Math.min(500, Math.floor(Number(next) || 20)));
+      } else if (popupKey === 'statisticalTrailingStop') {
         if (field === 'dataLength') next = Math.max(1, Math.floor(Number(next) || 10));
         if (field === 'distributionLength') next = Math.max(10, Math.min(5000, Math.floor(Number(next) || 100)));
         if (field === 'baseLevel') next = Math.max(0, Math.min(3, Math.floor(Number(next) || 2)));
@@ -3569,10 +3860,32 @@ export function openSettingsPopup(anchor: HTMLElement, chart: any, key: string, 
         else if (field === 'maxOpacity') next = Math.max(0, Math.min(100, Math.floor(Number(next) || 99)));
         if (field === 'minOpacity' && Number(ind.maxOpacity) < next) ind.maxOpacity = next;
         if (field === 'maxOpacity' && Number(ind.minOpacity) > next) ind.minOpacity = next;
+      } else if (popupKey === 'kalmanAdjustedAtr') {
+        if (field === 'factor') next = Math.max(0.01, Math.min(10, Number.isFinite(next) ? next : 0.5));
+        else if (field === 'processNoise') next = Math.max(0.0001, Math.min(10, Number.isFinite(next) ? next : 0.01));
+        else if (field === 'measurementNoise') next = Math.max(0.0001, Math.min(100, Number.isFinite(next) ? next : 3));
+        else if (field === 'filterOrder') next = Math.max(1, Math.min(20, Math.floor(Number(next) || 5)));
+        else if (field === 'confirmBars') next = Math.max(1, Math.min(20, Math.floor(Number(next) || 1)));
+        else if (field === 'atrPeriod') next = Math.max(1, Math.min(500, Math.floor(Number(next) || 5)));
+        else if (field === 'maPeriod') next = Math.max(1, Math.min(500, Math.floor(Number(next) || 50)));
+        else if (field === 'almaSigma') next = Math.max(0.0001, Math.min(20, Number.isFinite(next) ? next : 0.7));
       } else if (popupKey === 'zeroLagMaTrendLevels' && field === 'length') {
         next = Math.max(1, Math.floor(Number(next) || 15));
       } else if (popupKey === 'williamsFractal' && field === 'span') {
         next = Math.max(1, Math.min(20, Math.floor(Number(next) || 2)));
+      } else if (popupKey === 'williamsAlligator') {
+        const fallback: Record<string, number> = {
+          jawLength: 13,
+          teethLength: 8,
+          lipsLength: 5,
+          jawOffset: 8,
+          teethOffset: 5,
+          lipsOffset: 3,
+        };
+        const raw = Math.floor(Number(next) || fallback[field] || 0);
+        next = field.endsWith('Offset')
+          ? Math.max(0, Math.min(50, raw))
+          : Math.max(1, Math.min(500, raw));
       } else if (popupKey === 'parabolicSar') {
         const fallback = field === 'maximum' ? 0.2 : 0.02;
         next = Math.max(0.001, Math.min(1, Number.isFinite(next) ? next : fallback));

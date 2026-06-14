@@ -54,6 +54,7 @@ export type TelegramSignalMonitorOptions = {
 };
 
 const DEFAULT_CANDLE_LIMIT = 500;
+const MAX_REALTIME_CATCHUP_BARS = 10;
 
 export async function runTelegramSignalMonitorOnce(
   repository: AsyncChartServiceRepository,
@@ -92,9 +93,10 @@ export async function runTelegramSignalMonitorOnce(
       if (hasOpenTailCandle(candles, job.timeframe, nowSec)) {
         result.skippedOpenCandleCount += 1;
       }
+      const signals = computeServerStrategySignals({ strategy, candles, symbol: job.symbolId });
       const closed = getLatestClosedSignal({
         candles,
-        signals: computeServerStrategySignals({ strategy, candles, symbol: job.symbolId }),
+        signals,
         timeframe: job.timeframe,
         nowSec,
       });
@@ -104,31 +106,68 @@ export async function runTelegramSignalMonitorOnce(
 
       const eventType = signalToTelegramEventType(closed.signal);
       const previous = await repository.getTelegramSignalWatchState(job.key);
-      const nextState = createTelegramSignalWatchState(job, closed.candle.time, eventType, nowIso);
 
       if (!previous) {
-        await repository.saveTelegramSignalWatchState(nextState);
+        await repository.saveTelegramSignalWatchState(createTelegramSignalWatchState(
+          job,
+          closed.candle.time,
+          eventType ? closed.candle.time : null,
+          eventType,
+          nowIso,
+        ));
         result.seededCount += 1;
         continue;
       }
 
-      if (closed.candle.time <= previous.lastCheckedCandleTime || !eventType) {
-        await repository.saveTelegramSignalWatchState(nextState);
+      if (closed.candle.time <= previous.lastCheckedCandleTime) {
         continue;
       }
 
-      const delivery = await sendAsyncTelegramAlertForSignal(repository, {
-        eventType,
-        strategyId: job.strategyId,
-        strategyName: strategy.name,
-        symbolId: job.symbolId,
+      const closedSignals = getClosedSignalEventsAfter({
+        candles,
+        signals,
         timeframe: job.timeframe,
-        price: closed.candle.close,
-        occurredAt: new Date(closed.candle.time * 1000).toISOString(),
-      }, options.telegramFetch);
-      result.sentCount += delivery.sentCount;
-      result.failedCount += delivery.failedCount;
-      await repository.saveTelegramSignalWatchState(nextState);
+        nowSec,
+        afterCandleTime: previous.lastCheckedCandleTime,
+        latestClosedCandleTime: closed.candle.time,
+      });
+      let lastSignalCandleTime = previous.lastSignalCandleTime;
+      let lastSignalEventType = previous.lastSignalEventType;
+
+      if (!closedSignals.length) {
+        await repository.saveTelegramSignalWatchState(createTelegramSignalWatchState(
+          job,
+          closed.candle.time,
+          lastSignalCandleTime,
+          lastSignalEventType,
+          nowIso,
+        ));
+        continue;
+      }
+
+      for (const closedSignal of closedSignals) {
+        const delivery = await sendAsyncTelegramAlertForSignal(repository, {
+          eventType: closedSignal.eventType,
+          strategyId: job.strategyId,
+          strategyName: strategy.name,
+          symbolId: job.symbolId,
+          timeframe: job.timeframe,
+          price: closedSignal.candle.close,
+          occurredAt: new Date(closedSignal.candle.time * 1000).toISOString(),
+        }, options.telegramFetch);
+        result.sentCount += delivery.sentCount;
+        result.failedCount += delivery.failedCount;
+        lastSignalCandleTime = closedSignal.candle.time;
+        lastSignalEventType = closedSignal.eventType;
+      }
+
+      await repository.saveTelegramSignalWatchState(createTelegramSignalWatchState(
+        job,
+        closed.candle.time,
+        lastSignalCandleTime,
+        lastSignalEventType,
+        nowIso,
+      ));
     } catch (error) {
       result.skippedCount += 1;
       result.errors.push(error instanceof Error ? error.message : String(error));
@@ -190,7 +229,7 @@ export async function sendAsyncTelegramAlertForSignalWithWatchState(
 
   const delivery = await sendAsyncTelegramAlertForSignal(repository, event, fetcher);
   await repository.saveTelegramSignalWatchState(
-    createTelegramSignalWatchState(job, eventCandleTime, event.eventType, new Date().toISOString()),
+    createTelegramSignalWatchState(job, eventCandleTime, eventCandleTime, event.eventType, new Date().toISOString()),
   );
   return { ...delivery, suppressedCount: 0 };
 }
@@ -213,6 +252,35 @@ function getLatestClosedSignal(args: {
   return null;
 }
 
+function getClosedSignalEventsAfter(args: {
+  candles: ServerStrategyCandle[];
+  signals: StrategySignal[];
+  timeframe: TimeframeKey;
+  nowSec: number;
+  afterCandleTime: number;
+  latestClosedCandleTime: number;
+}): Array<{ candle: ServerStrategyCandle; signal: StrategySignal; eventType: TelegramSignalEventType }> {
+  const timeframeSec = TIMEFRAME_SECONDS[args.timeframe];
+  if (!timeframeSec) return [];
+  const count = Math.min(args.candles.length, args.signals.length);
+  const minCatchupTime = args.latestClosedCandleTime - timeframeSec * MAX_REALTIME_CATCHUP_BARS;
+  const afterTime = Math.max(args.afterCandleTime, minCatchupTime);
+  const events: Array<{ candle: ServerStrategyCandle; signal: StrategySignal; eventType: TelegramSignalEventType }> = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const candle = args.candles[index];
+    if (!candle) continue;
+    if (candle.time <= afterTime) continue;
+    if (candle.time + timeframeSec > args.nowSec) continue;
+    const signal = args.signals[index] ?? 0;
+    const eventType = signalToTelegramEventType(signal);
+    if (!eventType) continue;
+    events.push({ candle, signal, eventType });
+  }
+
+  return events;
+}
+
 function hasOpenTailCandle(candles: ServerStrategyCandle[], timeframe: TimeframeKey, nowSec: number): boolean {
   const timeframeSec = TIMEFRAME_SECONDS[timeframe];
   const last = candles[candles.length - 1];
@@ -221,8 +289,9 @@ function hasOpenTailCandle(candles: ServerStrategyCandle[], timeframe: Timeframe
 
 function createTelegramSignalWatchState(
   job: TelegramSignalMonitorJob,
-  candleTime: number,
-  eventType: TelegramSignalEventType | null,
+  lastCheckedCandleTime: number,
+  lastSignalCandleTime: number | null,
+  lastSignalEventType: TelegramSignalEventType | null,
   updatedAt: string,
 ): TelegramSignalWatchStateRecord {
   return {
@@ -230,9 +299,9 @@ function createTelegramSignalWatchState(
     strategyId: job.strategyId,
     symbolId: job.symbolId,
     timeframe: job.timeframe,
-    lastCheckedCandleTime: candleTime,
-    lastSignalCandleTime: eventType ? candleTime : null,
-    lastSignalEventType: eventType,
+    lastCheckedCandleTime,
+    lastSignalCandleTime,
+    lastSignalEventType,
     updatedAt,
   };
 }

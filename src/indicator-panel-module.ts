@@ -1,4 +1,4 @@
-﻿export type SubPanelId = 'volume' | 'rsi' | 'dmi' | 'macd' | 'stochF' | 'stochS' | 'cci' | 'obv' | 'cvd' | 'atr';
+﻿export type SubPanelId = 'volume' | 'rsi' | 'mfi' | 'momentum' | 'dmi' | 'macd' | 'stochF' | 'stochS' | 'cci' | 'obv' | 'cvd' | 'atr';
 
 export interface LineStyle {
   color: string;
@@ -13,7 +13,7 @@ export interface IndicatorPanelState {
   lineVisibility: Record<string, boolean>;
 }
 
-export const SUB_PANEL_IDS: SubPanelId[] = ['volume', 'rsi', 'dmi', 'macd', 'stochF', 'stochS', 'cci', 'obv', 'cvd', 'atr'];
+export const SUB_PANEL_IDS: SubPanelId[] = ['volume', 'rsi', 'mfi', 'momentum', 'dmi', 'macd', 'stochF', 'stochS', 'cci', 'obv', 'cvd', 'atr'];
 
 const MIN_PANEL_RATIO = 0.035;
 const MIN_COLLAPSED_PANEL_RATIO = 0.008;
@@ -47,8 +47,14 @@ const DEFAULT_LINE_STYLES: Record<string, LineStyle> = {
   vwapLower2: { color: 'rgba(255,193,7,0.52)', width: 1, dash: [5, 4] },
   vwapUpper3: { color: 'rgba(255,214,10,0.45)', width: 1, dash: [2, 3] },
   vwapLower3: { color: 'rgba(255,214,10,0.45)', width: 1, dash: [2, 3] },
+  donchianUpper: { color: '#42a5f5', width: 1.4, dash: [] },
+  donchianMiddle: { color: 'rgba(255,255,255,0.55)', width: 1, dash: [4, 4] },
+  donchianLower: { color: '#42a5f5', width: 1.4, dash: [] },
   williamsFractalHigh: { color: '#ef5350', width: 1.5, dash: [] },
   williamsFractalLow: { color: '#26a69a', width: 1.5, dash: [] },
+  williamsAlligatorJaw: { color: '#2962ff', width: 1.5, dash: [] },
+  williamsAlligatorTeeth: { color: '#e91e63', width: 1.5, dash: [] },
+  williamsAlligatorLips: { color: '#66bb6a', width: 1.5, dash: [] },
   parabolicSar: { color: '#2962ff', width: 1.5, dash: [] },
   smartMoneyConceptsBullish: { color: '#089981', width: 1, dash: [] },
   smartMoneyConceptsBearish: { color: '#f23645', width: 1, dash: [] },
@@ -72,6 +78,9 @@ const DEFAULT_LINE_STYLES: Record<string, LineStyle> = {
   envelopeLower: { color: 'rgba(255,200,50,0.8)', width: 1, dash: [] },
   supertrendUp: { color: '#26a69a', width: 1.7, dash: [] },
   supertrendDown: { color: '#ef5350', width: 1.7, dash: [] },
+  autoTrendlineUpper: { color: '#5b8def', width: 1.8, dash: [] },
+  autoTrendlineBasis: { color: 'rgba(255,255,255,0.72)', width: 1.1, dash: [5, 4] },
+  autoTrendlineLower: { color: '#5b8def', width: 1.8, dash: [] },
   statisticalTrailingStopBull: { color: '#26a69a', width: 1.7, dash: [] },
   statisticalTrailingStopBear: { color: '#ef5350', width: 1.7, dash: [] },
   atrTrailingEmaSignalTrendEma: { color: '#fcfc6c', width: 2, dash: [] },
@@ -89,12 +98,20 @@ const DEFAULT_LINE_STYLES: Record<string, LineStyle> = {
   bbMtfKalmanHtfLower: { color: '#ffffff', width: 1, dash: [] },
   bbMtfKalmanBuy: { color: '#089981', width: 1, dash: [] },
   bbMtfKalmanSell: { color: '#f23645', width: 1, dash: [] },
+  kalmanAdjustedAtrLine: { color: '#f6c85f', width: 2, dash: [] },
+  kalmanAdjustedAtrMa: { color: 'rgba(255,255,255,0.72)', width: 1.2, dash: [5, 4] },
+  kalmanAdjustedAtrTrendUp: { color: '#22ab94', width: 1, dash: [] },
+  kalmanAdjustedAtrTrendDown: { color: '#f23645', width: 1, dash: [] },
   zeroLagMaTrendLevelsZlma: { color: '#30d453', width: 1, dash: [] },
   zeroLagMaTrendLevelsEma: { color: '#4043f1', width: 1, dash: [] },
   zeroLagMaTrendLevelsSignal: { color: '#30d453', width: 1, dash: [] },
   zeroLagMaTrendLevelsLevel: { color: '#30d453', width: 1, dash: [] },
   rsi: { color: '#ffeb3b', width: 1.5, dash: [] },
   rsiBaseline: { color: '#999999', width: 1, dash: [4, 4] },
+  mfi: { color: '#7e57c2', width: 1.5, dash: [] },
+  mfiBaseline: { color: '#999999', width: 1, dash: [4, 4] },
+  momentum: { color: '#ffb74d', width: 1.5, dash: [] },
+  momentumBaseline: { color: '#999999', width: 1, dash: [4, 4] },
   dmiPlus: { color: '#26a69a', width: 1.5, dash: [] },
   dmiMinus: { color: '#ef5350', width: 1.5, dash: [] },
   dmiAdx: { color: '#ffffff', width: 2, dash: [] },
@@ -141,9 +158,19 @@ export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: strin
     { key: 'vwapUpper3', label: 'Upper #3' },
     { key: 'vwapLower3', label: 'Lower #3' },
   ],
+  donchianChannel: [
+    { key: 'donchianUpper', label: 'Upper' },
+    { key: 'donchianMiddle', label: 'Middle' },
+    { key: 'donchianLower', label: 'Lower' },
+  ],
   williamsFractal: [
     { key: 'williamsFractalHigh', label: 'High' },
     { key: 'williamsFractalLow', label: 'Low' },
+  ],
+  williamsAlligator: [
+    { key: 'williamsAlligatorJaw', label: 'Jaw' },
+    { key: 'williamsAlligatorTeeth', label: 'Teeth' },
+    { key: 'williamsAlligatorLips', label: 'Lips' },
   ],
   parabolicSar: [{ key: 'parabolicSar', label: 'Cross' }],
   smartMoneyConcepts: [
@@ -181,6 +208,11 @@ export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: strin
     { key: 'supertrendUp', label: 'Up' },
     { key: 'supertrendDown', label: 'Down' },
   ],
+  autoTrendlineChannel: [
+    { key: 'autoTrendlineUpper', label: 'Upper' },
+    { key: 'autoTrendlineBasis', label: 'Basis' },
+    { key: 'autoTrendlineLower', label: 'Lower' },
+  ],
   statisticalTrailingStop: [
     { key: 'statisticalTrailingStopBull', label: 'Bull' },
     { key: 'statisticalTrailingStopBear', label: 'Bear' },
@@ -206,6 +238,12 @@ export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: strin
     { key: 'bbMtfKalmanBuy', label: 'Buy' },
     { key: 'bbMtfKalmanSell', label: 'Sell' },
   ],
+  kalmanAdjustedAtr: [
+    { key: 'kalmanAdjustedAtrLine', label: 'Baseline' },
+    { key: 'kalmanAdjustedAtrMa', label: 'MA' },
+    { key: 'kalmanAdjustedAtrTrendUp', label: 'Trend Up' },
+    { key: 'kalmanAdjustedAtrTrendDown', label: 'Trend Down' },
+  ],
   zeroLagMaTrendLevels: [
     { key: 'zeroLagMaTrendLevelsZlma', label: 'ZLMA' },
     { key: 'zeroLagMaTrendLevelsEma', label: 'EMA' },
@@ -213,6 +251,8 @@ export const INDICATOR_STYLE_TARGETS: Record<string, { key: string; label: strin
     { key: 'zeroLagMaTrendLevelsLevel', label: 'Levels' },
   ],
   rsi: [{ key: 'rsi', label: 'Line' }, { key: 'rsiBaseline', label: 'Baseline' }],
+  mfi: [{ key: 'mfi', label: 'Line' }, { key: 'mfiBaseline', label: 'Baseline' }],
+  momentum: [{ key: 'momentum', label: 'Line' }, { key: 'momentumBaseline', label: 'Baseline' }],
   dmi: [
     { key: 'dmiPlus', label: '+DI' },
     { key: 'dmiMinus', label: '-DI' },
@@ -259,6 +299,8 @@ export function createDefaultPanelState(): IndicatorPanelState {
     panelRatios: {
       volume: 0.12,
       rsi: 0.12,
+      mfi: 0.12,
+      momentum: 0.12,
       dmi: 0.12,
       macd: 0.12,
       stochF: 0.12,

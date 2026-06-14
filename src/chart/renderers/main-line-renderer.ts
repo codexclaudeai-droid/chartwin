@@ -14,6 +14,7 @@ export type DrawSeriesLine = (
   color: string,
   width?: number,
   dash?: number[],
+  offsetBars?: number,
 ) => void;
 
 export type ResolveIndicatorStyle = (

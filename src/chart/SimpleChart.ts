@@ -24,8 +24,10 @@ import {
 import {
   calculateAutoTrendlineChannel,
   simulateAutoTrendlineChannelStrategy,
+  type AutoTrendlineChannelConfig,
   type AutoTrendlineChannelResult,
 } from '../strategy/strategies/auto-trendline-channel-runtime.ts';
+import { simulateDonchianTrendFollowingStrategy } from '../strategy/strategies/donchian-trend-following-runtime.ts';
 import {
   DEFAULT_CONFIG as DOUBLE_BREAK_DEFAULT_CONFIG,
   DoubleBreakStrategy,
@@ -92,6 +94,7 @@ import {
   calculateBb,
   calculateCci,
   calculateCvd,
+  calculateDonchianChannel,
   calculateDmi,
   calculateEma,
   calculateEnvelope,
@@ -104,10 +107,16 @@ import {
   calculateBbMtfKalmanSignal,
   type BbMtfKalmanColorOption,
   type BbMtfKalmanSignalResult,
+  calculateKalmanAdjustedAtr,
+  type KalmanAdjustedAtrMaType,
+  type KalmanAdjustedAtrResult,
+  type KalmanAdjustedAtrSource,
   calculateHma,
   calculateIchimoku,
   calculateMacd,
   calculateMa,
+  calculateMfi,
+  calculateMomentum,
   calculateObv,
   calculateParabolicSar,
   calculateRsi,
@@ -123,6 +132,9 @@ import {
   type VwapBands,
   type VwapOptions,
   type VwapResult,
+  type DonchianChannelResult,
+  calculateWilliamsAlligator,
+  type WilliamsAlligatorResult,
   calculateWilliamsFractals,
 } from './indicators/index.ts';
 import { resolveChartCursor } from './interaction/chart-cursor-resolver.ts';
@@ -225,6 +237,8 @@ type SubPanelCrosshairData = {
     sigLine: Array<number | null>;
   };
   cciD: Array<number | null>;
+  mfiD: Array<number | null>;
+  momentumD: Array<number | null>;
   atrD: Array<number | null>;
   obvD: number[];
   obvSignal9: Array<number | null>;
@@ -310,6 +324,7 @@ const BOLLINGER_RISK_DEFAULT_CONFIG: BollingerRiskConfig = {
 const DOUBLE_BREAK_STRATEGY_ID = 'strategy_js_double_break';
 const MTF_1M_SCALPER_STRATEGY_ID = 'strategy_js_mtf_1m_scalper';
 const AUTO_TRENDLINE_CHANNEL_STRATEGY_ID = 'strategy_js_auto_trendline_channel';
+const DONCHIAN_TREND_FOLLOWING_STRATEGY_ID = 'strategy_js_donchian_trend_following';
 const DOUBLE_BREAK_PARAM_DEFAULT_KEY = '__double_break_config_default__';
 const DOUBLE_BREAK_PARAM_SYMBOL_PREFIX = '__double_break_config_symbol__';
 const STRATEGY_RISK_LINES_VISIBLE_STORAGE_KEY = 'my-chart-lib-strategy-risk-lines-visible-v1';
@@ -449,6 +464,10 @@ export class SimpleChart {
   private resizeScheduled = false;
   private mainDrawScheduled = false;
   private overlayDrawScheduled = false;
+  private overlayDrawFrameId: number | null = null;
+  private passiveMouseMoveScheduled = false;
+  private pendingPassiveMouseMove: { clientX: number; clientY: number } | null = null;
+  private lastCanvasCursor = '';
   private drawingTool: ActiveDrawingToolId | null = null;
   private drawings: DrawingShape[] = [];
   private drawingsVisible = true;
@@ -546,6 +565,9 @@ export class SimpleChart {
   private logBtn: HTMLButtonElement | null = null;
   private _logBtnHovered = false;
   private logBtnHideTimer: ReturnType<typeof setTimeout> | null = null;
+  private logBtnVisible = false;
+  private lastLogBtnLeft = NaN;
+  private lastLogBtnTop = NaN;
   private leftPanBars = 0;
   private dragStartLeftPanBars = 0;
   private touchStartLeftPanBars = 0;
@@ -658,6 +680,8 @@ export class SimpleChart {
       hma:      { show: false, period: 55 },
       bb:       { show: false, period: 20, stdDev: 2 },
       rsi:      { show: false, period: 14 },
+      mfi:      { show: false, period: 14 },
+      momentum: { show: false, period: 10 },
       macd:     { show: false, fast: 12, slow: 26, signal: 9 },
       dmi:      { show: false, period: 14, axisMode: 'auto' as 'auto' | 'fixed', topThreshold: 30, bottomThreshold: 20 },
       stochF:   { show: false, kPeriod: 5,  dPeriod: 3 },
@@ -668,10 +692,13 @@ export class SimpleChart {
       cvd:      { show: false, barMode: true },
       footprint: { show: false, showSummary: true, maxLevels: 18, priceStep: 1000 },
       vwap:     { show: false, anchorPeriod: 'session', source: 'hlc3', offset: 0, hideOnDailyOrAbove: false, sessionTimezone: 'auto', bandMode: 'standard-deviation', showFill: true, fillColor: '#ff9800', fillOpacity: 8, showUpperBand1: true, showLowerBand1: true, bandMultiplier1: 1, showUpperBand2: false, showLowerBand2: false, bandMultiplier2: 2, showUpperBand3: false, showLowerBand3: false, bandMultiplier3: 3 },
+      donchianChannel: { show: false, period: 20 },
       williamsFractal: { show: false, span: 2 },
+      williamsAlligator: { show: false, jawLength: 13, teethLength: 8, lipsLength: 5, jawOffset: 8, teethOffset: 5, lipsOffset: 3 },
       parabolicSar: { show: false, start: 0.02, increment: 0.02, maximum: 0.2 },
       smartMoneyConcepts: { ...DEFAULT_SMART_MONEY_CONCEPTS_SETTINGS },
       volumeProfile: { show: false, rows: 24, widthPct: 22, upOpacity: 45, downOpacity: 45, pocOpacity: 95 },
+      autoTrendlineChannel: { show: false, channelLength: 20, widthMultiplier: 1.5, showFill: true, showBasis: true },
       fixedRangeVolumeProfile: {
         show: false,
         rowSize: 50,
@@ -779,6 +806,21 @@ export class SimpleChart {
         showTable: false,
         textColor: '#ffffff',
       },
+      kalmanAdjustedAtr: {
+        show: false,
+        atrPeriod: 5,
+        factor: 0.5,
+        processNoise: 0.01,
+        measurementNoise: 3,
+        filterOrder: 5,
+        confirmBars: 1,
+        source: 'close' as KalmanAdjustedAtrSource,
+        maType: 'ema' as KalmanAdjustedAtrMaType,
+        maPeriod: 50,
+        almaSigma: 0.7,
+        showMa: false,
+        showSignals: true,
+      },
       zeroLagMaTrendLevels: {
         show: false,
         length: 15,
@@ -794,6 +836,8 @@ export class SimpleChart {
       mainRatio:   0.55,
       volumeRatio: 0.12,
       rsiRatio:    0.12,
+      mfiRatio:    0.12,
+      momentumRatio: 0.12,
       dmiRatio:    0.10,
       macdRatio:   0.11,
       subRatio:    0.12, // default ratio for unknown sub panel
@@ -1079,7 +1123,7 @@ export class SimpleChart {
 
   private applyOneSecondIndicatorPolicy(): void {
     const indicators = this.config.indicators as Record<string, { show?: boolean }>;
-    const autoHideSubIndicators = ['rsi', 'dmi', 'macd', 'stochF', 'stochS', 'cci', 'obv'];
+    const autoHideSubIndicators = ['rsi', 'mfi', 'momentum', 'dmi', 'macd', 'stochF', 'stochS', 'cci', 'obv'];
 
     if (this.config.timeframe === '1s') {
       if (!this.oneSecondIndicatorVisibilityBackup) {
@@ -1126,6 +1170,24 @@ export class SimpleChart {
         title: 'RSI',
         settings: [{ text: String(ind.rsi.period), hint: 'RSI 기간' }],
         values: [{ text: fmt(rsi, 2), color: s.color }],
+      };
+    }
+    if (panelId === 'mfi') {
+      const s = this.resolveStyle('mfi', '#7e57c2');
+      const mfi = lastFinite(this.calcMFI(ind.mfi?.period ?? 14));
+      return {
+        title: 'MFI',
+        settings: [{ text: String(ind.mfi?.period ?? 14), hint: 'MFI 기간' }],
+        values: [{ text: fmt(mfi, 2), color: s.color }],
+      };
+    }
+    if (panelId === 'momentum') {
+      const s = this.resolveStyle('momentum', '#ffb74d');
+      const momentum = lastFinite(this.calcMomentum(ind.momentum?.period ?? 10));
+      return {
+        title: 'MOM',
+        settings: [{ text: String(ind.momentum?.period ?? 10), hint: 'Momentum 기간' }],
+        values: [{ text: fmt(momentum, 2), color: s.color }],
       };
     }
     if (panelId === 'dmi') {
@@ -4698,6 +4760,22 @@ export class SimpleChart {
       }
     }
 
+    if (this.activeStrategyId === DONCHIAN_TREND_FOLLOWING_STRATEGY_ID) {
+      const result = simulateDonchianTrendFollowingStrategy(this.data, this.getActiveStrategy()?.params ?? {});
+      for (let i = start; i < end; i += 1) {
+        const signal = this.strategySignals[i] ?? 0;
+        if (!signal) continue;
+        const stop = result.stopLoss[i];
+        const target = result.takeProfit[i];
+        if (target == null) continue;
+        details.set(i, {
+          side: signal > 0 ? 'LONG' : 'SHORT',
+          stopLoss: stop,
+          takeProfits: [target],
+        });
+      }
+    }
+
     return details;
   }
 
@@ -5007,6 +5085,7 @@ export class SimpleChart {
     this.initStrategyWorker();
     this.resize();
     this.canvas.style.cursor = 'none';
+    this.lastCanvasCursor = 'none';
     const scheduleResize = () => {
       if (this.resizeScheduled) return;
       this.resizeScheduled = true;
@@ -5043,7 +5122,9 @@ export class SimpleChart {
       this.stopMouseLongPressTooltip();
       this.hoveredDrawingId = null;
       this.hoveredDrawingPart = null;
+      this.pendingPassiveMouseMove = null;
       this.canvas.style.cursor = 'default';
+      this.lastCanvasCursor = 'default';
       if (!this.yAxisDragging) this.scheduleLogBtnHide();
       this.requestOverlayDraw();
     });
@@ -5760,8 +5841,24 @@ export class SimpleChart {
     return calculateRsi(this.getIndicatorSourceData(), period);
   }
 
+  private calcMFI(period: number): (number | null)[] {
+    return calculateMfi(this.getIndicatorSourceData(), period);
+  }
+
+  private calcMomentum(period: number): (number | null)[] {
+    return calculateMomentum(this.getIndicatorSourceData(), period);
+  }
+
   private calcBB(period: number, mult: number) {
     return calculateBb(this.getIndicatorSourceData(), period, mult);
+  }
+
+  private calcAutoTrendlineChannel(settings: Partial<AutoTrendlineChannelConfig>): AutoTrendlineChannelResult {
+    return calculateAutoTrendlineChannel(this.getIndicatorSourceData(), settings);
+  }
+
+  private calcDonchianChannel(period: number): DonchianChannelResult {
+    return calculateDonchianChannel(this.getIndicatorSourceData(), period);
   }
 
   private calcDMI(period: number) {
@@ -6128,6 +6225,26 @@ export class SimpleChart {
     return calculateEnvelope(this.getIndicatorSourceData(), period, pct);
   }
 
+  private getEmptyWilliamsAlligatorResult(): WilliamsAlligatorResult {
+    return {
+      jaw: [],
+      teeth: [],
+      lips: [],
+      offsets: { jaw: 8, teeth: 5, lips: 3 },
+    };
+  }
+
+  private calcWilliamsAlligator(settings: {
+    jawLength?: number;
+    teethLength?: number;
+    lipsLength?: number;
+    jawOffset?: number;
+    teethOffset?: number;
+    lipsOffset?: number;
+  }): WilliamsAlligatorResult {
+    return calculateWilliamsAlligator(this.getIndicatorSourceData(), settings);
+  }
+
   private getEmptyAtrTrailingEmaSignalResult(): AtrTrailingEmaSignalResult {
     return {
       atr: [],
@@ -6174,6 +6291,17 @@ export class SimpleChart {
     };
   }
 
+  private getEmptyKalmanAdjustedAtrResult(): KalmanAdjustedAtrResult {
+    return {
+      baseline: [],
+      ma: [],
+      atr: [],
+      trend: [],
+      trendUp: [],
+      trendDown: [],
+    };
+  }
+
   private calcBbMtfKalmanSignal(settings: {
     htfTimeframe?: string;
     ltfLength?: number;
@@ -6188,6 +6316,21 @@ export class SimpleChart {
       ...settings,
       chartTimeframe: this.config.timeframe,
     });
+  }
+
+  private calcKalmanAdjustedAtr(settings: {
+    source?: KalmanAdjustedAtrSource;
+    processNoise?: number;
+    measurementNoise?: number;
+    filterOrder?: number;
+    confirmBars?: number;
+    atrPeriod?: number;
+    factor?: number;
+    maType?: KalmanAdjustedAtrMaType;
+    maPeriod?: number;
+    almaSigma?: number;
+  }): KalmanAdjustedAtrResult {
+    return calculateKalmanAdjustedAtr(this.getIndicatorSourceData(), settings);
   }
 
   private calcSmartMoneyConcepts(settings: SmartMoneyConceptsSettings): SmartMoneyConceptsResult {
@@ -6677,6 +6820,12 @@ export class SimpleChart {
       data: this.calcBB(bbLine.period, bbLine.stdDev),
     }));
     const rsiD = indicatorLayerOn && ind.rsi.show      ? this.calcRSI(ind.rsi.period)   : [];
+    if (!ind.mfi) ind.mfi = { show: false, period: 14 };
+    if (!Number.isFinite(Number(ind.mfi.period)) || Number(ind.mfi.period) < 1) ind.mfi.period = 14;
+    const mfiD = indicatorLayerOn && ind.mfi.show      ? this.calcMFI(ind.mfi.period)   : [];
+    if (!ind.momentum) ind.momentum = { show: false, period: 10 };
+    if (!Number.isFinite(Number(ind.momentum.period)) || Number(ind.momentum.period) < 1) ind.momentum.period = 10;
+    const momentumD = indicatorLayerOn && ind.momentum.show ? this.calcMomentum(ind.momentum.period) : [];
     const dmiD = indicatorLayerOn && ind.dmi.show      ? this.calcDMI(ind.dmi.period)
                                    : { plusDI: [] as (number|null)[], minusDI: [] as (number|null)[], adx: [] as (number|null)[] };
     const macdD  = indicatorLayerOn && ind.macd.show   ? this.calcMACD(ind.macd.fast, ind.macd.slow, ind.macd.signal)
@@ -6695,6 +6844,10 @@ export class SimpleChart {
     this.lastVwapResult = vwapResult;
     const vwapD = vwapResult.vwap;
     const vwapBandsD = vwapResult.bands;
+    if (!ind.donchianChannel) ind.donchianChannel = { show: false, period: 20 };
+    if (!Number.isFinite(Number(ind.donchianChannel.period)) || Number(ind.donchianChannel.period) < 1) ind.donchianChannel.period = 20;
+    ind.donchianChannel.period = Math.max(1, Math.min(500, Math.floor(Number(ind.donchianChannel.period))));
+    const donchianChannelD = indicatorLayerOn && ind.donchianChannel.show ? this.calcDonchianChannel(ind.donchianChannel.period) : null;
     if (!ind.williamsFractal) ind.williamsFractal = { show: false, span: 2 };
     if (!Number.isFinite(Number(ind.williamsFractal.span)) || Number(ind.williamsFractal.span) < 1) {
       ind.williamsFractal.span = 2;
@@ -6702,6 +6855,12 @@ export class SimpleChart {
     const williamsFractalD = indicatorLayerOn && ind.williamsFractal.show
       ? calculateWilliamsFractals(this.data, ind.williamsFractal.span)
       : { highs: [] as Array<number | null>, lows: [] as Array<number | null>, span: 2 };
+    if (!ind.williamsAlligator) {
+      ind.williamsAlligator = { show: false, jawLength: 13, teethLength: 8, lipsLength: 5, jawOffset: 8, teethOffset: 5, lipsOffset: 3 };
+    }
+    const williamsAlligatorD = indicatorLayerOn && ind.williamsAlligator.show
+      ? this.calcWilliamsAlligator(ind.williamsAlligator)
+      : this.getEmptyWilliamsAlligatorResult();
     if (!ind.parabolicSar) ind.parabolicSar = { show: false, start: 0.02, increment: 0.02, maximum: 0.2 };
     if (!Number.isFinite(Number(ind.parabolicSar.start)) || Number(ind.parabolicSar.start) <= 0) ind.parabolicSar.start = 0.02;
     if (!Number.isFinite(Number(ind.parabolicSar.increment)) || Number(ind.parabolicSar.increment) <= 0) ind.parabolicSar.increment = 0.02;
@@ -6849,6 +7008,39 @@ export class SimpleChart {
     if (typeof ind.bbMtfKalmanSignal.showErrors !== 'boolean') ind.bbMtfKalmanSignal.showErrors = true;
     if (typeof ind.bbMtfKalmanSignal.showTable !== 'boolean') ind.bbMtfKalmanSignal.showTable = false;
     if (typeof ind.bbMtfKalmanSignal.textColor !== 'string' || !ind.bbMtfKalmanSignal.textColor) ind.bbMtfKalmanSignal.textColor = '#ffffff';
+    if (!ind.kalmanAdjustedAtr) {
+      ind.kalmanAdjustedAtr = {
+        show: false,
+        source: 'close',
+        processNoise: 0.01,
+        measurementNoise: 3,
+        filterOrder: 5,
+        confirmBars: 1,
+        atrPeriod: 5,
+        factor: 0.5,
+        maType: 'ema',
+        maPeriod: 50,
+        almaSigma: 0.7,
+        showMa: false,
+        showSignals: true,
+      };
+    }
+    if (!['close', 'open', 'high', 'low', 'hl2', 'hlc3', 'ohlc4'].includes(String(ind.kalmanAdjustedAtr.source))) ind.kalmanAdjustedAtr.source = 'close';
+    if (!['sma', 'ema', 'wma', 'rma', 'dema', 'hma', 'linreg', 'alma'].includes(String(ind.kalmanAdjustedAtr.maType))) ind.kalmanAdjustedAtr.maType = 'ema';
+    if (!Number.isFinite(Number(ind.kalmanAdjustedAtr.processNoise)) || Number(ind.kalmanAdjustedAtr.processNoise) <= 0) ind.kalmanAdjustedAtr.processNoise = 0.01;
+    if (!Number.isFinite(Number(ind.kalmanAdjustedAtr.measurementNoise)) || Number(ind.kalmanAdjustedAtr.measurementNoise) <= 0) ind.kalmanAdjustedAtr.measurementNoise = 3;
+    if (!Number.isFinite(Number(ind.kalmanAdjustedAtr.filterOrder)) || Number(ind.kalmanAdjustedAtr.filterOrder) < 1) ind.kalmanAdjustedAtr.filterOrder = 5;
+    if (!Number.isFinite(Number(ind.kalmanAdjustedAtr.confirmBars)) || Number(ind.kalmanAdjustedAtr.confirmBars) < 1) ind.kalmanAdjustedAtr.confirmBars = 1;
+    if (!Number.isFinite(Number(ind.kalmanAdjustedAtr.atrPeriod)) || Number(ind.kalmanAdjustedAtr.atrPeriod) < 1) ind.kalmanAdjustedAtr.atrPeriod = 5;
+    if (!Number.isFinite(Number(ind.kalmanAdjustedAtr.factor)) || Number(ind.kalmanAdjustedAtr.factor) <= 0) ind.kalmanAdjustedAtr.factor = 0.5;
+    if (!Number.isFinite(Number(ind.kalmanAdjustedAtr.maPeriod)) || Number(ind.kalmanAdjustedAtr.maPeriod) < 1) ind.kalmanAdjustedAtr.maPeriod = 50;
+    if (!Number.isFinite(Number(ind.kalmanAdjustedAtr.almaSigma)) || Number(ind.kalmanAdjustedAtr.almaSigma) <= 0) ind.kalmanAdjustedAtr.almaSigma = 0.7;
+    ind.kalmanAdjustedAtr.filterOrder = Math.max(1, Math.min(20, Math.floor(Number(ind.kalmanAdjustedAtr.filterOrder))));
+    ind.kalmanAdjustedAtr.confirmBars = Math.max(1, Math.min(20, Math.floor(Number(ind.kalmanAdjustedAtr.confirmBars))));
+    ind.kalmanAdjustedAtr.atrPeriod = Math.max(1, Math.min(500, Math.floor(Number(ind.kalmanAdjustedAtr.atrPeriod))));
+    ind.kalmanAdjustedAtr.maPeriod = Math.max(1, Math.min(500, Math.floor(Number(ind.kalmanAdjustedAtr.maPeriod))));
+    if (typeof ind.kalmanAdjustedAtr.showMa !== 'boolean') ind.kalmanAdjustedAtr.showMa = false;
+    if (typeof ind.kalmanAdjustedAtr.showSignals !== 'boolean') ind.kalmanAdjustedAtr.showSignals = true;
     if (!ind.vpvr) {
       ind.vpvr = {
         show: false,
@@ -6961,9 +7153,38 @@ export class SimpleChart {
         colorOption: ind.bbMtfKalmanSignal.colorOption,
       })
       : this.getEmptyBbMtfKalmanSignalResult();
+    const kalmanAdjustedAtrD = indicatorLayerOn && ind.kalmanAdjustedAtr.show
+      ? this.calcKalmanAdjustedAtr({
+        source: ind.kalmanAdjustedAtr.source,
+        processNoise: ind.kalmanAdjustedAtr.processNoise,
+        measurementNoise: ind.kalmanAdjustedAtr.measurementNoise,
+        filterOrder: ind.kalmanAdjustedAtr.filterOrder,
+        confirmBars: ind.kalmanAdjustedAtr.confirmBars,
+        atrPeriod: ind.kalmanAdjustedAtr.atrPeriod,
+        factor: ind.kalmanAdjustedAtr.factor,
+        maType: ind.kalmanAdjustedAtr.maType,
+        maPeriod: ind.kalmanAdjustedAtr.maPeriod,
+        almaSigma: ind.kalmanAdjustedAtr.almaSigma,
+      })
+      : this.getEmptyKalmanAdjustedAtrResult();
+    if (!ind.autoTrendlineChannel) {
+      ind.autoTrendlineChannel = { show: false, channelLength: 20, widthMultiplier: 1.5, showFill: true, showBasis: true };
+    }
+    if (!Number.isFinite(Number(ind.autoTrendlineChannel.channelLength)) || Number(ind.autoTrendlineChannel.channelLength) < 1) {
+      ind.autoTrendlineChannel.channelLength = 20;
+    }
+    ind.autoTrendlineChannel.channelLength = Math.max(1, Math.min(500, Math.floor(Number(ind.autoTrendlineChannel.channelLength))));
+    if (!Number.isFinite(Number(ind.autoTrendlineChannel.widthMultiplier)) || Number(ind.autoTrendlineChannel.widthMultiplier) <= 0) {
+      ind.autoTrendlineChannel.widthMultiplier = 1.5;
+    }
+    ind.autoTrendlineChannel.widthMultiplier = Math.max(0.1, Math.min(10, Number(ind.autoTrendlineChannel.widthMultiplier)));
+    if (typeof ind.autoTrendlineChannel.showFill !== 'boolean') ind.autoTrendlineChannel.showFill = true;
+    if (typeof ind.autoTrendlineChannel.showBasis !== 'boolean') ind.autoTrendlineChannel.showBasis = true;
+    const autoTrendlineChannelD = indicatorLayerOn && ind.autoTrendlineChannel.show ? this.calcAutoTrendlineChannel(ind.autoTrendlineChannel)
+      : null;
     const ichiD  = indicatorLayerOn && ind.ichimoku.show ? this.calcIchimoku(ind.ichimoku.tenkan, ind.ichimoku.kijun, ind.ichimoku.senkou) : null;
     const envD   = indicatorLayerOn && ind.envelope.show ? this.calcEnvelope(ind.envelope.period, ind.envelope.pct) : null;
-    const autoTrendlineChannelD: AutoTrendlineChannelResult | null = (
+    const strategyAutoTrendlineChannelD: AutoTrendlineChannelResult | null = (
       this.activeStrategyId === AUTO_TRENDLINE_CHANNEL_STRATEGY_ID
       && this.strategySignalVisible
     )
@@ -6993,6 +7214,12 @@ export class SimpleChart {
         hmaD[gi],
         vwapD[gi],
         ...this.getVisibleVwapBandValues(vwapBandsD, gi),
+        donchianChannelD?.upper[gi],
+        donchianChannelD?.middle[gi],
+        donchianChannelD?.lower[gi],
+        williamsAlligatorD.jaw[gi],
+        williamsAlligatorD.teeth[gi],
+        williamsAlligatorD.lips[gi],
         zeroLagMaTrendLevelsD.zlma[gi],
         zeroLagMaTrendLevelsD.emaValue[gi],
       ].forEach(v => {
@@ -7032,9 +7259,14 @@ export class SimpleChart {
         bbMtfKalmanSignalD.ltfLower[gi],
         bbMtfKalmanSignalD.htfUpper[gi],
         bbMtfKalmanSignalD.htfLower[gi],
+        kalmanAdjustedAtrD.baseline[gi],
+        kalmanAdjustedAtrD.ma[gi],
         autoTrendlineChannelD?.upper[gi],
         autoTrendlineChannelD?.basis[gi],
         autoTrendlineChannelD?.lower[gi],
+        strategyAutoTrendlineChannelD?.upper[gi],
+        strategyAutoTrendlineChannelD?.basis[gi],
+        strategyAutoTrendlineChannelD?.lower[gi],
       ].forEach((v) => {
         if (v != null) {
           minP = Math.min(minP, v);
@@ -7210,6 +7442,7 @@ export class SimpleChart {
       startIndex: this.startIndex,
       bbSeries,
       vwapBands: vwapBandsD,
+      donchianChannelData: donchianChannelD,
       ichimokuData: ichiD,
       envelopeData: envD,
       zeroLagMaTrendLevelsData: zeroLagMaTrendLevelsD,
@@ -7267,7 +7500,7 @@ export class SimpleChart {
 
     renderAutoTrendlineChannel({
       ctx,
-      data: autoTrendlineChannelD,
+      data: strategyAutoTrendlineChannelD,
       startIndex: this.startIndex,
       visLength: visData.length,
       chartLeft,
@@ -7325,7 +7558,9 @@ export class SimpleChart {
         bbSeries,
         vwapD,
         vwapBandsD,
+        donchianChannelD,
         williamsFractalD,
+        williamsAlligatorD,
         parabolicSarD,
         smartMoneyConceptsD,
         zeroLagMaTrendLevelsD,
@@ -7335,6 +7570,8 @@ export class SimpleChart {
         atrTrailingEmaSignalD,
         atrTrailingStopOriginD,
         bbMtfKalmanSignalD,
+        kalmanAdjustedAtrD,
+        autoTrendlineChannelD,
         envD,
         line,
         getY,
@@ -7352,6 +7589,8 @@ export class SimpleChart {
       },
       subPanels: {
         rsiD,
+        mfiD,
+        momentumD,
         dmiD,
         macdD,
         stFD,
@@ -7482,6 +7721,8 @@ export class SimpleChart {
         dmiD,
         macdD,
         cciD,
+        mfiD,
+        momentumD,
         atrD,
         obvD,
         obvSignal9,
@@ -7497,6 +7738,8 @@ export class SimpleChart {
       this.evaluateSubIndicatorAlerts({
         volume: this.data.map((d) => d.volume),
         rsi: rsiD,
+        mfi: mfiD,
+        momentum: momentumD,
         dmi: dmiD.adx,
         macd: macdD.macdLine,
         stochF: stFD?.k ?? [],
@@ -7518,15 +7761,24 @@ export class SimpleChart {
   private requestOverlayDraw() {
     if (this.overlayDrawScheduled) return;
     this.overlayDrawScheduled = true;
-    window.requestAnimationFrame(() => {
-      this.overlayDrawScheduled = false;
-      try {
-        this.drawOverlay();
-      } catch (error) {
-        (window as any).__simpleChartOverlayError = error;
-        console.error('[SimpleChart] overlay draw failed', error);
-      }
+    this.overlayDrawFrameId = window.requestAnimationFrame(() => {
+      this.overlayDrawFrameId = null;
+      this.drawOverlayNow();
     });
+  }
+
+  private drawOverlayNow(): void {
+    if (this.overlayDrawFrameId !== null) {
+      window.cancelAnimationFrame(this.overlayDrawFrameId);
+      this.overlayDrawFrameId = null;
+    }
+    this.overlayDrawScheduled = false;
+    try {
+      this.drawOverlay();
+    } catch (error) {
+      (window as any).__simpleChartOverlayError = error;
+      console.error('[SimpleChart] overlay draw failed', error);
+    }
   }
 
   private requestMainDraw() {
@@ -9486,6 +9738,8 @@ export class SimpleChart {
           calcDMI: () => subPanelCrosshairData?.dmiD ?? { plusDI: [], minusDI: [], adx: [] },
           calcMACD: () => subPanelCrosshairData?.macdD ?? { hist: [], macdLine: [], sigLine: [] },
           calcCCI: () => subPanelCrosshairData?.cciD ?? [],
+          calcMFI: () => subPanelCrosshairData?.mfiD ?? [],
+          calcMomentum: () => subPanelCrosshairData?.momentumD ?? [],
           calcATR: () => subPanelCrosshairData?.atrD ?? [],
           calcOBV: () => subPanelCrosshairData?.obvD ?? [],
           calcOBVSignal: () => subPanelCrosshairData?.obvSignal9 ?? [],
@@ -9616,7 +9870,10 @@ export class SimpleChart {
       this.logBtnHideTimer = null;
       if (this.logBtn && !this._logBtnHovered && !this.yAxisDragging
           && !this.isOnMainYAxis(this.mouseX, this.mouseY)) {
-        this.logBtn.style.display = 'none';
+        if (this.logBtnVisible) {
+          this.logBtn.style.display = 'none';
+          this.logBtnVisible = false;
+        }
       }
     }, 250);
   }
@@ -9624,31 +9881,50 @@ export class SimpleChart {
   private updateLogBtnPosition(): void {
     if (!this.logBtn) return;
     const meta = this.lastDrawMeta;
-    if (!meta) { this.logBtn.style.display = 'none'; return; }
+    if (!meta) {
+      if (this.logBtnVisible) {
+        this.logBtn.style.display = 'none';
+        this.logBtnVisible = false;
+      }
+      return;
+    }
+    const onAxis = this.isOnMainYAxis(this.mouseX, this.mouseY) || this.yAxisDragging || this._logBtnHovered;
+    if (!onAxis) {
+      this.scheduleLogBtnHide();
+      return;
+    }
+    if (this.logBtnHideTimer) { clearTimeout(this.logBtnHideTimer); this.logBtnHideTimer = null; }
+    if (!this.logBtnVisible) {
+      this.logBtn.style.display = 'block';
+      this.logBtnVisible = true;
+    }
     const btnH = 22;
     const axisCenter = meta.axisSide === 'right'
       ? meta.chartRight + (this.viewportWidth - meta.chartRight) / 2
       : meta.axisPad / 2;
     const btnW = this.logBtn.offsetWidth || 38;
-    const onAxis = this.isOnMainYAxis(this.mouseX, this.mouseY) || this.yAxisDragging || this._logBtnHovered;
-    if (onAxis) {
-      if (this.logBtnHideTimer) { clearTimeout(this.logBtnHideTimer); this.logBtnHideTimer = null; }
-      this.logBtn.style.display = 'block';
-    } else {
-      this.scheduleLogBtnHide();
+    const left = Math.round(axisCenter - btnW / 2);
+    const top = Math.round(meta.mainH - btnH - 8);
+    if (this.lastLogBtnLeft !== left) {
+      this.logBtn.style.left = `${left}px`;
+      this.lastLogBtnLeft = left;
     }
-    this.logBtn.style.left = `${Math.round(axisCenter - btnW / 2)}px`;
-    this.logBtn.style.top = `${Math.round(meta.mainH - btnH - 8)}px`;
+    if (this.lastLogBtnTop !== top) {
+      this.logBtn.style.top = `${top}px`;
+      this.lastLogBtnTop = top;
+    }
   }
 
-  private updateChartCursor(): void {
-    const hitDrawing = this.findDrawingAt(this.mouseX, this.mouseY);
+  private updateChartCursor(hitDrawingOverride?: { shape: DrawingShape; part: DrawingHitPart } | null): void {
+    const hitDrawing = hitDrawingOverride !== undefined
+      ? hitDrawingOverride
+      : this.findDrawingAt(this.mouseX, this.mouseY);
     const movingShape = this.drawingMoveState && this.selectedDrawingId
       ? this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null
       : null;
     const hitSubAlert = this.findSubIndicatorAlertHit(this.mouseX, this.mouseY);
     const hitVwapAnchor = this.isVwapAnchorSelectionHit(this.mouseX, this.mouseY);
-    this.canvas.style.cursor = resolveChartCursor({
+    const nextCursor = resolveChartCursor({
       isMouseOver: this.isMouseOver,
       mouseX: this.mouseX,
       mouseY: this.mouseY,
@@ -9677,6 +9953,10 @@ export class SimpleChart {
         xAxis: X_AXIS_CURSOR,
       },
     });
+    if (this.lastCanvasCursor !== nextCursor) {
+      this.canvas.style.cursor = nextCursor;
+      this.lastCanvasCursor = nextCursor;
+    }
   }
 
   private handleWheel(e: WheelEvent) {
@@ -10212,9 +10492,70 @@ export class SimpleChart {
     }
   }
 
-  private handleMouseMove(e: MouseEvent) {
+  private applyMousePositionFromClient(clientX: number, clientY: number): void {
     const rect = this.canvas.getBoundingClientRect();
-    this.mouseX = e.clientX - rect.left; this.mouseY = e.clientY - rect.top;
+    this.mouseX = clientX - rect.left;
+    this.mouseY = clientY - rect.top;
+  }
+
+  private updatePassiveMouseHover(clientX: number, clientY: number): void {
+    this.applyMousePositionFromClient(clientX, clientY);
+    this.isMouseOver = true;
+
+    const hoveredDrawing = this.findDrawingAt(this.mouseX, this.mouseY);
+    this.hoveredDrawingId = hoveredDrawing?.shape.id ?? null;
+    this.hoveredDrawingPart = hoveredDrawing?.part ?? null;
+
+    if (this.crosshairPlusHit) {
+      this.crosshairPlusHovered = isPointInCircle(this.crosshairPlusHit, this.mouseX, this.mouseY);
+    } else {
+      this.crosshairPlusHovered = false;
+    }
+
+    this.updateChartCursor(hoveredDrawing);
+    this.updateLogBtnPosition();
+    this.drawOverlayNow();
+  }
+
+  private schedulePassiveMouseHover(e: MouseEvent): void {
+    this.pendingPassiveMouseMove = { clientX: e.clientX, clientY: e.clientY };
+    this.isMouseOver = true;
+    if (this.passiveMouseMoveScheduled) return;
+    this.passiveMouseMoveScheduled = true;
+    window.requestAnimationFrame(() => {
+      this.passiveMouseMoveScheduled = false;
+      const pending = this.pendingPassiveMouseMove;
+      this.pendingPassiveMouseMove = null;
+      if (!pending || !this.isMouseOver) return;
+      if (
+        this.xAxisDragging
+        || this.yAxisDragging
+        || this.subYAxisDragging
+        || this.drawingMoveState
+        || this.drawingTool
+        || this.drawingDragActive
+        || this.isDragging
+      ) {
+        return;
+      }
+      this.updatePassiveMouseHover(pending.clientX, pending.clientY);
+    });
+  }
+
+  private handleMouseMove(e: MouseEvent) {
+    const passiveHoverOnly = !this.xAxisDragging
+      && !this.yAxisDragging
+      && !this.subYAxisDragging
+      && !this.drawingMoveState
+      && !this.drawingTool
+      && !this.drawingDragActive
+      && !this.isDragging;
+    if (passiveHoverOnly) {
+      this.schedulePassiveMouseHover(e);
+      return;
+    }
+
+    this.applyMousePositionFromClient(e.clientX, e.clientY);
     if (this.drawingMoveState) {
       const movingShape = this.selectedDrawingId
         ? this.drawings.find((shape) => shape.id === this.selectedDrawingId) ?? null
@@ -10273,7 +10614,7 @@ export class SimpleChart {
       this.crosshairPlusHovered = false;
     }
 
-    this.updateChartCursor();
+    this.updateChartCursor(hoveredDrawing);
     this.updateLogBtnPosition();
     if (this.drawingMoveState && this.selectedDrawingId) {
       const moveResult = applyDrawingMove({

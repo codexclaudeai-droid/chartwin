@@ -28,6 +28,12 @@ export interface SubPanelCrosshairIndicatorConfig {
   cci?: {
     period?: number;
   };
+  mfi?: {
+    period?: number;
+  };
+  momentum?: {
+    period?: number;
+  };
   atr?: {
     period?: number;
   };
@@ -48,6 +54,8 @@ export interface SubPanelCrosshairValueParams {
   calcDMI: (period: number) => DmiCrosshairData;
   calcMACD: (fast: number, slow: number, signal: number) => MacdCrosshairData;
   calcCCI: (period: number) => NullableSeries;
+  calcMFI: (period: number) => NullableSeries;
+  calcMomentum: (period: number) => NullableSeries;
   calcATR: (period: number) => NullableSeries;
   calcOBV: () => number[];
   calcOBVSignal?: () => NullableSeries;
@@ -131,6 +139,8 @@ function resolveValueRange(params: SubPanelCrosshairValueParams): {
     resolveColor,
     calcMACD,
     calcCCI,
+    calcMFI,
+    calcMomentum,
     calcATR,
     calcOBV,
     calcCVD,
@@ -146,6 +156,19 @@ function resolveValueRange(params: SubPanelCrosshairValueParams): {
 
   if (panelId === 'rsi') {
     return { lo: 0, hi: 100, accentColor: resolveColor('rsi', '#ffeb3b') };
+  }
+
+  if (panelId === 'mfi') {
+    const mfiConfig = indicators.mfi ?? {};
+    calcMFI(mfiConfig.period ?? 14);
+    return { lo: 0, hi: 100, accentColor: resolveColor('mfi', '#7e57c2') };
+  }
+
+  if (panelId === 'momentum') {
+    const momentumConfig = indicators.momentum ?? {};
+    const visibleValues = finiteNumbers(calcMomentum(momentumConfig.period ?? 10).slice(visStart, visEnd));
+    const maxAbs = Math.max(...visibleValues.map((value) => Math.abs(value)), 1) * 1.15;
+    return { lo: -maxAbs, hi: maxAbs, accentColor: resolveColor('momentum', '#ffb74d') };
   }
 
   if (panelId === 'dmi') {
@@ -222,7 +245,7 @@ export function resolveSubPanelCrosshairValue(params: SubPanelCrosshairValuePara
   const range = resolveValueRange(params);
   const clampedY = Math.max(plotTop, Math.min(plotTop + plotH, mouseY));
   const value = range.hi - ((clampedY - plotTop) / (plotH || 1)) * (range.hi - range.lo);
-  const isSignedPanel = panelId === 'macd' || panelId === 'cci' || panelId === 'obv' || panelId === 'cvd';
+  const isSignedPanel = panelId === 'macd' || panelId === 'momentum' || panelId === 'cci' || panelId === 'obv' || panelId === 'cvd';
 
   return {
     value,

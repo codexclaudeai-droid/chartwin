@@ -1,12 +1,14 @@
 import { toRgba } from '../color-utils.ts';
 import { drawZeroLagAreaUnderCandles, type ZeroLagTrendStates } from '../indicator-render-engine.ts';
 import type {
+  DonchianChannelResult,
   EnvelopeResult,
   IchimokuResult,
   IndicatorCandle,
 } from '../indicators/index.ts';
 import type { VwapBands } from '../indicators/volume.ts';
 import { renderBollingerBandFills, type BollingerBandRenderSeries } from './bollinger-renderer.ts';
+import { renderDonchianChannelFill } from './donchian-channel-renderer.ts';
 import { renderEnvelopeFill } from './envelope-renderer.ts';
 import { renderIchimoku } from './ichimoku-renderer.ts';
 import type { IndicatorLineStyle } from './main-line-renderer.ts';
@@ -32,6 +34,7 @@ export interface RenderMainBackgroundLayersParams {
   startIndex: number;
   bbSeries: BollingerBandRenderSeries[];
   vwapBands: VwapBands;
+  donchianChannelData: DonchianChannelResult | null;
   ichimokuData: IchimokuResult | null;
   envelopeData: EnvelopeResult | null;
   zeroLagMaTrendLevelsData: Parameters<typeof drawZeroLagAreaUnderCandles>[0]['data'];
@@ -140,6 +143,7 @@ export function renderMainBackgroundLayers(params: RenderMainBackgroundLayersPar
     startIndex,
     bbSeries,
     vwapBands,
+    donchianChannelData,
     ichimokuData,
     envelopeData,
     zeroLagMaTrendLevelsData,
@@ -218,6 +222,21 @@ export function renderMainBackgroundLayers(params: RenderMainBackgroundLayersPar
     ctx,
     data: envelopeData,
     enabled: indicatorLayerOn && indicators.envelope.show,
+    startIndex,
+    visLength,
+    effectiveChartLeft,
+    totalSp,
+    candleW,
+    getY,
+  });
+
+  renderDonchianChannelFill({
+    ctx,
+    data: donchianChannelData,
+    enabled: indicatorLayerOn
+      && indicators.donchianChannel?.show
+      && showLine('donchianUpper')
+      && showLine('donchianLower'),
     startIndex,
     visLength,
     effectiveChartLeft,

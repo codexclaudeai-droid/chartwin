@@ -20,6 +20,7 @@ type CreateTopBarArgs = {
   isPaneMaximized: () => boolean;
   onExitMaximize: () => void;
   onOpenEconomicCalendar: () => void;
+  onAnalyzeChartWithAi: () => void;
   onClickSignalNotification: () => void;
 };
 
@@ -97,6 +98,15 @@ const calendarSvgIcon = `
     <path d="M16 14h.01"></path>
     <path d="M8 18h.01"></path>
     <path d="M12 18h.01"></path>
+  </svg>
+`;
+
+const aiAnalysisSvgIcon = `
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"></path>
+    <path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14z"></path>
+    <path d="M5 13l.8 1.8L8 15.5l-2.2.7L5 18l-.8-1.8L2 15.5l2.2-.7L5 13z"></path>
   </svg>
 `;
 
@@ -351,6 +361,7 @@ export function createTopBar({
   isPaneMaximized,
   onExitMaximize,
   onOpenEconomicCalendar,
+  onAnalyzeChartWithAi,
   onClickSignalNotification,
 }: CreateTopBarArgs): { refreshTopControlIcons: () => void; syncFullscreenIcon: () => void; setSignalNotification: (count: number) => void } {
   const topBar = document.createElement('div');
@@ -561,6 +572,7 @@ export function createTopBar({
     if (splitMenuOpen) closeSplitMenu();
   });
   rightArea.appendChild(iconBtn(calendarSvgIcon, '경제달력', onOpenEconomicCalendar));
+  rightArea.appendChild(iconBtn(aiAnalysisSvgIcon, 'AI 차트분석', onAnalyzeChartWithAi));
   rightArea.appendChild(signalBtn);
   rightArea.appendChild(splitWrap);
 

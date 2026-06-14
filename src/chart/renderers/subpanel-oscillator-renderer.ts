@@ -39,6 +39,58 @@ export function renderRsiPanel(params: SubPanelRenderContext & {
   if (params.showLine('rsi')) params.drawSubAxisValue(lastRsi, top, pH, rsiLo, rsiHi, style.color, lastRsi.toFixed(2));
 }
 
+export function renderMfiPanel(params: SubPanelRenderContext & {
+  period: number;
+  data: Array<number | null>;
+}): void {
+  const { ctx, top, panelHeight: pH, chartLeft, subChartWidth, period, data } = params;
+  const lastMfi = lastFinite(data);
+  const style = params.resolveStyle('mfi', '#7e57c2');
+  params.drawPanelLegend(`MFI(${period})`, top, [{ text: 'MFI', color: style.color, enabled: params.showLine('mfi') }]);
+  const { lo, hi } = params.scaleRange(0, 100);
+  params.subGrid([80, 50, 20], top, pH, lo, hi);
+  const { plotTop, plotH } = params.getSubPlotBounds(top, pH);
+  const range = hi - lo || 1;
+  const sy = (value: number) => plotTop + (hi - value) / range * plotH;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(chartLeft, top, subChartWidth, pH);
+  ctx.clip();
+  ctx.fillStyle = 'rgba(242,54,69,0.06)';
+  ctx.fillRect(chartLeft, sy(hi), subChartWidth, Math.max(0, sy(80) - sy(hi)));
+  ctx.fillStyle = 'rgba(34,171,148,0.06)';
+  ctx.fillRect(chartLeft, sy(20), subChartWidth, Math.max(0, sy(lo) - sy(20)));
+  ctx.restore();
+  if (params.showLine('mfi')) params.subLine(data, style.color, style.width, top, pH, lo, hi, style.dash);
+  if (params.showLine('mfiBaseline')) {
+    const baseline = params.resolveStyle('mfiBaseline', '#999999', 1, [4, 4]);
+    params.subHorizontalLine(50, baseline.color, baseline.width, top, pH, lo, hi, baseline.dash);
+  }
+  params.drawSubAlertLines('mfi', top, pH, lo, hi);
+  if (params.showLine('mfi')) params.drawSubAxisValue(lastMfi, top, pH, lo, hi, style.color, lastMfi.toFixed(2));
+}
+
+export function renderMomentumPanel(params: SubPanelRenderContext & {
+  period: number;
+  data: Array<number | null>;
+}): void {
+  const { top, panelHeight: pH, startIndex, endIndex, data } = params;
+  const visible = data.slice(startIndex, endIndex).filter((value): value is number => value != null && Number.isFinite(value));
+  const maxAbs = Math.max(...visible.map((value) => Math.abs(value)), 1);
+  const { lo, hi } = params.scaleRange(-maxAbs * 1.15, maxAbs * 1.15);
+  const style = params.resolveStyle('momentum', '#ffb74d');
+  params.drawPanelLegend(`MOM(${params.period})`, top, [{ text: 'MOM', color: style.color, enabled: params.showLine('momentum') }]);
+  params.subGrid([hi, 0, lo], top, pH, lo, hi);
+  if (params.showLine('momentum')) params.subLine(data, style.color, style.width, top, pH, lo, hi, style.dash);
+  if (params.showLine('momentumBaseline')) {
+    const baseline = params.resolveStyle('momentumBaseline', '#999999', 1, [4, 4]);
+    params.subHorizontalLine(0, baseline.color, baseline.width, top, pH, lo, hi, baseline.dash);
+  }
+  params.drawSubAlertLines('momentum', top, pH, lo, hi);
+  const lastMomentum = lastFinite(data);
+  if (params.showLine('momentum')) params.drawSubAxisValue(lastMomentum, top, pH, lo, hi, style.color, lastMomentum.toFixed(2));
+}
+
 export function renderMacdPanel(params: SubPanelRenderContext & {
   fast: number;
   slow: number;

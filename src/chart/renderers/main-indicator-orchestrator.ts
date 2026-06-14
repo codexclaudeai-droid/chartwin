@@ -3,6 +3,7 @@ import {
   type ZeroLagMaTrendLevelsData,
   type ZeroLagTrendStates,
 } from '../indicator-render-engine.ts';
+import type { DonchianChannelResult } from '../indicators/donchian-channel.ts';
 import type { EnvelopeResult } from '../indicators/envelope.ts';
 import type { NullableSeries } from '../indicators/types.ts';
 import {
@@ -14,15 +15,21 @@ import {
   type ResolveIndicatorStyle,
   renderSingleMainLine,
 } from './main-line-renderer.ts';
+import { renderDonchianChannelLines } from './donchian-channel-renderer.ts';
 import { renderEnvelopeLines } from './envelope-renderer.ts';
+import { renderWilliamsAlligatorLines } from './williams-alligator-renderer.ts';
+import { renderAutoTrendlineChannel } from './auto-trendline-channel-renderer.ts';
 import type { AtrTrailingEmaSignalResult } from '../indicators/atr-trailing-ema-signal.ts';
 import { renderAtrTrailingEmaSignal } from './atr-trailing-ema-signal-renderer.ts';
 import type { BbMtfKalmanSignalResult } from '../indicators/bb-mtf-kalman-signal.ts';
 import { applyBbMtfKalmanLinewidth, renderBbMtfKalmanSignal } from './bb-mtf-kalman-signal-renderer.ts';
+import type { KalmanAdjustedAtrResult } from '../indicators/kalman-adjusted-atr.ts';
+import { renderKalmanAdjustedAtr } from './kalman-adjusted-atr-renderer.ts';
 import type { SmartMoneyConceptsResult } from '../indicators/smart-money-concepts.ts';
 import { renderSmartMoneyConcepts } from './smart-money-concepts-renderer.ts';
 import { renderParabolicSar } from './parabolic-sar-renderer.ts';
 import type { VwapBands } from '../indicators/volume.ts';
+import type { WilliamsAlligatorResult } from '../indicators/williams-alligator.ts';
 import {
   getStatisticalTrailingStopMarkerGeometry,
   renderStatisticalTrailingStopBase,
@@ -33,6 +40,7 @@ import { renderSupertrend, type SupertrendRenderData } from './supertrend-render
 import { renderWilliamsFractals, type WilliamsFractalRenderData } from './williams-fractal-renderer.ts';
 import type { SubPanelIndicatorSettings } from './subpanel-render-orchestrator.ts';
 import { INDICATOR_STYLE_TARGETS } from '../../indicator-panel-module.ts';
+import type { AutoTrendlineChannelResult } from '../../strategy/strategies/auto-trendline-channel-runtime.ts';
 
 export interface MainIndicatorSettings extends SubPanelIndicatorSettings {
   volume: { show: boolean };
@@ -57,7 +65,9 @@ export interface MainIndicatorSettings extends SubPanelIndicatorSettings {
     showLowerBand3?: boolean;
     bandMultiplier3?: number;
   };
+  donchianChannel?: { show: boolean; period?: number };
   williamsFractal?: { show: boolean };
+  williamsAlligator?: { show: boolean };
   parabolicSar?: { show: boolean };
   smartMoneyConcepts?: {
     show: boolean;
@@ -105,6 +115,11 @@ export interface MainIndicatorSettings extends SubPanelIndicatorSettings {
     upBgColor?: string;
     downBgColor?: string;
   };
+  autoTrendlineChannel?: {
+    show: boolean;
+    showFill?: boolean;
+    showBasis?: boolean;
+  };
   statisticalTrailingStop: {
     show: boolean;
     bullishColor?: string;
@@ -138,6 +153,11 @@ export interface MainIndicatorSettings extends SubPanelIndicatorSettings {
     textColor?: string;
     ltfBBLinewidth?: number;
     htfBBLinewidth?: number;
+  };
+  kalmanAdjustedAtr?: {
+    show: boolean;
+    showMa?: boolean;
+    showSignals?: boolean;
   };
   envelope: { show: boolean };
   maShort?: { show: boolean };
@@ -178,7 +198,9 @@ export interface RenderMainIndicatorsParams {
   }>;
   vwapD: NullableSeries;
   vwapBandsD: VwapBands;
+  donchianChannelD: DonchianChannelResult | null;
   williamsFractalD: WilliamsFractalRenderData;
+  williamsAlligatorD: WilliamsAlligatorResult;
   parabolicSarD: NullableSeries;
   smartMoneyConceptsD: SmartMoneyConceptsResult;
   zeroLagMaTrendLevelsD: ZeroLagMaTrendLevelsData;
@@ -190,6 +212,8 @@ export interface RenderMainIndicatorsParams {
   atrTrailingEmaSignalD: AtrTrailingEmaSignalResult;
   atrTrailingStopOriginD: AtrTrailingEmaSignalResult;
   bbMtfKalmanSignalD: BbMtfKalmanSignalResult;
+  kalmanAdjustedAtrD: KalmanAdjustedAtrResult;
+  autoTrendlineChannelD: AutoTrendlineChannelResult | null;
   envD: EnvelopeResult | null;
   line: DrawSeriesLine;
   showLine: (key: string) => boolean;
@@ -231,7 +255,9 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     bbSeries,
     vwapD,
     vwapBandsD,
+    donchianChannelD,
     williamsFractalD,
+    williamsAlligatorD,
     parabolicSarD,
     smartMoneyConceptsD,
     zeroLagMaTrendLevelsD,
@@ -241,6 +267,8 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     atrTrailingEmaSignalD,
     atrTrailingStopOriginD,
     bbMtfKalmanSignalD,
+    kalmanAdjustedAtrD,
+    autoTrendlineChannelD,
     envD,
     line,
     showLine,
@@ -337,6 +365,28 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
       showHigh: showLine('williamsFractalHigh'),
       showLow: showLine('williamsFractalLow'),
       getY,
+    });
+  }
+
+  if (indicatorLayerOn && ind.donchianChannel?.show) {
+    renderDonchianChannelLines({
+      data: donchianChannelD,
+      showLine,
+      upperStyle: resolveStyle('donchianUpper', '#42a5f5', 1.4),
+      middleStyle: resolveStyle('donchianMiddle', 'rgba(255,255,255,0.55)', 1, [4, 4]),
+      lowerStyle: resolveStyle('donchianLower', '#42a5f5', 1.4),
+      drawLine: line,
+    });
+  }
+
+  if (indicatorLayerOn && ind.williamsAlligator?.show) {
+    renderWilliamsAlligatorLines({
+      data: williamsAlligatorD,
+      showLine,
+      jawStyle: resolveStyle('williamsAlligatorJaw', '#2962ff', 1.5),
+      teethStyle: resolveStyle('williamsAlligatorTeeth', '#e91e63', 1.5),
+      lipsStyle: resolveStyle('williamsAlligatorLips', '#66bb6a', 1.5),
+      drawLine: line,
     });
   }
 
@@ -466,6 +516,35 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
     });
   }
 
+  if (indicatorLayerOn && ind.autoTrendlineChannel?.show) {
+    const upperStyle = resolveStyle('autoTrendlineUpper', '#5b8def', 1.8);
+    const basisStyle = resolveStyle('autoTrendlineBasis', 'rgba(255,255,255,0.72)', 1.1, [5, 4]);
+    const lowerStyle = resolveStyle('autoTrendlineLower', '#5b8def', 1.8);
+    renderAutoTrendlineChannel({
+      ctx,
+      data: autoTrendlineChannelD,
+      startIndex,
+      visLength: visData.length,
+      chartLeft,
+      chartRight,
+      plotTop: R.top,
+      plotBottom: mainH,
+      effectiveChartLeft,
+      totalSp,
+      candleW,
+      getY,
+      showFill: ind.autoTrendlineChannel.showFill !== false
+        && showLine('autoTrendlineUpper')
+        && showLine('autoTrendlineLower'),
+      showUpper: showLine('autoTrendlineUpper'),
+      showBasis: ind.autoTrendlineChannel.showBasis !== false && showLine('autoTrendlineBasis'),
+      showLower: showLine('autoTrendlineLower'),
+      upperStyle,
+      basisStyle,
+      lowerStyle,
+    });
+  }
+
   if (indicatorLayerOn && ind.atrTrailingEmaSignal?.show) {
     const trendEmaStyle = resolveStyle('atrTrailingEmaSignalTrendEma', '#fcfc6c', 2);
     const atrStopStyle = resolveStyle('atrTrailingEmaSignalAtrStop', '#8ab4ff', 1.4, [5, 4]);
@@ -570,6 +649,32 @@ export function renderMainIndicators(params: RenderMainIndicatorsParams): void {
       showHtfLower: showLine('bbMtfKalmanHtfLower'),
       showBuySignal: showLine('bbMtfKalmanBuy'),
       showSellSignal: showLine('bbMtfKalmanSell'),
+      drawLine: line,
+      getY,
+      fontStack,
+    });
+  }
+
+  if (indicatorLayerOn && ind.kalmanAdjustedAtr?.show) {
+    renderKalmanAdjustedAtr({
+      ctx,
+      data: kalmanAdjustedAtrD,
+      displayData,
+      startIndex,
+      visLength: visData.length,
+      effectiveChartLeft,
+      totalSp,
+      candleW,
+      top: R.top,
+      bottom: mainH,
+      lineStyle: resolveStyle('kalmanAdjustedAtrLine', '#f6c85f', 2),
+      maStyle: resolveStyle('kalmanAdjustedAtrMa', 'rgba(255,255,255,0.72)', 1.2, [5, 4]),
+      trendUpStyle: resolveStyle('kalmanAdjustedAtrTrendUp', '#22ab94', 1),
+      trendDownStyle: resolveStyle('kalmanAdjustedAtrTrendDown', '#f23645', 1),
+      showLine: showLine('kalmanAdjustedAtrLine'),
+      showMa: ind.kalmanAdjustedAtr.showMa !== false && showLine('kalmanAdjustedAtrMa'),
+      showTrendUp: ind.kalmanAdjustedAtr.showSignals !== false && showLine('kalmanAdjustedAtrTrendUp'),
+      showTrendDown: ind.kalmanAdjustedAtr.showSignals !== false && showLine('kalmanAdjustedAtrTrendDown'),
       drawLine: line,
       getY,
       fontStack,

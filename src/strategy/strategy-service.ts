@@ -627,7 +627,9 @@ export function loadStrategies(): StrategyDefinition[] {
           || saved.id === 'strategy_js_grid_atr_bnf_srouter_v1'
           || saved.id === 'strategy_js_mtf_1m_scalper'
           || saved.id === 'strategy_js_auto_trendline_channel'
+          || saved.id === 'strategy_js_donchian_trend_following'
           || saved.id === 'strategy_js_ml_cvd_ultimate_scalper'
+          || saved.id === 'strategy_js_bb_mtf_kalman_signal'
         )
         && (saved.version ?? 0) < def.version
       ) {

@@ -54,3 +54,65 @@ test('indicator panel hover controls skip repeated DOM writes for the same panel
     'panel hover state should only update DOM when the hovered panel actually changes',
   );
 });
+
+test('passive mouse hover is coalesced to animation frames', () => {
+  assert.match(
+    simpleChartSource,
+    /private passiveMouseMoveScheduled = false;/,
+    'passive mouse hover should keep one pending animation-frame update',
+  );
+  assert.match(
+    simpleChartSource,
+    /private schedulePassiveMouseHover\(e: MouseEvent\): void \{[\s\S]*?window\.requestAnimationFrame/,
+    'passive mousemove events should be coalesced through requestAnimationFrame',
+  );
+  assert.match(
+    simpleChartSource,
+    /const passiveHoverOnly = !this\.xAxisDragging[\s\S]*?!this\.isDragging;[\s\S]*?if \(passiveHoverOnly\) \{\s*this\.schedulePassiveMouseHover\(e\);\s*return;\s*\}/,
+    'non-drag hover moves should avoid the immediate heavy mousemove path',
+  );
+});
+
+test('cursor style writes only when the resolved cursor changes', () => {
+  assert.match(
+    simpleChartSource,
+    /private lastCanvasCursor = '';/,
+    'cursor state should remember the last DOM value',
+  );
+  assert.match(
+    simpleChartSource,
+    /const nextCursor = resolveChartCursor\(/,
+    'cursor resolution should be stored before writing to the canvas style',
+  );
+  assert.match(
+    simpleChartSource,
+    /if \(this\.lastCanvasCursor !== nextCursor\) \{\s*this\.canvas\.style\.cursor = nextCursor;\s*this\.lastCanvasCursor = nextCursor;\s*\}/,
+    'canvas cursor style should only be written when the value changes',
+  );
+});
+
+test('passive hover draws overlay in the same animation frame', () => {
+  assert.match(
+    simpleChartSource,
+    /private drawOverlayNow\(\): void \{[\s\S]*?this\.drawOverlay\(\);/,
+    'overlay draw should have a reusable immediate draw path',
+  );
+  assert.match(
+    simpleChartSource,
+    /private updatePassiveMouseHover\(clientX: number, clientY: number\): void \{[\s\S]*?this\.drawOverlayNow\(\);/,
+    'passive hover should update and draw the crosshair in the same animation frame',
+  );
+});
+
+test('log button positioning avoids layout work when the pointer is away from the axis', () => {
+  assert.match(
+    simpleChartSource,
+    /const onAxis = this\.isOnMainYAxis\(this\.mouseX, this\.mouseY\) \|\| this\.yAxisDragging \|\| this\._logBtnHovered;\s*if \(!onAxis\) \{\s*this\.scheduleLogBtnHide\(\);\s*return;\s*\}[\s\S]*?const btnW = this\.logBtn\.offsetWidth/,
+    'normal cursor movement away from the Y axis should not read offsetWidth or rewrite button position',
+  );
+  assert.match(
+    simpleChartSource,
+    /if \(this\.lastLogBtnLeft !== left\) \{\s*this\.logBtn\.style\.left = `\$\{left\}px`;\s*this\.lastLogBtnLeft = left;\s*\}/,
+    'log button left position should only be written when it changes',
+  );
+});

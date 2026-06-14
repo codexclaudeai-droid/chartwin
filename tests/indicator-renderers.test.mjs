@@ -6,9 +6,12 @@ import {
   splitStatisticalTrailingStopLines,
 } from '../src/chart/renderers/statistical-trailing-stop-renderer.ts';
 import { renderBollingerBandFills } from '../src/chart/renderers/bollinger-renderer.ts';
+import { renderDonchianChannelLines } from '../src/chart/renderers/donchian-channel-renderer.ts';
 import { renderEnvelopeLines } from '../src/chart/renderers/envelope-renderer.ts';
 import { renderIchimoku } from '../src/chart/renderers/ichimoku-renderer.ts';
+import { renderWilliamsAlligatorLines } from '../src/chart/renderers/williams-alligator-renderer.ts';
 import { splitSupertrendLines } from '../src/chart/renderers/supertrend-renderer.ts';
+import { splitKalmanAdjustedAtrTrendLines } from '../src/chart/renderers/kalman-adjusted-atr-renderer.ts';
 import {
   buildVpvrProfile,
   calculateVpvrLayout,
@@ -60,6 +63,20 @@ test('Statistical Trailing Stop marker helpers calculate size and label text', (
   assert.equal(label, '10.00\n50.00%');
 });
 
+test('Kalman Adjusted ATR renderer splits baseline values by trend color', () => {
+  const result = splitKalmanAdjustedAtrTrendLines({
+    baseline: [null, 10, 11, 12, 11, 10, 11],
+    ma: [],
+    atr: [],
+    trend: [0, 1, 1, 1, -1, -1, 1],
+    trendUp: [],
+    trendDown: [],
+  });
+
+  assert.deepEqual(result.upLine, [null, 10, 11, 12, null, 10, 11]);
+  assert.deepEqual(result.downLine, [null, null, null, 12, 11, 10, null]);
+});
+
 test('Envelope renderer draws visible upper, middle, and lower lines', () => {
   const calls = [];
   const style = (color, width = 1, dash = []) => ({ color, width, dash });
@@ -81,6 +98,53 @@ test('Envelope renderer draws visible upper, middle, and lower lines', () => {
     [[null, 11, 12], 'gold', 2, []],
     [[null, 10, 11], 'amber', 1, [4, 4]],
     [[null, 9, 10], 'goldenrod', 2, []],
+  ]);
+});
+
+test('Donchian Channel renderer draws visible upper, middle, and lower lines', () => {
+  const calls = [];
+  const style = (color, width = 1, dash = []) => ({ color, width, dash });
+
+  renderDonchianChannelLines({
+    data: {
+      upper: [null, 15, 16],
+      middle: [null, 12, 13],
+      lower: [null, 9, 10],
+    },
+    showLine: (key) => key !== 'donchianMiddle',
+    upperStyle: style('#42a5f5', 2),
+    middleStyle: style('gray', 1, [4, 4]),
+    lowerStyle: style('#26c6da', 2),
+    drawLine: (...args) => calls.push(args),
+  });
+
+  assert.deepEqual(calls, [
+    [[null, 15, 16], '#42a5f5', 2, []],
+    [[null, 9, 10], '#26c6da', 2, []],
+  ]);
+});
+
+test('Williams Alligator renderer draws jaw teeth and lips with configured offsets', () => {
+  const calls = [];
+  const style = (color, width = 1, dash = []) => ({ color, width, dash });
+
+  renderWilliamsAlligatorLines({
+    data: {
+      jaw: [null, 10, 11],
+      teeth: [null, 12, 13],
+      lips: [14, 15, 16],
+      offsets: { jaw: 8, teeth: 5, lips: 3 },
+    },
+    showLine: (key) => key !== 'williamsAlligatorTeeth',
+    jawStyle: style('#2962ff', 2),
+    teethStyle: style('#e91e63', 1),
+    lipsStyle: style('#66bb6a', 1.5, [3, 2]),
+    drawLine: (...args) => calls.push(args),
+  });
+
+  assert.deepEqual(calls, [
+    [[null, 10, 11], '#2962ff', 2, [], 8],
+    [[14, 15, 16], '#66bb6a', 1.5, [3, 2], 3],
   ]);
 });
 

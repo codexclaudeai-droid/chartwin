@@ -299,12 +299,12 @@ test('server Telegram monitor seeds existing latest signal before sending realti
     [
       { time: 160, open: 11, high: 13, low: 10, close: 12, volume: 1 },
       { time: 220, open: 12, high: 14, low: 11, close: 13, volume: 1 },
-      { time: 280, open: 13, high: 15, low: 12, close: 14, volume: 1 },
+      { time: 280, open: 14, high: 15, low: 12, close: 13, volume: 1 },
     ],
     [
       { time: 160, open: 11, high: 13, low: 10, close: 12, volume: 1 },
       { time: 220, open: 12, high: 14, low: 11, close: 13, volume: 1 },
-      { time: 280, open: 13, high: 15, low: 12, close: 14, volume: 1 },
+      { time: 280, open: 14, high: 15, low: 12, close: 13, volume: 1 },
     ],
   ];
   let fetchIndex = 0;
@@ -330,6 +330,64 @@ test('server Telegram monitor seeds existing latest signal before sending realti
   assert.equal(sentMessages.length, 1);
   assert.match(sentMessages[0], /BUY BTCUSDT/);
   assert.match(sentMessages[0], /TF: 1m/);
+});
+
+test('server Telegram monitor scans closed candles since the last check so delayed cron runs do not skip signals', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const strategy = buildStrategyDefinition({
+    id: 'strategy_test_delayed_cron_signal',
+    name: 'Delayed Cron Signal Test',
+    description: 'Signals only on the middle closed candle',
+    language: 'javascript',
+    sourceCode: `(
+      function(_context, index) {
+        return index === 1 ? 1 : 0;
+      }
+    )`,
+  });
+  await repository.saveTelegramBotProfile(createProfile({
+    id: 'telegram_profile_delayed_cron',
+    strategyIds: [strategy.id],
+    symbolIds: ['BTCUSDT'],
+    timeframeIds: ['1m'],
+  }));
+  await repository.saveTelegramSignalWatchState({
+    key: `${strategy.id}:BTCUSDT:1m`,
+    strategyId: strategy.id,
+    symbolId: 'BTCUSDT',
+    timeframe: '1m',
+    lastCheckedCandleTime: 60,
+    lastSignalCandleTime: null,
+    lastSignalEventType: null,
+    updatedAt: '1970-01-01T00:01:00.000Z',
+  });
+
+  const sentMessages = [];
+  const result = await runTelegramSignalMonitorOnce(repository, {
+    now: '1970-01-01T00:04:30.000Z',
+    strategies: [strategy],
+    candleProvider: async () => [
+      { time: 60, open: 10, high: 11, low: 9, close: 10, volume: 1 },
+      { time: 120, open: 10, high: 12, low: 9, close: 11, volume: 1 },
+      { time: 180, open: 11, high: 12, low: 10, close: 10, volume: 1 },
+      { time: 240, open: 10, high: 13, low: 9, close: 12, volume: 1 },
+    ],
+    telegramFetch: async (_url, init) => {
+      sentMessages.push(JSON.parse(init.body).text);
+      return { ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: sentMessages.length } }) };
+    },
+  });
+
+  const watchState = await repository.getTelegramSignalWatchState(`${strategy.id}:BTCUSDT:1m`);
+
+  assert.equal(result.sentCount, 1);
+  assert.equal(sentMessages.length, 1);
+  assert.match(sentMessages[0], /BUY BTCUSDT/);
+  assert.match(sentMessages[0], /Time: 70\.01\.01 09:02:00 KST/);
+  assert.equal(watchState?.lastCheckedCandleTime, 180);
+  assert.equal(watchState?.lastSignalCandleTime, 120);
+  assert.equal(watchState?.lastSignalEventType, 'buy');
 });
 
 test('server Telegram monitor ignores still-open candles', async () => {

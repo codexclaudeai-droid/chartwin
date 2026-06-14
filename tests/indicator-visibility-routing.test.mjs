@@ -5,9 +5,12 @@ import fs from 'node:fs';
 const panelModuleSource = fs.readFileSync(new URL('../src/indicator-panel-module.ts', import.meta.url), 'utf8');
 const backgroundSource = fs.readFileSync(new URL('../src/chart/renderers/main-background-layer-orchestrator.ts', import.meta.url), 'utf8');
 const mainIndicatorSource = fs.readFileSync(new URL('../src/chart/renderers/main-indicator-orchestrator.ts', import.meta.url), 'utf8');
+const subPanelSource = fs.readFileSync(new URL('../src/chart/renderers/subpanel-render-orchestrator.ts', import.meta.url), 'utf8');
+const crosshairSource = fs.readFileSync(new URL('../src/chart/renderers/subpanel-crosshair-value.ts', import.meta.url), 'utf8');
 const simpleChartSource = fs.readFileSync(new URL('../src/chart/SimpleChart.ts', import.meta.url), 'utf8');
 const modalHandlersSource = fs.readFileSync(new URL('../src/ui/modal-handlers.ts', import.meta.url), 'utf8');
 const indicatorOverlaySource = fs.readFileSync(new URL('../src/ui/indicator-overlay.ts', import.meta.url), 'utf8');
+const catalogSource = fs.readFileSync(new URL('../src/catalog/indicators.ts', import.meta.url), 'utf8');
 
 test('VPVR hide action routes through its own render visibility key', () => {
   assert.match(panelModuleSource, /vpvr:\s*\[\s*\{\s*key:\s*'vpvr',\s*label:\s*'Line'\s*\}\s*\]/);
@@ -66,4 +69,29 @@ test('VWAP defaults to TradingView-style session anchor with automatic exchange 
   assert.match(simpleChartSource, /private getVwapAnchorMarkerIndices\(result: VwapResult\): number\[\]/);
   assert.match(simpleChartSource, /private openVwapSettingsFromAnchor\(\): void/);
   assert.match(indicatorOverlaySource, /chart-open-indicator-settings/);
+});
+
+test('Momentum is routed as a configurable subpanel indicator', () => {
+  assert.match(catalogSource, /\{\s*id: 'momentum', label: 'Momentum', desc: 'Price momentum \(close - close n bars ago\)', panel: 'sub'\s*\}/);
+  assert.match(panelModuleSource, /export type SubPanelId = 'volume' \| 'rsi' \| 'mfi' \| 'momentum'/);
+  assert.match(panelModuleSource, /momentum:\s*\{\s*color: '#ffb74d', width: 1\.5, dash: \[\]\s*\}/);
+  assert.match(panelModuleSource, /momentum:\s*\[\{\s*key: 'momentum', label: 'Line'\s*\}, \{\s*key: 'momentumBaseline', label: 'Baseline'\s*\}\]/);
+  assert.match(simpleChartSource, /momentum:\s*\{\s*show:\s*false,\s*period:\s*10\s*\}/);
+  assert.match(simpleChartSource, /const momentumD = indicatorLayerOn && ind\.momentum\.show\s+\?\s+this\.calcMomentum\(ind\.momentum\.period\)\s+:\s+\[\]/);
+  assert.match(subPanelSource, /renderMomentumPanel\(\{ \.\.\.subPanelContext, period: ind\.momentum\.period, data: momentumD \}\)/);
+  assert.match(crosshairSource, /if \(panelId === 'momentum'\) \{/);
+  assert.match(modalHandlersSource, /momentum: \['period'\]/);
+  assert.match(indicatorOverlaySource, /momentum:\s*\(\) => `MOM\(\$\{i\.momentum\?\.period \?\? 10\}\)`/);
+});
+
+test('Donchian Channel is routed as a configurable main overlay indicator', () => {
+  assert.match(catalogSource, /\{\s*id: 'donchianChannel', label: 'Donchian Channel', desc: 'Highest high and lowest low price channel', panel: 'main'\s*\}/);
+  assert.match(panelModuleSource, /donchianUpper:\s*\{\s*color: '#42a5f5', width: 1\.4, dash: \[\]\s*\}/);
+  assert.match(panelModuleSource, /donchianChannel:\s*\[\s*\{\s*key: 'donchianUpper', label: 'Upper'\s*\},\s*\{\s*key: 'donchianMiddle', label: 'Middle'\s*\},\s*\{\s*key: 'donchianLower', label: 'Lower'\s*\},\s*\]/);
+  assert.match(simpleChartSource, /donchianChannel:\s*\{\s*show:\s*false,\s*period:\s*20\s*\}/);
+  assert.match(simpleChartSource, /const donchianChannelD\s+=\s+indicatorLayerOn && ind\.donchianChannel\.show\s+\?\s+this\.calcDonchianChannel\(ind\.donchianChannel\.period\)\s+:\s+null/);
+  assert.match(backgroundSource, /renderDonchianChannelFill\(\{/);
+  assert.match(mainIndicatorSource, /renderDonchianChannelLines\(\{/);
+  assert.match(modalHandlersSource, /donchianChannel: \['period'\]/);
+  assert.match(indicatorOverlaySource, /donchianChannel:\s*\(\) => `DC\(\$\{i\.donchianChannel\?\.period \?\? 20\}\)`/);
 });

@@ -58,6 +58,7 @@ import { createGatewayLiveFeed, shouldUseBinanceDirect } from '../data/gateway-l
 import { bindPaneEventHandlers } from '../ui/workspace/pane-events';
 import { createStrategyReportPanel } from '../ui/workspace/strategy-report-panel';
 import { createLeftToolbox } from '../ui/workspace/left-toolbox';
+import { openAiChartAnalysis } from '../ui/workspace/ai-chart-analysis';
 import {
   createMobileDrawingToolPanel,
   createMobileDrawingTriggerButton,
@@ -2150,6 +2151,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     a.click();
   };
 
+  const analyzeActivePaneWithAi = () => {
+    void openAiChartAnalysis(getActivePane().chart);
+  };
+
   const toggleFullscreen = () => {
     const action = !document.fullscreenElement
       ? document.documentElement.requestFullscreen()
@@ -2191,6 +2196,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       isPaneMaximized: () => paneState.maximizedPaneId !== null,
       onExitMaximize: exitMaximize,
       onOpenEconomicCalendar: openEconomicCalendarModal,
+      onAnalyzeChartWithAi: analyzeActivePaneWithAi,
       onClickSignalNotification: () => onSignalNotificationClick(),
     });
     refreshTopControlIcons = topBarControls.refreshTopControlIcons;

@@ -4,6 +4,7 @@ import {
   calculateBb,
   calculateCci,
   calculateCvd,
+  calculateDonchianChannel,
   calculateDmi,
   calculateEma,
   calculateEnvelope,
@@ -15,11 +16,14 @@ import {
   calculateIchimoku,
   calculateMacd,
   calculateMa,
+  calculateMfi,
+  calculateMomentum,
   calculateObv,
   calculateRsi,
   calculateStochastic,
   calculateVwap,
   calculateVwapWithBands,
+  calculateWilliamsAlligator,
 } from '../src/chart/indicators/index.ts';
 import { getExchangeSessionTimezoneForSymbol } from '../src/utils/market-session.ts';
 
@@ -41,6 +45,32 @@ test('indicator modules calculate RSI with null warmup values', () => {
   assert.equal(rsi[4], 100);
 });
 
+test('indicator modules calculate MFI from typical price money flow', () => {
+  const candles = [
+    candle(9, 11, 9, 10, 100),
+    candle(10, 12, 10, 11, 100),
+    candle(11, 13, 11, 12, 100),
+    candle(10, 12, 10, 11, 100),
+    candle(9, 11, 9, 10, 100),
+    candle(10, 12, 10, 11, 100),
+  ];
+
+  const mfi = calculateMfi(candles, 3);
+
+  assert.deepEqual(mfi.slice(0, 3), [null, null, null]);
+  assert.equal(Math.round((mfi[3] ?? 0) * 100) / 100, 67.65);
+  assert.equal(Math.round((mfi[4] ?? 0) * 100) / 100, 36.36);
+  assert.equal(Math.round((mfi[5] ?? 0) * 100) / 100, 34.38);
+});
+
+test('indicator modules calculate Momentum as close minus prior close by period', () => {
+  const candles = [10, 12, 11, 15, 14, 18].map((close) => candle(close - 0.5, close + 1, close - 1, close));
+
+  const momentum = calculateMomentum(candles, 3);
+
+  assert.deepEqual(momentum, [null, null, null, 5, 2, 7]);
+});
+
 test('indicator modules calculate MA and EMA arrays aligned to source candles', () => {
   const candles = [1, 2, 3, 4, 5].map((close) => candle(close - 0.5, close + 1, close - 1, close));
 
@@ -51,6 +81,26 @@ test('indicator modules calculate MA and EMA arrays aligned to source candles', 
   assert.deepEqual(ema.slice(0, 2), [null, null]);
   assert.equal(ema[2], 2);
   assert.equal(ema[4], 4);
+});
+
+test('indicator modules calculate Williams Alligator from HL2 with SMMA warmup and offsets', () => {
+  const candles = [1, 2, 3, 4, 5, 6].map((value) => candle(value, value + 1, value - 1, value + 0.25));
+
+  const alligator = calculateWilliamsAlligator(candles, {
+    jawLength: 3,
+    teethLength: 2,
+    lipsLength: 1,
+    jawOffset: 2,
+    teethOffset: 1,
+    lipsOffset: 0,
+  });
+
+  assert.deepEqual(alligator.offsets, { jaw: 2, teeth: 1, lips: 0 });
+  assert.deepEqual(alligator.lips, [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(alligator.teeth.slice(0, 3), [null, 1.5, 2.25]);
+  assert.equal(Math.round((alligator.jaw[2] ?? 0) * 100) / 100, 2);
+  assert.equal(Math.round((alligator.jaw[3] ?? 0) * 100) / 100, 2.67);
+  assert.equal(Math.round((alligator.jaw[5] ?? 0) * 100) / 100, 4.3);
 });
 
 test('indicator modules calculate HMA arrays aligned to source candles', () => {
@@ -212,6 +262,22 @@ test('indicator modules calculate Envelope bands from moving average and percent
   assert.deepEqual(envelope.mid, [null, 15, 25, 35]);
   assert.deepEqual(envelope.upper, [null, 16.5, 27.500000000000004, 38.5]);
   assert.deepEqual(envelope.lower, [null, 13.5, 22.5, 31.5]);
+});
+
+test('indicator modules calculate Donchian Channel from rolling highs and lows', () => {
+  const candles = [
+    candle(10, 12, 9, 11),
+    candle(11, 13, 10, 12),
+    candle(12, 15, 11, 13),
+    candle(13, 14, 8, 9),
+    candle(9, 10, 7, 8),
+  ];
+
+  const donchian = calculateDonchianChannel(candles, 3);
+
+  assert.deepEqual(donchian.upper, [null, null, 15, 15, 15]);
+  assert.deepEqual(donchian.lower, [null, null, 9, 8, 7]);
+  assert.deepEqual(donchian.middle, [null, null, 12, 11.5, 11]);
 });
 
 test('indicator modules calculate Ichimoku lines aligned to source candles', () => {

@@ -11,6 +11,8 @@ import {
   renderAtrPanel,
   renderDmiPanel,
   renderMacdPanel,
+  renderMfiPanel,
+  renderMomentumPanel,
   renderRsiPanel,
   renderStochasticPanel,
 } from './subpanel-oscillator-renderer.ts';
@@ -62,6 +64,8 @@ interface CvdSetting {
 
 export interface SubPanelIndicatorSettings {
   rsi: PeriodSetting;
+  mfi: PeriodSetting;
+  momentum: PeriodSetting;
   dmi: DmiSetting;
   macd: MacdSetting;
   stochF: StochasticSetting;
@@ -91,6 +95,8 @@ export interface RenderSubPanelsParams {
   ctx: CanvasRenderingContext2D;
   ind: SubPanelIndicatorSettings;
   rsiD: NumberSeries;
+  mfiD: NumberSeries;
+  momentumD: NumberSeries;
   dmiD: DmiResult;
   macdD: MacdResult;
   stFD: StochasticResult | null | undefined;
@@ -132,6 +138,8 @@ export interface RenderSubPanelsParams {
 function getPanelTitle(id: PanelIdLike, ind: SubPanelIndicatorSettings): string {
   if (id === 'volume') return 'Volume';
   if (id === 'rsi') return `RSI(${ind.rsi.period})`;
+  if (id === 'mfi') return `MFI(${ind.mfi.period})`;
+  if (id === 'momentum') return `MOM(${ind.momentum.period})`;
   if (id === 'dmi') return `DMI(${ind.dmi.period})`;
   if (id === 'macd') return `MACD(${ind.macd.fast},${ind.macd.slow},${ind.macd.signal})`;
   if (id === 'stochF') return `Stoch Fast(${ind.stochF.kPeriod},${ind.stochF.dPeriod})`;
@@ -147,6 +155,8 @@ export function renderSubPanels(chart: SubPanelHostChart, params: RenderSubPanel
     ctx,
     ind,
     rsiD,
+    mfiD,
+    momentumD,
     dmiD,
     macdD,
     stFD,
@@ -291,6 +301,12 @@ export function renderSubPanels(chart: SubPanelHostChart, params: RenderSubPanel
     }
     if (id === 'rsi') {
       renderRsiPanel({ ...subPanelContext, period: ind.rsi.period, data: rsiD });
+    }
+    if (id === 'mfi') {
+      renderMfiPanel({ ...subPanelContext, period: ind.mfi.period, data: mfiD });
+    }
+    if (id === 'momentum') {
+      renderMomentumPanel({ ...subPanelContext, period: ind.momentum.period, data: momentumD });
     }
     if (id === 'dmi') {
       const dmiTopThresholdRaw = Number(ind.dmi.topThreshold);

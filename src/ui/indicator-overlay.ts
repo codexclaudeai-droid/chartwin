@@ -154,6 +154,8 @@ export function createIndicatorOverlay(
   const getValueHint = (panelId: string, valueIndex: number): string => {
     const map: Record<string, string[]> = {
       rsi: ['RSI 현재값'],
+      mfi: ['MFI 현재값'],
+      momentum: ['Momentum 현재값'],
       dmi: ['+DI 현재값', '-DI 현재값', 'ADX 현재값'],
       macd: ['MACD 라인 현재값', 'Signal 라인 현재값'],
       stochF: ['Stoch Fast %K 현재값', 'Stoch Fast %D 현재값'],
@@ -276,11 +278,11 @@ export function createIndicatorOverlay(
     overlay.style.gap = '0px';
 
     const indicatorVisibilityTargetKeys = [
-      'ma','ema','hma','maShort','maLong','ma60','ma120','ma200','bb','vwap','volumeProfile','fixedRangeVolumeProfile','vpvr','ichimoku','envelope',
+      'ma','ema','hma','maShort','maLong','ma60','ma120','ma200','bb','vwap','donchianChannel','volumeProfile','fixedRangeVolumeProfile','vpvr','ichimoku','envelope',
       'footprint',
-      'williamsFractal','parabolicSar','smartMoneyConcepts',
-      'supertrend','statisticalTrailingStop','atrTrailingEmaSignal','atrTrailingStopOrigin','bbMtfKalmanSignal','zeroLagMaTrendLevels',
-      'rsi','dmi','macd','stochF','stochS','cci','atr','obv','cvd','volume',
+      'williamsFractal','williamsAlligator','parabolicSar','smartMoneyConcepts',
+      'supertrend','autoTrendlineChannel','statisticalTrailingStop','atrTrailingEmaSignal','atrTrailingStopOrigin','bbMtfKalmanSignal','kalmanAdjustedAtr','zeroLagMaTrendLevels',
+      'rsi','mfi','momentum','dmi','macd','stochF','stochS','cci','atr','obv','cvd','volume',
     ];
 
     const getIndicatorStyleKeys = (targetKey: string): string[] => {
@@ -736,6 +738,8 @@ export function createIndicatorOverlay(
           ? `BB ${bbLines.map((line: any) => `${Number(line.period ?? 20)} ${Number(line.stdDev ?? 2)}`).join(' / ')}`
           : `BB ${i.bb.period} ${i.bb.stdDev}`,
         rsi:      () => `RSI(${i.rsi.period})`,
+        mfi:      () => `MFI(${i.mfi?.period ?? 14})`,
+        momentum: () => `MOM(${i.momentum?.period ?? 10})`,
         dmi:      () => `DMI(${i.dmi.period})`,
         macd:     () => `MACD(${i.macd.fast},${i.macd.slow},${i.macd.signal})`,
         stochF:   () => `Stoch Fast(${i.stochF.kPeriod},${i.stochF.dPeriod})`,
@@ -760,16 +764,20 @@ export function createIndicatorOverlay(
           const timezoneLabel = timezone === 'auto' ? 'Auto' : timezone.split('/').pop()?.replace('_', ' ') ?? timezone;
           return `VWAP ${labels[anchor] ?? 'Session'} ${timezoneLabel}`;
         },
+        donchianChannel: () => `DC(${i.donchianChannel?.period ?? 20})`,
         williamsFractal: () => `Fractal(${Number(i.williamsFractal?.span ?? 2)})`,
+        williamsAlligator: () => `Alligator(${Number(i.williamsAlligator?.jawLength ?? 13)},${Number(i.williamsAlligator?.teethLength ?? 8)},${Number(i.williamsAlligator?.lipsLength ?? 5)})`,
         parabolicSar: () => `SAR(${Number(i.parabolicSar?.start ?? 0.02)}, ${Number(i.parabolicSar?.increment ?? 0.02)}, ${Number(i.parabolicSar?.maximum ?? 0.2)})`,
         smartMoneyConcepts: () => `SMC(${Number(i.smartMoneyConcepts?.swingsLength ?? i.smartMoneyConcepts?.swingLength ?? 50)}, ${Number(i.smartMoneyConcepts?.internalOrderBlocksSize ?? 5)}, ${Number(i.smartMoneyConcepts?.swingOrderBlocksSize ?? 5)})`,
         ichimoku: () => `Ichimoku(${i.ichimoku.tenkan},${i.ichimoku.kijun})`,
         envelope: () => `Envelope(${i.envelope.period}, ${i.envelope.pct}%)`,
         supertrend: () => `Supertrend(${i.supertrend.period}, ${i.supertrend.factor})`,
+        autoTrendlineChannel: () => `ATL(${Number(i.autoTrendlineChannel?.channelLength ?? 20)}, ${Number(i.autoTrendlineChannel?.widthMultiplier ?? 1.5)})`,
         statisticalTrailingStop: () => `STS(${i.statisticalTrailingStop.dataLength}, ${i.statisticalTrailingStop.distributionLength}, L${i.statisticalTrailingStop.baseLevel})`,
         atrTrailingEmaSignal: () => `ATR EMA Signal(${i.atrTrailingEmaSignal?.mode === 'filtered' ? 'Filtered' : 'Basic'}, ${Number(i.atrTrailingEmaSignal?.atrPeriod ?? 2)}, ${Number(i.atrTrailingEmaSignal?.trendEmaLength ?? 240)})`,
         atrTrailingStopOrigin: () => `ATR Stop Origin(${Number(i.atrTrailingStopOrigin?.atrPeriod ?? 2)}, ${Number(i.atrTrailingStopOrigin?.trendEmaLength ?? 240)})`,
         bbMtfKalmanSignal: () => `BB MTF Kalman(${String(i.bbMtfKalmanSignal?.htfTimeframe ?? '4h')}, ${Number(i.bbMtfKalmanSignal?.ltfLength ?? 20)}, ${Number(i.bbMtfKalmanSignal?.htfLength ?? 20)})`,
+        kalmanAdjustedAtr: () => `KATR(${Number(i.kalmanAdjustedAtr?.atrPeriod ?? 5)}, ${Number(i.kalmanAdjustedAtr?.factor ?? 0.5)})`,
         zeroLagMaTrendLevels: () => `ZLMA(${Number(i.zeroLagMaTrendLevels?.length ?? 15)})`,
         footprint: () => `Footprint(${Number(i.footprint?.priceStep ?? 1000)})`,
         volumeProfile: () => {
@@ -809,22 +817,28 @@ export function createIndicatorOverlay(
       hma: getLineStyle(chart.config.panelState, 'hma', { color: '#00bcd4', width: 1.7, dash: [] }).color,
       bb: getLineStyle(chart.config.panelState, ((chart.config.indicators as any).bb?.lines?.[0]?.id ?? 'bb1') + 'Upper', { color: 'rgba(100,149,237,0.95)', width: 1, dash: [] }).color,
       vwap: getLineStyle(chart.config.panelState, 'vwap', { color: '#ff9800', width: 1.5, dash: [] }).color,
+      donchianChannel: getLineStyle(chart.config.panelState, 'donchianUpper', { color: '#42a5f5', width: 1.4, dash: [] }).color,
       williamsFractal: getLineStyle(chart.config.panelState, 'williamsFractalHigh', { color: '#ef5350', width: 1.5, dash: [] }).color,
+      williamsAlligator: getLineStyle(chart.config.panelState, 'williamsAlligatorJaw', { color: '#2962ff', width: 1.5, dash: [] }).color,
       parabolicSar: getLineStyle(chart.config.panelState, 'parabolicSar', { color: '#2962ff', width: 1.5, dash: [] }).color,
       smartMoneyConcepts: getLineStyle(chart.config.panelState, 'smartMoneyConceptsBullish', { color: '#089981', width: 1, dash: [] }).color,
       ichimoku: '#aaaaff',
       envelope: getLineStyle(chart.config.panelState, 'envelopeUpper', { color: 'rgba(255,200,50,0.95)', width: 1, dash: [] }).color,
       supertrend: getLineStyle(chart.config.panelState, 'supertrendUp', { color: '#26a69a', width: 1.7, dash: [] }).color,
+      autoTrendlineChannel: getLineStyle(chart.config.panelState, 'autoTrendlineUpper', { color: '#5b8def', width: 1.8, dash: [] }).color,
       statisticalTrailingStop: getLineStyle(chart.config.panelState, 'statisticalTrailingStopBull', { color: '#26a69a', width: 1.7, dash: [] }).color,
       atrTrailingEmaSignal: getLineStyle(chart.config.panelState, 'atrTrailingEmaSignalTrendEma', { color: '#fcfc6c', width: 2, dash: [] }).color,
       atrTrailingStopOrigin: getLineStyle(chart.config.panelState, 'atrTrailingStopOriginTrendEma', { color: '#fcfc6c', width: 3, dash: [] }).color,
       bbMtfKalmanSignal: getLineStyle(chart.config.panelState, 'bbMtfKalmanLtfBasis', { color: '#2962ff', width: 1, dash: [] }).color,
+      kalmanAdjustedAtr: getLineStyle(chart.config.panelState, 'kalmanAdjustedAtrLine', { color: '#f6c85f', width: 2, dash: [] }).color,
       zeroLagMaTrendLevels: getLineStyle(chart.config.panelState, 'zeroLagMaTrendLevelsZlma', { color: '#30d453', width: 1, dash: [] }).color,
       footprint: '#22ab94',
       volumeProfile: getLineStyle(chart.config.panelState, 'volumeProfilePoc', { color: 'rgba(255,193,7,0.95)', width: 1.2, dash: [4, 3] }).color,
       fixedRangeVolumeProfile: getLineStyle(chart.config.panelState, 'fixedRangeVolumeProfilePoc', { color: 'rgba(255,193,7,0.95)', width: 1.2, dash: [4, 3] }).color,
       vpvr: String((chart.config.indicators as any).vpvr?.pocColor ?? '#ffc107'),
       rsi: getLineStyle(chart.config.panelState, 'rsi', { color: '#ffeb3b', width: 1.5, dash: [] }).color,
+      mfi: getLineStyle(chart.config.panelState, 'mfi', { color: '#7e57c2', width: 1.5, dash: [] }).color,
+      momentum: getLineStyle(chart.config.panelState, 'momentum', { color: '#ffb74d', width: 1.5, dash: [] }).color,
       dmi: getLineStyle(chart.config.panelState, 'dmiPlus', { color: '#26a69a', width: 1.5, dash: [] }).color,
       macd: getLineStyle(chart.config.panelState, 'macdLine', { color: '#2962ff', width: 1.5, dash: [] }).color,
       stochF: getLineStyle(chart.config.panelState, 'stochFastK', { color: '#26a69a', width: 1.5, dash: [] }).color,
@@ -910,7 +924,14 @@ export function createIndicatorOverlay(
           case 'ma200':    return [{ text: 'MA', color: '#dbe3f4' }, { text: String(i.ma200?.value ?? ''),   color: c }];
           case 'hma':      return [{ text: 'HMA', color: '#dbe3f4' }, { text: String(i.hma?.period ?? ''), color: c }];
           case 'vwap':     return [{ text: 'VWAP', color: c }];
+          case 'donchianChannel': return [{ text: 'DC', color: '#dbe3f4' }, { text: String(i.donchianChannel?.period ?? 20), color: c }];
           case 'williamsFractal': return [{ text: 'Fractal', color: '#dbe3f4' }, { text: String(Number(i.williamsFractal?.span ?? 2)), color: c }];
+          case 'williamsAlligator': return [
+            { text: 'Alligator', color: '#dbe3f4' },
+            { text: String(Number(i.williamsAlligator?.jawLength ?? 13)), color: getLineStyle(chart.config.panelState, 'williamsAlligatorJaw', { color: c, width: 1.5, dash: [] }).color },
+            { text: String(Number(i.williamsAlligator?.teethLength ?? 8)), color: getLineStyle(chart.config.panelState, 'williamsAlligatorTeeth', { color: '#e91e63', width: 1.5, dash: [] }).color },
+            { text: String(Number(i.williamsAlligator?.lipsLength ?? 5)), color: getLineStyle(chart.config.panelState, 'williamsAlligatorLips', { color: '#66bb6a', width: 1.5, dash: [] }).color },
+          ];
           case 'parabolicSar': return [{ text: 'SAR', color: '#dbe3f4' }, { text: String(Number(i.parabolicSar?.start ?? 0.02)), color: c }, { text: String(Number(i.parabolicSar?.maximum ?? 0.2)), color: c }];
           case 'smartMoneyConcepts': return [
             { text: 'SMC', color: '#dbe3f4' },
@@ -921,13 +942,17 @@ export function createIndicatorOverlay(
           case 'ichimoku': return [{ text: 'Ichi', color: '#dbe3f4' }, { text: String(i.ichimoku?.tenkan ?? ''), color: c }, { text: String(i.ichimoku?.kijun ?? ''), color: c }];
           case 'envelope': return [{ text: 'Env', color: '#dbe3f4' }, { text: String(i.envelope?.period ?? ''), color: c }, { text: `${i.envelope?.pct ?? ''}%`, color: c }];
           case 'supertrend': return [{ text: 'ST', color: '#dbe3f4' }, { text: String(i.supertrend?.period ?? ''), color: c }, { text: String(i.supertrend?.factor ?? ''), color: c }];
+          case 'autoTrendlineChannel': return [{ text: 'ATL', color: '#dbe3f4' }, { text: String(Number(i.autoTrendlineChannel?.channelLength ?? 20)), color: c }, { text: String(Number(i.autoTrendlineChannel?.widthMultiplier ?? 1.5)), color: c }];
           case 'statisticalTrailingStop': return [{ text: 'STS', color: '#dbe3f4' }, { text: String(i.statisticalTrailingStop?.dataLength ?? ''), color: c }, { text: String(i.statisticalTrailingStop?.distributionLength ?? ''), color: c }, { text: `L${i.statisticalTrailingStop?.baseLevel ?? ''}`, color: c }];
           case 'atrTrailingEmaSignal': return [{ text: 'ATR EMA', color: '#dbe3f4' }, { text: i.atrTrailingEmaSignal?.mode === 'filtered' ? 'F' : 'B', color: c }, { text: String(Number(i.atrTrailingEmaSignal?.trendEmaLength ?? 240)), color: c }];
           case 'atrTrailingStopOrigin': return [{ text: 'ATR origin', color: '#dbe3f4' }, { text: String(Number(i.atrTrailingStopOrigin?.atrPeriod ?? 2)), color: c }, { text: String(Number(i.atrTrailingStopOrigin?.trendEmaLength ?? 240)), color: c }];
           case 'bbMtfKalmanSignal': return [{ text: 'BB MTF', color: '#dbe3f4' }, { text: String(i.bbMtfKalmanSignal?.htfTimeframe ?? '4h'), color: c }, { text: String(Number(i.bbMtfKalmanSignal?.ltfLength ?? 20)), color: c }];
+          case 'kalmanAdjustedAtr': return [{ text: 'KATR', color: '#dbe3f4' }, { text: String(Number(i.kalmanAdjustedAtr?.atrPeriod ?? 5)), color: c }, { text: String(Number(i.kalmanAdjustedAtr?.factor ?? 0.5)), color: c }];
           case 'zeroLagMaTrendLevels': return [{ text: 'ZLMA', color: '#dbe3f4' }, { text: String(Number(i.zeroLagMaTrendLevels?.length ?? 15)), color: c }];
           case 'footprint': return [{ text: 'Footprint', color: '#dbe3f4' }, { text: String(Number(i.footprint?.priceStep ?? 1000)), color: c }];
           case 'rsi':    return [{ text: 'RSI',  color: '#dbe3f4' }, { text: String(i.rsi?.period ?? ''),  color: c }];
+          case 'mfi':    return [{ text: 'MFI',  color: '#dbe3f4' }, { text: String(i.mfi?.period ?? 14),  color: c }];
+          case 'momentum': return [{ text: 'MOM', color: '#dbe3f4' }, { text: String(i.momentum?.period ?? 10), color: c }];
           case 'dmi':    return [{ text: 'DMI',  color: '#dbe3f4' }, { text: String(i.dmi?.period ?? ''),  color: c }];
           case 'macd':   return [{ text: 'MACD', color: '#dbe3f4' }, { text: String(i.macd?.fast ?? ''), color: c }, { text: String(i.macd?.slow ?? ''), color: c }, { text: String(i.macd?.signal ?? ''), color: c }];
           case 'stochF': return [{ text: 'StF',  color: '#dbe3f4' }, { text: String(i.stochF?.kPeriod ?? ''), color: c }, { text: String(i.stochF?.dPeriod ?? ''), color: c }];

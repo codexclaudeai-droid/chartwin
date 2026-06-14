@@ -15,14 +15,25 @@ export {
   type BbMtfKalmanSignalOptions,
   type BbMtfKalmanSignalResult,
 } from './bb-mtf-kalman-signal.ts';
+export {
+  applyKalmanAdjustedAtrTrendConfirmation,
+  calculateKalmanAdjustedAtr,
+  type KalmanAdjustedAtrMaType,
+  type KalmanAdjustedAtrOptions,
+  type KalmanAdjustedAtrResult,
+  type KalmanAdjustedAtrSource,
+} from './kalman-adjusted-atr.ts';
 export type { IndicatorCandle, NullableSeries } from './types.ts';
 export { calculateCci } from './cci.ts';
+export { calculateDonchianChannel, type DonchianChannelResult } from './donchian-channel.ts';
 export { calculateDmi, type DmiResult } from './dmi.ts';
 export { calculateEnvelope, type EnvelopeResult } from './envelope.ts';
 export { calculateIchimoku, type IchimokuResult } from './ichimoku.ts';
 export { calculateHma } from './hma.ts';
 export { calculateEma, calculateEmaFromValues, calculateMa } from './moving-average.ts';
 export { calculateMacd, type MacdResult } from './macd.ts';
+export { calculateMfi } from './mfi.ts';
+export { calculateMomentum } from './momentum.ts';
 export { calculateObv } from './obv.ts';
 export { calculateParabolicSar, type ParabolicSarCandle } from './parabolic-sar.ts';
 export { calculateRsi } from './rsi.ts';
@@ -68,3 +79,8 @@ export {
   type WilliamsFractalCandle,
   type WilliamsFractalResult,
 } from './williams-fractal.ts';
+export {
+  calculateWilliamsAlligator,
+  type WilliamsAlligatorOptions,
+  type WilliamsAlligatorResult,
+} from './williams-alligator.ts';
