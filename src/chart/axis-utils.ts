@@ -2,7 +2,7 @@ import {
   TIMEFRAME_SECONDS,
   formatDateWithTimezone,
   type TimeframeKey,
-} from '../catalog/time';
+} from '../catalog/time.ts';
 import type { DisplayCurrency } from '../types/market';
 
 export function pickAxisStepCandles(rawCandles: number, timeframe: TimeframeKey): number {

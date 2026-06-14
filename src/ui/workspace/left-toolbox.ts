@@ -256,6 +256,37 @@ const tools: ToolboxTool[] = [
     },
   },
   {
+    id: 'patterns',
+    label: '패턴',
+    icon: patternMenuIcon,
+    menu: {
+      title: '패턴',
+      sections: [
+        {
+          title: '차트 패턴',
+          items: [
+            { id: 'xabcd-pattern', label: 'XABCD 패턴', icon: xabcdPatternIcon },
+            { id: 'cypher-pattern', label: '사이퍼 패턴', icon: cypherPatternIcon },
+            { id: 'head-shoulders-pattern', label: '헤드 앤 숄더', icon: headShouldersPatternIcon },
+            { id: 'abcd-pattern', label: 'ABCD 패턴', icon: abcdPatternIcon },
+            { id: 'triangle-pattern', label: '삼각형 패턴', icon: trianglePatternIcon },
+            { id: 'three-drives-pattern', label: '쓰리 드라이브 패턴', icon: threeDrivesPatternIcon },
+          ],
+        },
+        {
+          title: '엘리엇 파동',
+          items: [
+            { id: 'elliott-impulse-wave', label: '엘리엇 충격 파동 (0·1·2·3·4·5)', icon: elliottImpulseWaveIcon },
+            { id: 'elliott-correction-wave', label: '엘리엇 조정 파동 (0·A·B·C)', icon: elliottCorrectionWaveIcon },
+            { id: 'elliott-triangle-wave', label: '엘리엇 삼각 파동 (0·A·B·C·D·E)', icon: elliottTriangleWaveIcon },
+            { id: 'elliott-double-combo-wave', label: '엘리엇 이중 콤보 파동 (0·W·X·Y)', icon: elliottDoubleComboWaveIcon },
+            { id: 'elliott-triple-combo-wave', label: '엘리엇 삼중 콤보 파동 (0·W·X·Y·X·Z)', icon: elliottTripleComboWaveIcon },
+          ],
+        },
+      ],
+    },
+  },
+  {
     id: 'forecast',
     label: '예측',
     icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-6 4 3 7-8"></path><polyline points="18 6 20 6 20 8"></polyline><polyline points="6 18 4 18 4 16"></polyline></svg>`,
@@ -321,37 +352,6 @@ const tools: ToolboxTool[] = [
               label: '원',
               icon: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="${iconStroke}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="12" r="6.5"></circle><circle cx="10.5" cy="12" r="1.7"></circle><circle cx="18.5" cy="12" r="1.5"></circle></svg>`,
             },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: 'patterns',
-    label: '패턴',
-    icon: patternMenuIcon,
-    menu: {
-      title: '패턴',
-      sections: [
-        {
-          title: '차트 패턴',
-          items: [
-            { id: 'xabcd-pattern', label: 'XABCD 패턴', icon: xabcdPatternIcon },
-            { id: 'cypher-pattern', label: '사이퍼 패턴', icon: cypherPatternIcon },
-            { id: 'head-shoulders-pattern', label: '헤드 앤 숄더', icon: headShouldersPatternIcon },
-            { id: 'abcd-pattern', label: 'ABCD 패턴', icon: abcdPatternIcon },
-            { id: 'triangle-pattern', label: '삼각형 패턴', icon: trianglePatternIcon },
-            { id: 'three-drives-pattern', label: '쓰리 드라이브 패턴', icon: threeDrivesPatternIcon },
-          ],
-        },
-        {
-          title: '엘리엇 파동',
-          items: [
-            { id: 'elliott-impulse-wave', label: '엘리엇 충격 파동 (0·1·2·3·4·5)', icon: elliottImpulseWaveIcon },
-            { id: 'elliott-correction-wave', label: '엘리엇 조정 파동 (0·A·B·C)', icon: elliottCorrectionWaveIcon },
-            { id: 'elliott-triangle-wave', label: '엘리엇 삼각 파동 (0·A·B·C·D·E)', icon: elliottTriangleWaveIcon },
-            { id: 'elliott-double-combo-wave', label: '엘리엇 이중 콤보 파동 (0·W·X·Y)', icon: elliottDoubleComboWaveIcon },
-            { id: 'elliott-triple-combo-wave', label: '엘리엇 삼중 콤보 파동 (0·W·X·Y·X·Z)', icon: elliottTripleComboWaveIcon },
           ],
         },
       ],

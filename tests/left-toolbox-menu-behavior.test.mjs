@@ -48,3 +48,13 @@ test('pointer submenu selections update the top-level tooltip label state', () =
     /tool\.id === 'trend' \|\| tool\.id === 'fibonacci' \|\| tool\.id === 'forecast' \|\| tool\.id === 'patterns' \|\| tool\.id === 'draw' \|\| tool\.id === 'pointer'/,
   );
 });
+
+test('pattern menu appears immediately after the fibonacci menu', () => {
+  const fibonacciIndex = leftToolboxSource.indexOf("id: 'fibonacci'");
+  const patternsIndex = leftToolboxSource.indexOf("id: 'patterns'");
+  const forecastIndex = leftToolboxSource.indexOf("id: 'forecast'");
+
+  assert.ok(fibonacciIndex >= 0);
+  assert.ok(patternsIndex > fibonacciIndex);
+  assert.ok(forecastIndex > patternsIndex);
+});

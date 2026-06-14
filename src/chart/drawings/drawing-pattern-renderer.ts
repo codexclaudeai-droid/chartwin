@@ -159,6 +159,22 @@ function drawAnchorLabel(
   });
 }
 
+function drawAnchorHandle(
+  ctx: CanvasRenderingContext2D,
+  point: PatternScreenPoint,
+  strokeColor: string,
+  isActive: boolean,
+): void {
+  const radius = isActive ? 5 : 4.2;
+  ctx.beginPath();
+  ctx.fillStyle = '#0f172a';
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 2;
+  ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+}
+
 function getProjectedY(from: PatternScreenPoint, to: PatternScreenPoint, x: number): number {
   const dx = to.x - from.x;
   if (Math.abs(dx) < 1e-6) return to.y;
@@ -386,14 +402,7 @@ function renderTrianglePattern(
   screenPoints.forEach((point, index) => {
     const label = labels[index] ?? triangleLabels[index] ?? String(index + 1);
     const labelPoint = getTriangleOuterLabelPoint(point, triangleBoundary);
-    const radius = isActive ? 5 : 4.2;
-    ctx.beginPath();
-    ctx.fillStyle = '#0f172a';
-    ctx.strokeStyle = '#2f6cff';
-    ctx.lineWidth = 2;
-    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    if (isActive) drawAnchorHandle(ctx, point, '#2f6cff', true);
     drawRoundedBadge(ctx, label, labelPoint.x, labelPoint.y, {
       font: `700 12px ${fontStack}`,
       minWidth: 22,
@@ -466,16 +475,9 @@ function renderThreeDrivesPattern(
   if (screenPoints.length >= 4 && ratios.A_B !== null) drawRatioBadge(ctx, ratios.A_B.toFixed(2), a, b, fontStack, 0);
   if (screenPoints.length >= 6 && ratios.B_C !== null) drawRatioBadge(ctx, ratios.B_C.toFixed(2), b, c, fontStack, 0);
 
-  screenPoints.slice(0, 7).forEach((point) => {
-    const radius = isActive ? 5 : 4.2;
-    ctx.beginPath();
-    ctx.fillStyle = '#0f172a';
-    ctx.strokeStyle = '#2f6cff';
-    ctx.lineWidth = 2;
-    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  });
+  if (isActive) {
+    screenPoints.slice(0, 7).forEach((point) => drawAnchorHandle(ctx, point, '#2f6cff', true));
+  }
 
   ctx.restore();
   return true;
@@ -537,14 +539,7 @@ function renderAbcdPattern(
 
   screenPoints.slice(0, 4).forEach((point, index) => {
     const label = labels[index] ?? String(index + 1);
-    const radius = isActive ? 5 : 4.2;
-    ctx.beginPath();
-    ctx.fillStyle = '#0f172a';
-    ctx.strokeStyle = '#2f6cff';
-    ctx.lineWidth = 2;
-    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    if (isActive) drawAnchorHandle(ctx, point, '#2f6cff', true);
     drawRoundedBadge(ctx, label, point.x, point.y + (index === 0 || index === 2 ? 22 : -22), {
       font: `700 12px ${fontStack}`,
       minWidth: 22,
@@ -609,16 +604,9 @@ function renderHeadShouldersPattern(
     ctx.globalAlpha = alpha;
   }
 
-  screenPoints.slice(0, 7).forEach((point) => {
-    const radius = isActive ? 5 : 4.2;
-    ctx.beginPath();
-    ctx.fillStyle = '#0f172a';
-    ctx.strokeStyle = '#2f6cff';
-    ctx.lineWidth = 2;
-    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  });
+  if (isActive) {
+    screenPoints.slice(0, 7).forEach((point) => drawAnchorHandle(ctx, point, '#2f6cff', true));
+  }
 
   if (screenPoints.length >= 2) drawHeadShouldersLabel(ctx, screenPoints[1], '왼어깨', fontStack);
   if (screenPoints.length >= 4) drawHeadShouldersLabel(ctx, screenPoints[3], '머리', fontStack);
@@ -723,14 +711,7 @@ function renderXabcdPattern(
   if (screenPoints.length >= 5 && ratios.XD_XA !== null) drawRatioBadge(ctx, ratios.XD_XA.toFixed(3), x, d, fontStack, -4);
 
   screenPoints.slice(0, 5).forEach((point, index) => {
-    const radius = isActive ? 5 : 4.2;
-    ctx.beginPath();
-    ctx.fillStyle = '#0f172a';
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    if (isActive) drawAnchorHandle(ctx, point, strokeColor, true);
     drawAnchorLabel(ctx, point, labels[index] ?? String(index + 1), index, fontStack);
   });
 
@@ -768,12 +749,13 @@ export function renderDrawingPattern(params: RenderDrawingPatternParams): void {
   }));
   const labels = getPatternPointLabels(shape.kind);
   const isActive = !isDraft && 'id' in shape && (shape.id === selectedDrawingId || shape.id === hoveredDrawingId);
+  const showAnchorHandles = isDraft || isActive;
 
-  if (renderXabcdPattern(params, anchors, screenPoints, labels, isActive)) return;
-  if (renderHeadShouldersPattern(params, anchors, screenPoints, isActive)) return;
-  if (renderTrianglePattern(params, screenPoints, labels, isActive)) return;
-  if (renderThreeDrivesPattern(params, screenPoints, labels, isActive)) return;
-  if (renderAbcdPattern(params, anchors, screenPoints, labels, isActive)) return;
+  if (renderXabcdPattern(params, anchors, screenPoints, labels, showAnchorHandles)) return;
+  if (renderHeadShouldersPattern(params, anchors, screenPoints, showAnchorHandles)) return;
+  if (renderTrianglePattern(params, screenPoints, labels, showAnchorHandles)) return;
+  if (renderThreeDrivesPattern(params, screenPoints, labels, showAnchorHandles)) return;
+  if (renderAbcdPattern(params, anchors, screenPoints, labels, showAnchorHandles)) return;
 
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -806,14 +788,7 @@ export function renderDrawingPattern(params: RenderDrawingPatternParams): void {
   ctx.textBaseline = 'middle';
   screenPoints.forEach((point, index) => {
     const label = labels[index] ?? String(index + 1);
-    const radius = isActive || isDraft ? 4.6 : 3.6;
-    ctx.beginPath();
-    ctx.fillStyle = '#0f172a';
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 1.5;
-    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    if (showAnchorHandles) drawAnchorHandle(ctx, point, strokeColor, true);
 
     const labelY = point.y - 16;
     const labelWidth = Math.max(18, ctx.measureText(label).width + 10);

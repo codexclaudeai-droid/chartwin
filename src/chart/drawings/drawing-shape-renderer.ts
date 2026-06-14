@@ -24,10 +24,13 @@ import type {
   DrawingViewportMetrics,
 } from './drawing-renderer-utils.ts';
 import { isPatternDrawingKind } from '../../ui/workspace/drawing-utils.ts';
+import type { TimeframeKey } from '../../catalog/time.ts';
+import type { SingleAnchorLineCandle } from './drawing-single-anchor-line-renderer.ts';
 
 export type DrawingShapeRenderMetrics = DrawingViewportMetrics & DrawingChartBounds & DrawingAxisMetrics & {
   top: number;
   mainH: number;
+  plotHeight?: number;
 };
 
 export interface RenderDrawingShapeParams {
@@ -46,6 +49,9 @@ export interface RenderDrawingShapeParams {
   xAxisHeight: number;
   fontStack: string;
   formatPrice: (value: number) => string;
+  candles?: SingleAnchorLineCandle[];
+  timezone?: string;
+  timeframe?: TimeframeKey;
   xForIndex: (index: number, totalSp: number, candleW: number) => number;
   getAnchoredVwapSettings: (shape: DrawingShape) => AnchoredVwapSettings;
   getAnchoredVwapPlot: (shape: DrawingShape) => AnchoredVwapPlotPoint[];
@@ -89,6 +95,9 @@ export function renderDrawingShape(params: RenderDrawingShapeParams): void {
     xAxisHeight,
     fontStack,
     formatPrice,
+    candles,
+    timezone,
+    timeframe,
     xForIndex,
     getAnchoredVwapSettings,
     getAnchoredVwapPlot,
@@ -102,6 +111,8 @@ export function renderDrawingShape(params: RenderDrawingShapeParams): void {
   const style = getDrawingStyle(shape);
   const shouldClipToChart = shape.kind !== 'hline'
     && shape.kind !== 'anchored-vwap'
+    && shape.kind !== 'vertical-line'
+    && shape.kind !== 'cross-line'
     && shape.kind !== 'xabcd-pattern'
     && shape.kind !== 'head-shoulders-pattern';
   if (shouldClipToChart) {
@@ -187,6 +198,13 @@ export function renderDrawingShape(params: RenderDrawingShapeParams): void {
           lineStyle: style.lineStyle,
           selectedDrawingId,
           hoveredDrawingId,
+          fontStack,
+          formatPrice,
+          candles,
+          timezone,
+          timeframe,
+          xAxisHeight,
+          viewportHeight,
           xForIndex,
         });
       } else {

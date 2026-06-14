@@ -123,7 +123,7 @@ test('triangle pattern previews dotted triangle after C anchor and completes on 
   assert.match(patternRendererSource, /drawSegment\(ctx, a, leftTop\)/);
   assert.match(patternRendererSource, /for \(let i = 0; i < screenPoints\.length - 1; i \+= 1\)/);
   assert.match(patternRendererSource, /setLineDash\(\[2, 8\]\)/);
-  assert.match(patternRendererSource, /renderTrianglePattern\(params, screenPoints, labels, isActive\)/);
+  assert.match(patternRendererSource, /renderTrianglePattern\(params, screenPoints, labels, showAnchorHandles\)/);
 });
 
 test('triangle pattern toolbar can add anchors after D', () => {
@@ -177,7 +177,7 @@ test('three drives pattern uses seven anchors with dotted ratio guides', () => {
   assert.match(patternRendererSource, /if \(screenPoints\.length >= 6\) drawSegment\(ctx, b, c\)/);
   assert.match(patternRendererSource, /drawRatioBadge\(ctx, ratios\.A_B\.toFixed\(2\), a, b, fontStack, 0\)/);
   assert.match(patternRendererSource, /drawRatioBadge\(ctx, ratios\.B_C\.toFixed\(2\), b, c, fontStack, 0\)/);
-  assert.match(patternRendererSource, /renderThreeDrivesPattern\(params, screenPoints, labels, isActive\)/);
+  assert.match(patternRendererSource, /renderThreeDrivesPattern\(params, screenPoints, labels, showAnchorHandles\)/);
 });
 
 test('ABCD pattern previews dotted ratio guides between A-C and B-D', () => {
@@ -190,7 +190,19 @@ test('ABCD pattern previews dotted ratio guides between A-C and B-D', () => {
   assert.match(patternRendererSource, /if \(screenPoints\.length >= 4\) drawSegment\(ctx, b, d\)/);
   assert.match(patternRendererSource, /drawRatioBadge\(ctx, ratios\.AC_AB\.toFixed\(3\), a, c, fontStack, 0\)/);
   assert.match(patternRendererSource, /drawRatioBadge\(ctx, ratios\.BD_BC\.toFixed\(3\), b, d, fontStack, 0\)/);
-  assert.match(patternRendererSource, /renderAbcdPattern\(params, anchors, screenPoints, labels, isActive\)/);
+  assert.match(patternRendererSource, /renderAbcdPattern\(params, anchors, screenPoints, labels, showAnchorHandles\)/);
+});
+
+test('completed pattern drawings hide anchor point handles until draft or edit activation', () => {
+  assert.match(patternRendererSource, /function drawAnchorHandle/);
+  assert.match(patternRendererSource, /const showAnchorHandles = isDraft \|\| isActive/);
+  assert.match(patternRendererSource, /renderXabcdPattern\(params, anchors, screenPoints, labels, showAnchorHandles\)/);
+  assert.match(patternRendererSource, /renderHeadShouldersPattern\(params, anchors, screenPoints, showAnchorHandles\)/);
+  assert.match(patternRendererSource, /renderTrianglePattern\(params, screenPoints, labels, showAnchorHandles\)/);
+  assert.match(patternRendererSource, /renderThreeDrivesPattern\(params, screenPoints, labels, showAnchorHandles\)/);
+  assert.match(patternRendererSource, /renderAbcdPattern\(params, anchors, screenPoints, labels, showAnchorHandles\)/);
+  assert.match(patternRendererSource, /if \(showAnchorHandles\) drawAnchorHandle\(ctx, point, strokeColor, true\)/);
+  assert.equal((patternRendererSource.match(/ctx\.arc\(point\.x, point\.y/g) ?? []).length, 1);
 });
 
 test('Elliott pattern drawings include a zero anchor before wave labels', () => {
