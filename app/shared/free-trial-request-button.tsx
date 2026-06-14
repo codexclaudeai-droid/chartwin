@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { getAuthSession } from '../auth-session-client';
 import { AuthPromptModal } from './auth-prompt-modal';
 
 type FreeTrialRequestButtonProps = {
@@ -70,6 +72,12 @@ export function FreeTrialRequestButton({
   }
 
   async function requestTrial() {
+    const session = await getAuthSession();
+    if (!session.authenticated) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const response = await fetch('/api/trial/request', {
@@ -118,12 +126,17 @@ export function FreeTrialRequestButton({
     window.location.assign(returnHref);
   }
 
+  function renderModal(content: ReactNode) {
+    if (typeof document === 'undefined') return null;
+    return createPortal(content, document.body);
+  }
+
   return (
     <>
       <button className={className} type="button" onClick={handleClick} disabled={isSubmitting}>
         {isSubmitting ? '처리 중' : children}
       </button>
-      {showConfirmPrompt ? (
+      {showConfirmPrompt ? renderModal(
         <div className="pricing-auth-modal-backdrop" role="presentation" onClick={() => setShowConfirmPrompt(false)}>
           <div
             aria-labelledby="free-trial-confirm-title"
@@ -143,7 +156,7 @@ export function FreeTrialRequestButton({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
       ) : null}
       {showAuthPrompt ? (
         <AuthPromptModal
@@ -154,7 +167,7 @@ export function FreeTrialRequestButton({
           onClose={() => setShowAuthPrompt(false)}
         />
       ) : null}
-      {resultModal ? (
+      {resultModal ? renderModal(
         <div className="pricing-auth-modal-backdrop" role="presentation" onClick={returnToLanding}>
           <div
             aria-labelledby="free-trial-result-title"
@@ -174,7 +187,7 @@ export function FreeTrialRequestButton({
               닫기
             </button>
           </div>
-        </div>
+        </div>,
       ) : null}
     </>
   );

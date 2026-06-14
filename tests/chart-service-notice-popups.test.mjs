@@ -202,9 +202,11 @@ test('notice popup admin screen uses Tiptap and icon actions', () => {
   assert.match(publicRouteSource, /listAsyncPublishedNoticePopups/);
   assert.match(layoutSource, /NoticePopupViewer/);
   assert.match(viewerSource, /usePathname/);
-  assert.match(viewerSource, /startsWith\('\/admin'\)/);
+  assert.match(viewerSource, /pathname === '\/main'/);
+  assert.doesNotMatch(viewerSource, /sessionStorage/);
   assert.match(viewerSource, /localStorage/);
   assert.match(viewerSource, /24시간 동안 닫기/);
+  assert.match(viewerSource, /window\.localStorage\.setItem\(key, String\(Date\.now\(\) \+ NOTICE_POPUP_SNOOZE_MS\)\)/);
   assert.match(viewerSource, /NOTICE_POPUP_SNOOZE_MS/);
   assert.match(viewerSource, /NOTICE_POPUP_POLL_INTERVAL_MS/);
   assert.match(viewerSource, /window\.setInterval/);

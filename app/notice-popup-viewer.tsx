@@ -9,13 +9,14 @@ const NOTICE_POPUP_POLL_INTERVAL_MS = 60 * 1000;
 
 export function NoticePopupViewer() {
   const pathname = usePathname();
-  const canShowNoticePopup = !pathname?.startsWith('/admin');
+  const canShowNoticePopup = pathname === '/main';
   const [popups, setPopups] = useState<NoticePopupRecord[]>([]);
   const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     if (!canShowNoticePopup) {
       setPopups([]);
+      setDismissedKeys(new Set());
       return;
     }
     let cancelled = false;
@@ -53,11 +54,8 @@ export function NoticePopupViewer() {
     if (typeof window === 'undefined') return;
     const keys = popups
       .map((popup) => getNoticePopupDismissKey(popup))
-      .filter((key) => (
-        window.sessionStorage.getItem(key) === '1' ||
-        isNoticePopupSnoozed(key)
-      ));
-    setDismissedKeys(new Set(keys));
+      .filter((key) => isNoticePopupSnoozed(key));
+    setDismissedKeys((current) => new Set([...current, ...keys]));
   }, [popups]);
 
   const activePopup = useMemo(() => (
@@ -65,9 +63,8 @@ export function NoticePopupViewer() {
   ), [dismissedKeys, popups]);
 
   function closePopup() {
-    if (!activePopup || typeof window === 'undefined') return;
+    if (!activePopup) return;
     const key = getNoticePopupDismissKey(activePopup);
-    window.sessionStorage.setItem(key, '1');
     setDismissedKeys((current) => new Set([...current, key]));
   }
 

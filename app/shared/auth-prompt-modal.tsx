@@ -1,5 +1,7 @@
 'use client';
 
+import { createPortal } from 'react-dom';
+
 type AuthPromptModalProps = {
   title: string;
   description: string;
@@ -15,7 +17,7 @@ export function AuthPromptModal({
   signupHref,
   onClose,
 }: AuthPromptModalProps) {
-  return (
+  const modal = (
     <div className="pricing-auth-modal-backdrop" role="presentation" onClick={onClose}>
       <div
         aria-labelledby="pricing-auth-modal-title"
@@ -40,4 +42,7 @@ export function AuthPromptModal({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modal, document.body);
 }

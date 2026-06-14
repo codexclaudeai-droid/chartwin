@@ -244,10 +244,16 @@ test('member-specific free trial allowance is adjustable and consumed on use', a
 
 test('free trial request button posts to the trial request API and shows auth prompt for guests', () => {
   const source = readFileSync(new URL('../app/shared/free-trial-request-button.tsx', import.meta.url), 'utf8');
+  const authModalSource = readFileSync(new URL('../app/shared/auth-prompt-modal.tsx', import.meta.url), 'utf8');
 
+  assert.match(source, /getAuthSession/);
+  assert.match(source, /if \(!session\.authenticated\) \{/);
+  assert.match(source, /setShowAuthPrompt\(true\);\s+return;/);
   assert.match(source, /fetch\('\/api\/trial\/request'/);
   assert.match(source, /response\.status === 401/);
   assert.match(source, /AuthPromptModal/);
+  assert.match(source, /createPortal\(content, document\.body\)/);
+  assert.match(authModalSource, /createPortal\(modal, document\.body\)/);
   assert.match(source, /무료체험 신청이 접수되었습니다/);
   assert.match(source, /durationDays/);
   assert.match(source, /formatTrialDuration/);
