@@ -3098,6 +3098,7 @@ export class SimpleChart {
           const high = candles.map((c) => c.high);
           const low = candles.map((c) => c.low);
           const volume = candles.map((c) => c.volume);
+          const cvd = Array.isArray(payload.cvd) ? payload.cvd : [];
           const ta = buildTa();
           const ctx = {
             open,
@@ -3105,6 +3106,7 @@ export class SimpleChart {
             low,
             close,
             volume,
+            cvd,
             __doubleBreakConfig: payload.doubleBreakConfig,
             __strategyParams: payload.strategyParams || {},
             __symbol: payload.symbol || '',
@@ -3240,6 +3242,7 @@ export class SimpleChart {
       requestId: this.strategyRequestId,
       compiledJs: strategy.obfuscatedJs || strategy.compiledJs,
       candles: this.data,
+      cvd: this.calcCVD(),
       changedFrom,
       previousSignals: this.strategySignals,
       doubleBreakConfig: this.getDoubleBreakConfig(),
@@ -4129,6 +4132,7 @@ export class SimpleChart {
         low: candles.map((candle) => Number(candle.low)),
         close: candles.map((candle) => Number(candle.close)),
         volume: candles.map((candle) => Number(candle.volume)),
+        cvd: calculateCvd(candles),
         __doubleBreakConfig: this.getDoubleBreakConfig(),
         __strategyParams: strategy.params ?? {},
         __symbol: this.config.symbol,

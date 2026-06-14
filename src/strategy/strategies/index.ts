@@ -8,6 +8,7 @@ export { gridAtrBnfSrouterV1 }    from './grid-atr-bnf-srouter-v1.ts';
 export { xauGridLongJs }          from './xau-grid-long-js.ts';
 export { mtf1mScalperJs }         from './mtf-1m-scalper-js.ts';
 export { autoTrendlineChannelJs } from './auto-trendline-channel-js.ts';
+export { mlCvdUltimateScalperJs } from './ml-cvd-ultimate-scalper-js.ts';
 
 import { smaCrossJs }              from './sma-cross-js.ts';
 import { smaCrossPine }            from './sma-cross-pine.ts';
@@ -19,6 +20,7 @@ import { gridAtrBnfSrouterV1 }    from './grid-atr-bnf-srouter-v1.ts';
 import { xauGridLongJs }          from './xau-grid-long-js.ts';
 import { mtf1mScalperJs }         from './mtf-1m-scalper-js.ts';
 import { autoTrendlineChannelJs } from './auto-trendline-channel-js.ts';
+import { mlCvdUltimateScalperJs } from './ml-cvd-ultimate-scalper-js.ts';
 
 export const ALL_STRATEGIES = [
   smaCrossJs,
@@ -31,4 +33,5 @@ export const ALL_STRATEGIES = [
   xauGridLongJs,
   mtf1mScalperJs,
   autoTrendlineChannelJs,
+  mlCvdUltimateScalperJs,
 ] as const;
