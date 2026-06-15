@@ -129,7 +129,15 @@ test('notification voice plays stored mp3 files for service notification categor
   assert.equal(resolveNotificationVoiceAudioPath({
     category: 'support_request',
     title: '입금확인 요청',
+  }), STORED_NOTIFICATION_AUDIO_PATHS.adminSubscriptionPayment);
+  assert.equal(resolveNotificationVoiceAudioPath({
+    category: 'support_request',
+    title: '문의글이 게시되었습니다',
   }), STORED_NOTIFICATION_AUDIO_PATHS.adminSupportCheck);
+  assert.equal(resolveNotificationVoiceAudioPath({
+    category: 'subscription',
+    title: '구독승인 요청이 접수되었습니다',
+  }), STORED_NOTIFICATION_AUDIO_PATHS.adminSubscriptionPayment);
   assert.equal(resolveNotificationVoiceAudioPath({
     category: 'subscription',
     title: '구독이 활성화되었습니다',

@@ -10,6 +10,23 @@ export type NotificationSummaryResult = {
   summary: NotificationSummary | null;
 };
 
+export type NotificationListItem = {
+  id: string;
+  category: string;
+  title: string;
+  body: string;
+  linkUrl: string | null;
+  readAt: string | null;
+  archivedAt: string | null;
+  createdAt: string;
+};
+
+export type NotificationListResult = {
+  ok: boolean;
+  notifications: NotificationListItem[];
+  summary: NotificationSummary | null;
+};
+
 const NOTIFICATION_SUMMARY_CACHE_TTL_MS = 5 * 1000;
 
 let cachedNotificationSummary: NotificationSummaryResult | null = null;
@@ -68,6 +85,22 @@ export function getNotificationSummary(
   return request;
 }
 
+export async function getNotificationList(
+  options: { force?: boolean } = {},
+): Promise<NotificationListResult> {
+  if (options.force) {
+    clearNotificationSummaryCache();
+  }
+
+  try {
+    const response = await fetch('/api/notifications', { cache: 'no-store' });
+    if (!response.ok) return createEmptyNotificationList(false);
+    return normalizeNotificationListResult(await response.json().catch(() => ({})));
+  } catch {
+    return createEmptyNotificationList(false);
+  }
+}
+
 function normalizeNotificationSummaryResult(payload: unknown): NotificationSummaryResult {
   if (!isRecord(payload) || payload.ok !== true || !isRecord(payload.summary)) {
     return createEmptyNotificationSummary(false);
@@ -93,6 +126,65 @@ function createEmptyNotificationSummary(ok: boolean): NotificationSummaryResult 
     ok,
     summary: null,
   };
+}
+
+function normalizeNotificationListResult(payload: unknown): NotificationListResult {
+  if (!isRecord(payload) || payload.ok !== true || !Array.isArray(payload.notifications)) {
+    return createEmptyNotificationList(false);
+  }
+
+  return {
+    ok: true,
+    notifications: payload.notifications
+      .map(normalizeNotificationListItem)
+      .filter((notification): notification is NotificationListItem => Boolean(notification)),
+    summary: normalizeNotificationSummaryFromRecord(payload.summary),
+  };
+}
+
+function normalizeNotificationListItem(value: unknown): NotificationListItem | null {
+  if (!isRecord(value)) return null;
+  const id = normalizeRequiredString(value.id);
+  const category = normalizeRequiredString(value.category);
+  const title = normalizeRequiredString(value.title);
+  const body = normalizeRequiredString(value.body);
+  const createdAt = normalizeRequiredString(value.createdAt);
+  if (!id || !category || !title || !createdAt) return null;
+
+  return {
+    id,
+    category,
+    title,
+    body,
+    linkUrl: normalizeNullableString(value.linkUrl),
+    readAt: normalizeNullableString(value.readAt),
+    archivedAt: normalizeNullableString(value.archivedAt),
+    createdAt,
+  };
+}
+
+function normalizeNotificationSummaryFromRecord(value: unknown): NotificationSummary | null {
+  if (!isRecord(value)) return null;
+  const totalCount = Number(value.totalCount);
+  const unreadCount = Number(value.unreadCount);
+  if (!Number.isFinite(totalCount) || !Number.isFinite(unreadCount)) return null;
+  return { totalCount, unreadCount };
+}
+
+function createEmptyNotificationList(ok: boolean): NotificationListResult {
+  return {
+    ok,
+    notifications: [],
+    summary: null,
+  };
+}
+
+function normalizeRequiredString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function normalizeNullableString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

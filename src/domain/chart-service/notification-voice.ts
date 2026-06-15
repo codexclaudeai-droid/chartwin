@@ -120,6 +120,12 @@ export function resolveNotificationVoiceAudioPath(notification: VoiceNotificatio
   const text = `${title} ${body}`;
 
   if (notification.category === 'payment') return STORED_NOTIFICATION_AUDIO_PATHS.adminSubscriptionPayment;
+  if (notification.category === 'support_request' && isPaymentOrSubscriptionRequestText(text)) {
+    return STORED_NOTIFICATION_AUDIO_PATHS.adminSubscriptionPayment;
+  }
+  if (notification.category === 'subscription' && isAdminSubscriptionApprovalRequestText(text)) {
+    return STORED_NOTIFICATION_AUDIO_PATHS.adminSubscriptionPayment;
+  }
   if (notification.category === 'support_request' || notification.category === 'qna') {
     return STORED_NOTIFICATION_AUDIO_PATHS.adminSupportCheck;
   }
@@ -129,6 +135,32 @@ export function resolveNotificationVoiceAudioPath(notification: VoiceNotificatio
   }
 
   return null;
+}
+
+function isPaymentOrSubscriptionRequestText(text: string): boolean {
+  return includesAny(text, [
+    '입금확인',
+    '입금 확인',
+    '결제확인',
+    '결제 확인',
+    '구독신청',
+    '구독 신청',
+    '?낃툑?뺤씤',
+    '?낃툑 ?뺤씤',
+    '寃곗젣',
+    '援щ룆',
+  ]);
+}
+
+function isAdminSubscriptionApprovalRequestText(text: string): boolean {
+  return includesAny(text, [
+    '승인요청',
+    '승인 요청',
+    '구독승인 요청',
+    '구독 승인 요청',
+    '援щ룆 ?뱀씤',
+    '?뱀씤 ?붿껌',
+  ]);
 }
 
 export function getStoredNotificationAudioPath(message: string): string | null {

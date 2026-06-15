@@ -185,6 +185,32 @@ This command verifies:
 
 ## 7. Manual Smoke Checklist
 
+## 7.1 Telegram Signal Monitor
+
+Run the Telegram signal monitor as a separate always-on Node process on AWS or another server host. This process does not require a visible browser.
+
+```powershell
+$env:NODE_ENV='production'
+$env:CHART_SERVICE_REPOSITORY='postgres'
+$env:CHART_SERVICE_DATABASE_URL='<production-postgres-url>'
+$env:CHART_SERVICE_DATABASE_SSL_MODE='require'
+$env:CHART_SERVICE_SIGNAL_MONITOR_ENABLED='true'
+$env:CHART_SERVICE_SIGNAL_MONITOR_INTERVAL_MS='60000'
+$env:CHART_SERVICE_SIGNAL_MONITOR_SETTLE_DELAY_MS='3000'
+npm.cmd run service:telegram-monitor
+```
+
+Operational notes:
+
+- Keep `CHART_SERVICE_TELEGRAM_CRON_ENABLED=false` while Cloudflare cron monitoring is paused.
+- The monitor reads Telegram alert profiles from the database and watches each enabled strategy/symbol/timeframe combination.
+- The default check runs just after each one-minute candle boundary and also catches configured higher timeframes such as `5m`.
+- New BUY/SELL signals also create PWA signal notifications for active free-trial users and active paid subscribers whose subscription has not expired.
+- Actual PWA push delivery requires `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, and `WEB_PUSH_SUBJECT` to be configured in the same runtime environment as this monitor.
+- Run it under a process manager such as systemd, PM2, Docker restart policy, or the hosting provider's background worker feature.
+
+## 7.2 Manual Smoke Checklist
+
 After deployment, verify these flows in the browser:
 
 - Sign up with phone number, password confirmation, and required agreements.

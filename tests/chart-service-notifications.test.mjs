@@ -6,6 +6,7 @@ import {
   approveSubscriptionActivationRequest,
   confirmManualPaymentRequest,
   createAsyncAuthenticatedManualPaymentRequest,
+  confirmAsyncManualPaymentRequest,
   createAsyncChartServiceRepository,
   createManualPaymentRequest,
   createMockChartServiceRepository,
@@ -74,6 +75,41 @@ test('async manual payment request creates a receipt notification for the reques
   assert.ok(receipt);
   assert.match(receipt.body, /수동 확인/);
   assert.equal(receipt.linkUrl, `/profile#payment-${result.payment.id}`);
+});
+
+test('async payment confirmation notifies admins that subscription approval is waiting', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+
+  const request = await createAsyncAuthenticatedManualPaymentRequest(repository, {
+    actor: { id: 'user_trial', role: 'member' },
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T12:00:00.000Z',
+    depositorName: 'Trial User',
+  });
+
+  await confirmAsyncManualPaymentRequest(repository, {
+    paymentId: request.payment.id,
+    admin: { id: 'admin_1', role: 'admin' },
+    confirmedAt: '2026-05-23T12:10:00.000Z',
+  });
+
+  const adminNotifications = await repository.listNotificationsByUserId('admin_1');
+  const superAdminNotifications = await repository.listNotificationsByUserId('super_1');
+  const adminApprovalNotice = adminNotifications.find((notification) => (
+    notification.category === 'subscription' &&
+    notification.linkUrl === `/admin#admin-subscription-${request.subscription.id}`
+  ));
+  const superApprovalNotice = superAdminNotifications.find((notification) => (
+    notification.category === 'subscription' &&
+    notification.linkUrl === `/admin#admin-subscription-${request.subscription.id}`
+  ));
+
+  assert.ok(adminApprovalNotice);
+  assert.ok(superApprovalNotice);
+  assert.match(adminApprovalNotice.title, /구독승인 요청/);
+  assert.match(adminApprovalNotice.body, /Trial User/);
 });
 
 test('payment confirmation creates a user notification without activating subscription', () => {

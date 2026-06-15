@@ -70,7 +70,10 @@ import {
   createAsyncReferralLedgerForPayment,
   getAsyncUserReferralSummary,
 } from './referral-program.ts';
-import { notifyAsyncAdminsAboutSupportRequest } from './support-admin-notifications.ts';
+import {
+  notifyAsyncAdminsAboutSubscriptionApprovalRequest,
+  notifyAsyncAdminsAboutSupportRequest,
+} from './support-admin-notifications.ts';
 import { getAsyncPaymentTransferSettingsForDisplay } from './payment-settings.ts';
 import { notifyUserPushSubscriptions } from './web-push.ts';
 import {
@@ -1687,6 +1690,17 @@ export async function confirmAsyncManualPaymentRequest(
     linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.confirmedAt,
   });
+  if (!input.provisionalSale && nextSubscription.status === SUBSCRIPTION_STATUSES.paymentRequested) {
+    const paymentUser = await repository.getUserById(payment.userId);
+    if (paymentUser) {
+      await notifyAsyncAdminsAboutSubscriptionApprovalRequest(repository, {
+        subscription: nextSubscription,
+        payment: confirmedPayment,
+        user: paymentUser,
+        createdAt: input.confirmedAt,
+      });
+    }
+  }
 
   return { payment: confirmedPayment, subscription: nextSubscription };
 }

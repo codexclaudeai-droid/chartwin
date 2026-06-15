@@ -23,6 +23,7 @@
     "service:bootstrap": "node scripts/bootstrap-chart-service.mjs",
     "service:email:deliver": "node scripts/deliver-email-outbox.mjs",
     "service:vapid:generate": "node scripts/generate-vapid-keys.mjs",
+    "service:telegram-monitor": "node scripts/run-telegram-signal-monitor.mjs",
     "service:migrate": "node scripts/run-chart-service-migration.mjs",
     "service:schema": "node scripts/write-chart-service-schema.mjs",
     "service:cloudflare:build": "node scripts/run-open-next-cloudflare-build.mjs",

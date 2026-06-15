@@ -1,6 +1,8 @@
 import {
   USER_ROLES,
   type NotificationRecord,
+  type PaymentRequestRecord,
+  type SubscriptionRecord,
   type SupportMessageRecord,
   type SupportThreadRecord,
 } from '../../domain/chart-service/index.ts';
@@ -43,6 +45,23 @@ export async function notifyAsyncAdminsAboutSupportRequest(
     await repository.saveNotification(notification);
     void notifyUserPushSubscriptions(repository, notification).catch(() => {});
     await repository.saveEmailOutboxRecord(await createAsyncSupportRequestAdminEmail(repository, admin, input));
+  }
+}
+
+export async function notifyAsyncAdminsAboutSubscriptionApprovalRequest(
+  repository: AsyncChartServiceRepository,
+  input: {
+    subscription: SubscriptionRecord;
+    payment: PaymentRequestRecord;
+    user: ServiceUserRecord;
+    createdAt: string;
+  },
+): Promise<void> {
+  const admins = getSupportAdminUsers(await repository.listUsers());
+  for (const admin of admins) {
+    const notification = await createAsyncSubscriptionApprovalAdminNotification(repository, admin, input);
+    await repository.saveNotification(notification);
+    void notifyUserPushSubscriptions(repository, notification).catch(() => {});
   }
 }
 
@@ -144,6 +163,29 @@ async function createAsyncSupportRequestAdminEmail(
   };
 }
 
+async function createAsyncSubscriptionApprovalAdminNotification(
+  repository: AsyncChartServiceRepository,
+  admin: ServiceUserRecord,
+  input: {
+    subscription: SubscriptionRecord;
+    payment: PaymentRequestRecord;
+    user: ServiceUserRecord;
+    createdAt: string;
+  },
+): Promise<NotificationRecord> {
+  return {
+    id: await repository.nextId('notification'),
+    userId: admin.id,
+    category: 'subscription',
+    title: '구독승인 요청이 접수되었습니다',
+    body: `${formatPaymentUserLabel(input)} 결제 확인이 완료되어 구독승인 처리가 필요합니다.`,
+    linkUrl: createAdminSubscriptionPath(input.subscription.id),
+    readAt: null,
+    archivedAt: null,
+    createdAt: input.createdAt,
+  };
+}
+
 function formatSupportRequestSummary(input: {
   thread: SupportThreadRecord;
   message: SupportMessageRecord;
@@ -166,4 +208,14 @@ function formatSupportRequestAdminEmailBody(input: {
     `Message: ${input.message.body}`,
     `Reply link: ${createAdminSupportThreadPath(input.thread.id)}`,
   ].join('\n');
+}
+
+function createAdminSubscriptionPath(subscriptionId: string): string {
+  return `/admin#admin-subscription-${encodeURIComponent(subscriptionId)}`;
+}
+
+function formatPaymentUserLabel(input: { payment: PaymentRequestRecord; user: ServiceUserRecord }): string {
+  const depositorName = input.payment.depositorName?.trim();
+  const displayName = depositorName || input.user.name;
+  return `${displayName} <${input.user.email}>`;
 }

@@ -148,6 +148,9 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
 test('admin sidebar can collapse into an icon rail', () => {
   const shellSource = fs.readFileSync(new URL('../app/admin/admin-dashboard-shell.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  const sidebarToggleRule = cssSource.match(
+    /\.admin-dashboard-sidebar-toggle\s*\{(?<body>[^}]*)\}/,
+  )?.groups?.body ?? '';
 
   assert.match(shellSource, /PanelLeftClose/);
   assert.match(shellSource, /PanelLeftOpen/);
@@ -158,8 +161,9 @@ test('admin sidebar can collapse into an icon rail', () => {
   assert.match(shellSource, /title=\{isSidebarCollapsed \? section\.label : undefined\}/);
   assert.match(cssSource, /\.admin-dashboard-sidebar-heading/);
   assert.match(cssSource, /\.admin-dashboard-sidebar-toggle/);
-  assert.match(cssSource, /\.admin-dashboard-sidebar-toggle\s*\{[\s\S]*?background:\s*transparent/);
-  assert.match(cssSource, /\.admin-dashboard-sidebar-toggle\s*\{[\s\S]*?border:\s*1px solid transparent/);
+  assert.match(sidebarToggleRule, /background:\s*transparent/);
+  assert.doesNotMatch(sidebarToggleRule, /background:\s*#fff/);
+  assert.match(sidebarToggleRule, /border:\s*1px solid transparent/);
   assert.match(cssSource, /\.admin-dashboard-sidebar-toggle:hover\s*\{[\s\S]*?background:\s*rgba\(255, 255, 255, 0\.14\)/);
   assert.match(cssSource, /\.admin-dashboard-sidebar-toggle:focus-visible\s*\{[\s\S]*?outline:\s*0/);
   assert.match(cssSource, /\.admin-dashboard-menu-icon/);

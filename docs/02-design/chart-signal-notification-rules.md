@@ -23,11 +23,17 @@ Implementation files:
 - `src/domain/chart-service/notification-voice.ts`
   - Maps signal messages to stored audio files.
   - Falls back to browser TTS when stored audio cannot be played.
+- `app/api/telegram-alerts/signal/route.ts`
+  - Receives chart-page realtime BUY/SELL signal events and dispatches matching Telegram alerts.
+- `src/server/chart-service/telegram-signal-monitor-runner.ts`
+  - Runs the server-side signal monitor loop for browser-free Telegram alert delivery.
+- `src/server/chart-service/signal-push-notifications.ts`
+  - Creates signal notification records and PWA push attempts for eligible members.
 
 Test files:
 
 - `tests/chart-signal-live-notice.test.mjs`
-  - Guards popup/voice timing rules.
+  - Guards popup/voice timing rules and chart-page Telegram signal posting.
 - `tests/chart-service-notification-voice.test.mjs`
   - Guards signal voice text and audio file mapping.
 
@@ -155,6 +161,41 @@ Stored audio paths:
 /audio/notifications/signal-sell.mp3
 ```
 
+### 8. External Signal Delivery Source
+
+For the current operating model, external signal delivery should run from the explicit Node server monitor, not Cloudflare cron.
+
+Required behavior:
+
+- The Node monitor is started with `npm run service:telegram-monitor`.
+- The monitor reads enabled Telegram profiles and builds unique strategy/symbol/timeframe jobs.
+- Each cycle runs just after the one-minute candle boundary by default.
+- The monitor calculates closed-candle BUY/SELL signals and filters profiles by event, strategy, symbol, and timeframe before sending.
+- The same server signal event creates PWA/app-push notifications for eligible members.
+- A visible chart runtime still handles browser popup and voice locally.
+- The chart runtime may still post the same live signal to `/api/telegram-alerts/signal`; shared watch state suppresses duplicate Telegram delivery.
+- Cloudflare scheduled Telegram monitoring remains paused until its timeframe and timing calculations are verified.
+
+Operational note:
+
+Running a PWA, PC browser, mobile browser, or AWS-hosted browser session is no longer required for Telegram signal monitoring when the Node monitor process is active. PWA/web push and local voice behavior still depend on browser/PWA capabilities. The scheduled Cloudflare monitor code is kept for future reactivation but must not be the production signal source while cron timing is under review.
+
+### 9. PWA App Push Recipients
+
+Server-side signal PWA push currently targets users with active chart access:
+
+- `trial_active` free-trial subscriptions when the trial end time has not passed.
+- `active` and `expiring` paid subscriptions when the subscription end time has not passed.
+
+Excluded users:
+
+- Expired free trials.
+- Expired, cancelled, refunded, pending, or requested subscriptions.
+- Suspended user accounts.
+- Users whose subscription start time is in the future.
+
+Future profile-level filtering will add member-specific interested symbols and timeframes from My Profile. Until then, server-side PWA signal push follows the admin-defined server monitor jobs.
+
 ## State Rules
 
 ### Announced Signal Key
@@ -200,7 +241,15 @@ When changing signal notification behavior, update all relevant items:
 - `src/domain/chart-service/notification-voice.ts`
   - Voice text and audio file mappings.
 - `tests/chart-signal-live-notice.test.mjs`
-  - Alert timing and backlog suppression expectations.
+  - Alert timing, backlog suppression, and Telegram post expectations.
+- `wrangler.jsonc`
+  - Keep Cloudflare Telegram cron paused unless deliberately reactivating the server monitor.
+- `scripts/run-telegram-signal-monitor.mjs`
+  - Keep the explicit Node monitor entrypoint working for AWS/process-manager deployments.
+- `tests/chart-service-telegram-monitor-runner.test.mjs`
+  - Guard Node monitor config, timing alignment, and package script wiring.
+- `tests/chart-service-signal-push.test.mjs`
+  - Guard PWA signal push recipient filtering and server monitor integration.
 - `tests/chart-service-notification-voice.test.mjs`
   - Voice text and audio file path expectations.
 - `public/audio/notifications/`
@@ -213,6 +262,8 @@ Run at minimum:
 
 ```powershell
 node --test tests\chart-signal-live-notice.test.mjs
+node --test tests\chart-service-signal-push.test.mjs
+node --test tests\chart-service-telegram-monitor-runner.test.mjs
 node --test tests\chart-service-notification-voice.test.mjs
 npm.cmd run service:build
 git diff --check

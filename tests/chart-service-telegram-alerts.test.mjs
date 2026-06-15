@@ -470,16 +470,31 @@ test('browser Telegram signal API shares watch state to suppress server monitor 
   assert.equal(syncRepository.listTelegramDeliveryLogs().length, 0);
 });
 
-test('Cloudflare deploy config registers Telegram monitor cron and custom scheduled worker', () => {
+test('Cloudflare deploy config keeps Telegram monitor cron paused while preserving the scheduled worker', async () => {
   const wranglerConfig = fs.readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
   const customWorker = fs.readFileSync(new URL('../cloudflare-worker.ts', import.meta.url), 'utf8');
+  const scheduledSource = fs.readFileSync(new URL('../src/server/chart-service/cloudflare-scheduled.ts', import.meta.url), 'utf8');
 
   assert.match(wranglerConfig, /"main"\s*:\s*"\.\/cloudflare-worker\.ts"/);
-  assert.match(wranglerConfig, /"triggers"\s*:/);
-  assert.match(wranglerConfig, /"crons"\s*:\s*\[\s*"\* \* \* \* \*"/);
+  assert.match(wranglerConfig, /CHART_SERVICE_TELEGRAM_CRON_ENABLED"\s*:\s*"false"/);
+  assert.match(wranglerConfig, /Telegram monitor cron is intentionally paused/);
+  assert.doesNotMatch(wranglerConfig, /^\s*"triggers"\s*:/m);
+  assert.doesNotMatch(wranglerConfig, /^\s*"crons"\s*:\s*\[\s*"\* \* \* \* \*"/m);
   assert.match(customWorker, /from '\.\/\.open-next\/worker\.js'/);
   assert.match(customWorker, /scheduled/);
   assert.match(customWorker, /runScheduledTelegramSignalMonitor/);
+  assert.match(scheduledSource, /isTelegramSignalCronEnabled/);
+  assert.match(scheduledSource, /telegram-signal-monitor-disabled/);
+
+  const { runScheduledTelegramSignalMonitor } = await import('../src/server/chart-service/cloudflare-scheduled.ts');
+  const result = await runScheduledTelegramSignalMonitor({
+    CHART_SERVICE_REPOSITORY: 'memory',
+    CHART_SERVICE_TELEGRAM_CRON_ENABLED: 'false',
+  });
+
+  assert.equal(result.disabled, true);
+  assert.equal(result.jobCount, 0);
+  assert.equal(result.sentCount, 0);
 });
 
 test('admin Telegram panel supports profile management and test sends without exposing raw saved tokens', () => {

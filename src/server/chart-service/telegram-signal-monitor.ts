@@ -23,6 +23,7 @@ import {
   createBinanceServerCandleProvider,
   type ServerCandleProvider,
 } from './server-candles.ts';
+import { notifyAsyncSignalPushSubscribers } from './signal-push-notifications.ts';
 
 export type TelegramSignalMonitorJob = {
   key: string;
@@ -38,6 +39,12 @@ export type TelegramSignalMonitorResult = {
   seededCount: number;
   skippedCount: number;
   skippedOpenCandleCount: number;
+  pushEligibleUserCount: number;
+  pushNotificationCount: number;
+  pushAttemptedCount: number;
+  pushDeliveredCount: number;
+  pushRemovedCount: number;
+  pushFailedCount: number;
   errors: string[];
 };
 
@@ -73,6 +80,12 @@ export async function runTelegramSignalMonitorOnce(
     seededCount: 0,
     skippedCount: 0,
     skippedOpenCandleCount: 0,
+    pushEligibleUserCount: 0,
+    pushNotificationCount: 0,
+    pushAttemptedCount: 0,
+    pushDeliveredCount: 0,
+    pushRemovedCount: 0,
+    pushFailedCount: 0,
     errors: [],
   };
 
@@ -146,7 +159,7 @@ export async function runTelegramSignalMonitorOnce(
       }
 
       for (const closedSignal of closedSignals) {
-        const delivery = await sendAsyncTelegramAlertForSignal(repository, {
+        const event = {
           eventType: closedSignal.eventType,
           strategyId: job.strategyId,
           strategyName: strategy.name,
@@ -154,9 +167,11 @@ export async function runTelegramSignalMonitorOnce(
           timeframe: job.timeframe,
           price: closedSignal.candle.close,
           occurredAt: new Date(closedSignal.candle.time * 1000).toISOString(),
-        }, options.telegramFetch);
+        };
+        const delivery = await sendAsyncTelegramAlertForSignal(repository, event, options.telegramFetch);
         result.sentCount += delivery.sentCount;
         result.failedCount += delivery.failedCount;
+        await notifySignalPushSubscribers(repository, event, result);
         lastSignalCandleTime = closedSignal.candle.time;
         lastSignalEventType = closedSignal.eventType;
       }
@@ -175,6 +190,25 @@ export async function runTelegramSignalMonitorOnce(
   }
 
   return result;
+}
+
+async function notifySignalPushSubscribers(
+  repository: AsyncChartServiceRepository,
+  event: Parameters<typeof notifyAsyncSignalPushSubscribers>[1],
+  result: TelegramSignalMonitorResult,
+): Promise<void> {
+  try {
+    const push = await notifyAsyncSignalPushSubscribers(repository, event);
+    result.pushEligibleUserCount += push.eligibleUserCount;
+    result.pushNotificationCount += push.notificationCount;
+    result.pushAttemptedCount += push.pushAttemptedCount;
+    result.pushDeliveredCount += push.pushDeliveredCount;
+    result.pushRemovedCount += push.pushRemovedCount;
+    result.pushFailedCount += push.pushFailedCount;
+  } catch (error) {
+    result.pushFailedCount += 1;
+    result.errors.push(`signal push failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 export function buildTelegramSignalMonitorJobs(
