@@ -452,6 +452,7 @@ export function SignupPanel() {
             <span className="social-auth-logo" aria-hidden="true">{renderGoogleLogo()}</span>
             <span>Google로 가입</span>
           </a>
+          {/* NAVER_KAKAO_SOCIAL_AUTH_PAUSED: 검수/연동 안정화 전까지 사용자 화면에서 숨김.
           <a
             className="social-auth-button social-auth-button-naver"
             href="/api/auth/social/naver/start?intent=signup"
@@ -467,6 +468,7 @@ export function SignupPanel() {
             <span className="social-auth-logo" aria-hidden="true">{renderKakaoLogo()}</span>
             <span>카카오로 가입</span>
           </button>
+          */}
         </div>
       </form>
       <p className="notice">{message}</p>

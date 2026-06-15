@@ -134,6 +134,7 @@ export function LoginPanel({ showWithdrawnPrompt = false }: LoginPanelProps) {
               <path fill="#eb4335" d="M12 4.57c2.29 0 3.84.96 4.72 1.76l3.45-3.27C18.05 1.14 15.29 0 12 0A12.15 12.15 0 0 0 1.3 6.52l3.75 2.92A7.34 7.34 0 0 1 12 4.57Z" />
             </svg>
           </a>
+          {/* NAVER_KAKAO_SOCIAL_AUTH_PAUSED: 검수/연동 안정화 전까지 사용자 화면에서 숨김.
           <a
             aria-label="네이버 간편로그인"
             className="social-auth-icon-button social-auth-icon-naver"
@@ -155,6 +156,7 @@ export function LoginPanel({ showWithdrawnPrompt = false }: LoginPanelProps) {
               <path fill="#181600" d="M12 3.1c-5.5 0-9.96 3.52-9.96 7.86 0 2.78 1.83 5.22 4.58 6.62l-.93 3.41c-.08.28.24.5.47.33l4.05-2.69c.58.08 1.18.12 1.79.12 5.5 0 9.96-3.52 9.96-7.86S17.5 3.1 12 3.1Z" />
             </svg>
           </button>
+          */}
         </div>
       </form>
       <p className="notice">{message}</p>

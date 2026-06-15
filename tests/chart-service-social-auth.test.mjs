@@ -16,6 +16,8 @@ import {
   SOCIAL_AUTH_PROVIDERS,
 } from '../src/server/chart-service/index.ts';
 
+const stripJsxComments = (source) => source.replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+
 test('social auth provider config uses provider-specific OAuth endpoints', () => {
   const env = {
     CHART_SERVICE_GOOGLE_CLIENT_ID: 'google-client',
@@ -336,37 +338,39 @@ test('social auth runtime env keeps OAuth secret values when Cloudflare bindings
   assert.equal(asyncEnv.CHART_SERVICE_NAVER_CLIENT_SECRET, 'naver-secret');
 });
 
-test('signup and login panels wire Google and Naver auth while keeping Kakao preparation-only', () => {
+test('signup and login panels expose Google while pausing Naver and Kakao UI', () => {
   const signupSource = readFileSync(new URL('../app/signup/signup-panel.tsx', import.meta.url), 'utf8');
   const loginSource = readFileSync(new URL('../app/login/login-panel.tsx', import.meta.url), 'utf8');
+  const activeSignupSource = stripJsxComments(signupSource);
+  const activeLoginSource = stripJsxComments(loginSource);
   const startRouteSource = readFileSync(new URL('../app/api/auth/social/[provider]/start/route.ts', import.meta.url), 'utf8');
   const callbackRouteSource = readFileSync(new URL('../app/api/auth/social/[provider]/callback/route.ts', import.meta.url), 'utf8');
 
   assert.match(signupSource, /signup-social-auth-actions/);
-  assert.match(signupSource, /social-auth-button-google/);
-  assert.match(signupSource, /social-auth-button-naver/);
-  assert.match(signupSource, /social-auth-button-kakao/);
+  assert.match(activeSignupSource, /social-auth-button-google/);
+  assert.doesNotMatch(activeSignupSource, /social-auth-button-naver/);
+  assert.doesNotMatch(activeSignupSource, /social-auth-button-kakao/);
+  assert.match(signupSource, /NAVER_KAKAO_SOCIAL_AUTH_PAUSED/);
   assert.match(signupSource, /renderGoogleLogo/);
   assert.match(signupSource, /renderNaverLogo/);
   assert.match(signupSource, /renderKakaoLogo/);
-  assert.match(signupSource, /google-logo-svg/);
-  assert.match(signupSource, /naver-logo-svg/);
-  assert.match(signupSource, /kakao-logo-svg/);
-  assert.match(signupSource, /Google로 가입/);
-  assert.match(signupSource, /네이버로 가입/);
-  assert.match(signupSource, /카카오로 가입/);
+  assert.match(activeSignupSource, /google-logo-svg/);
+  assert.match(activeSignupSource, /Google로 가입/);
+  assert.doesNotMatch(activeSignupSource, /네이버로 가입/);
+  assert.doesNotMatch(activeSignupSource, /카카오로 가입/);
   assert.match(signupSource, /간편가입은 서비스 준비중입니다/);
-  assert.match(signupSource, /href="\/api\/auth\/social\/google\/start\?intent=signup"/);
-  assert.match(signupSource, /href="\/api\/auth\/social\/naver\/start\?intent=signup"/);
+  assert.match(activeSignupSource, /href="\/api\/auth\/social\/google\/start\?intent=signup"/);
+  assert.doesNotMatch(activeSignupSource, /href="\/api\/auth\/social\/naver\/start\?intent=signup"/);
   assert.match(loginSource, /login-social-auth-actions/);
-  assert.match(loginSource, /social-auth-icon-google/);
-  assert.match(loginSource, /google-logo-svg/);
-  assert.match(loginSource, /href="\/api\/auth\/social\/google\/start"/);
-  assert.match(loginSource, /social-auth-icon-naver/);
-  assert.match(loginSource, /naver-logo-svg/);
-  assert.match(loginSource, /href="\/api\/auth\/social\/naver\/start"/);
-  assert.match(loginSource, /social-auth-icon-kakao/);
-  assert.match(loginSource, /kakao-logo-svg/);
+  assert.match(activeLoginSource, /social-auth-icon-google/);
+  assert.match(activeLoginSource, /google-logo-svg/);
+  assert.match(activeLoginSource, /href="\/api\/auth\/social\/google\/start"/);
+  assert.doesNotMatch(activeLoginSource, /social-auth-icon-naver/);
+  assert.doesNotMatch(activeLoginSource, /naver-logo-svg/);
+  assert.doesNotMatch(activeLoginSource, /href="\/api\/auth\/social\/naver\/start"/);
+  assert.doesNotMatch(activeLoginSource, /social-auth-icon-kakao/);
+  assert.doesNotMatch(activeLoginSource, /kakao-logo-svg/);
+  assert.match(loginSource, /NAVER_KAKAO_SOCIAL_AUTH_PAUSED/);
   assert.match(loginSource, /간편로그인은 서비스 준비중입니다/);
   assert.match(startRouteSource, /createSocialAuthAuthorizationUrl/);
   assert.match(startRouteSource, /createCanonicalSocialAuthStartUrl/);
