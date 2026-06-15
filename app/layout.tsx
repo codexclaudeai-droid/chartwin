@@ -10,6 +10,16 @@ import { SiteFooter } from './shared/site-footer';
 import './globals.css';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.CF_PAGES_URL || 'http://localhost:3000';
+const dataGatewayUrl = String(
+  process.env.NEXT_PUBLIC_DATA_GATEWAY_URL
+  || process.env.DATA_GATEWAY_PUBLIC_URL
+  || process.env.DATA_GATEWAY_URL
+  || process.env.CHART_DATA_GATEWAY_URL
+  || '',
+).trim().replace(/\/+$/, '');
+const dataGatewayClientConfigScript = dataGatewayUrl
+  ? `window.__DATA_GATEWAY_URL__ = ${JSON.stringify(dataGatewayUrl)};`
+  : '';
 const ethereumExtensionErrorGuardScript = `
 (function () {
   function describeUnknown(value, depth, seen) {
@@ -284,6 +294,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: ethereumExtensionErrorGuardScript }}
         />
+        {dataGatewayClientConfigScript ? (
+          <Script
+            id="tc-data-gateway-config"
+            strategy="beforeInteractive"
+            dangerouslySetInnerHTML={{ __html: dataGatewayClientConfigScript }}
+          />
+        ) : null}
       </head>
       <body>
         <div className="shell">
