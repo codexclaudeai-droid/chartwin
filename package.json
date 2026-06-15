@@ -32,8 +32,10 @@
     "build": "tsc -p tsconfig.vite.json && vite build",
     "preview": "vite preview",
     "preview:cloudflare": "npm run build && wrangler pages dev dist",
-    "deploy:cloudflare": "npm run build && wrangler pages deploy dist --project-name chartwin",
-    "deploy:cloudflare:prod": "npm run build && wrangler pages deploy dist --project-name chartwin --branch main",
+    "deploy:cloudflare": "npm run service:cloudflare:deploy",
+    "deploy:cloudflare:prod": "npm run service:cloudflare:deploy",
+    "deploy:cloudflare:pages": "node scripts/prevent-cloudflare-pages-deploy.mjs",
+    "deploy:cloudflare:pages:prod": "node scripts/prevent-cloudflare-pages-deploy.mjs",
     "preview:cloudflare:next": "npm run service:cloudflare:preview",
     "deploy:cloudflare:next": "npm run service:cloudflare:deploy"
   },
