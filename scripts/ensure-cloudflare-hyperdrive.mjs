@@ -126,7 +126,7 @@ function normalizeScheme(protocol) {
 
 function patchWranglerConfig(hyperdriveId, binding) {
   const configPath = path.resolve('wrangler.jsonc');
-  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  const config = JSON.parse(stripJsoncComments(fs.readFileSync(configPath, 'utf8')));
   config.hyperdrive = [
     {
       binding,
@@ -134,4 +134,43 @@ function patchWranglerConfig(hyperdriveId, binding) {
     },
   ];
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+}
+
+function stripJsoncComments(source) {
+  let output = '';
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < source.length; i += 1) {
+    const char = source[i];
+    const next = source[i + 1];
+
+    if (inString) {
+      output += char;
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      output += char;
+      continue;
+    }
+
+    if (char === '/' && next === '/') {
+      while (i < source.length && source[i] !== '\n') i += 1;
+      output += '\n';
+      continue;
+    }
+
+    output += char;
+  }
+
+  return output;
 }

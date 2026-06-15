@@ -9,11 +9,17 @@ test('Hyperdrive setup script can bind a pre-created config without Cloudflare A
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chart-service-hyperdrive-'));
   fs.writeFileSync(
     path.join(tempDir, 'wrangler.jsonc'),
-    JSON.stringify({
-      name: 'chartwin',
-      compatibility_date: '2026-05-20',
-      main: '.open-next/worker.js',
-    }),
+    [
+      '{',
+      '  "name": "chartwin",',
+      '  "compatibility_date": "2026-05-20",',
+      '  "main": ".open-next/worker.js",',
+      '  "vars": {',
+      '    "CHART_SERVICE_BASE_URL": "https://tradingcore.co"',
+      '  }',
+      '  // Telegram monitor cron is intentionally paused.',
+      '}',
+    ].join('\n'),
   );
 
   const result = spawnSync(
