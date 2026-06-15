@@ -7,6 +7,8 @@ import { createHash } from 'node:crypto';
 import { createBinanceWebSocketCollector, mergeBinanceCollectorConfig } from './binance-websocket-collector.mjs';
 import { createKisWebSocketCollector, hasKisCredentials } from './kis-websocket-collector.mjs';
 import { createMarketCandlePostgresStoreFromEnv } from './market-candle-postgres-store.mjs';
+import { createMarketTickPostgresStoreFromEnv } from './market-tick-postgres-store.mjs';
+import { createMt45TickAggregator, normalizeMt45Ticks } from './mt45-tick-collector.mjs';
 import { getPreferredSymbolProviders, resolveProviderForSymbol } from './provider-routing.mjs';
 
 const PORT = Number(process.env.DATA_GATEWAY_PORT || 8787);
@@ -15,7 +17,7 @@ const CONFIG_PATH = resolve(process.cwd(), 'server/config/runtime-config.json');
 const CANDLE_DB_PATH = resolve(process.cwd(), 'server/data/candles-db.json');
 const MAX_CANDLES_PER_KEY = 20000;
 
-const ALLOWED_PROVIDERS = ['binance', 'api', 'webhook', 'kis'];
+const ALLOWED_PROVIDERS = ['binance', 'api', 'webhook', 'kis', 'mt45'];
 const ALLOWED_MARKETS = ['crypto', 'futures', 'index', 'commodity', 'fx'];
 const DEFAULT_PROVIDER_BY_MARKET = {
   crypto: 'binance',
@@ -25,10 +27,34 @@ const DEFAULT_PROVIDER_BY_MARKET = {
   fx: 'webhook',
 };
 const DEFAULT_SYMBOL_PROVIDER_BY_MARKET = getPreferredSymbolProviders();
+const DEFAULT_MT45_API_KEY = 'change-me-mt45-api-key';
+function createDefaultMt45Profile(apiKey = DEFAULT_MT45_API_KEY) {
+  return {
+    apiKey,
+    priceStep: 0,
+    symbols: [],
+    tickStorage: {
+      enabled: false,
+      retentionDays: 7,
+      flushIntervalMs: 1000,
+      maxBatchSize: 500,
+    },
+  };
+}
+const DEFAULT_MT45_CONFIG = {
+  activePlatform: 'mt5',
+  profiles: {
+    mt4: createDefaultMt45Profile(),
+    mt5: createDefaultMt45Profile(process.env.DATA_GATEWAY_MT45_API_KEY || DEFAULT_MT45_API_KEY),
+  },
+};
+const DEFAULT_MT45_PROFILE = createDefaultMt45Profile();
+const MT45_PLATFORMS = ['mt4', 'mt5'];
+const DEFAULT_MT45_TICK_STORAGE = DEFAULT_MT45_PROFILE.tickStorage;
 
 /** @typedef {{time:number,open:number,high:number,low:number,close:number,volume:number}} Candle */
 
-/** @type {{adminToken:string, webhookPassphrase:string, providers: Record<string, string>, symbolProviders: Record<string, Record<string, string>>, binance?: {storedSymbols?: string[], backfillLimit?: number, reconnectMs?: number}, kis?: Record<string, unknown>}} */
+/** @type {{adminToken:string, webhookPassphrase:string, providers: Record<string, string>, symbolProviders: Record<string, Record<string, string>>, binance?: {storedSymbols?: string[], backfillLimit?: number, reconnectMs?: number}, kis?: Record<string, unknown>, mt45?: {activePlatform?: string, profiles?: Record<string, {apiKey?: string, priceStep?: number, symbols?: Array<{market?: string, symbol?: string, tickStorageEnabled?: boolean, priceStep?: number}>, tickStorage?: {enabled?: boolean, retentionDays?: number, flushIntervalMs?: number, maxBatchSize?: number}}>}}}} */
 let runtimeConfig;
 
 /** @type {Map<string, Candle[]>} */
@@ -38,6 +64,10 @@ let persistTimer = null;
 let kisCollector = null;
 let binanceCollector = null;
 let marketCandlePostgresStore = null;
+let marketTickPostgresStore = null;
+let mt45TickAggregator = null;
+let mt45TickFlushTimer = null;
+let mt45RawTickBuffer = [];
 
 function splitCandleKey(key) {
   const parts = String(key || '').split(':');
@@ -94,7 +124,7 @@ function sendJson(res, code, payload) {
     'content-type': 'application/json; charset=utf-8',
     'access-control-allow-origin': '*',
     'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS',
-    'access-control-allow-headers': 'content-type,x-admin-token',
+    'access-control-allow-headers': 'content-type,x-admin-token,x-mt45-api-key',
   });
   res.end(JSON.stringify(payload));
 }
@@ -145,6 +175,124 @@ function normalizeMarket(input) {
 function normalizeProvider(input) {
   const provider = String(input || '').trim().toLowerCase();
   return ALLOWED_PROVIDERS.includes(provider) ? provider : null;
+}
+
+function clampInt(value, fallback, min, max) {
+  const number = Math.floor(Number(value));
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
+}
+
+function normalizeBoolean(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  if (value == null) return fallback;
+  const raw = String(value).trim().toLowerCase();
+  if (raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on') return true;
+  if (raw === '0' || raw === 'false' || raw === 'no' || raw === 'off') return false;
+  return fallback;
+}
+
+function normalizeMt45Platform(value, fallback = DEFAULT_MT45_CONFIG.activePlatform) {
+  const raw = String(value || '').trim().toLowerCase();
+  return MT45_PLATFORMS.includes(raw) ? raw : fallback;
+}
+
+function normalizeMt45SymbolRules(rawSymbols = []) {
+  const rules = Array.isArray(rawSymbols) ? rawSymbols : [];
+  const byKey = new Map();
+  for (const raw of rules) {
+    if (!raw || typeof raw !== 'object') continue;
+    const market = normalizeMarket(raw.market) || inferMarketFromSymbol(raw.symbol);
+    const symbol = canonicalizeSymbolByMarket(market, raw.symbol);
+    if (!market || !symbol) continue;
+    const priceStep = Math.max(0, Number(raw.priceStep) || 0);
+    byKey.set(`${market}:${symbol}`, {
+      market,
+      symbol,
+      tickStorageEnabled: normalizeBoolean(raw.tickStorageEnabled, false),
+      priceStep,
+    });
+  }
+  return Array.from(byKey.values()).sort((a, b) => `${a.market}:${a.symbol}`.localeCompare(`${b.market}:${b.symbol}`));
+}
+
+function normalizeMt45Profile(profileRaw = {}, fallback = DEFAULT_MT45_PROFILE) {
+  const tickStorage = profileRaw?.tickStorage && typeof profileRaw.tickStorage === 'object' ? profileRaw.tickStorage : {};
+  const fallbackStorage = fallback?.tickStorage || DEFAULT_MT45_TICK_STORAGE;
+  return {
+    apiKey: String(profileRaw?.apiKey || fallback?.apiKey || DEFAULT_MT45_API_KEY),
+    priceStep: Math.max(0, Number(profileRaw?.priceStep ?? fallback?.priceStep) || 0),
+    symbols: normalizeMt45SymbolRules(profileRaw?.symbols ?? fallback?.symbols),
+    tickStorage: {
+      enabled: normalizeBoolean(tickStorage.enabled, fallbackStorage.enabled),
+      retentionDays: clampInt(tickStorage.retentionDays, fallbackStorage.retentionDays, 1, 365),
+      flushIntervalMs: clampInt(tickStorage.flushIntervalMs, fallbackStorage.flushIntervalMs, 100, 60000),
+      maxBatchSize: clampInt(tickStorage.maxBatchSize, fallbackStorage.maxBatchSize, 1, 5000),
+    },
+  };
+}
+
+function mergeMt45Profiles(rawProfiles = {}, fallbackProfiles = DEFAULT_MT45_CONFIG.profiles) {
+  const profiles = {};
+  const source = rawProfiles && typeof rawProfiles === 'object' ? rawProfiles : {};
+  for (const platform of MT45_PLATFORMS) {
+    profiles[platform] = normalizeMt45Profile(source[platform], fallbackProfiles[platform]);
+  }
+  return profiles;
+}
+
+function mergeMt45CollectorConfig(raw = {}) {
+  const activePlatform = normalizeMt45Platform(raw?.activePlatform ?? raw?.platform);
+  const profiles = mergeMt45Profiles(raw?.profiles, DEFAULT_MT45_CONFIG.profiles);
+  const hasLegacyProfileFields = raw && typeof raw === 'object' && (
+    Object.hasOwn(raw, 'apiKey')
+    || Object.hasOwn(raw, 'priceStep')
+    || Object.hasOwn(raw, 'symbols')
+    || Object.hasOwn(raw, 'tickStorage')
+  );
+  if (hasLegacyProfileFields) {
+    profiles[activePlatform] = normalizeMt45Profile(raw, profiles[activePlatform]);
+  }
+  return {
+    activePlatform,
+    profiles,
+  };
+}
+
+function getMt45Profile(configRaw = runtimeConfig.mt45, platformRaw) {
+  const config = mergeMt45CollectorConfig(configRaw);
+  const platform = normalizeMt45Platform(platformRaw, config.activePlatform);
+  return config.profiles[platform] || config.profiles[config.activePlatform] || DEFAULT_MT45_PROFILE;
+}
+
+function getMt45RequestPlatform(body = {}) {
+  const config = mergeMt45CollectorConfig(runtimeConfig.mt45);
+  const firstTick = Array.isArray(body.ticks) ? body.ticks.find((tick) => tick && typeof tick === 'object') : null;
+  return normalizeMt45Platform(body.platform ?? body.source ?? firstTick?.platform ?? firstTick?.source, config.activePlatform);
+}
+
+function isMt45ApiKeyConfigured(platformRaw) {
+  const profile = getMt45Profile(runtimeConfig.mt45, platformRaw);
+  return Boolean(profile.apiKey && profile.apiKey !== DEFAULT_MT45_API_KEY);
+}
+
+function sanitizeMt45ConfigForAdmin() {
+  const config = mergeMt45CollectorConfig(runtimeConfig.mt45);
+  const profiles = {};
+  for (const platform of MT45_PLATFORMS) {
+    const profile = config.profiles[platform];
+    profiles[platform] = {
+      apiKeySet: isMt45ApiKeyConfigured(platform),
+      priceStep: profile.priceStep,
+      symbols: profile.symbols,
+      tickStorage: profile.tickStorage,
+    };
+  }
+  return {
+    activePlatform: config.activePlatform,
+    profiles,
+    ingestPath: '/ingest/mt45/tick',
+  };
 }
 
 function normalizeSymbol(input) {
@@ -355,7 +503,7 @@ function sanitizeCandles(rows, timeframe) {
       const time = floorToBucketSec(rawTimeSec, timeframe);
       const safeVolume = Number.isFinite(volume) ? volume : 0;
       if (![time, open, high, low, close, safeVolume].every((n) => Number.isFinite(n))) return null;
-      return {
+      const sanitized = {
         time: Math.floor(time),
         open,
         high,
@@ -363,6 +511,14 @@ function sanitizeCandles(rows, timeframe) {
         close,
         volume: safeVolume,
       };
+      for (const field of ['buyVolume', 'sellVolume', 'volumeDelta']) {
+        const value = Number(v[field]);
+        if (Number.isFinite(value)) sanitized[field] = value;
+      }
+      if (v.footprint && typeof v.footprint === 'object') {
+        sanitized.footprint = v.footprint;
+      }
+      return sanitized;
     })
     .filter((row) => row != null)
     .sort((a, b) => a.time - b.time);
@@ -390,7 +546,7 @@ function upsertCandles(market, symbol, timeframe, incomingCandles) {
 
 function mergeLiveCandle(existing, incoming) {
   if (!existing) return { ...incoming };
-  return {
+  const merged = {
     time: existing.time,
     open: Number.isFinite(existing.open) ? existing.open : incoming.open,
     high: Math.max(existing.high, incoming.high, incoming.close),
@@ -398,9 +554,16 @@ function mergeLiveCandle(existing, incoming) {
     close: incoming.close,
     volume: Number.isFinite(incoming.volume) ? incoming.volume : existing.volume,
   };
+  for (const field of ['buyVolume', 'sellVolume', 'volumeDelta']) {
+    if (Number.isFinite(incoming[field])) merged[field] = incoming[field];
+  }
+  if (incoming.footprint && typeof incoming.footprint === 'object') {
+    merged.footprint = incoming.footprint;
+  }
+  return merged;
 }
 
-function applyLiveCandle(market, symbol, timeframe, incomingCandle) {
+function applyLiveCandle(market, symbol, timeframe, incomingCandle, options = {}) {
   const canonicalSymbol = canonicalizeSymbolByMarket(market, symbol);
   const sanitized = sanitizeCandles([incomingCandle], timeframe);
   const incoming = sanitized[0];
@@ -427,13 +590,99 @@ function applyLiveCandle(market, symbol, timeframe, incomingCandle) {
   const trimmed = nextRows.slice(-MAX_CANDLES_PER_KEY);
   candleStore.set(key, trimmed);
   schedulePersistCandleStore();
-  persistMarketCandlesToPostgres(market, canonicalSymbol, timeframe, [incoming]);
+  if (options.persistToPostgres !== false) {
+    persistMarketCandlesToPostgres(market, canonicalSymbol, timeframe, [incoming]);
+  }
   return trimmed;
+}
+
+function applyLiveCandleMemoryOnly(market, symbol, timeframe, incomingCandle) {
+  return applyLiveCandle(market, symbol, timeframe, incomingCandle, { persistToPostgres: false });
 }
 
 function checkAdmin(req) {
   const token = req.headers['x-admin-token'];
   return typeof token === 'string' && token === runtimeConfig.adminToken;
+}
+
+function checkMt45Ingest(req, body = {}) {
+  const platform = getMt45RequestPlatform(body);
+  if (!isMt45ApiKeyConfigured(platform)) return false;
+  const headerToken = req.headers['x-mt45-api-key'];
+  const bodyToken = body.apiKey ?? body.api_key ?? body.token;
+  const token = typeof headerToken === 'string' ? headerToken : String(bodyToken || '');
+  return token === getMt45Profile(runtimeConfig.mt45, platform).apiKey;
+}
+
+function getMt45TickStorageConfig(platformRaw) {
+  return getMt45Profile(runtimeConfig.mt45, platformRaw).tickStorage;
+}
+
+function getMt45FlushStorageConfig() {
+  const config = mergeMt45CollectorConfig(runtimeConfig.mt45);
+  const activeStorage = config.profiles[config.activePlatform]?.tickStorage;
+  if (activeStorage?.enabled) return activeStorage;
+  return Object.values(config.profiles).find((profile) => profile.tickStorage.enabled)?.tickStorage || activeStorage || DEFAULT_MT45_TICK_STORAGE;
+}
+
+function getMt45EnabledRetentionDays() {
+  const config = mergeMt45CollectorConfig(runtimeConfig.mt45);
+  const retentions = Object.values(config.profiles)
+    .filter((profile) => profile.tickStorage.enabled)
+    .map((profile) => profile.tickStorage.retentionDays);
+  return retentions.length ? Math.max(...retentions) : null;
+}
+
+function getMt45SymbolConfig(market, symbol, platformRaw) {
+  const profile = getMt45Profile(runtimeConfig.mt45, platformRaw);
+  const normalizedMarket = normalizeMarket(market) || inferMarketFromSymbol(symbol);
+  const normalizedSymbol = canonicalizeSymbolByMarket(normalizedMarket, symbol);
+  const rule = profile.symbols.find((item) => item.market === normalizedMarket && item.symbol === normalizedSymbol);
+  return {
+    market: normalizedMarket,
+    symbol: normalizedSymbol,
+    priceStep: rule?.priceStep || profile.priceStep || 0,
+    tickStorageEnabled: Boolean(rule?.tickStorageEnabled),
+  };
+}
+
+function scheduleMt45TickFlush() {
+  const storage = getMt45FlushStorageConfig();
+  if (!storage.enabled || !marketTickPostgresStore || mt45TickFlushTimer != null) return;
+  mt45TickFlushTimer = setTimeout(() => {
+    mt45TickFlushTimer = null;
+    void flushMt45RawTickBuffer().catch((error) => {
+      console.warn('[data-gateway] mt45 raw tick flush failed:', error.message);
+    });
+  }, storage.flushIntervalMs);
+}
+
+async function flushMt45RawTickBuffer() {
+  const storage = getMt45FlushStorageConfig();
+  if (!marketTickPostgresStore || !mt45RawTickBuffer.length) return 0;
+  const batchSize = Math.min(storage.maxBatchSize, mt45RawTickBuffer.length);
+  const batch = mt45RawTickBuffer.splice(0, batchSize);
+  const inserted = await marketTickPostgresStore.tryInsertTicks(batch);
+  if (mt45RawTickBuffer.length) scheduleMt45TickFlush();
+  return inserted;
+}
+
+function enqueueMt45RawTicks(ticks) {
+  if (!marketTickPostgresStore || !Array.isArray(ticks) || !ticks.length) return;
+  const enabledTicks = ticks.filter((tick) => {
+    const storage = getMt45TickStorageConfig(tick.source);
+    return storage.enabled && getMt45SymbolConfig(tick.market, tick.symbol, tick.source).tickStorageEnabled;
+  });
+  if (!enabledTicks.length) return;
+  const storage = getMt45FlushStorageConfig();
+  mt45RawTickBuffer.push(...enabledTicks);
+  if (mt45RawTickBuffer.length >= storage.maxBatchSize) {
+    void flushMt45RawTickBuffer().catch((error) => {
+      console.warn('[data-gateway] mt45 raw tick batch insert failed:', error.message);
+    });
+    return;
+  }
+  scheduleMt45TickFlush();
 }
 
 async function loadRuntimeConfig() {
@@ -445,6 +694,7 @@ async function loadRuntimeConfig() {
       symbolProviders: structuredClone(DEFAULT_SYMBOL_PROVIDER_BY_MARKET),
       binance: mergeBinanceCollectorConfig(),
       kis: {},
+      mt45: mergeMt45CollectorConfig(),
     };
     await persistRuntimeConfig();
     return;
@@ -461,6 +711,7 @@ async function loadRuntimeConfig() {
     symbolProviders: mergeSymbolProviders(parsed.symbolProviders),
     binance: mergeBinanceCollectorConfig(parsed.binance),
     kis: parsed.kis && typeof parsed.kis === 'object' ? parsed.kis : {},
+    mt45: mergeMt45CollectorConfig(parsed.mt45),
   };
 }
 
@@ -552,6 +803,12 @@ function handleHealth(req, res) {
       enabledSymbols: getKisEnabledSymbols(),
       credentialsSet: hasKisCredentials(runtimeConfig.kis),
     },
+    mt45: {
+      activePlatform: mergeMt45CollectorConfig(runtimeConfig.mt45).activePlatform,
+      profiles: sanitizeMt45ConfigForAdmin().profiles,
+      tickStorageAvailable: Boolean(marketTickPostgresStore),
+      pendingRawTicks: mt45RawTickBuffer.length,
+    },
   });
 }
 
@@ -566,6 +823,7 @@ function handleGetConfig(req, res) {
     symbolProviders: runtimeConfig.symbolProviders,
     adminTokenSet: Boolean(runtimeConfig.adminToken),
     webhookPassphraseSet: Boolean(runtimeConfig.webhookPassphrase),
+    mt45: sanitizeMt45ConfigForAdmin(),
   });
 }
 
@@ -742,6 +1000,156 @@ function handleGetCandles(req, res, url) {
   });
 }
 
+function handleGetMt45Config(req, res) {
+  if (!checkAdmin(req)) {
+    sendJson(res, 401, { ok: false, message: 'unauthorized' });
+    return;
+  }
+
+  sendJson(res, 200, {
+    ok: true,
+    mt45: sanitizeMt45ConfigForAdmin(),
+    tickStorageAvailable: Boolean(marketTickPostgresStore),
+    pendingRawTicks: mt45RawTickBuffer.length,
+  });
+}
+
+async function handleSetMt45Config(req, res) {
+  if (!checkAdmin(req)) {
+    sendJson(res, 401, { ok: false, message: 'unauthorized' });
+    return;
+  }
+
+  let body;
+  try {
+    body = await parseBody(req);
+  } catch (error) {
+    sendJson(res, 400, { ok: false, message: error.message });
+    return;
+  }
+
+  const current = mergeMt45CollectorConfig(runtimeConfig.mt45);
+  const activePlatform = normalizeMt45Platform(body.activePlatform ?? body.platform, current.activePlatform);
+  const profiles = mergeMt45Profiles(body.profiles, current.profiles);
+  const activeProfile = profiles[activePlatform];
+  const incomingStorage = body.tickStorage && typeof body.tickStorage === 'object' ? body.tickStorage : null;
+  const hasActiveProfileFields = body && typeof body === 'object' && (
+    Object.hasOwn(body, 'apiKey')
+    || Object.hasOwn(body, 'priceStep')
+    || Object.hasOwn(body, 'symbols')
+    || Object.hasOwn(body, 'tickStorage')
+  );
+  if (hasActiveProfileFields) {
+    profiles[activePlatform] = normalizeMt45Profile({
+      ...activeProfile,
+      apiKey: body.apiKey ? String(body.apiKey) : activeProfile.apiKey,
+      priceStep: body.priceStep ?? activeProfile.priceStep,
+      symbols: body.symbols ?? activeProfile.symbols,
+      tickStorage: {
+        ...activeProfile.tickStorage,
+        ...(incomingStorage || {}),
+      },
+    }, activeProfile);
+  }
+  if (body.apiKeys && typeof body.apiKeys === 'object') {
+    for (const platform of MT45_PLATFORMS) {
+      if (body.apiKeys[platform]) {
+        profiles[platform] = normalizeMt45Profile({
+          ...profiles[platform],
+          apiKey: String(body.apiKeys[platform]),
+        }, profiles[platform]);
+      }
+    }
+  }
+  const next = {
+    activePlatform,
+    profiles,
+  };
+
+  runtimeConfig.mt45 = next;
+  await persistRuntimeConfig();
+  if (!mt45TickAggregator) {
+    mt45TickAggregator = createMt45TickAggregator({
+      priceStep: (tick) => getMt45SymbolConfig(tick.market, tick.symbol, tick.source).priceStep,
+    });
+  }
+  const enabledRetentionDays = getMt45EnabledRetentionDays();
+  if (enabledRetentionDays == null) {
+    mt45RawTickBuffer = [];
+  } else if (marketTickPostgresStore) {
+    void marketTickPostgresStore.tryPurgeOldTicks(enabledRetentionDays);
+  }
+
+  sendJson(res, 200, {
+    ok: true,
+    mt45: sanitizeMt45ConfigForAdmin(),
+    tickStorageAvailable: Boolean(marketTickPostgresStore),
+    pendingRawTicks: mt45RawTickBuffer.length,
+  });
+}
+
+async function handleMt45TickIngest(req, res) {
+  let body;
+  try {
+    body = await parseBody(req);
+  } catch (error) {
+    sendJson(res, 400, { ok: false, message: error.message });
+    return;
+  }
+
+  const platform = getMt45RequestPlatform(body);
+  if (!checkMt45Ingest(req, body)) {
+    sendJson(res, isMt45ApiKeyConfigured(platform) ? 401 : 503, {
+      ok: false,
+      message: isMt45ApiKeyConfigured(platform)
+        ? 'invalid mt45 api key'
+        : 'mt45 api key is not configured',
+    });
+    return;
+  }
+
+  const ticks = normalizeMt45Ticks(body, {
+    source: getMt45RequestPlatform(body),
+  });
+  if (!ticks.length) {
+    sendJson(res, 400, {
+      ok: false,
+      message: 'tick payload is required',
+      note: 'send {market,symbol,ticks:[{time,price,volume,bid,ask,side?}]}',
+    });
+    return;
+  }
+
+  let liveUpdated = 0;
+  let finalized = 0;
+  for (const tick of ticks) {
+    const result = mt45TickAggregator.applyTick(tick);
+    if (result.liveCandle) {
+      applyLiveCandleMemoryOnly(tick.market, tick.symbol, '1m', result.liveCandle);
+      liveUpdated += 1;
+    }
+    if (result.finalizedCandles.length) {
+      upsertCandles(tick.market, tick.symbol, '1m', result.finalizedCandles);
+      finalized += result.finalizedCandles.length;
+    }
+  }
+
+  enqueueMt45RawTicks(ticks);
+
+  sendJson(res, 202, {
+    ok: true,
+    accepted: ticks.length,
+    liveUpdated,
+    finalizedCandles: finalized,
+    tickStorage: {
+      enabled: getMt45TickStorageConfig(platform).enabled,
+      retentionDays: getMt45TickStorageConfig(platform).retentionDays,
+      available: Boolean(marketTickPostgresStore),
+      pending: mt45RawTickBuffer.length,
+    },
+  });
+}
+
 async function handleGetReportCandles(req, res, url) {
   const market = normalizeMarket(url.searchParams.get('market'));
   const symbol = canonicalizeSymbolByMarket(market, url.searchParams.get('symbol'));
@@ -834,7 +1242,10 @@ function handleNotFound(res) {
       'GET /health',
       'GET /admin/config',
       'POST /admin/provider',
+      'GET /admin/mt45',
+      'POST /admin/mt45',
       'POST /ingest/webhook/tradingview',
+      'POST /ingest/mt45/tick',
       'POST /ingest/api/candles',
       'GET /candles?market=index&symbol=NQ1!&timeframe=1m&limit=300',
       'GET /report/candles?market=crypto&symbol=BTCUSDT&timeframe=1m&limit=5000',
@@ -889,12 +1300,29 @@ function handleWebSocketUpgrade(req, socket) {
 
 await loadRuntimeConfig();
 await loadCandleStore();
+mt45TickAggregator = createMt45TickAggregator({
+  priceStep: (tick) => getMt45SymbolConfig(tick.market, tick.symbol, tick.source).priceStep,
+});
 
 try {
   marketCandlePostgresStore = await createMarketCandlePostgresStoreFromEnv(process.env);
 } catch (error) {
   console.warn('[data-gateway] postgres market candle store disabled:', error.message);
   marketCandlePostgresStore = null;
+}
+
+try {
+  marketTickPostgresStore = await createMarketTickPostgresStoreFromEnv(process.env);
+  if (marketTickPostgresStore) {
+    await marketTickPostgresStore.ensureSchema();
+    const enabledRetentionDays = getMt45EnabledRetentionDays();
+    if (enabledRetentionDays != null) {
+      void marketTickPostgresStore.tryPurgeOldTicks(enabledRetentionDays);
+    }
+  }
+} catch (error) {
+  console.warn('[data-gateway] postgres market tick store disabled:', error.message);
+  marketTickPostgresStore = null;
 }
 
 binanceCollector = createBinanceWebSocketCollector({
@@ -923,7 +1351,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(204, {
       'access-control-allow-origin': '*',
       'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS',
-      'access-control-allow-headers': 'content-type,x-admin-token',
+      'access-control-allow-headers': 'content-type,x-admin-token,x-mt45-api-key',
     });
     res.end();
     return;
@@ -946,8 +1374,23 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'GET' && url.pathname === '/admin/mt45') {
+    handleGetMt45Config(req, res);
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/admin/mt45') {
+    await handleSetMt45Config(req, res);
+    return;
+  }
+
   if (req.method === 'POST' && url.pathname === '/ingest/webhook/tradingview') {
     await handleWebhookIngest(req, res);
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/ingest/mt45/tick') {
+    await handleMt45TickIngest(req, res);
     return;
   }
 

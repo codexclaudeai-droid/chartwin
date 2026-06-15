@@ -2,6 +2,7 @@ export type AdminDashboardSectionKey =
   | 'overview'
   | 'webInfo'
   | 'symbols'
+  | 'marketData'
   | 'telegramAlerts'
   | 'statistics'
   | 'sales'
@@ -59,6 +60,13 @@ const ADMIN_DASHBOARD_SECTION_META: Record<AdminDashboardSectionKey, AdminDashbo
     label: '종목관리',
     description: 'TC Chart에서 제공할 종목, 티커, 카테고리, 아이콘 정보를 관리합니다.',
     href: '#admin-symbols',
+  },
+  marketData: {
+    key: 'marketData',
+    eyebrow: 'Market Data',
+    label: '데이터수집',
+    description: 'MT4/5 OHLCV, tick 실시간 수집과 Tick DB 저장 보관기간을 관리합니다.',
+    href: '#admin-market-data',
   },
   telegramAlerts: {
     key: 'telegramAlerts',
@@ -131,6 +139,7 @@ export const ADMIN_DASHBOARD_SECTIONS: AdminDashboardSection[] = [
   ADMIN_DASHBOARD_SECTION_META.overview,
   ADMIN_DASHBOARD_SECTION_META.webInfo,
   ADMIN_DASHBOARD_SECTION_META.symbols,
+  ADMIN_DASHBOARD_SECTION_META.marketData,
   ADMIN_DASHBOARD_SECTION_META.telegramAlerts,
   ADMIN_DASHBOARD_SECTION_META.users,
   ADMIN_DASHBOARD_SECTION_META.support,
@@ -190,6 +199,10 @@ function getSectionFromTargetId(targetId: string): AdminDashboardSectionKey | nu
 
   if (targetId === 'admin-symbols' || targetId.startsWith('admin-symbol-')) {
     return 'symbols';
+  }
+
+  if (targetId === 'admin-market-data' || targetId.startsWith('admin-market-data-')) {
+    return 'marketData';
   }
 
   if (targetId === 'admin-telegram-alerts' || targetId.startsWith('admin-telegram-alert-')) {

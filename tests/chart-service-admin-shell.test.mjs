@@ -16,6 +16,7 @@ test('admin dashboard sections define the professional sidebar order', () => {
     'overview',
     'webInfo',
     'symbols',
+    'marketData',
     'telegramAlerts',
     'users',
     'support',
@@ -59,6 +60,7 @@ test('admin dashboard shell maps legacy anchors and deep links to sidebar sectio
   assert.equal(getAdminDashboardSectionFromLocation('#admin-notice-popup'), 'webInfo');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-trial-policy'), 'subscriptions');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-symbols'), 'symbols');
+  assert.equal(getAdminDashboardSectionFromLocation('#admin-market-data'), 'marketData');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-telegram-alerts'), 'telegramAlerts');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-statistics'), 'statistics');
   assert.equal(getAdminDashboardSectionFromLocation('#admin-sales'), 'sales');
@@ -89,7 +91,7 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   assert.match(pageSource, /LandingScrollTopButton/);
   assert.match(pageSource, /<LandingScrollTopButton \/>/);
   assert.match(pageSource, /AdminDashboardShell/);
-  assert.match(pageSource, /sectionKey="overview"[\s\S]*sectionKey="webInfo"[\s\S]*sectionKey="symbols"[\s\S]*sectionKey="telegramAlerts"[\s\S]*sectionKey="users"[\s\S]*sectionKey="support"[\s\S]*sectionKey="payments"[\s\S]*sectionKey="subscriptions"[\s\S]*sectionKey="sales"[\s\S]*sectionKey="statistics"[\s\S]*sectionKey="audit"/);
+  assert.match(pageSource, /sectionKey="overview"[\s\S]*sectionKey="webInfo"[\s\S]*sectionKey="symbols"[\s\S]*sectionKey="marketData"[\s\S]*sectionKey="telegramAlerts"[\s\S]*sectionKey="users"[\s\S]*sectionKey="support"[\s\S]*sectionKey="payments"[\s\S]*sectionKey="subscriptions"[\s\S]*sectionKey="sales"[\s\S]*sectionKey="statistics"[\s\S]*sectionKey="audit"/);
   assert.doesNotMatch(pageSource, /AdminDashboardShellSection sectionKey="paymentSettings"/);
   assert.match(pageSource, /sectionKey="webInfo"[\s\S]*AdminWebInfoSection/);
   assert.match(pageSource, /sectionKey="subscriptions"[\s\S]*AdminSubscriptionSection/);

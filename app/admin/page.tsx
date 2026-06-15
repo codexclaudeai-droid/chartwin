@@ -1,6 +1,7 @@
 import { AdminAccessGate } from './admin-access-gate';
 import { AdminDashboardShell, AdminDashboardShellSection } from './admin-dashboard-shell';
 import { AdminDashboardPanel } from './admin-dashboard-panel';
+import { AdminMarketDataPanel } from './admin-market-data-panel';
 import { AdminSalesPanel } from './admin-sales-panel';
 import { AdminStatisticsPanel } from './admin-statistics-panel';
 import { AdminSubscriptionSection } from './admin-subscription-section';
@@ -37,6 +38,9 @@ export default function AdminPage() {
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="symbols">
             <AdminSymbolsPanel />
+          </AdminDashboardShellSection>
+          <AdminDashboardShellSection sectionKey="marketData">
+            <AdminMarketDataPanel />
           </AdminDashboardShellSection>
           <AdminDashboardShellSection sectionKey="telegramAlerts">
             <AdminTelegramAlertsPanel />
