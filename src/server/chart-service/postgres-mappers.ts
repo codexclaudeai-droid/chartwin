@@ -530,9 +530,9 @@ export function mapChartUserSettingsToPostgresRow(record: ChartUserSettingsRecor
 export function mapSignalAdminSettingsFromPostgresRow(row: PostgresRow): SignalAdminSettingsRecord {
   return {
     id: readString(row.id),
-    hiddenSymbols: readStringArray(row.hidden_symbols_json),
-    disabledSymbols: readStringArray(row.disabled_symbols_json),
-    hiddenStrategyIds: readStringArray(row.hidden_strategy_ids_json),
+    hiddenSymbols: readLegacySignalStringArray(row.hidden_symbols_json),
+    disabledSymbols: readLegacySignalStringArray(row.disabled_symbols_json),
+    hiddenStrategyIds: readLegacySignalStringArray(row.hidden_strategy_ids_json),
     strategyMgmtVisible: readBoolean(row.strategy_mgmt_visible),
     selectedStrategyId: readString(row.selected_strategy_id),
     updatedAt: readIsoString(row.updated_at),
@@ -991,6 +991,19 @@ function readStringArray(value: unknown): string[] {
     throw new Error('Expected postgres json string array value');
   }
   return [...parsedValue];
+}
+
+function readLegacySignalStringArray(value: unknown): string[] {
+  const parsedValue = typeof value === 'string' ? JSON.parse(value) : value;
+  if (
+    parsedValue &&
+    typeof parsedValue === 'object' &&
+    !Array.isArray(parsedValue) &&
+    Object.keys(parsedValue).length === 0
+  ) {
+    return [];
+  }
+  return readStringArray(value);
 }
 
 function readNullableStringArray(value: unknown): string[] | null {

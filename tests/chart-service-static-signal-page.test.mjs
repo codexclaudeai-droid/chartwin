@@ -120,5 +120,26 @@ test('postgres schema includes global signal admin settings persistence', async 
 
   assert.match(schema, /create table if not exists signal_admin_settings/);
   assert.match(schema, /hidden_strategy_ids_json jsonb/);
+  assert.match(schema, /jsonb_typeof\(hidden_symbols_json\) <> 'array'/);
+  assert.match(schema, /jsonb_typeof\(disabled_symbols_json\) <> 'array'/);
+  assert.match(schema, /jsonb_typeof\(hidden_strategy_ids_json\) <> 'array'/);
   assert.match(schema, /selected_strategy_id text/);
+});
+
+test('signal admin postgres mapper tolerates legacy empty json objects for array fields', async () => {
+  const { mapSignalAdminSettingsFromPostgresRow } = await import('../src/server/chart-service/postgres-mappers.ts');
+
+  const record = mapSignalAdminSettingsFromPostgresRow({
+    id: 'default',
+    hidden_symbols_json: {},
+    disabled_symbols_json: {},
+    hidden_strategy_ids_json: {},
+    strategy_mgmt_visible: false,
+    selected_strategy_id: 'strategy_js_grid_martingale',
+    updated_at: '2026-06-15T00:00:00.000Z',
+  });
+
+  assert.deepEqual(record.hiddenSymbols, []);
+  assert.deepEqual(record.disabledSymbols, []);
+  assert.deepEqual(record.hiddenStrategyIds, []);
 });
