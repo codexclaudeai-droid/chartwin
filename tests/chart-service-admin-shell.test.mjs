@@ -86,6 +86,8 @@ test('admin page wraps operation panels in the dashboard shell sections', () => 
   const dashboardSource = fs.readFileSync(new URL('../app/admin/admin-dashboard-panel.tsx', import.meta.url), 'utf8');
   const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
+  assert.match(pageSource, /LandingScrollTopButton/);
+  assert.match(pageSource, /<LandingScrollTopButton \/>/);
   assert.match(pageSource, /AdminDashboardShell/);
   assert.match(pageSource, /sectionKey="overview"[\s\S]*sectionKey="webInfo"[\s\S]*sectionKey="symbols"[\s\S]*sectionKey="telegramAlerts"[\s\S]*sectionKey="users"[\s\S]*sectionKey="support"[\s\S]*sectionKey="payments"[\s\S]*sectionKey="subscriptions"[\s\S]*sectionKey="sales"[\s\S]*sectionKey="statistics"[\s\S]*sectionKey="audit"/);
   assert.doesNotMatch(pageSource, /AdminDashboardShellSection sectionKey="paymentSettings"/);
@@ -320,6 +322,8 @@ test('admin dashboard uses polished console design tokens and surfaces', () => {
   assert.match(cssSource, /\.admin-page \.table/);
   assert.match(cssSource, /\.admin-page \.form input:focus/);
   assert.match(cssSource, /\.admin-page \.button:hover:not\(:disabled\)/);
+  assert.match(cssSource, /\.admin-page \.landing-scroll-top-button/);
+  assert.match(cssSource, /\.admin-page \.landing-scroll-top-button\.visible/);
 });
 
 test('admin refresh controls use the shared icon button', () => {

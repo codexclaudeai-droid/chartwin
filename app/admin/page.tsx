@@ -11,6 +11,7 @@ import { AdminPanel } from './admin-panel';
 import { AuditLogPanel } from './audit-log-panel';
 import { SupportAdminPanel } from './support-admin-panel';
 import { UserAdminPanel } from './user-admin-panel';
+import LandingScrollTopButton from '../landing-scroll-top-button.tsx';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +64,7 @@ export default function AdminPage() {
           </AdminDashboardShellSection>
         </AdminDashboardShell>
       </AdminAccessGate>
+      <LandingScrollTopButton />
     </main>
   );
 }

@@ -879,10 +879,10 @@ test('landing page shows a bottom-right scroll-to-top jump button after scrollin
   assert.match(scrollButtonSource, /window\.scrollTo\(\{ top: 0, behavior: 'smooth' \}\)/);
   assert.match(scrollButtonSource, /landing-scroll-top-button/);
   assert.match(scrollButtonSource, /aria-label="페이지 상단으로 이동"/);
-  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button,\s*\.legal-service-page \.landing-scroll-top-button\s*\{[\s\S]*?position: fixed/);
-  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button,\s*\.legal-service-page \.landing-scroll-top-button\s*\{[\s\S]*?right: clamp\(18px, 3vw, 34px\)/);
-  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button,\s*\.legal-service-page \.landing-scroll-top-button\s*\{[\s\S]*?bottom: clamp\(22px, 4vw, 42px\)/);
-  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button\.visible,\s*\.legal-service-page \.landing-scroll-top-button\.visible\s*\{[\s\S]*?opacity: 1/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button,\s*\.legal-service-page \.landing-scroll-top-button,\s*\.admin-page \.landing-scroll-top-button\s*\{[\s\S]*?position: fixed/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button,\s*\.legal-service-page \.landing-scroll-top-button,\s*\.admin-page \.landing-scroll-top-button\s*\{[\s\S]*?right: clamp\(18px, 3vw, 34px\)/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button,\s*\.legal-service-page \.landing-scroll-top-button,\s*\.admin-page \.landing-scroll-top-button\s*\{[\s\S]*?bottom: clamp\(22px, 4vw, 42px\)/);
+  assert.match(cssSource, /\.landing-page \.landing-scroll-top-button\.visible,\s*\.legal-service-page \.landing-scroll-top-button\.visible,\s*\.admin-page \.landing-scroll-top-button\.visible\s*\{[\s\S]*?opacity: 1/);
 });
 
 test('legal policy pages include the shared scroll-to-top button', () => {

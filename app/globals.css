@@ -7816,7 +7816,8 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .landing-page .landing-scroll-top-button,
-.legal-service-page .landing-scroll-top-button {
+.legal-service-page .landing-scroll-top-button,
+.admin-page .landing-scroll-top-button {
   align-items: center;
   backdrop-filter: blur(18px);
   background:
@@ -7845,7 +7846,8 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .landing-page .landing-scroll-top-button.visible,
-.legal-service-page .landing-scroll-top-button.visible {
+.legal-service-page .landing-scroll-top-button.visible,
+.admin-page .landing-scroll-top-button.visible {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
@@ -7854,7 +7856,9 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 .landing-page .landing-scroll-top-button:hover,
 .landing-page .landing-scroll-top-button:focus-visible,
 .legal-service-page .landing-scroll-top-button:hover,
-.legal-service-page .landing-scroll-top-button:focus-visible {
+.legal-service-page .landing-scroll-top-button:focus-visible,
+.admin-page .landing-scroll-top-button:hover,
+.admin-page .landing-scroll-top-button:focus-visible {
   border-color: rgba(216, 236, 255, 0.72);
   box-shadow: 0 22px 58px rgba(0, 0, 0, 0.42), 0 0 30px rgba(86, 240, 255, 0.26);
 }
