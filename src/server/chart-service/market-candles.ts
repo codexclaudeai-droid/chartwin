@@ -27,7 +27,25 @@ export type MarketCandleQuery = {
   limit?: string | number | null;
 };
 
+export type MarketCandleUpsertInput = {
+  market: string;
+  symbol: string;
+  timeframe: string;
+  candles: unknown[];
+};
+
 const ALLOWED_MARKETS = ['crypto', 'futures', 'index', 'commodity', 'fx'] as const;
+const MARKET_CANDLE_COLUMNS = [
+  'market',
+  'symbol',
+  'timeframe',
+  'time',
+  'open',
+  'high',
+  'low',
+  'close',
+  'volume',
+] as const;
 
 export function normalizeMarketCandleMarket(input: unknown): string | null {
   const market = String(input ?? '').trim().toLowerCase();
@@ -88,6 +106,103 @@ export function createMarketCandleSelectStatement(query: MarketCandleQuery): Pos
   };
 }
 
+export function getMarketCandleSchemaStatements(): PostgresStatement[] {
+  return [
+    {
+      sql: [
+        'create table if not exists market_candles (',
+        'market text not null,',
+        'symbol text not null,',
+        'timeframe text not null,',
+        'time timestamptz not null,',
+        'open numeric not null,',
+        'high numeric not null,',
+        'low numeric not null,',
+        'close numeric not null,',
+        'volume numeric default 0,',
+        'created_at timestamptz default now(),',
+        'updated_at timestamptz default now(),',
+        'primary key (market, symbol, timeframe, time)',
+        ')',
+      ].join(' '),
+      values: [],
+    },
+    {
+      sql: 'create index if not exists idx_market_candles_symbol_time on market_candles (market, symbol, time)',
+      values: [],
+    },
+    {
+      sql: 'create index if not exists idx_market_candles_timeframe_time on market_candles (market, symbol, timeframe, time)',
+      values: [],
+    },
+  ];
+}
+
+export function normalizeMarketCandleInput(candle: unknown): MarketCandle | null {
+  if (!candle || typeof candle !== 'object') return null;
+  const row = candle as Record<string, unknown>;
+  const time = parseUnixTimeSec(row.time);
+  const open = Number(row.open);
+  const high = Number(row.high);
+  const low = Number(row.low);
+  const close = Number(row.close);
+  const volume = row.volume == null ? 0 : Number(row.volume);
+  if (![time, open, high, low, close, volume].every(Number.isFinite)) return null;
+  return {
+    time,
+    open,
+    high,
+    low,
+    close,
+    volume,
+  };
+}
+
+export function createMarketCandleUpsertStatement(input: MarketCandleUpsertInput): PostgresStatement | null {
+  const market = normalizeMarketCandleMarket(input.market) ?? '';
+  const symbol = canonicalizeMarketCandleSymbol(market, input.symbol);
+  const timeframe = normalizeMarketCandleTimeframe(input.timeframe);
+  const rows = (Array.isArray(input.candles) ? input.candles : [])
+    .map(normalizeMarketCandleInput)
+    .filter((row): row is MarketCandle => row != null);
+  if (!market || !symbol || !timeframe || !rows.length) return null;
+
+  const values: unknown[] = [];
+  const rowSql = rows.map((row) => {
+    const normalized = {
+      market,
+      symbol,
+      timeframe,
+      time: new Date(row.time * 1000).toISOString(),
+      open: row.open,
+      high: row.high,
+      low: row.low,
+      close: row.close,
+      volume: row.volume,
+    };
+    const placeholders = MARKET_CANDLE_COLUMNS.map((column) => {
+      values.push(normalized[column]);
+      return `$${values.length}`;
+    });
+    return `(${placeholders.join(', ')})`;
+  });
+
+  return {
+    sql: [
+      `insert into market_candles (${MARKET_CANDLE_COLUMNS.join(', ')})`,
+      `values ${rowSql.join(', ')}`,
+      'on conflict (market, symbol, timeframe, time) do update set',
+      'open = excluded.open,',
+      'high = excluded.high,',
+      'low = excluded.low,',
+      'close = excluded.close,',
+      'volume = excluded.volume,',
+      'updated_at = now()',
+    ].join(' '),
+    values,
+  };
+}
+
 export function mapMarketCandleRows(rows: PostgresRow[]): MarketCandle[] {
   return rows
     .map((row) => {
@@ -124,6 +239,7 @@ export async function selectMarketCandles(query: MarketCandleQuery): Promise<Mar
   }
 
   try {
+    await ensureMarketCandleSchema(executor);
     const result = await executor.query(createMarketCandleSelectStatement({
       ...query,
       market,
@@ -131,6 +247,34 @@ export async function selectMarketCandles(query: MarketCandleQuery): Promise<Mar
       timeframe,
     }));
     return mapMarketCandleRows(result.rows);
+  } finally {
+    await executor.close();
+  }
+}
+
+export async function upsertMarketCandles(input: MarketCandleUpsertInput): Promise<number> {
+  const market = normalizeMarketCandleMarket(input.market);
+  const symbol = canonicalizeMarketCandleSymbol(market, input.symbol);
+  const timeframe = normalizeMarketCandleTimeframe(input.timeframe);
+  const statement = createMarketCandleUpsertStatement({
+    ...input,
+    market: market ?? '',
+    symbol,
+    timeframe,
+  });
+  if (!market || !symbol || !timeframe || !statement) {
+    throw new MarketCandleRequestError('market/symbol/timeframe/candles is required', 400);
+  }
+
+  const executor = createMarketCandleQueryExecutorFromConfig(getChartServiceRepositoryConfigFromEnv());
+  if (!executor) {
+    throw new MarketCandleRequestError('postgres market candle store is not configured', 503);
+  }
+
+  try {
+    await ensureMarketCandleSchema(executor);
+    await executor.query(statement);
+    return statement.values.length / MARKET_CANDLE_COLUMNS.length;
   } finally {
     await executor.close();
   }
@@ -152,6 +296,12 @@ function createMarketCandleQueryExecutorFromConfig(
   const adapter = resolveChartServiceRepositoryAdapter(config);
   if (adapter.kind !== 'postgres' || !adapter.connection) return null;
   return createNodePgPostgresQueryExecutor(adapter.connection);
+}
+
+async function ensureMarketCandleSchema(executor: ClosablePostgresQueryExecutor): Promise<void> {
+  for (const statement of getMarketCandleSchemaStatements()) {
+    await executor.query(statement);
+  }
 }
 
 function parseUnixTimeSec(value: unknown): number {
