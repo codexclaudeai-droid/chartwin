@@ -1,6 +1,7 @@
 import { bindTooltipBadge } from './tooltip-badge';
 
 const TOP_ICON_TOOLTIP = { placement: 'bottom' as const, align: 'center' as const, offset: 8 };
+const SHOW_AI_CHART_ANALYSIS_BUTTON = false;
 
 type MonitorMode = 'single' | 'multi';
 
@@ -572,7 +573,10 @@ export function createTopBar({
     if (splitMenuOpen) closeSplitMenu();
   });
   rightArea.appendChild(iconBtn(calendarSvgIcon, '경제달력', onOpenEconomicCalendar));
-  rightArea.appendChild(iconBtn(aiAnalysisSvgIcon, 'AI 차트분석', onAnalyzeChartWithAi));
+  if (SHOW_AI_CHART_ANALYSIS_BUTTON) {
+    const aiAnalysisBtn = iconBtn(aiAnalysisSvgIcon, 'AI 차트분석', onAnalyzeChartWithAi);
+    rightArea.appendChild(aiAnalysisBtn);
+  }
   rightArea.appendChild(signalBtn);
   rightArea.appendChild(splitWrap);
 

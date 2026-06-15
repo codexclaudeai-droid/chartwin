@@ -6,10 +6,15 @@ const aiSourcePath = new URL('../src/ui/workspace/ai-chart-analysis.ts', import.
 const topBarSource = fs.readFileSync(new URL('../src/ui/workspace/top-bar.ts', import.meta.url), 'utf8');
 const initSource = fs.readFileSync(new URL('../src/app/init.ts', import.meta.url), 'utf8');
 
-test('top bar wires browser-aware AI chart analysis action', () => {
+test('top bar keeps AI chart analysis action hidden until release', () => {
   assert.match(topBarSource, /onAnalyzeChartWithAi: \(\) => void/);
   assert.match(topBarSource, /aiAnalysisSvgIcon/);
-  assert.match(topBarSource, /iconBtn\(aiAnalysisSvgIcon, 'AI 차트분석', onAnalyzeChartWithAi\)/);
+  assert.match(topBarSource, /const SHOW_AI_CHART_ANALYSIS_BUTTON = false/);
+  assert.match(topBarSource, /if \(SHOW_AI_CHART_ANALYSIS_BUTTON\) \{/);
+  assert.doesNotMatch(
+    topBarSource,
+    /rightArea\.appendChild\(iconBtn\(aiAnalysisSvgIcon, 'AI 차트분석', onAnalyzeChartWithAi\)\);/,
+  );
   assert.match(initSource, /openAiChartAnalysis/);
   assert.match(initSource, /getActivePane\(\)\.chart/);
 });
