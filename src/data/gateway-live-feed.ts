@@ -1,5 +1,17 @@
-﻿import type { TimeframeKey } from '../catalog/time';
+import type { TimeframeKey } from '../catalog/time';
 import { disabledSymbols } from '../catalog/symbols';
+import {
+  inferGatewayMarket,
+  inferGatewayReportMarket,
+  normalizeSymbol,
+  shouldUseBinanceDirect,
+} from './gateway-market';
+export {
+  inferGatewayMarket,
+  inferGatewayReportMarket,
+  normalizeSymbol,
+  shouldUseBinanceDirect,
+} from './gateway-market';
 
 export type CandleDataLike = {
   time: number;
@@ -84,53 +96,6 @@ function loadGatewayFastSyncConfig(): GatewayFastSyncConfig {
   }
 }
 
-const FX_QUOTES = ['USD', 'EUR', 'JPY', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD', 'KRW', 'CNH', 'HKD', 'SGD'];
-
-function normalizeSymbol(symbol: string): string {
-  const normalized = symbol.replace(/\s+/g, '').toUpperCase();
-  if (normalized === 'NAS100' || normalized === 'NQ') return 'NQ1!';
-  if (normalized === '^IXIC') return 'NASDAQ';
-  return normalized;
-}
-
-function stripCryptoFuturesSuffix(symbol: string): string {
-  return symbol.endsWith('.P') ? symbol.slice(0, -2) : symbol;
-}
-
-function isCryptoLikeSymbol(symbol: string): boolean {
-  const base = stripCryptoFuturesSuffix(normalizeSymbol(symbol));
-  return base.endsWith('USDT') || base.endsWith('BUSD') || base.endsWith('USDC');
-}
-
-function isFxLikeSymbol(symbol: string): boolean {
-  const upper = normalizeSymbol(symbol);
-  if (!/^[A-Z]{6}$/.test(upper)) return false;
-  const base = upper.slice(0, 3);
-  const quote = upper.slice(3);
-  return FX_QUOTES.includes(base) && FX_QUOTES.includes(quote);
-}
-
-function isCommodityLikeSymbol(symbol: string): boolean {
-  const upper = normalizeSymbol(symbol);
-  return upper.startsWith('XAU') || upper.startsWith('XAG') || upper.startsWith('XPT') || upper.startsWith('USO') || upper.startsWith('WTI') || upper.startsWith('BRENT');
-}
-
-export function shouldUseBinanceDirect(symbol: string): boolean {
-  return isCryptoLikeSymbol(symbol);
-}
-
-export function inferGatewayMarket(symbol: string): 'futures' | 'index' | 'commodity' | 'fx' {
-  if (isCommodityLikeSymbol(symbol)) return 'commodity';
-  if (isFxLikeSymbol(symbol)) return 'fx';
-  if (/^([A-Z]{2,5}\d{2,4}|SPX500|NAS100|NQ1!|NDX|NASDAQ|IXIC|HSI|DAX|NIKKEI|KOSPI|KOSDAQ|KOSPI200)$/.test(normalizeSymbol(symbol))) {
-    return 'index';
-  }
-  return 'futures';
-}
-
-export function inferGatewayReportMarket(symbol: string): 'crypto' | 'futures' | 'index' | 'commodity' | 'fx' {
-  return isCryptoLikeSymbol(symbol) ? 'crypto' : inferGatewayMarket(symbol);
-}
 
 function resolveGatewayBaseUrl(): string {
   const win = window as Window & { __DATA_GATEWAY_URL__?: string };
@@ -140,7 +105,7 @@ function resolveGatewayBaseUrl(): string {
   if (fromWindow) return fromWindow.replace(/\/+$/, '');
   if (fromStorage) return fromStorage.replace(/\/+$/, '');
   if (fromEnv) return fromEnv.replace(/\/+$/, '');
-  // 로컬 개발 환경은 로컬 게이트웨이, 그 외 배포 환경은 같은 오리진을 사용
+  // Local development uses the local gateway; deployed builds use the same origin.
   const hostname = window.location.hostname;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://127.0.0.1:8787';
