@@ -7,7 +7,12 @@ import {
 } from '../signal-admin-settings.ts';
 
 export async function GET() {
-  return signalAdminJson(toStrategiesResponse(await readSignalAdminSettings()));
+  try {
+    return signalAdminJson(toStrategiesResponse(await readSignalAdminSettings()));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'load failed';
+    return signalAdminJson({ ok: false, message }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
@@ -22,11 +27,16 @@ export async function POST(request: Request) {
     return signalAdminJson({ ok: false, message }, { status: message.includes('Super admin') ? 403 : 401 });
   }
 
-  const settings = await updateSignalAdminSettings({
-    hiddenStrategies: (body as { hidden?: unknown }).hidden as string[],
-    mgmtVisible: (body as { mgmtVisible?: unknown }).mgmtVisible === true,
-    selectedStrategyId: String((body as { selectedStrategyId?: unknown }).selectedStrategyId || ''),
-  });
+  try {
+    const settings = await updateSignalAdminSettings({
+      hiddenStrategies: (body as { hidden?: unknown }).hidden as string[],
+      mgmtVisible: (body as { mgmtVisible?: unknown }).mgmtVisible === true,
+      selectedStrategyId: String((body as { selectedStrategyId?: unknown }).selectedStrategyId || ''),
+    });
 
-  return signalAdminJson(toStrategiesResponse(settings));
+    return signalAdminJson(toStrategiesResponse(settings));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'save failed';
+    return signalAdminJson({ ok: false, message }, { status: 500 });
+  }
 }

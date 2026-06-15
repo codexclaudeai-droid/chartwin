@@ -7,7 +7,12 @@ import {
 } from '../signal-admin-settings.ts';
 
 export async function GET() {
-  return signalAdminJson(toSymbolsResponse(await readSignalAdminSettings()));
+  try {
+    return signalAdminJson(toSymbolsResponse(await readSignalAdminSettings()));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'load failed';
+    return signalAdminJson({ ok: false, message }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
@@ -22,10 +27,15 @@ export async function POST(request: Request) {
     return signalAdminJson({ ok: false, message }, { status: message.includes('Super admin') ? 403 : 401 });
   }
 
-  const settings = await updateSignalAdminSettings({
-    hidden: (body as { hidden?: unknown }).hidden as string[],
-    disabled: (body as { disabled?: unknown }).disabled as string[],
-  });
+  try {
+    const settings = await updateSignalAdminSettings({
+      hidden: (body as { hidden?: unknown }).hidden as string[],
+      disabled: (body as { disabled?: unknown }).disabled as string[],
+    });
 
-  return signalAdminJson(toSymbolsResponse(settings));
+    return signalAdminJson(toSymbolsResponse(settings));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'save failed';
+    return signalAdminJson({ ok: false, message }, { status: 500 });
+  }
 }

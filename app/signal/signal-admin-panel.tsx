@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { readRequiredJsonPayload } from './signal-admin-json';
 
 type SymbolItem = {
   id: string;
@@ -129,7 +130,7 @@ export function SignalAdminPanel() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
       });
-      const validatePayload = await validateResponse.json();
+      const validatePayload = await readRequiredJsonPayload(validateResponse);
       if (!validatePayload.ok) throw new Error(validatePayload.message || 'unauthorized');
 
       const [symbolsPayload, strategiesPayload] = await Promise.all([
@@ -369,7 +370,7 @@ function StatusMessage({ status, compact = false }: Readonly<{ status: StatusSta
 
 async function fetchJson(url: string) {
   const response = await fetch(url, { cache: 'no-store' });
-  const payload = await response.json();
+  const payload = await readRequiredJsonPayload(response);
   if (!payload.ok) throw new Error(payload.message || 'failed');
   return payload;
 }
@@ -380,7 +381,7 @@ async function postJson(url: string, body: Record<string, unknown>) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const payload = await response.json();
+  const payload = await readRequiredJsonPayload(response);
   if (!payload.ok) throw new Error(payload.message || 'failed');
   return payload;
 }

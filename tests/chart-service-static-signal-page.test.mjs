@@ -25,7 +25,7 @@ test('fullstack signal admin routes save strategy settings as JSON', async () =>
     const repository = getChartServiceRepository({ CHART_SERVICE_REPOSITORY: 'memory' });
     const { session } = createSessionForUser(repository, {
       userId: 'super_1',
-      createdAt: '2026-05-31T00:00:00.000Z',
+      createdAt: new Date().toISOString(),
       ttlSeconds: 60 * 60,
     });
 
@@ -73,7 +73,7 @@ test('signal admin mutations reject non-super-admin sessions', async () => {
     const repository = getChartServiceRepository({ CHART_SERVICE_REPOSITORY: 'memory' });
     const { session } = createSessionForUser(repository, {
       userId: 'admin_1',
-      createdAt: '2026-05-31T00:00:00.000Z',
+      createdAt: new Date().toISOString(),
       ttlSeconds: 60 * 60,
     });
 
