@@ -11174,6 +11174,10 @@ body:has(.chart-preview-page) .site-footer {
   display: none;
 }
 
+body:has(.chart-runtime-page) .site-footer {
+  display: none;
+}
+
 @media (max-width: 640px) {
   body:not(:has(.landing-page)) .chart-preview-page {
     padding: 22px;

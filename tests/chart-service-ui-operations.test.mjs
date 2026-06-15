@@ -1126,6 +1126,7 @@ test('landing page presents TC Chart feature capabilities under the TradingCore 
 test('chart route renders the TC Chart access preview or runtime', () => {
   const chartPageSource = fs.readFileSync(new URL('../app/chart/page.tsx', import.meta.url), 'utf8');
   const previewSource = fs.readFileSync(new URL('../app/chart/chart-access-preview.tsx', import.meta.url), 'utf8');
+  const cssSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(chartPageSource, /ChartAccessPreview/);
   assert.match(chartPageSource, /ChartRuntime/);
@@ -1139,6 +1140,8 @@ test('chart route renders the TC Chart access preview or runtime', () => {
   assert.doesNotMatch(chartPageSource, /Full chart/);
   assert.doesNotMatch(chartPageSource, /Paid signals/);
   assert.doesNotMatch(chartPageSource, /Chart engine/);
+  assert.match(cssSource, /body:has\(\.chart-preview-page\) \.site-footer\s*\{[^}]*display: none/s);
+  assert.match(cssSource, /body:has\(\.chart-runtime-page\) \.site-footer\s*\{[^}]*display: none/s);
 });
 
 test('landing hero keeps internal access gate details out of the public view', () => {
