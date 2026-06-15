@@ -26,3 +26,9 @@ test('Next layout installs the external-error guard with beforeInteractive strat
     /<script dangerouslySetInnerHTML=\{\{ __html: ethereumExtensionErrorGuardScript \}\} \/>/,
   );
 });
+
+test('Next layout suppresses root html hydration noise from browser extensions', () => {
+  const source = readFileSync('app/layout.tsx', 'utf8');
+
+  assert.match(source, /<html lang="ko" suppressHydrationWarning>/);
+});
