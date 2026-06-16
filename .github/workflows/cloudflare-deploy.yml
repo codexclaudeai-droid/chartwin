@@ -87,28 +87,44 @@ jobs:
       - name: Build integrated Next.js Cloudflare worker
         run: npm run service:cloudflare:build
 
-      - name: Upload runtime secrets
+      - name: Write runtime secrets file
+        env:
+          SECRETS_FILE: ${{ runner.temp }}/chartwin-secrets.json
         run: |
           set -euo pipefail
-          for name in \
-            CHART_SERVICE_DATABASE_URL \
-            CHART_SERVICE_SESSION_SECRET \
-            CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL \
-            CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD \
-            CHART_SERVICE_BOOTSTRAP_ADMIN_NAME \
-            WEB_PUSH_PUBLIC_KEY \
-            WEB_PUSH_PRIVATE_KEY \
-            WEB_PUSH_SUBJECT \
-            CHART_SERVICE_GOOGLE_CLIENT_ID \
-            CHART_SERVICE_GOOGLE_CLIENT_SECRET \
-            CHART_SERVICE_NAVER_CLIENT_ID \
-            CHART_SERVICE_NAVER_CLIENT_SECRET
-          do
-            printf '%s' "${!name}" | npx wrangler secret put "$name"
-          done
-          printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | npx wrangler secret put CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID
-          EMAIL_API_TOKEN="${CLOUDFLARE_EMAIL_API_TOKEN:-$CLOUDFLARE_API_TOKEN}"
-          printf '%s' "$EMAIL_API_TOKEN" | npx wrangler secret put CHART_SERVICE_CLOUDFLARE_API_TOKEN
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const secretNames = [
+            'CHART_SERVICE_DATABASE_URL',
+            'CHART_SERVICE_SESSION_SECRET',
+            'CHART_SERVICE_BOOTSTRAP_ADMIN_EMAIL',
+            'CHART_SERVICE_BOOTSTRAP_ADMIN_PASSWORD',
+            'CHART_SERVICE_BOOTSTRAP_ADMIN_NAME',
+            'WEB_PUSH_PUBLIC_KEY',
+            'WEB_PUSH_PRIVATE_KEY',
+            'WEB_PUSH_SUBJECT',
+            'CHART_SERVICE_GOOGLE_CLIENT_ID',
+            'CHART_SERVICE_GOOGLE_CLIENT_SECRET',
+            'CHART_SERVICE_NAVER_CLIENT_ID',
+            'CHART_SERVICE_NAVER_CLIENT_SECRET',
+          ];
+
+          const secrets = Object.fromEntries(
+            secretNames.map((name) => [name, process.env[name] ?? '']),
+          );
+          secrets.CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID ?? '';
+          secrets.CHART_SERVICE_CLOUDFLARE_API_TOKEN =
+            process.env.CLOUDFLARE_EMAIL_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '';
+
+          fs.writeFileSync(process.env.SECRETS_FILE, JSON.stringify(secrets));
+          fs.chmodSync(process.env.SECRETS_FILE, 0o600);
+          NODE
 
       - name: Deploy Worker
-        run: npx wrangler deploy
+        env:
+          SECRETS_FILE: ${{ runner.temp }}/chartwin-secrets.json
+        run: |
+          set -euo pipefail
+          trap 'rm -f "$SECRETS_FILE"' EXIT
+          npx wrangler deploy --secrets-file "$SECRETS_FILE"

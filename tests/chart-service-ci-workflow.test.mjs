@@ -23,15 +23,16 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(workflow, /runs-on:\s+ubuntu-latest/);
   assert.match(workflow, /npm run service:cloudflare:build/);
   assert.match(deployWorkflow, /npm ci --include=dev/);
-  assert.match(deployWorkflow, /npx wrangler deploy/);
+  assert.match(deployWorkflow, /npx wrangler deploy --secrets-file "\$SECRETS_FILE"/);
   assert.match(deployWorkflow, /npm run service:migrate/);
   assert.match(deployWorkflow, /npm run service:bootstrap/);
   assert.match(deployWorkflow, /npm run service:postgres:admin-check/);
   assert.match(deployWorkflow, /node scripts\/ensure-cloudflare-hyperdrive\.mjs/);
   assert.ok(
-    deployWorkflow.indexOf('Upload runtime secrets') < deployWorkflow.indexOf('Deploy Worker'),
-    'runtime secrets must be uploaded before deploying the Worker',
+    deployWorkflow.indexOf('Write runtime secrets file') < deployWorkflow.indexOf('Deploy Worker'),
+    'runtime secrets file must be written before deploying the Worker',
   );
+  assert.match(deployWorkflow, /SECRETS_FILE:\s+\$\{\{ runner\.temp \}\}\/chartwin-secrets\.json/);
   assert.match(deployWorkflow, /CHART_SERVICE_DATABASE_URL/);
   assert.match(deployWorkflow, /CHART_SERVICE_SESSION_SECRET/);
   assert.match(deployWorkflow, /CLOUDFLARE_HYPERDRIVE_NAME:\s+tradingcore-hyperdrive/);
@@ -59,10 +60,10 @@ test('chart service CI workflow runs chart and Cloudflare build checks', () => {
   assert.match(deployWorkflow, /CLOUDFLARE_ACCOUNT_ID/);
   assert.match(deployWorkflow, /CLOUDFLARE_API_TOKEN/);
   assert.match(deployWorkflow, /CLOUDFLARE_EMAIL_API_TOKEN:\s+\$\{\{ secrets\.CLOUDFLARE_EMAIL_API_TOKEN \}\}/);
-  assert.match(deployWorkflow, /EMAIL_API_TOKEN="\$\{CLOUDFLARE_EMAIL_API_TOKEN:-\$CLOUDFLARE_API_TOKEN\}"/);
-  assert.match(deployWorkflow, /wrangler secret put CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID/);
-  assert.match(deployWorkflow, /wrangler secret put CHART_SERVICE_CLOUDFLARE_API_TOKEN/);
-  assert.match(deployWorkflow, /wrangler secret put "\$name"/);
+  assert.match(deployWorkflow, /process\.env\.CLOUDFLARE_EMAIL_API_TOKEN \|\| process\.env\.CLOUDFLARE_API_TOKEN/);
+  assert.match(deployWorkflow, /secrets\.CHART_SERVICE_CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(deployWorkflow, /secrets\.CHART_SERVICE_CLOUDFLARE_API_TOKEN/);
+  assert.doesNotMatch(deployWorkflow, /wrangler secret put/);
   assert.match(deployWorkflow, /WEB_PUSH_PRIVATE_KEY/);
   assert.match(openNextConfig, /buildCommand:\s*'npx next build'/);
   assert.match(nextConfig, /pg-cloudflare/);
