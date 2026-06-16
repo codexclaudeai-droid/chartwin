@@ -7,6 +7,7 @@ import {
   getChartServiceRepositoryConfigSignature,
   resolvePostgresConnectionSettings,
   resolveChartServiceRepositoryAdapter,
+  getChartServiceRepositoryConfigFromEnv,
 } from '../src/server/chart-service/index.ts';
 
 test('repository adapter defaults to isolated in-memory persistence', () => {
@@ -103,6 +104,23 @@ test('cloudflare workers runtime uses Supabase direct host when a pooler url inc
   assert.match(settings.connectionString, /db\.project-ref\.supabase\.co:5432\/postgres/);
   assert.equal(settings.connectionString.includes('super-secret'), true);
   assert.equal(JSON.stringify(settings).includes('super-secret'), false);
+});
+
+test('explicit database url wins over an ambient Hyperdrive binding', () => {
+  const config = getChartServiceRepositoryConfigFromEnv({
+    CHART_SERVICE_REPOSITORY: 'postgres',
+    CHART_SERVICE_DATABASE_URL: 'postgresql://postgres.project-ref:super-secret@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres',
+    CHART_SERVICE_DATABASE_SSL_MODE: 'require',
+    CHART_SERVICE_RUNTIME_TARGET: 'cloudflare-workers',
+    HYPERDRIVE: {
+      connectionString: 'postgresql://token.hyperdrive.local:5432/config-id',
+    },
+  });
+
+  const resolved = resolveChartServiceRepositoryAdapter(config);
+
+  assert.equal(resolved.connection?.host, 'db.project-ref.supabase.co');
+  assert.equal(resolved.connection?.sslMode, 'require');
 });
 
 test('cloudflare Hyperdrive local connections disable app-level SSL', () => {

@@ -71,7 +71,7 @@ export function getChartServiceRepositoryConfigFromEnv(
 ): ChartServiceRepositoryAdapterConfig {
   return {
     adapter: env.CHART_SERVICE_REPOSITORY,
-    databaseUrl: env.HYPERDRIVE?.connectionString ?? env.CHART_SERVICE_DATABASE_URL,
+    databaseUrl: env.CHART_SERVICE_DATABASE_URL ?? env.HYPERDRIVE?.connectionString,
     databaseSslMode: env.CHART_SERVICE_DATABASE_SSL_MODE,
     runtimeTarget: env.CHART_SERVICE_RUNTIME_TARGET,
     runtimeMode: env.NODE_ENV,
@@ -209,7 +209,7 @@ function getRuntimeEnv(): ChartServiceRepositoryRuntimeEnv {
     process?: { env?: ChartServiceRepositoryRuntimeEnv };
   }).process?.env) ?? {};
   const hyperdriveConnectionString = getHyperdriveConnectionString();
-  if (!hyperdriveConnectionString) return processEnv;
+  if (!hyperdriveConnectionString || processEnv.CHART_SERVICE_DATABASE_URL) return processEnv;
 
   return {
     ...processEnv,
