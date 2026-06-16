@@ -2810,6 +2810,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         pane.tfSelect.value = timeframe as TimeframeKey;
         pane.tfSelect.dispatchEvent(new Event('change'));
       },
+      onManualRefresh: () => {
+        const pane = getActivePane();
+        requestStrategyReportAfterNextCompute(pane.paneId);
+        pane.chart.recomputeStrategySignals?.(0);
+      },
       getExpandedAvailableHeight: () => Math.max(0, app.clientHeight - topBarHeight - bottomBarHeight * 2),
       onHeightChange: (nextHeight) => {
         reportPanelHeight = nextHeight;

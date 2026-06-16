@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const initSource = fs.readFileSync(new URL('../src/app/init.ts', import.meta.url), 'utf8');
 const panelSource = fs.readFileSync(new URL('../src/ui/workspace/strategy-report-panel.ts', import.meta.url), 'utf8');
+const chartSource = fs.readFileSync(new URL('../src/chart/SimpleChart.ts', import.meta.url), 'utf8');
 
 test('strategy report panel skips calculation while hidden or collapsed', () => {
   assert.match(
@@ -56,5 +57,50 @@ test('expanded strategy report refreshes after timeframe recompute without manua
     initSource,
     /onModeChange: \(mode, prevMode\) => \{[\s\S]*?strategyReportOpenByPane\.set\(paneId, mode !== 'collapsed'\);/,
     'unfolding the report panel should mark it open for subsequent strategy recomputes',
+  );
+});
+
+test('live current-candle patches do not schedule strategy recomputation', () => {
+  const updateLastCandleMethod = chartSource.match(
+    /public updateLastCandle\(td: Partial<CandleData>\) \{[\s\S]*?\n  \}/,
+  )?.[0] ?? '';
+  const addNewCandleMethod = chartSource.match(
+    /public addNewCandle\(c: CandleData\) \{[\s\S]*?\n  \}/,
+  )?.[0] ?? '';
+
+  assert.match(
+    updateLastCandleMethod,
+    /this\.draw\(\);/,
+    'live current-candle updates should keep drawing immediately',
+  );
+  assert.ok(updateLastCandleMethod, 'updateLastCandle method should be present');
+  assert.ok(addNewCandleMethod, 'addNewCandle method should be present');
+  assert.doesNotMatch(
+    updateLastCandleMethod,
+    /scheduleStrategyCompute/,
+    'current-candle tick updates should not recompute strategy on every tick',
+  );
+  assert.match(
+    addNewCandleMethod,
+    /scheduleStrategyCompute/,
+    'new completed candle boundaries should still recompute strategy candidates',
+  );
+});
+
+test('manual strategy report refresh requests a fresh strategy recompute first', () => {
+  assert.match(
+    chartSource,
+    /public recomputeStrategySignals\(changedFrom = 0\): void \{[\s\S]*?this\.scheduleStrategyCompute\(changedFrom, 0\);[\s\S]*?\}/,
+    'chart should expose an explicit strategy recompute API for report refreshes',
+  );
+  assert.match(
+    panelSource,
+    /manualRefreshBtn\.addEventListener\('click', \(\) => \{[\s\S]*?onManualRefresh\?\.\(\);[\s\S]*?refresh\(\);[\s\S]*?\}\);/,
+    'manual report refresh should request a fresh strategy recompute before refreshing',
+  );
+  assert.match(
+    initSource,
+    /onManualRefresh: \(\) => \{[\s\S]*?requestStrategyReportAfterNextCompute\(pane\.paneId\);[\s\S]*?pane\.chart\.recomputeStrategySignals\?\.\(0\);[\s\S]*?\}/,
+    'the app should refresh the report after the explicit strategy recompute finishes',
   );
 });

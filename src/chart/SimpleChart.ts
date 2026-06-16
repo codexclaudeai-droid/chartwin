@@ -5704,8 +5704,11 @@ export class SimpleChart {
     this.displayDataCache = null;
     this.displayDataCacheKey = '';
     this.invalidateDoubleBreakResultCache();
-    this.scheduleStrategyCompute(Math.max(0, i - 1), 50);
     this.draw();
+  }
+
+  public recomputeStrategySignals(changedFrom = 0): void {
+    this.scheduleStrategyCompute(changedFrom, 0);
   }
 
   public addNewCandle(c: CandleData) {

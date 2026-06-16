@@ -27,6 +27,7 @@ type StrategyReportChartLike = {
   getCandles: () => CandleLike[];
   getStrategySignalSeries: () => number[];
   isStrategyComputePending?: () => boolean;
+  recomputeStrategySignals?: (changedFrom?: number) => void;
   getActiveStrategyName: () => string | null;
   focusRangeByIndex?: (
     startIndex: number,
@@ -71,6 +72,7 @@ type CreateStrategyReportPanelArgs<TChart extends StrategyReportChartLike> = {
   getExpandedAvailableHeight?: () => number;
   onHeightChange?: (height: number) => void;
   onModeChange?: (mode: 'normal' | 'expanded' | 'collapsed', prevMode: 'normal' | 'expanded' | 'collapsed') => void;
+  onManualRefresh?: () => void;
 };
 
 type SideFilter = 'all' | 'long' | 'short';
@@ -560,6 +562,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   getExpandedAvailableHeight,
   onHeightChange,
   onModeChange,
+  onManualRefresh,
 }: CreateStrategyReportPanelArgs<TChart>): {
   refresh: () => void;
   setVisible: (visible: boolean) => void;
@@ -2447,6 +2450,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     }
   });
   manualRefreshBtn.addEventListener('click', () => {
+    onManualRefresh?.();
     refresh();
   });
   expandBtn.addEventListener('click', () => {
