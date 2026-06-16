@@ -24,6 +24,18 @@ test('wrangler config defines a Worker entrypoint and static asset binding', () 
   assert.doesNotMatch(wranglerSource, /pages_build_output_dir/);
 });
 
+test('wrangler config preserves the existing chartwin Worker routes and bindings', () => {
+  assert.match(wranglerSource, /"compatibility_flags"\s*:\s*\[\s*"nodejs_compat"\s*\]/);
+  assert.match(wranglerSource, /"workers_dev"\s*:\s*true/);
+  assert.match(wranglerSource, /"pattern"\s*:\s*"www\.tradingcore\.co"/);
+  assert.match(wranglerSource, /"pattern"\s*:\s*"dev\.tradingcore\.co"/);
+  assert.match(wranglerSource, /"pattern"\s*:\s*"tradingcore\.co"/);
+  assert.match(wranglerSource, /"binding"\s*:\s*"HYPERDRIVE"/);
+  assert.match(wranglerSource, /"name"\s*:\s*"EMAIL"/);
+  assert.match(wranglerSource, /"crons"\s*:\s*\[\s*"\* \* \* \* \*"\s*\]/);
+  assert.match(wranglerSource, /"DATA_GATEWAY_URL"\s*:\s*"https:\/\/minority-iowa-retrieve-contest\.trycloudflare\.com"/);
+});
+
 test('deployment doc describes Workers as the primary target', () => {
   assert.match(deploymentDoc, /Cloudflare Workers as the primary deployment target/i);
   assert.match(deploymentDoc, /wrangler deploy/);
