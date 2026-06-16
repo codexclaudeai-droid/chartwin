@@ -205,7 +205,7 @@ function normalizeAdapter(adapter: string | null | undefined): ChartServiceRepos
 }
 
 function getRuntimeEnv(): ChartServiceRepositoryRuntimeEnv {
-  const processEnv = ((globalThis as typeof globalThis & {
+  const processEnv: ChartServiceRepositoryRuntimeEnv = ((globalThis as typeof globalThis & {
     process?: { env?: ChartServiceRepositoryRuntimeEnv };
   }).process?.env) ?? {};
   const hyperdriveConnectionString = getHyperdriveConnectionString();
