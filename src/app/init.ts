@@ -30,6 +30,7 @@ import {
 } from '../strategy/strategy-service';
 import { GRID_ATR_BNF_SROUTER_PRESETS, inferGridAtrBnfSrouterPreset } from '../strategy/strategies/grid-atr-bnf-srouter-v1';
 import { getStrategyHistoryDiagnostic } from '../strategy/strategy-history';
+import { normalizeSignalSeriesLength } from '../strategy/signal-series';
 import {
   openChartSettingsModal,
   openIndicatorModal,
@@ -2995,8 +2996,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         day: '2-digit',
       });
       const candles = pane.chart.getCandles();
-      const series = pane.chart.getStrategySignalSeries();
-      if (!Array.isArray(series) || !series.length) return 0;
+      const series = normalizeSignalSeriesLength(pane.chart.getStrategySignalSeries(), candles.length);
+      if (!series.length) return 0;
       return series.reduce<number>((acc, value, index) => {
         if (Number(value) === 0) return acc;
         const sec = Number(candles[index]?.time);
@@ -3050,7 +3051,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         day: '2-digit',
       });
       const candles = pane.chart.getCandles();
-      const series = pane.chart.getStrategySignalSeries();
+      const series = normalizeSignalSeriesLength(pane.chart.getStrategySignalSeries(), candles.length);
       const symbol = pane.chart.config.symbol;
       const found: Array<{
         key: string;
@@ -3060,7 +3061,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         timeSec: number;
         timezone: string;
       }> = [];
-      const n = Math.min(candles.length, series.length);
+      const n = candles.length;
       for (let i = 0; i < n; i += 1) {
         const sig = Number(series[i] || 0);
         if (sig !== 1 && sig !== -1) continue;

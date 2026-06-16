@@ -1,3 +1,5 @@
+import { sanitizeCandleSeries, shouldResetCandleSeries } from '../../../server/candle-series-guards.mjs';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST,OPTIONS',
@@ -62,9 +64,10 @@ function sanitize(rows, tf) {
     if (!isFinite(time)) continue;
     out.push({ time: Math.floor(time), open, high, low, close, volume: vol });
   }
-  const map = new Map();
-  out.sort((a, b) => a.time - b.time).forEach(c => map.set(c.time, c));
-  return Array.from(map.values()).sort((a, b) => a.time - b.time);
+  return sanitizeCandleSeries(out, {
+    timeframeSec: TF_SECONDS[tf],
+    maxGapBars: MAX_CANDLES,
+  });
 }
 
 function aggregateFrom1m(candles1m, targetTfSec) {
@@ -97,7 +100,12 @@ async function storeDerivedTimeframes(env, market, symbol, merged1m) {
     let existing = [];
     try {
       const raw = await env.CANDLES_KV.get(key, { type: 'json' });
-      if (Array.isArray(raw)) existing = raw;
+      if (Array.isArray(raw)) {
+        existing = sanitizeCandleSeries(raw, {
+          timeframeSec: tfSec,
+          maxGapBars: MAX_CANDLES,
+        });
+      }
     } catch {}
 
     const derivedStartTime = derived[0].time;
@@ -145,10 +153,14 @@ export async function onRequestPost({ request, env }) {
   let existing = [];
   try {
     const raw = await env.CANDLES_KV.get(key, { type: 'json' });
-    if (Array.isArray(raw)) existing = raw;
+    if (Array.isArray(raw)) existing = sanitize(raw, timeframe);
   } catch {}
 
-  const map = new Map(existing.map(c => [c.time, c]));
+  const baseRows = shouldResetCandleSeries(existing, candles, {
+    timeframeSec: TF_SECONDS[timeframe],
+    maxGapBars: MAX_CANDLES,
+  }) ? [] : existing;
+  const map = new Map(baseRows.map(c => [c.time, c]));
   candles.forEach(c => map.set(c.time, c));
   const merged = Array.from(map.values()).sort((a, b) => a.time - b.time).slice(-MAX_CANDLES);
 

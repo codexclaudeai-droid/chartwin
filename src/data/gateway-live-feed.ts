@@ -12,6 +12,7 @@ export {
   normalizeSymbol,
   shouldUseBinanceDirect,
 } from './gateway-market';
+import { sanitizeGatewayCandles } from './gateway-candle-sanitize';
 
 export type CandleDataLike = {
   time: number;
@@ -113,38 +114,6 @@ function resolveGatewayBaseUrl(): string {
   return window.location.origin;
 }
 
-function sanitizeCandles(rows: unknown): CandleDataLike[] {
-  if (!Array.isArray(rows)) return [];
-  const parsed = rows
-    .map((row) => {
-      if (!row || typeof row !== 'object') return null;
-      const v = row as Record<string, unknown>;
-      const time = Number(v.time);
-      const open = Number(v.open);
-      const high = Number(v.high);
-      const low = Number(v.low);
-      const close = Number(v.close);
-      const volume = Number(v.volume);
-      if (![time, open, high, low, close, volume].every((n) => Number.isFinite(n))) return null;
-      return {
-        time: Math.floor(time),
-        open,
-        high,
-        low,
-        close,
-        volume,
-      };
-    })
-    .filter((item): item is CandleDataLike => item != null)
-    .sort((a, b) => a.time - b.time);
-
-  const map = new Map<number, CandleDataLike>();
-  parsed.forEach((item) => {
-    map.set(item.time, item);
-  });
-  return Array.from(map.values()).sort((a, b) => a.time - b.time);
-}
-
 async function fetchGatewayCandles(
   baseUrl: string,
   market: string,
@@ -169,7 +138,7 @@ async function fetchGatewayCandles(
     throw new Error(`Gateway candles error: ${response.status}`);
   }
   const json = await response.json() as { candles?: unknown };
-  return sanitizeCandles(json.candles);
+  return sanitizeGatewayCandles(json.candles);
 }
 
 export async function fetchGatewayReportCandles(args: {
@@ -201,7 +170,7 @@ export async function fetchGatewayReportCandles(args: {
     throw new Error(`Gateway report candles error: ${response.status}`);
   }
   const json = await response.json() as { candles?: unknown };
-  return sanitizeCandles(json.candles);
+  return sanitizeGatewayCandles(json.candles);
 }
 
 export function createGatewayLiveFeed({
@@ -266,7 +235,7 @@ export function createGatewayLiveFeed({
   };
 
   const applyIncremental = (latestRows: CandleDataLike[]) => {
-    const incoming = sanitizeCandles(latestRows);
+    const incoming = sanitizeGatewayCandles(latestRows);
     if (!incoming.length) return;
 
     const current = chart.getCandles();
@@ -402,7 +371,7 @@ export function createGatewayLiveFeed({
     socket.onmessage = (event) => {
       try {
         const payload = JSON.parse(String(event.data)) as { candle?: unknown };
-        const rows = sanitizeCandles(payload.candle ? [payload.candle] : []);
+        const rows = sanitizeGatewayCandles(payload.candle ? [payload.candle] : []);
         if (!rows.length) return;
         applyIncremental(rows);
       } catch {
