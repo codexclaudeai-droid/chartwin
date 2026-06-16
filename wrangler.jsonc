@@ -1,8 +1,13 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "chartwin",
-  "compatibility_date": "2026-05-20",
-  "pages_build_output_dir": "./dist",
+  "main": "./worker/index.js",
+  "compatibility_date": "2026-06-16",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
   "kv_namespaces": [
     {
       "binding": "CANDLES_KV",

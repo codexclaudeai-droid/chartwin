@@ -9,9 +9,9 @@
     "backend:dev": "node server/data-gateway.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "preview:cloudflare": "npm run build && wrangler pages dev dist",
-    "deploy:cloudflare": "npm run build && wrangler pages deploy dist --project-name chartwin",
-    "deploy:cloudflare:prod": "npm run build && wrangler pages deploy dist --project-name chartwin --branch main"
+    "preview:cloudflare": "npm run build && wrangler dev",
+    "deploy:cloudflare": "npm run build && wrangler deploy",
+    "deploy:cloudflare:prod": "npm run build && wrangler deploy"
   },
   "devDependencies": {
     "@types/moo": "^0.5.10",
