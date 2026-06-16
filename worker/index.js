@@ -1,15 +1,9 @@
-import * as candlesRoute from '../functions/candles.js';
 import * as adminPassphraseRoute from '../functions/admin/passphrase.js';
 import * as adminStrategiesRoute from '../functions/admin/strategies.js';
 import * as adminSymbolsRoute from '../functions/admin/symbols.js';
 import * as adminValidateRoute from '../functions/admin/validate.js';
-import * as tradingViewWebhookRoute from '../functions/ingest/webhook/tradingview.js';
 
 const ROUTES = new Map([
-  ['/candles', {
-    GET: candlesRoute.onRequestGet,
-    OPTIONS: candlesRoute.onRequestOptions,
-  }],
   ['/admin/passphrase', {
     POST: adminPassphraseRoute.onRequestPost,
     OPTIONS: adminPassphraseRoute.onRequestOptions,
@@ -28,10 +22,20 @@ const ROUTES = new Map([
     POST: adminValidateRoute.onRequestPost,
     OPTIONS: adminValidateRoute.onRequestOptions,
   }],
-  ['/ingest/webhook/tradingview', {
-    POST: tradingViewWebhookRoute.onRequestPost,
-    OPTIONS: tradingViewWebhookRoute.onRequestOptions,
-  }],
+]);
+
+const DATA_GATEWAY_PATHS = new Set([
+  '/health',
+  '/candles',
+  '/stream',
+  '/report/candles',
+  '/admin/config',
+  '/admin/provider',
+  '/admin/mt45',
+  '/admin/candles',
+  '/ingest/api/candles',
+  '/ingest/mt45/tick',
+  '/ingest/webhook/tradingview',
 ]);
 
 function normalizePathname(pathname) {
@@ -52,6 +56,32 @@ function missingAssetsBinding() {
   return new Response('ASSETS binding missing', { status: 500 });
 }
 
+function missingDataGatewayBinding() {
+  return Response.json({
+    ok: false,
+    message: 'DATA_GATEWAY_URL missing',
+  }, { status: 503 });
+}
+
+function isDataGatewayRoute(pathname) {
+  return DATA_GATEWAY_PATHS.has(pathname);
+}
+
+function buildDataGatewayUrl(baseUrl, pathname, search) {
+  return `${String(baseUrl || '').trim().replace(/\/+$/, '')}${pathname}${search}`;
+}
+
+async function proxyToDataGateway(request, env) {
+  const configuredBaseUrl = typeof env?.DATA_GATEWAY_URL === 'string' ? env.DATA_GATEWAY_URL.trim() : '';
+  if (!configuredBaseUrl) {
+    return missingDataGatewayBinding();
+  }
+
+  const incomingUrl = new URL(request.url);
+  const targetUrl = buildDataGatewayUrl(configuredBaseUrl, incomingUrl.pathname, incomingUrl.search);
+  return fetch(new Request(targetUrl, request));
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -68,6 +98,10 @@ export default {
         env,
         waitUntil: ctx?.waitUntil?.bind(ctx),
       });
+    }
+
+    if (isDataGatewayRoute(pathname)) {
+      return proxyToDataGateway(request, env);
     }
 
     if (!env?.ASSETS || typeof env.ASSETS.fetch !== 'function') {
