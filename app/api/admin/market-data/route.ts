@@ -76,5 +76,10 @@ async function proxyGatewayJson(
 }
 
 function getGatewayUrl() {
-  return String(process.env.DATA_GATEWAY_URL || process.env.CHART_DATA_GATEWAY_URL || 'http://127.0.0.1:8787').trim();
+  return String(
+    process.env.DATA_GATEWAY_URL
+    || process.env.DATA_GATEWAY_PUBLIC_URL
+    || process.env.CHART_DATA_GATEWAY_URL
+    || 'http://127.0.0.1:8787',
+  ).trim();
 }

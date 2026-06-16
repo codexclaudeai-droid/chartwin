@@ -19,6 +19,7 @@ test('admin dashboard includes market data section for MT45 collector controls',
 test('admin market data route proxies settings without exposing gateway admin token to client source', async () => {
   const routeSource = await readFile(new URL('../app/api/admin/market-data/route.ts', import.meta.url), 'utf8');
   assert.match(routeSource, /DATA_GATEWAY_URL/);
+  assert.match(routeSource, /DATA_GATEWAY_PUBLIC_URL/);
   assert.match(routeSource, /DATA_GATEWAY_ADMIN_TOKEN/);
   assert.match(routeSource, /x-admin-token/);
   assert.match(routeSource, /data gateway unauthorized: check DATA_GATEWAY_ADMIN_TOKEN/);

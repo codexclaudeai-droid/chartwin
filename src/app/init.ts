@@ -1346,7 +1346,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       (chart as any)._suspendMobilePanelAutoRatio = false;
     }
 
-    let rawCandles = generateDummyData(300, chart.config.timeframe);
+    let rawCandles: CandleData[] = [];
+    let restoreInitialDrawingsAfterLiveData = true;
     let gapMode: GapMode = loadGapMode();
     let patternScope: PatternAnalysisScope = loadPatternAnalysisScope();
     let patternAlertEnabled = loadPatternAlertEnabled();
@@ -1404,8 +1405,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     chart.setGapMode(gapMode);
     chart.setPatternAnalysisScope(patternScope);
     chart.setPatternAlertEnabled(patternAlertEnabled);
-    applyDisplayCurrencyToChart();
-    restoreCurrentChartDrawings();
     window.addEventListener('chart-drawings-changed', () => {
       saveDrawingEntry(chart.config.symbol, chart.config.timeframe, chart, rawCandles);
     });
@@ -1914,6 +1913,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         setLiveStatus('fallback');
         fallbackTicker.startLive();
         return false;
+      }
+      if (restoreInitialDrawingsAfterLiveData) {
+        restoreInitialDrawingsAfterLiveData = false;
+        restoreCurrentChartDrawings();
       }
       return true;
     };
