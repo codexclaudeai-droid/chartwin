@@ -106,7 +106,7 @@ test('cloudflare workers runtime uses Supabase direct host when a pooler url inc
   assert.equal(JSON.stringify(settings).includes('super-secret'), false);
 });
 
-test('explicit database url wins over an ambient Hyperdrive binding', () => {
+test('cloudflare runtime prefers Hyperdrive binding over direct database url', () => {
   const config = getChartServiceRepositoryConfigFromEnv({
     CHART_SERVICE_REPOSITORY: 'postgres',
     CHART_SERVICE_DATABASE_URL: 'postgresql://postgres.project-ref:super-secret@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres',
@@ -119,8 +119,8 @@ test('explicit database url wins over an ambient Hyperdrive binding', () => {
 
   const resolved = resolveChartServiceRepositoryAdapter(config);
 
-  assert.equal(resolved.connection?.host, 'db.project-ref.supabase.co');
-  assert.equal(resolved.connection?.sslMode, 'require');
+  assert.equal(resolved.connection?.host, 'token.hyperdrive.local');
+  assert.equal(resolved.connection?.sslMode, 'disable');
 });
 
 test('cloudflare Hyperdrive local connections disable app-level SSL', () => {
