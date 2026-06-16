@@ -7,9 +7,12 @@ production `chartwin` Worker or any `tradingcore.co` route.
 
 - Production full-stack Worker: managed outside this repository.
 - Chart engine Cloudflare target: Pages project `chart-engine-dev`.
+- Legacy Cloudflare Pages project: `tradingcore` (`chartwin.pages.dev`).
+  Its Git auto deploys must stay disabled.
 - Build output: `dist`.
 - Cloudflare config: `wrangler.jsonc`.
 - Deploy guard: `scripts/guard-cloudflare-deploy.mjs`.
+- Pages build guard: `scripts/guard-cloudflare-pages-build.mjs`.
 
 ## Commands
 
@@ -27,6 +30,9 @@ production `chartwin` Worker or any `tradingcore.co` route.
 - The config must not reference `chartwin`, `tradingcore.co`,
   `CHART_SERVICE_*`, `DATA_GATEWAY_URL`, `hyperdrive`, or `send_email`.
 - `npm run deploy:cloudflare` runs the guard before `wrangler pages deploy`.
+- Cloudflare Pages Git builds for `chartwin.pages.dev` are blocked during
+  `prebuild` and Vite config loading.
+- Manual `wrangler pages deploy ... --project-name tradingcore` is blocked.
 
 If the production full-stack Worker needs deployment, use the full-stack
 repository or its Cloudflare pipeline. Do not use this chart engine workspace.

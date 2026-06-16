@@ -10,14 +10,18 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json
 const wranglerSource = fs.readFileSync(path.join(repoRoot, 'wrangler.jsonc'), 'utf8');
 const viteConfigSource = fs.readFileSync(path.join(repoRoot, 'vite.config.js'), 'utf8');
 
-function runGuard(configSource) {
+function runGuard(configSource, packageOverride = packageJson) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chartwin-guard-'));
   const configPath = path.join(dir, 'wrangler.jsonc');
+  const packagePath = path.join(dir, 'package.json');
   fs.writeFileSync(configPath, configSource);
+  fs.writeFileSync(packagePath, JSON.stringify(packageOverride));
   return spawnSync(process.execPath, [
     path.join(repoRoot, 'scripts/guard-cloudflare-deploy.mjs'),
     '--config',
     configPath,
+    '--package',
+    packagePath,
   ], {
     cwd: repoRoot,
     encoding: 'utf8',
@@ -44,6 +48,7 @@ test('Cloudflare deploy scripts cannot run a Workers deploy from this chart repo
   assert.match(packageJson.scripts['deploy:cloudflare'], /wrangler pages deploy/);
   assert.doesNotMatch(packageJson.scripts['deploy:cloudflare'], /\bwrangler deploy\b/);
   assert.doesNotMatch(packageJson.scripts['deploy:cloudflare'], /--project-name\s+chartwin\b/);
+  assert.doesNotMatch(packageJson.scripts['deploy:cloudflare'], /--project-name\s+tradingcore\b/);
   assert.doesNotMatch(packageJson.scripts['deploy:cloudflare:prod'], /\bwrangler (pages )?deploy\b/);
 });
 
@@ -76,6 +81,18 @@ test('deploy guard rejects production Worker-shaped wrangler config', () => {
   assert.match(`${result.stderr}${result.stdout}`, /Blocked Cloudflare deploy/i);
   assert.match(`${result.stderr}${result.stdout}`, /chartwin/);
   assert.match(`${result.stderr}${result.stdout}`, /tradingcore\.co/);
+});
+
+test('deploy guard rejects the old tradingcore Pages project target', () => {
+  const result = runGuard(wranglerSource, {
+    scripts: {
+      'deploy:cloudflare': 'npm run build && wrangler pages deploy dist --project-name tradingcore',
+    },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(`${result.stderr}${result.stdout}`, /Blocked Cloudflare deploy/i);
+  assert.match(`${result.stderr}${result.stdout}`, /tradingcore Pages project/i);
 });
 
 test('deploy guard accepts this chart Pages config', () => {

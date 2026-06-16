@@ -60,8 +60,8 @@ for (const [name, script] of Object.entries(scripts)) {
     violations.push(`${name} runs bare wrangler deploy`);
   }
 
-  if (/--project-name\s+chartwin\b/.test(script)) {
-    violations.push(`${name} targets the old chartwin Pages project`);
+  if (/--project-name\s+(?:chartwin|tradingcore)\b/.test(script)) {
+    violations.push(`${name} targets the old tradingcore Pages project`);
   }
 
   if (name === 'deploy:cloudflare:prod' && /\bwrangler\s+(pages\s+)?deploy\b/.test(script)) {
