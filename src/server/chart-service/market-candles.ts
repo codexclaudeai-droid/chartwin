@@ -8,6 +8,8 @@ import {
   resolveChartServiceRepositoryAdapter,
   type ChartServiceRepositoryAdapterConfig,
 } from './repository-adapter.ts';
+import { TIMEFRAME_SECONDS } from '../../catalog/time.ts';
+import { sanitizeGatewayCandles } from '../../data/gateway-candle-sanitize.ts';
 
 export type MarketCandle = {
   time: number;
@@ -225,6 +227,39 @@ export function mapMarketCandleRows(rows: PostgresRow[]): MarketCandle[] {
     .filter((row): row is MarketCandle => row != null);
 }
 
+export function sanitizeMarketCandles(candles: MarketCandle[]): MarketCandle[] {
+  return sanitizeGatewayCandles(candles);
+}
+
+export function aggregateMarketCandlesToTimeframe(
+  candles: MarketCandle[],
+  timeframe: string,
+): MarketCandle[] {
+  const targetSec = getMarketCandleTimeframeSec(timeframe);
+  if (!Array.isArray(candles) || !Number.isFinite(targetSec) || targetSec <= 60 || targetSec % 60 !== 0) {
+    return Array.isArray(candles) ? candles : [];
+  }
+
+  const buckets = new Map<number, MarketCandle>();
+  candles
+    .slice()
+    .sort((a, b) => a.time - b.time)
+    .forEach((candle) => {
+      const bucketTime = Math.floor(candle.time / targetSec) * targetSec;
+      const existing = buckets.get(bucketTime);
+      if (!existing) {
+        buckets.set(bucketTime, { ...candle, time: bucketTime });
+        return;
+      }
+      existing.high = Math.max(existing.high, candle.high);
+      existing.low = Math.min(existing.low, candle.low);
+      existing.close = candle.close;
+      existing.volume += candle.volume;
+    });
+
+  return Array.from(buckets.values()).sort((a, b) => a.time - b.time);
+}
+
 export async function selectMarketCandles(query: MarketCandleQuery): Promise<MarketCandle[]> {
   const market = normalizeMarketCandleMarket(query.market);
   const symbol = canonicalizeMarketCandleSymbol(market, query.symbol);
@@ -246,7 +281,24 @@ export async function selectMarketCandles(query: MarketCandleQuery): Promise<Mar
       symbol,
       timeframe,
     }));
-    return mapMarketCandleRows(result.rows);
+    const candles = sanitizeMarketCandles(mapMarketCandleRows(result.rows));
+    if (candles.length || timeframe === '1m' || !canAggregateMarketCandleFallback(timeframe)) {
+      return candles;
+    }
+
+    const targetLimit = Math.max(1, Math.min(100000, Math.floor(Number(query.limit) || 5000)));
+    const sourceMultiplier = Math.max(1, Math.ceil(getMarketCandleTimeframeSec(timeframe) / 60));
+    const fallbackResult = await executor.query(createMarketCandleSelectStatement({
+      ...query,
+      market,
+      symbol,
+      timeframe: '1m',
+      limit: Math.min(100000, targetLimit * sourceMultiplier),
+    }));
+    return aggregateMarketCandlesToTimeframe(
+      sanitizeMarketCandles(mapMarketCandleRows(fallbackResult.rows)),
+      timeframe,
+    ).slice(-targetLimit);
   } finally {
     await executor.close();
   }
@@ -315,4 +367,13 @@ function parseUnixTimeSec(value: unknown): number {
     if (Number.isFinite(parsedMs)) return Math.floor(parsedMs / 1000);
   }
   return NaN;
+}
+
+function getMarketCandleTimeframeSec(timeframe: string): number {
+  return (TIMEFRAME_SECONDS as Record<string, number | undefined>)[timeframe] ?? NaN;
+}
+
+function canAggregateMarketCandleFallback(timeframe: string): boolean {
+  const targetSec = getMarketCandleTimeframeSec(timeframe);
+  return Number.isFinite(targetSec) && targetSec > 60 && targetSec % 60 === 0;
 }

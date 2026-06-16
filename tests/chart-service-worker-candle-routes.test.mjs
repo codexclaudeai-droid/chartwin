@@ -70,6 +70,28 @@ test('market candle query module keeps gateway-compatible symbol normalization',
   });
 });
 
+test('market candle API guards stale low-price clusters and can aggregate 1m fallback rows', async () => {
+  const {
+    aggregateMarketCandlesToTimeframe,
+    sanitizeMarketCandles,
+  } = await import('../src/server/chart-service/market-candles.ts');
+
+  assert.deepEqual(sanitizeMarketCandles([
+    { time: 1781550420, open: 17750.25, high: 17750.25, low: 17750.25, close: 17750.25, volume: 1 },
+    { time: 1781566740, open: 30524.5, high: 30530, low: 30520, close: 30524.5, volume: 1 },
+    { time: 1781566800, open: 30524.5, high: 30545, low: 30520, close: 30540, volume: 2 },
+  ]).map((row) => row.close), [30524.5, 30540]);
+
+  assert.deepEqual(aggregateMarketCandlesToTimeframe([
+    { time: 180, open: 10, high: 12, low: 9, close: 11, volume: 1 },
+    { time: 240, open: 11, high: 13, low: 10, close: 12, volume: 2 },
+    { time: 360, open: 12, high: 15, low: 11, close: 14, volume: 3 },
+  ], '3m'), [
+    { time: 180, open: 10, high: 13, low: 9, close: 12, volume: 3 },
+    { time: 360, open: 12, high: 15, low: 11, close: 14, volume: 3 },
+  ]);
+});
+
 test('market candle module creates tables and upserts webhook candles', async () => {
   const {
     createMarketCandleUpsertStatement,
