@@ -9,6 +9,7 @@ import { sanitizeCandleSeries, shouldResetCandleSeries } from '../server/candle-
 const initSource = fs.readFileSync(path.resolve('src/app/init.ts'), 'utf8');
 const simpleChartSource = fs.readFileSync(path.resolve('src/chart/SimpleChart.ts'), 'utf8');
 const strategyReportPanelSource = fs.readFileSync(path.resolve('src/ui/workspace/strategy-report-panel.ts'), 'utf8');
+const gatewayLiveFeedSource = fs.readFileSync(path.resolve('src/data/gateway-live-feed.ts'), 'utf8');
 const gatewayServerSource = fs.readFileSync(path.resolve('server/data-gateway.mjs'), 'utf8');
 const pagesCandlesSource = fs.readFileSync(path.resolve('functions/candles.js'), 'utf8');
 const pagesWebhookSource = fs.readFileSync(path.resolve('functions/ingest/webhook/tradingview.js'), 'utf8');
@@ -130,4 +131,27 @@ test('gateway read/write paths use candle guards for stale history and corrupt r
   assert.match(gatewayServerSource, /shouldResetCandleSeries\(current, sanitizedIncoming, \{/);
   assert.match(pagesCandlesSource, /sanitizeCandleSeries\(result1m\.rows, \{/);
   assert.match(pagesWebhookSource, /shouldResetCandleSeries\(existing, candles, \{/);
+});
+
+test('gateway live patches use incremental chart updates instead of full setData snapshots', () => {
+  assert.match(
+    gatewayLiveFeedSource,
+    /const hasSameCandleValues = \(a: CandleDataLike, b: CandleDataLike\): boolean =>/,
+    'gateway feed should compare live candle values before mutating the chart',
+  );
+  assert.match(
+    gatewayLiveFeedSource,
+    /if \(hasMiddleRepair \|\| \(hasNewerRows && current\.length \+ incoming\.filter\(\(row\) => row\.time > latestTime\)\.length > limit\)\) \{[\s\S]*?applySnapshot\(merged\);/,
+    'gateway feed should reserve full snapshots for history repair or render-window trimming',
+  );
+  assert.match(
+    gatewayLiveFeedSource,
+    /if \(row\.time === latest\.time && !hasSameCandleValues\(latest, row\)\) \{[\s\S]*?chart\.updateLastCandle\(\{/,
+    'current MT candle ticks should patch the last candle without clearing strategy signals',
+  );
+  assert.match(
+    gatewayLiveFeedSource,
+    /if \(row\.time > latest\.time\) \{\s*chart\.addNewCandle\(row\);/,
+    'new completed MT candles should use the same incremental path as Binance',
+  );
 });

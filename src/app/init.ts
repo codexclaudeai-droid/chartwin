@@ -1947,6 +1947,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         updateLastCandle: (patch) => {
           const last = rawCandles[rawCandles.length - 1];
           if (!last) return;
+          if (Number.isFinite(patch.open)) last.open = patch.open;
           if (Number.isFinite(patch.close)) last.close = patch.close;
           if (Number.isFinite(patch.high)) last.high = patch.high;
           if (Number.isFinite(patch.low)) last.low = patch.low;
@@ -1956,6 +1957,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             return;
           }
           chart.updateLastCandle({
+            open: convertPrice(last.open),
             close: convertPrice(last.close),
             high: convertPrice(last.high),
             low: convertPrice(last.low),

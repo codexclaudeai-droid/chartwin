@@ -32,7 +32,7 @@ type ChartLike = {
   setData: (candles: CandleDataLike[]) => void;
   getCandles: () => CandleDataLike[];
   addNewCandle: (candle: CandleDataLike) => void;
-  updateLastCandle: (patch: Pick<CandleDataLike, 'close' | 'high' | 'low' | 'volume'>) => void;
+  updateLastCandle: (patch: Partial<CandleDataLike>) => void;
 };
 
 type CreateGatewayLiveFeedArgs = {
@@ -301,6 +301,14 @@ export function createGatewayLiveFeed({
       return;
     }
 
+    const hasSameCandleValues = (a: CandleDataLike, b: CandleDataLike): boolean => (
+      a.open === b.open
+      && a.high === b.high
+      && a.low === b.low
+      && a.close === b.close
+      && a.volume === b.volume
+    );
+
     const currentMap = new Map<number, CandleDataLike>();
     current.forEach((row) => currentMap.set(row.time, row));
     const latestTime = current[current.length - 1]?.time ?? -Infinity;
@@ -310,15 +318,10 @@ export function createGatewayLiveFeed({
 
     incoming.forEach((row) => {
       const existing = currentMap.get(row.time);
-      if (!existing && row.time < latestTime) hasMiddleRepair = true;
+      if (row.time < latestTime && (!existing || !hasSameCandleValues(existing, row))) hasMiddleRepair = true;
       if (row.time > latestTime) hasNewerRows = true;
       if (row.time === latestTime) {
-        hasLastPatch = !existing
-          || existing.close !== row.close
-          || existing.high !== row.high
-          || existing.low !== row.low
-          || existing.volume !== row.volume
-          || existing.open !== row.open;
+        hasLastPatch = !existing || !hasSameCandleValues(existing, row);
       }
       currentMap.set(row.time, row);
     });
@@ -330,7 +333,34 @@ export function createGatewayLiveFeed({
       .slice(-Math.max(1, limit));
 
     // Full merge keeps polling capable of repairing missing candles inside the visible history.
-    applySnapshot(merged);
+    if (hasMiddleRepair || (hasNewerRows && current.length + incoming.filter((row) => row.time > latestTime).length > limit)) {
+      applySnapshot(merged);
+      onLiveTick?.();
+      return;
+    }
+
+    const sortedIncoming = incoming.slice().sort((a, b) => a.time - b.time);
+    let applied = false;
+    sortedIncoming.forEach((row) => {
+      const latest = chart.getCandles().at(-1);
+      if (!latest) return;
+      if (row.time === latest.time && !hasSameCandleValues(latest, row)) {
+        chart.updateLastCandle({
+          open: row.open,
+          close: row.close,
+          high: row.high,
+          low: row.low,
+          volume: row.volume,
+        });
+        applied = true;
+        return;
+      }
+      if (row.time > latest.time) {
+        chart.addNewCandle(row);
+        applied = true;
+      }
+    });
+    if (!applied) return;
     onLiveTick?.();
   };
 

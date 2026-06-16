@@ -387,7 +387,10 @@ export function createTopBar({
   `;
   const signalBadge = signalBtn.querySelector('[data-signal-badge]') as HTMLSpanElement;
   let signalCount = 0;
+  let renderedSignalCount = -1;
   const renderSignalBadge = () => {
+    if (renderedSignalCount === signalCount) return;
+    renderedSignalCount = signalCount;
     if (signalCount <= 0) {
       signalBadge.style.display = 'none';
       return;
@@ -629,7 +632,9 @@ export function createTopBar({
     refreshTopControlIcons,
     syncFullscreenIcon,
     setSignalNotification: (count: number) => {
-      signalCount = Math.max(0, Math.floor(Number(count) || 0));
+      const nextCount = Math.max(0, Math.floor(Number(count) || 0));
+      if (signalCount === nextCount) return;
+      signalCount = nextCount;
       renderSignalBadge();
     },
   };

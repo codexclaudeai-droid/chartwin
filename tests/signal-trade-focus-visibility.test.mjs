@@ -9,6 +9,8 @@ const tradeFocusRendererPath = path.resolve('src/chart/renderers/trade-focus-ove
 const tradeFocusRendererSource = fs.readFileSync(tradeFocusRendererPath, 'utf8');
 const panelSourcePath = path.resolve('src/ui/workspace/strategy-report-panel.ts');
 const panelSource = fs.readFileSync(panelSourcePath, 'utf8');
+const topBarSourcePath = path.resolve('src/ui/workspace/top-bar.ts');
+const topBarSource = fs.readFileSync(topBarSourcePath, 'utf8');
 
 test('trade signal focus keeps overlays alive for at least 24 seconds', () => {
   assert.match(
@@ -145,8 +147,23 @@ test('latest signal animation is temporary and trade focus suppresses pulse draw
   );
   assert.match(
     source,
+    /const LATEST_SIGNAL_ANIMATION_FRAME_INTERVAL_MS\s*=\s*100;/,
+    'latest signal animation should avoid high-frequency redraws while live candles are already updating',
+  );
+  assert.match(
+    source,
     /private isLatestSignalAnimationLive\(timeMs = performance\.now\(\)\): boolean \{[\s\S]*?return this\.latestSignalAnimationUntilMs > 0 && timeMs < this\.latestSignalAnimationUntilMs;[\s\S]*?\}/,
     'chart should expose a time gate for latest-signal pulse rendering',
+  );
+  assert.match(
+    source,
+    /private buildLatestSignalAnimationKey\(index = this\.latestStrategySignalIndex\): string \{[\s\S]*?this\.activeStrategyId[\s\S]*?this\.config\.symbol[\s\S]*?this\.config\.timeframe[\s\S]*?String\(time\)[\s\S]*?String\(signal\)/,
+    'latest signal animation should be keyed by strategy, symbol, timeframe, candle time, and side',
+  );
+  assert.match(
+    source,
+    /if \(nextKey && nextKey !== this\.latestSignalAnimationKey && hasChangedSignal\) \{[\s\S]*?this\.latestSignalAnimationKey = nextKey;[\s\S]*?LATEST_SIGNAL_ANIMATION_DURATION_MS;/,
+    'full data re-syncs should not re-arm animation for the same latest signal',
   );
   assert.match(
     source,
@@ -172,6 +189,29 @@ test('latest signal animation is temporary and trade focus suppresses pulse draw
     source,
     /const shouldPulseLatest = isLatest && this\.isLatestSignalAnimationLive\(timeMs\);/,
     'non-animated signal redraws should render the latest signal statically after the pulse window',
+  );
+  assert.match(
+    source,
+    /const shouldBuildSignalRiskDetails = this\.strategyRiskLinesVisible[\s\S]*?this\.hoveredSignalCandleIndex != null \|\| this\.focusedSignalCandleIndex != null/,
+    'signal layer redraws should not rebuild risk details unless a hover or focused signal needs them',
+  );
+});
+
+test('top-bar signal badge skips repeated DOM writes for unchanged counts', () => {
+  assert.match(
+    topBarSource,
+    /let renderedSignalCount = -1;/,
+    'top-bar should remember the last rendered signal badge count',
+  );
+  assert.match(
+    topBarSource,
+    /if \(renderedSignalCount === signalCount\) return;/,
+    'rendering the badge should no-op when the visible count did not change',
+  );
+  assert.match(
+    topBarSource,
+    /const nextCount = Math\.max\(0, Math\.floor\(Number\(count\) \|\| 0\)\);\s*if \(signalCount === nextCount\) return;\s*signalCount = nextCount;/,
+    'setSignalNotification should avoid touching the DOM for duplicate notification counts',
   );
 });
 

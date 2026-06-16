@@ -254,6 +254,7 @@ const CHART_TEXT_PRIMARY = '#e3e8f2';
 const CHART_TEXT_SECONDARY = '#c2ccdf';
 const CHART_TEXT_MUTED = '#b3bfd4';
 const LATEST_SIGNAL_ANIMATION_DURATION_MS = 4500;
+const LATEST_SIGNAL_ANIMATION_FRAME_INTERVAL_MS = 100;
 const HLINE_DEFAULT_WIDTH = 1.2;
 const LOCK_ICON_CLOSED_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 1 1 8 0v3"></path></svg>';
 const LOCK_ICON_OPEN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M16 11V8a4 4 0 1 0-8 0"></path></svg>';
@@ -457,6 +458,7 @@ export class SimpleChart {
   private signalAnimationActive = false;
   private lastSignalDrawTimeMs = 0;
   private latestSignalAnimationUntilMs = 0;
+  private latestSignalAnimationKey = '';
   private signalLayerDrawFrame = 0;
   private lastAuxiliaryAlertEvalMs = 0;
   private strategyRequestId = 0;
@@ -2953,8 +2955,8 @@ export class SimpleChart {
       this.drawSignalLayer(this.lastDrawMeta, timeMs);
       return;
     }
-    // Throttle to ~30fps to avoid starving crosshair interaction on desktop.
-    if (timeMs - this.lastSignalDrawTimeMs >= 33) {
+    // Keep the newest-signal glow lightweight; live candles already redraw frequently.
+    if (timeMs - this.lastSignalDrawTimeMs >= LATEST_SIGNAL_ANIMATION_FRAME_INTERVAL_MS) {
       this.lastSignalDrawTimeMs = timeMs;
       this.drawSignalLayer(this.lastDrawMeta, timeMs);
     }
@@ -2965,6 +2967,20 @@ export class SimpleChart {
     return this.latestSignalAnimationUntilMs > 0 && timeMs < this.latestSignalAnimationUntilMs;
   }
 
+  private buildLatestSignalAnimationKey(index = this.latestStrategySignalIndex): string {
+    if (index < 0) return '';
+    const signal = this.strategySignals[index] ?? 0;
+    if (!signal) return '';
+    const time = this.data[index]?.time ?? index;
+    return [
+      this.activeStrategyId ?? '',
+      this.config.symbol,
+      this.config.timeframe,
+      String(time),
+      String(signal),
+    ].join('|');
+  }
+
   private armLatestSignalAnimation(previousLatestIndex: number, previousSignals: StrategySignal[]): void {
     const latestIndex = this.latestStrategySignalIndex;
     if (latestIndex < 0) {
@@ -2973,7 +2989,12 @@ export class SimpleChart {
     }
     const previousValue = previousSignals[latestIndex] ?? 0;
     const nextValue = this.strategySignals[latestIndex] ?? 0;
-    if (latestIndex !== previousLatestIndex || previousValue !== nextValue) {
+    const nextKey = this.buildLatestSignalAnimationKey(latestIndex);
+    const hasChangedSignal = latestIndex !== previousLatestIndex
+      || previousValue !== nextValue
+      || previousSignals.length !== this.strategySignals.length;
+    if (nextKey && nextKey !== this.latestSignalAnimationKey && hasChangedSignal) {
+      this.latestSignalAnimationKey = nextKey;
       this.latestSignalAnimationUntilMs = performance.now() + LATEST_SIGNAL_ANIMATION_DURATION_MS;
     }
   }
@@ -3162,6 +3183,9 @@ export class SimpleChart {
   }
 
   public setActiveStrategy(strategyId: string | null): void {
+    if (this.activeStrategyId !== strategyId) {
+      this.latestSignalAnimationKey = '';
+    }
     this.activeStrategyId = strategyId;
     this.invalidateDoubleBreakResultCache();
     if (strategyId === DOUBLE_BREAK_STRATEGY_ID) {
@@ -3349,6 +3373,7 @@ export class SimpleChart {
       this.signalHitAreas = [];
       this.latestStrategySignalIndex = -1;
       this.latestSignalAnimationUntilMs = 0;
+      this.latestSignalAnimationKey = '';
       this.drawSignalLayer(this.lastDrawMeta);
       this.updateSignalAnimationLoop();
       return;
@@ -4892,7 +4917,14 @@ export class SimpleChart {
     ctx.textBaseline = 'middle';
     const symbolPriceDigits = getSymbolPricePrecision(this.config.symbol, this.config.quoteCurrency);
     const baseRadius = Math.max(8, Math.min(12, meta.candleW * 0.8));
-    const signalRiskDetails = this.buildSignalRiskDetails(this.startIndex, this.endIndex);
+    const shouldBuildSignalRiskDetails = this.strategyRiskLinesVisible
+      && (this.hoveredSignalCandleIndex != null || this.focusedSignalCandleIndex != null);
+    const signalRiskDetails = shouldBuildSignalRiskDetails
+      ? this.buildSignalRiskDetails(this.startIndex, this.endIndex)
+      : new Map<number, {
+        stopLoss: number | null;
+        takeProfits: number[];
+      }>();
     const riskDrawJobs: Array<{
       fromX: number;
       price: number;
