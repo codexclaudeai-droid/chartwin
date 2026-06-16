@@ -1,4 +1,7 @@
 import { defineConfig } from 'vite'
+import { assertCloudflarePagesBuildTarget } from './scripts/guard-cloudflare-pages-build.mjs'
+
+assertCloudflarePagesBuildTarget()
 
 export default defineConfig({
   server: {
