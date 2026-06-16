@@ -2,6 +2,8 @@
 
 const SYMBOL_STORAGE_KEY = 'my-chart-lib.symbol-registry.v1';
 const NASDAQ_FUTURES_CANONICAL_SYMBOL = 'NQ1!';
+const NASDAQ_FUTURES_LABEL = 'NAS100 ft';
+const NASDAQ_FUTURES_DESC = 'NAS100 ft';
 
 function normalizeCatalogSymbolId(id: string): string {
   const normalized = String(id || '').trim().toUpperCase();
@@ -9,9 +11,17 @@ function normalizeCatalogSymbolId(id: string): string {
   return normalized;
 }
 
+function isRequiredVisibleSymbol(id: string): boolean {
+  return normalizeCatalogSymbolId(id) === NASDAQ_FUTURES_CANONICAL_SYMBOL;
+}
+
+function restoreRequiredVisibleSymbols(): void {
+  hiddenSymbols.delete(NASDAQ_FUTURES_CANONICAL_SYMBOL);
+}
+
 const DEFAULT_SYMBOL_CATALOG: Record<string, { id: string; label: string; desc: string; iconUrl?: string }[]> = {
   '지수선물': [
-    { id: NASDAQ_FUTURES_CANONICAL_SYMBOL, label: 'E-mini Nasdaq-100', desc: 'E-mini Nasdaq-100' },
+    { id: NASDAQ_FUTURES_CANONICAL_SYMBOL, label: NASDAQ_FUTURES_LABEL, desc: NASDAQ_FUTURES_DESC },
   ],
   index: [
     { id: 'SPX500', label: 'SPX500', desc: 'S&P 500' },
@@ -128,8 +138,8 @@ function applyBuiltinLabelOverrides(): void {
       const normalizedId = normalizeCatalogSymbolId(item.id);
       if (normalizedId !== item.id) item.id = normalizedId;
       if (normalizedId === NASDAQ_FUTURES_CANONICAL_SYMBOL) {
-        item.label = 'E-mini Nasdaq-100';
-        item.desc = 'E-mini Nasdaq-100';
+        item.label = NASDAQ_FUTURES_LABEL;
+        item.desc = NASDAQ_FUTURES_DESC;
         nqItem = item;
         nqSourceCategory = cat;
       }
@@ -179,8 +189,8 @@ function ensureBuiltinSymbolsPresent(): void {
   if (!hasCanonicalNasdaq) {
     SYMBOL_CATALOG[indexCategory].unshift({
       id: NASDAQ_FUTURES_CANONICAL_SYMBOL,
-      label: 'E-mini Nasdaq-100',
-      desc: 'E-mini Nasdaq-100',
+      label: NASDAQ_FUTURES_LABEL,
+      desc: NASDAQ_FUTURES_DESC,
     });
   }
 }
@@ -240,6 +250,7 @@ function loadSymbolRegistry(): void {
   }
   ensureBuiltinSymbolsPresent();
   applyBuiltinLabelOverrides();
+  restoreRequiredVisibleSymbols();
 }
 
 export function persistSymbolRegistry(): void {
@@ -270,6 +281,7 @@ export async function loadAdminConfig(): Promise<void> {
     const json = await res.json() as { hidden?: unknown; disabled?: unknown };
     if (Array.isArray(json.hidden)) {
       json.hidden.forEach((s) => { if (typeof s === 'string') hiddenSymbols.add(normalizeCatalogSymbolId(s)); });
+      restoreRequiredVisibleSymbols();
     }
     if (Array.isArray(json.disabled)) {
       json.disabled.forEach((s) => { if (typeof s === 'string') disabledSymbols.add(normalizeCatalogSymbolId(s)); });
@@ -300,6 +312,11 @@ export function isSymbolAppliedToChart(symbolId: string): boolean {
 export function setSymbolChartApplied(symbolId: string, applied: boolean): void {
   const normalized = normalizeCatalogSymbolId(symbolId);
   if (!normalized) return;
+  if (isRequiredVisibleSymbol(normalized)) {
+    hiddenSymbols.delete(normalized);
+    persistSymbolRegistry();
+    return;
+  }
   if (applied) {
     hiddenSymbols.delete(normalized);
   } else {

@@ -493,7 +493,7 @@ export function createBottomBar<TChart extends TimezoneChartLike>({
       src: 'spot' | 'futures' | 'gateway'; apiSym?: string; gatewayMarket?: string;
     };
     const TDEFS: TDef[] = [
-      { sym: 'NQ1!',      name: 'NQ',     currency: '',     src: 'gateway', gatewayMarket: 'futures'   },
+      { sym: 'NQ1!',      name: 'NAS100 ft', currency: '',  src: 'gateway', gatewayMarket: 'futures'   },
       { sym: 'SPX500',    name: 'SPX',    currency: '',     src: 'gateway', gatewayMarket: 'index'     },
       { sym: 'HSI',       name: 'HSI',    currency: '',     src: 'gateway', gatewayMarket: 'index'     },
       { sym: 'KOSPI',     name: 'KOSPI',  currency: '',     src: 'gateway', gatewayMarket: 'index'     },

@@ -42,7 +42,7 @@ const SYMBOL_GROUPS: SymbolGroup[] = [
     label: 'Index Futures',
     webhook: true,
     symbols: [
-      { id: 'NQ1!', desc: 'E-mini Nasdaq-100 Futures' },
+      { id: 'NQ1!', desc: 'NAS100 ft' },
       { id: 'SPX500', desc: 'S&P 500' },
       { id: 'HSI', desc: 'Hang Seng' },
       { id: 'KOSPI', desc: 'Korea Composite Stock Price Index' },

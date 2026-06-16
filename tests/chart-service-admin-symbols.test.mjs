@@ -12,6 +12,7 @@ test('admin dashboard exposes symbol management as its own section', () => {
     'overview',
     'webInfo',
     'symbols',
+    'marketData',
     'telegramAlerts',
     'users',
     'support',
@@ -81,6 +82,22 @@ test('symbol registry persists chart application state for hidden symbols', () =
   assert.match(catalogSource, /export function setSymbolChartApplied/);
   assert.match(catalogSource, /hiddenSymbols\.add\(normalized\)/);
   assert.match(catalogSource, /hiddenSymbols\.delete\(normalized\)/);
+});
+
+test('nasdaq futures symbol remains visible and uses the NAS100 ft display name', () => {
+  const catalogSource = fs.readFileSync(new URL('../src/catalog/symbols.ts', import.meta.url), 'utf8');
+  const initSource = fs.readFileSync(new URL('../src/app/init.ts', import.meta.url), 'utf8');
+  const bottomBarSource = fs.readFileSync(new URL('../src/ui/workspace/bottom-bar.ts', import.meta.url), 'utf8');
+  const signalAdminSource = fs.readFileSync(new URL('../app/signal/signal-admin-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(catalogSource, /const NASDAQ_FUTURES_LABEL = 'NAS100 ft';/);
+  assert.match(catalogSource, /const NASDAQ_FUTURES_DESC = 'NAS100 ft';/);
+  assert.match(catalogSource, /function restoreRequiredVisibleSymbols\(\): void \{[\s\S]*?hiddenSymbols\.delete\(NASDAQ_FUTURES_CANONICAL_SYMBOL\);[\s\S]*?\}/);
+  assert.match(catalogSource, /if \(Array\.isArray\(json\.hidden\)\) \{[\s\S]*?restoreRequiredVisibleSymbols\(\);[\s\S]*?\}/);
+  assert.match(catalogSource, /if \(isRequiredVisibleSymbol\(normalized\)\) \{[\s\S]*?hiddenSymbols\.delete\(normalized\);[\s\S]*?return;[\s\S]*?\}/);
+  assert.doesNotMatch(initSource, /E-mini Nasdaq-100/);
+  assert.match(bottomBarSource, /name: 'NAS100 ft'/);
+  assert.match(signalAdminSource, /\{ id: 'NQ1!', desc: 'NAS100 ft' \}/);
 });
 
 test('chart admin config keeps locally toggled symbol visibility', () => {
