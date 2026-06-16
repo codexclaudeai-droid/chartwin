@@ -8,7 +8,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import LandingHeroSlider from '../landing-hero-slider.tsx';
-import LandingChartMotion from '../landing-chart-motion.tsx';
 import LandingScrollFadeMotion from '../landing-scroll-fade-motion.tsx';
 import LandingScrollTopButton from '../landing-scroll-top-button.tsx';
 import { FreeTrialRequestButton } from '../shared/free-trial-request-button';
@@ -296,7 +295,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         id="landing-tc-chart-features"
         aria-label="TC Chart 기능"
       >
-        <LandingChartMotion className='landing-feature-chart-motion' />
         <div className="section-heading">
           <span className="eyebrow">TC Chart Features</span>
           <h2>고정밀 시그널부터 프로급 차트 도구까지 한 화면에서 경험하세요.</h2>
