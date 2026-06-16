@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createKisWebSocketCollector, hasKisCredentials } from './kis-websocket-collector.mjs';
+import { sanitizeCandleSeries, shouldResetCandleSeries } from './candle-series-guards.mjs';
 import { getPreferredSymbolProviders, resolveProviderForSymbol } from './provider-routing.mjs';
 
 const PORT = Number(process.env.DATA_GATEWAY_PORT || 8787);
@@ -371,18 +372,22 @@ function sanitizeCandles(rows, timeframe) {
     .filter((row) => row != null)
     .sort((a, b) => a.time - b.time);
 
-  const map = new Map();
-  parsed.forEach((item) => {
-    map.set(item.time, item);
+  return sanitizeCandleSeries(parsed, {
+    timeframeSec: timeframeToSeconds(timeframe),
+    maxGapBars: MAX_CANDLES_PER_KEY,
   });
-  return Array.from(map.values()).sort((a, b) => a.time - b.time);
 }
 
 function upsertCandles(market, symbol, timeframe, incomingCandles) {
   const key = candleKey(market, symbol, timeframe);
   const current = candleStore.get(key) || [];
-  const map = new Map(current.map((c) => [c.time, c]));
-  incomingCandles.forEach((c) => map.set(c.time, c));
+  const sanitizedIncoming = sanitizeCandles(incomingCandles, timeframe);
+  const baseRows = shouldResetCandleSeries(current, sanitizedIncoming, {
+    timeframeSec: timeframeToSeconds(timeframe),
+    maxGapBars: MAX_CANDLES_PER_KEY,
+  }) ? [] : current;
+  const map = new Map(baseRows.map((c) => [c.time, c]));
+  sanitizedIncoming.forEach((c) => map.set(c.time, c));
   const merged = Array.from(map.values())
     .sort((a, b) => a.time - b.time)
     .slice(-MAX_CANDLES_PER_KEY);
@@ -411,6 +416,15 @@ function applyLiveCandle(market, symbol, timeframe, incomingCandle) {
 
   const key = candleKey(market, canonicalSymbol, timeframe);
   const current = candleStore.get(key) || [];
+  if (shouldResetCandleSeries(current, [incoming], {
+    timeframeSec: timeframeToSeconds(timeframe),
+    maxGapBars: MAX_CANDLES_PER_KEY,
+  })) {
+    candleStore.set(key, [incoming]);
+    schedulePersistCandleStore();
+    broadcastLiveCandle(market, canonicalSymbol, timeframe, incoming);
+    return [incoming];
+  }
   const last = current[current.length - 1];
   let nextRows;
   if (last && last.time === incoming.time) {

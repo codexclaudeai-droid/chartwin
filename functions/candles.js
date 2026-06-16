@@ -1,9 +1,12 @@
+import { sanitizeCandleSeries } from '../server/candle-series-guards.mjs';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,OPTIONS',
   'Access-Control-Allow-Headers': 'content-type',
 };
 const ALLOWED_MARKETS = ['crypto', 'futures', 'index', 'commodity', 'fx'];
+const MAX_CONTIGUOUS_BARS = 3000;
 const TF_SECONDS = {
   '1s': 1, '1m': 60, '3m': 180, '5m': 300, '15m': 900,
   '30m': 1800, '1h': 3600, '2h': 7200, '4h': 14400,
@@ -171,8 +174,12 @@ export async function onRequestGet({ request, env }) {
         const result1m = await getCandleRows(env, market, symbol, '1m', requestedSymbol);
         keysTried = result1m.keys;
         readErrors = result1m.errors;
-        if (Array.isArray(result1m.rows) && result1m.rows.length > 0) {
-          const base1m = shouldFillTimeGaps(market, symbol) ? fillMissingCandles(result1m.rows, '1m') : result1m.rows;
+        const sanitized1m = sanitizeCandleSeries(result1m.rows, {
+          timeframeSec: TF_SECONDS['1m'],
+          maxGapBars: MAX_CONTIGUOUS_BARS,
+        });
+        if (sanitized1m.length > 0) {
+          const base1m = shouldFillTimeGaps(market, symbol) ? fillMissingCandles(sanitized1m, '1m') : sanitized1m;
           candles = aggregateFrom1m(base1m, tfSec);
           source = 'aggregated_from_1m';
           matchedKey = result1m.key;
@@ -183,8 +190,12 @@ export async function onRequestGet({ request, env }) {
       const result = await getCandleRows(env, market, symbol, timeframe, requestedSymbol);
       keysTried = result.keys;
       readErrors = result.errors;
-      if (Array.isArray(result.rows) && result.rows.length > 0) {
-        candles = result.rows;
+      const sanitizedRows = sanitizeCandleSeries(result.rows, {
+        timeframeSec: TF_SECONDS[timeframe],
+        maxGapBars: MAX_CONTIGUOUS_BARS,
+      });
+      if (sanitizedRows.length > 0) {
+        candles = sanitizedRows;
         source = 'stored';
         matchedKey = result.key;
       }

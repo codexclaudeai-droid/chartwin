@@ -2,6 +2,7 @@
 import type { TimeframeKey } from '../../catalog/time';
 import { isBetaAppVariant } from '../../app/runtime';
 import { getSymbolPricePrecision } from '../../data/market-data-sources';
+import { normalizeSignalSeriesLength } from '../../strategy/signal-series';
 import type { DisplayCurrency } from '../../types/market';
 
 const REPORT_ICON_TOOLTIP = { placement: 'top' as const, align: 'center' as const, offset: 8 };
@@ -2058,10 +2059,10 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const buildCurrentReportSignature = (): string => {
     const chart = getActiveChart();
     const candles = chart.getCandles();
-    const signals = chart.getStrategySignalSeries().map((s) => Number(s || 0));
+    const signals = normalizeSignalSeriesLength(chart.getStrategySignalSeries(), candles.length);
     const closes = candles.map((c) => Number(c.close));
     const times = candles.map((c) => Number(c.time ?? NaN));
-    const nAll = Math.min(closes.length, signals.length > 0 ? signals.length : closes.length);
+    const nAll = closes.length;
     let start = 0;
     let end = nAll;
 
@@ -2131,10 +2132,8 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const candles = chart.getCandles();
     const closes = candles.map((c) => Number(c.close));
     const times = candles.map((c) => Number(c.time ?? NaN));
-    const signals = chart.getStrategySignalSeries().map((s) => Number(s || 0));
-
-    // signals 배열이 candles보다 짧을 수 있음(워커 응답 지연) — 짧은 쪽 기준으로 통일
-    const nAll = Math.min(closes.length, signals.length > 0 ? signals.length : closes.length);
+    const signals = normalizeSignalSeriesLength(chart.getStrategySignalSeries(), candles.length);
+    const nAll = closes.length;
     let start = 0;
     let end = nAll;
 
