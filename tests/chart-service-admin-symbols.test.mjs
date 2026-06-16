@@ -90,6 +90,9 @@ test('nasdaq futures symbol remains visible and uses the NAS100 ft display name'
   const bottomBarSource = fs.readFileSync(new URL('../src/ui/workspace/bottom-bar.ts', import.meta.url), 'utf8');
   const signalAdminSource = fs.readFileSync(new URL('../app/signal/signal-admin-panel.tsx', import.meta.url), 'utf8');
 
+  assert.match(catalogSource, /'Index Futures': \[/);
+  assert.match(catalogSource, /const NQ_TARGET_CATEGORY = 'Index Futures';/);
+  assert.doesNotMatch(catalogSource, /'지수선물': \[/);
   assert.match(catalogSource, /const NASDAQ_FUTURES_LABEL = 'NAS100 ft';/);
   assert.match(catalogSource, /const NASDAQ_FUTURES_DESC = 'NAS100 ft';/);
   assert.match(catalogSource, /function restoreRequiredVisibleSymbols\(\): void \{[\s\S]*?hiddenSymbols\.delete\(NASDAQ_FUTURES_CANONICAL_SYMBOL\);[\s\S]*?\}/);

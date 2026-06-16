@@ -20,7 +20,7 @@ function restoreRequiredVisibleSymbols(): void {
 }
 
 const DEFAULT_SYMBOL_CATALOG: Record<string, { id: string; label: string; desc: string; iconUrl?: string }[]> = {
-  '지수선물': [
+  'Index Futures': [
     { id: NASDAQ_FUTURES_CANONICAL_SYMBOL, label: NASDAQ_FUTURES_LABEL, desc: NASDAQ_FUTURES_DESC },
   ],
   index: [
@@ -130,7 +130,7 @@ function restoreDefaultCatalog(): void {
 }
 
 function applyBuiltinLabelOverrides(): void {
-  const NQ_TARGET_CATEGORY = '지수선물';
+  const NQ_TARGET_CATEGORY = 'Index Futures';
   let nqItem: { id: string; label: string; desc: string } | null = null;
   let nqSourceCategory: string | null = null;
   for (const [cat, items] of Object.entries(SYMBOL_CATALOG)) {
@@ -145,7 +145,7 @@ function applyBuiltinLabelOverrides(): void {
       }
     }
   }
-  // localStorage에 저장된 구 카테고리('index' 등)에서 '지수선물'로 이동
+  // Move older localStorage categories ('index', '지수선물', etc.) into the unified futures group.
   if (nqItem && nqSourceCategory && nqSourceCategory !== NQ_TARGET_CATEGORY) {
     SYMBOL_CATALOG[nqSourceCategory] = SYMBOL_CATALOG[nqSourceCategory].filter(
       (item) => normalizeCatalogSymbolId(item.id) !== NASDAQ_FUTURES_CANONICAL_SYMBOL,
