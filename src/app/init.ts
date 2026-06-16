@@ -3044,6 +3044,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const pane = paneControllers.get(paneId) ?? ensurePane(paneId);
       const strategyName = pane.chart.getActiveStrategyName();
       if (!strategyName) return [];
+      if (pane.chart.isStrategyComputePending?.()) return [];
       const timezone = pane.chart.config.timezone;
       const todayKey = formatDateWithTimezone(new Date(), timezone, {
         year: 'numeric',
@@ -3166,6 +3167,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     };
     const refreshSignalNotification = () => {
       const paneId = paneState.activePaneId;
+      const pane = getActivePane();
+      if (pane.chart.isStrategyComputePending?.()) return;
       const totalSignals = getSignalEventCountByPane(paneId);
       const acknowledged = acknowledgedSignalCountByPane.get(paneId) ?? 0;
       const unreadCount = Math.max(0, totalSignals - acknowledged);

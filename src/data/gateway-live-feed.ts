@@ -1,4 +1,5 @@
 import type { TimeframeKey } from '../catalog/time';
+import { TIMEFRAME_SECONDS } from '../catalog/time';
 import { disabledSymbols } from '../catalog/symbols';
 import {
   inferGatewayMarket,
@@ -114,6 +115,40 @@ function resolveGatewayBaseUrl(): string {
   return window.location.origin;
 }
 
+function canAggregateGatewayFallback(timeframe: TimeframeKey): boolean {
+  const targetSec = TIMEFRAME_SECONDS[timeframe];
+  return Number.isFinite(targetSec) && targetSec > 60 && targetSec % 60 === 0;
+}
+
+export function aggregateGatewayCandlesToTimeframe(
+  candles: CandleDataLike[],
+  timeframe: TimeframeKey,
+): CandleDataLike[] {
+  const targetSec = TIMEFRAME_SECONDS[timeframe];
+  if (!Array.isArray(candles) || !Number.isFinite(targetSec) || targetSec <= 60 || targetSec % 60 !== 0) {
+    return Array.isArray(candles) ? candles : [];
+  }
+
+  const buckets = new Map<number, CandleDataLike>();
+  candles
+    .slice()
+    .sort((a, b) => a.time - b.time)
+    .forEach((candle) => {
+      const bucketTime = Math.floor(candle.time / targetSec) * targetSec;
+      const existing = buckets.get(bucketTime);
+      if (!existing) {
+        buckets.set(bucketTime, { ...candle, time: bucketTime });
+        return;
+      }
+      existing.high = Math.max(existing.high, candle.high);
+      existing.low = Math.min(existing.low, candle.low);
+      existing.close = candle.close;
+      existing.volume += candle.volume;
+    });
+
+  return Array.from(buckets.values()).sort((a, b) => a.time - b.time);
+}
+
 async function fetchGatewayCandles(
   baseUrl: string,
   market: string,
@@ -138,7 +173,21 @@ async function fetchGatewayCandles(
     throw new Error(`Gateway candles error: ${response.status}`);
   }
   const json = await response.json() as { candles?: unknown };
-  return sanitizeGatewayCandles(json.candles);
+  const candles = sanitizeGatewayCandles(json.candles);
+  if (!candles.length && timeframe !== '1m' && canAggregateGatewayFallback(timeframe)) {
+    const sourceMultiplier = Math.max(1, Math.ceil((TIMEFRAME_SECONDS[timeframe] ?? 60) / 60));
+    const fallbackRows = await fetchGatewayCandles(
+      baseUrl,
+      market,
+      symbol,
+      '1m',
+      Math.min(3000, Math.max(1, limit * sourceMultiplier)),
+      signal,
+    );
+    return aggregateGatewayCandlesToTimeframe(fallbackRows, timeframe).slice(-Math.max(1, limit));
+  }
+
+  return candles;
 }
 
 export async function fetchGatewayReportCandles(args: {

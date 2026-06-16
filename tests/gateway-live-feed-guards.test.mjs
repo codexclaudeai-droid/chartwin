@@ -7,6 +7,7 @@ import { normalizeSignalSeriesLength } from '../src/strategy/signal-series.ts';
 import { sanitizeCandleSeries, shouldResetCandleSeries } from '../server/candle-series-guards.mjs';
 
 const initSource = fs.readFileSync(path.resolve('src/app/init.ts'), 'utf8');
+const simpleChartSource = fs.readFileSync(path.resolve('src/chart/SimpleChart.ts'), 'utf8');
 const strategyReportPanelSource = fs.readFileSync(path.resolve('src/ui/workspace/strategy-report-panel.ts'), 'utf8');
 const gatewayServerSource = fs.readFileSync(path.resolve('server/data-gateway.mjs'), 'utf8');
 const pagesCandlesSource = fs.readFileSync(path.resolve('functions/candles.js'), 'utf8');
@@ -22,6 +23,18 @@ test('sanitizeGatewayCandles drops implausible outlier candles but keeps surroun
   assert.equal(rows.length, 2);
   assert.deepEqual(rows.map((row) => row.time), [1, 3]);
   assert.deepEqual(rows.map((row) => row.close), [27272, 27275]);
+});
+
+test('sanitizeGatewayCandles keeps the latest plausible price cluster for NQ history', () => {
+  const rows = sanitizeGatewayCandles([
+    { time: 1781550420, open: 17750.25, high: 17752, low: 17749, close: 17750.25, volume: 10 },
+    { time: 1781550480, open: 17751, high: 17753, low: 17750, close: 17752, volume: 12 },
+    { time: 1781550540, open: 30510, high: 30530, low: 30500, close: 30520, volume: 40 },
+    { time: 1781550600, open: 30520, high: 30540, low: 30515, close: 30535, volume: 44 },
+  ]);
+
+  assert.deepEqual(rows.map((row) => row.time), [1781550540, 1781550600]);
+  assert.deepEqual(rows.map((row) => row.close), [30520, 30535]);
 });
 
 test('normalizeSignalSeriesLength pads missing worker signals with zeros to match candle count', () => {
@@ -41,6 +54,18 @@ test('sanitizeCandleSeries keeps only the latest contiguous segment and drops im
 
   assert.deepEqual(rows.map((row) => row.time), [60 * 60 * 24 * 30, 60 * 60 * 24 * 30 + 120]);
   assert.deepEqual(rows.map((row) => row.close), [30525, 30528]);
+});
+
+test('sanitizeCandleSeries also trims stale low-price NQ clusters before current rows', () => {
+  const rows = sanitizeCandleSeries([
+    { time: 1781550420, open: 17750.25, high: 17752, low: 17749, close: 17750.25, volume: 10 },
+    { time: 1781550480, open: 17751, high: 17753, low: 17750, close: 17752, volume: 12 },
+    { time: 1781550540, open: 30510, high: 30530, low: 30500, close: 30520, volume: 40 },
+    { time: 1781550600, open: 30520, high: 30540, low: 30515, close: 30535, volume: 44 },
+  ], { timeframeSec: 60, maxGapBars: 3000 });
+
+  assert.deepEqual(rows.map((row) => row.time), [1781550540, 1781550600]);
+  assert.deepEqual(rows.map((row) => row.close), [30520, 30535]);
 });
 
 test('shouldResetCandleSeries detects when fresh intraday rows should replace stale history', () => {
@@ -64,6 +89,39 @@ test('signal length normalization is used for live signal notifications and stra
     strategyReportPanelSource,
     /normalizeSignalSeriesLength\(chart\.getStrategySignalSeries\(\), candles\.length\)/,
     'strategy report refresh should align worker signals to candle length before slicing',
+  );
+});
+
+test('strategy signal consumers wait for the latest compute result to avoid flicker', () => {
+  assert.match(
+    simpleChartSource,
+    /if \(message\.requestId !== this\.strategyRequestId\) return;/,
+    'chart should ignore stale worker results when a newer strategy compute is pending',
+  );
+  assert.match(
+    simpleChartSource,
+    /public isStrategyComputePending\(\): boolean \{/,
+    'chart should expose pending strategy compute state to UI consumers',
+  );
+  assert.match(
+    initSource,
+    /if \(pane\.chart\.isStrategyComputePending\?\.\(\)\) return \[\];/,
+    'live signal popup scan should not announce from in-flight strategy output',
+  );
+  assert.match(
+    initSource,
+    /if \(pane\.chart\.isStrategyComputePending\?\.\(\)\) return;/,
+    'top bar notification should keep the previous stable count during strategy recompute',
+  );
+  assert.match(
+    strategyReportPanelSource,
+    /if \(!message \|\| message\.requestId !== nextRequestId\) return;/,
+    'strategy report worker should only apply the latest refresh result',
+  );
+  assert.match(
+    strategyReportPanelSource,
+    /if \(chart\.isStrategyComputePending\?\.\(\) && latestResult\) \{/,
+    'strategy report refresh should keep current trades visible while strategy signals are recomputing',
   );
 });
 

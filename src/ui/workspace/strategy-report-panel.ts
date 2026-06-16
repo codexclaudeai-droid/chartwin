@@ -26,6 +26,7 @@ type StrategyReportChartLike = {
   };
   getCandles: () => CandleLike[];
   getStrategySignalSeries: () => number[];
+  isStrategyComputePending?: () => boolean;
   getActiveStrategyName: () => string | null;
   focusRangeByIndex?: (
     startIndex: number,
@@ -2060,7 +2061,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
   worker.addEventListener('message', (event: MessageEvent<{ requestId: number; result: ReportResult }>) => {
     const message = event.data;
-    if (!message || message.requestId < lastAppliedRequestId) return;
+    if (!message || message.requestId !== nextRequestId) return;
     lastAppliedRequestId = message.requestId;
     latestResult = applyCapitalBasedRatios(message.result);
     reportStale = false;
@@ -2235,6 +2236,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     reportStale = false;
     const chart = getActiveChart();
     syncLatestMetaFromActiveChart();
+    if (chart.isStrategyComputePending?.() && latestResult) {
+      reportStale = true;
+      renderAll();
+      return;
+    }
 
     const candles = chart.getCandles();
     const closes = candles.map((c) => Number(c.close));

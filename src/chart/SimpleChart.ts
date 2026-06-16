@@ -459,6 +459,7 @@ export class SimpleChart {
   private pendingStrategyRequestId = 0;
   private strategyComputeTimer: number | null = null;
   private pendingStrategyChangedFrom: number | null = null;
+  private strategyComputePending = false;
   private dmiScaleRange: { lo: number; hi: number } | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private resizeScheduled = false;
@@ -2838,6 +2839,10 @@ export class SimpleChart {
     return this.strategySignals;
   }
 
+  public isStrategyComputePending(): boolean {
+    return this.strategyComputePending;
+  }
+
   public getCompositeDataUrl(): string {
     const w = this.canvas.width;
     const h = this.canvas.height;
@@ -3212,8 +3217,9 @@ export class SimpleChart {
     }>) => {
       const message = event.data;
       if (message.type !== 'result') return;
-      if (message.requestId < this.pendingStrategyRequestId) return;
+      if (message.requestId !== this.strategyRequestId) return;
       this.pendingStrategyRequestId = message.requestId;
+      this.strategyComputePending = false;
       this.strategySignals = message.signals;
       this.latestStrategySignalIndex = this.computeLatestSignalIndex(this.strategySignals);
       this.drawSignalLayer(this.lastDrawMeta);
@@ -3234,6 +3240,7 @@ export class SimpleChart {
     }
     this.strategyRequestId += 1;
     this.pendingStrategyRequestId = this.strategyRequestId;
+    this.strategyComputePending = false;
     this.strategySignals = [];
     this.signalHitAreas = [];
     this.latestStrategySignalIndex = -1;
@@ -3269,9 +3276,13 @@ export class SimpleChart {
   }
 
   private requestStrategyCompute(changedFrom: number): void {
-    if (!this.strategyWorker) return;
+    if (!this.strategyWorker) {
+      this.strategyComputePending = false;
+      return;
+    }
     const strategy = this.getActiveStrategy();
     if (!strategy || !this.data.length) {
+      this.strategyComputePending = false;
       this.strategySignals = [];
       this.signalHitAreas = [];
       this.latestStrategySignalIndex = -1;
@@ -3280,6 +3291,7 @@ export class SimpleChart {
       return;
     }
     if (strategy.id === DOUBLE_BREAK_STRATEGY_ID) {
+      this.strategyComputePending = false;
       this.syncDoubleBreakConfigFromParams();
       const result = this.getDoubleBreakResult();
       const signals = new Array<StrategySignal>(this.data.length).fill(0);
@@ -3299,6 +3311,7 @@ export class SimpleChart {
       return;
     }
     this.strategyRequestId += 1;
+    this.strategyComputePending = true;
     this.strategyWorker.postMessage({
       type: 'compute',
       requestId: this.strategyRequestId,
