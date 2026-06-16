@@ -95,6 +95,9 @@ test('chart service database schema covers repository-backed core tables', () =>
   assert.equal(tables.find((table) => table.name === 'web_info_settings')?.columns.plan_services_json.type, 'jsonb');
   assert.equal(tables.find((table) => table.name === 'web_info_settings')?.columns.updated_by_admin_id.references, 'users.id');
   assert.equal(tables.find((table) => table.name === 'signal_admin_settings')?.columns.hidden_strategy_ids_json.type, 'jsonb');
+  assert.equal(tables.find((table) => table.name === 'signal_admin_settings')?.columns.global_signal_policy_json.type, 'jsonb');
+  assert.equal(tables.find((table) => table.name === 'signal_admin_settings')?.columns.symbol_signal_policies_json.type, 'jsonb');
+  assert.equal(tables.find((table) => table.name === 'signal_admin_settings')?.columns.strategy_param_profiles_json.type, 'jsonb');
   assert.equal(tables.find((table) => table.name === 'signal_admin_settings')?.columns.selected_strategy_id.type, 'text');
   assert.equal(tables.find((table) => table.name === 'telegram_bot_profiles')?.columns.bot_token.type, 'text');
   assert.equal(tables.find((table) => table.name === 'telegram_bot_profiles')?.columns.chat_id.type, 'text');
@@ -179,6 +182,9 @@ test('postgres schema renderer emits tables, checks, foreign keys, and indexes',
   assert.match(sql, /alter table if exists web_info_settings add column if not exists plan_services_json jsonb/i);
   assert.match(sql, /create table if not exists signal_admin_settings/i);
   assert.match(sql, /hidden_strategy_ids_json jsonb not null default '\[\]'::jsonb/i);
+  assert.match(sql, /global_signal_policy_json jsonb not null default '\{\}'::jsonb/i);
+  assert.match(sql, /symbol_signal_policies_json jsonb not null default '\[\]'::jsonb/i);
+  assert.match(sql, /strategy_param_profiles_json jsonb not null default '\[\]'::jsonb/i);
   assert.match(sql, /selected_strategy_id text not null default 'strategy_js_grid_martingale'/i);
   assert.match(sql, /create table if not exists telegram_bot_profiles/i);
   assert.match(sql, /bot_token text not null/i);

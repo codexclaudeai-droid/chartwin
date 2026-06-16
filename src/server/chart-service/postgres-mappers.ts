@@ -8,6 +8,8 @@ import type {
   SupportMessageRecord,
   SupportThreadRecord,
 } from '../../domain/chart-service/index.ts';
+import { normalizeSignalPolicySettings } from '../../domain/chart-service/index.ts';
+import { normalizeStrategyParameterSettings } from '../../domain/chart-service/index.ts';
 import type {
   AuthSessionRecord,
   ChartUserSettingsRecord,
@@ -528,13 +530,21 @@ export function mapChartUserSettingsToPostgresRow(record: ChartUserSettingsRecor
 }
 
 export function mapSignalAdminSettingsFromPostgresRow(row: PostgresRow): SignalAdminSettingsRecord {
+  const selectedStrategyId = readString(row.selected_strategy_id);
   return {
     id: readString(row.id),
     hiddenSymbols: readLegacySignalStringArray(row.hidden_symbols_json),
     disabledSymbols: readLegacySignalStringArray(row.disabled_symbols_json),
     hiddenStrategyIds: readLegacySignalStringArray(row.hidden_strategy_ids_json),
+    signalPolicy: normalizeSignalPolicySettings({
+      globalPolicy: readJsonRecord(row.global_signal_policy_json),
+      symbolPolicies: readJsonArray(row.symbol_signal_policies_json),
+    }, selectedStrategyId),
+    strategyParams: normalizeStrategyParameterSettings({
+      profiles: readJsonArray(row.strategy_param_profiles_json),
+    }),
     strategyMgmtVisible: readBoolean(row.strategy_mgmt_visible),
-    selectedStrategyId: readString(row.selected_strategy_id),
+    selectedStrategyId,
     updatedAt: readIsoString(row.updated_at),
   };
 }
@@ -545,6 +555,9 @@ export function mapSignalAdminSettingsToPostgresRow(record: SignalAdminSettingsR
     hidden_symbols_json: [...record.hiddenSymbols],
     disabled_symbols_json: [...record.disabledSymbols],
     hidden_strategy_ids_json: [...record.hiddenStrategyIds],
+    global_signal_policy_json: record.signalPolicy.globalPolicy,
+    symbol_signal_policies_json: record.signalPolicy.symbolPolicies,
+    strategy_param_profiles_json: record.strategyParams.profiles,
     strategy_mgmt_visible: record.strategyMgmtVisible,
     selected_strategy_id: record.selectedStrategyId,
     updated_at: record.updatedAt,
@@ -1031,6 +1044,13 @@ function readJsonRecord(value: unknown): Record<string, unknown> {
     throw new Error('Expected postgres json object value');
   }
   return structuredClone(parsedValue as Record<string, unknown>);
+}
+
+function readJsonArray(value: unknown): unknown[] {
+  if (value == null) return [];
+  const parsedValue = typeof value === 'string' ? JSON.parse(value) : value;
+  if (!Array.isArray(parsedValue)) return [];
+  return structuredClone(parsedValue as unknown[]);
 }
 
 function assertSafeIdentifier(identifier: string): void {

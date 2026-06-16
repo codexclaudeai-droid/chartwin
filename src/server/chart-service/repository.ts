@@ -4,6 +4,8 @@ import type {
   NotificationRecord,
   PaymentRequestRecord,
   ReferralLedgerRecord,
+  SignalPolicySettings,
+  StrategyParameterSettings,
   SubscriptionPlan,
   SubscriptionRecord,
   SupportMessageRecord,
@@ -184,6 +186,8 @@ export type SignalAdminSettingsRecord = {
   hiddenSymbols: string[];
   disabledSymbols: string[];
   hiddenStrategyIds: string[];
+  signalPolicy: SignalPolicySettings;
+  strategyParams: StrategyParameterSettings;
   strategyMgmtVisible: boolean;
   selectedStrategyId: string;
   updatedAt: string;

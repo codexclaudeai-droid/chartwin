@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server.js';
-import { assertSuperAdminActor } from '../../src/domain/chart-service/index.ts';
+import {
+  DEFAULT_SIGNAL_POLICY_SETTINGS,
+  DEFAULT_STRATEGY_PARAMETER_SETTINGS,
+  assertAdminActor,
+  assertSuperAdminActor,
+  normalizeSignalPolicySettings,
+  normalizeStrategyParameterSettings,
+} from '../../src/domain/chart-service/index.ts';
 import {
   getActorFromAsyncRequest,
   getAsyncChartServicePersistence,
@@ -14,6 +21,8 @@ export type SignalAdminSettingsPayload = {
   hidden: string[];
   disabled: string[];
   hiddenStrategies: string[];
+  signalPolicy: unknown;
+  strategyParams: unknown;
   mgmtVisible: boolean;
   selectedStrategyId: string;
 };
@@ -29,13 +38,20 @@ export async function updateSignalAdminSettings(
   const persistence = getAsyncChartServicePersistence();
   return persistence.runMutation(async (repository) => {
     const current = await getStoredOrDefault(repository);
+    const selectedStrategyId = patch.selectedStrategyId?.trim() || current.selectedStrategyId;
     const next: SignalAdminSettingsRecord = {
       ...current,
       hiddenSymbols: patch.hidden ? normalizeUpperList(patch.hidden) : current.hiddenSymbols,
       disabledSymbols: patch.disabled ? normalizeUpperList(patch.disabled) : current.disabledSymbols,
       hiddenStrategyIds: patch.hiddenStrategies ? normalizeStringList(patch.hiddenStrategies) : current.hiddenStrategyIds,
+      signalPolicy: patch.signalPolicy
+        ? normalizeSignalPolicySettings(patch.signalPolicy, selectedStrategyId)
+        : normalizeSignalPolicySettings(current.signalPolicy, selectedStrategyId),
+      strategyParams: patch.strategyParams
+        ? normalizeStrategyParameterSettings(patch.strategyParams)
+        : normalizeStrategyParameterSettings(current.strategyParams),
       strategyMgmtVisible: typeof patch.mgmtVisible === 'boolean' ? patch.mgmtVisible : current.strategyMgmtVisible,
-      selectedStrategyId: patch.selectedStrategyId?.trim() || current.selectedStrategyId,
+      selectedStrategyId,
       updatedAt: new Date().toISOString(),
     };
     await repository.saveSignalAdminSettings(next);
@@ -48,6 +64,14 @@ export async function requireSignalSuperAdmin(request: Request): Promise<void> {
   await persistence.runRead(async (repository) => {
     const actor = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
     assertSuperAdminActor(actor);
+  });
+}
+
+export async function requireSignalAdmin(request: Request): Promise<void> {
+  const persistence = getAsyncChartServicePersistence();
+  await persistence.runRead(async (repository) => {
+    const actor = await getActorFromAsyncRequest(repository, request, new Date().toISOString());
+    assertAdminActor(actor);
   });
 }
 
@@ -75,15 +99,41 @@ export function toStrategiesResponse(settings: SignalAdminSettingsRecord) {
     hidden: settings.hiddenStrategyIds,
     mgmtVisible: settings.strategyMgmtVisible,
     selectedStrategyId: settings.selectedStrategyId,
+    signalPolicy: settings.signalPolicy,
+  };
+}
+
+export function toSignalPolicyResponse(settings: SignalAdminSettingsRecord) {
+  return {
+    ok: true,
+    signalPolicy: settings.signalPolicy,
+  };
+}
+
+export function toStrategyParamsResponse(settings: SignalAdminSettingsRecord) {
+  return {
+    ok: true,
+    strategyParams: settings.strategyParams,
   };
 }
 
 async function getStoredOrDefault(repository: AsyncChartServiceRepository): Promise<SignalAdminSettingsRecord> {
-  return (await repository.getSignalAdminSettings(SETTINGS_ID)) ?? {
+  const stored = await repository.getSignalAdminSettings(SETTINGS_ID);
+  if (stored) {
+    return {
+      ...stored,
+      signalPolicy: normalizeSignalPolicySettings(stored.signalPolicy, stored.selectedStrategyId),
+      strategyParams: normalizeStrategyParameterSettings(stored.strategyParams),
+    };
+  }
+
+  return {
     id: SETTINGS_ID,
     hiddenSymbols: [],
     disabledSymbols: [],
     hiddenStrategyIds: [],
+    signalPolicy: DEFAULT_SIGNAL_POLICY_SETTINGS,
+    strategyParams: DEFAULT_STRATEGY_PARAMETER_SETTINGS,
     strategyMgmtVisible: false,
     selectedStrategyId: DEFAULT_SELECTED_STRATEGY_ID,
     updatedAt: new Date(0).toISOString(),

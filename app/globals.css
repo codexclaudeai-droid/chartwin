@@ -16283,6 +16283,94 @@ body:not(:has(.landing-page)) .profile-page .payment-flow-step small {
   justify-content: flex-start;
 }
 
+.signal-admin-policy-editor {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.signal-admin-policy-editor.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.signal-admin-policy-title {
+  align-items: center;
+  background: rgba(2, 7, 19, 0.32);
+  border: 1px solid rgba(129, 182, 216, 0.13);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  min-height: 58px;
+  padding: 10px 12px;
+}
+
+.signal-admin-policy-title strong {
+  color: #ffffff;
+  font-size: 0.92rem;
+}
+
+.signal-admin-policy-editor label {
+  color: rgba(233, 242, 255, 0.58);
+  display: grid;
+  font-size: 0.72rem;
+  font-weight: 850;
+  gap: 7px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.signal-admin-input,
+.signal-admin-select {
+  background: rgba(2, 7, 19, 0.56);
+  border: 1px solid rgba(129, 182, 216, 0.2);
+  border-radius: 8px;
+  color: #e9f2ff;
+  font: inherit;
+  min-height: 40px;
+  outline: none;
+  padding: 0 12px;
+  width: 100%;
+}
+
+.signal-admin-input:focus,
+.signal-admin-select:focus {
+  border-color: rgba(125, 183, 255, 0.72);
+  box-shadow: 0 0 0 3px rgba(125, 183, 255, 0.12);
+}
+
+.signal-admin-policy-note {
+  background: rgba(73, 255, 145, 0.07);
+  border: 1px solid rgba(73, 255, 145, 0.16);
+  border-radius: 8px;
+  color: rgba(233, 242, 255, 0.72);
+  font-size: 0.84rem;
+  line-height: 1.6;
+  padding: 12px 14px;
+}
+
+.signal-admin-policy-add {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(180px, 280px) auto;
+  justify-content: start;
+}
+
+.signal-admin-policy-card {
+  background: rgba(2, 7, 19, 0.26);
+  border: 1px solid rgba(129, 182, 216, 0.13);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.signal-admin-section-head.compact {
+  padding-bottom: 10px;
+}
+
 @media (max-width: 640px) {
   .signal-admin-page {
     padding-inline: 12px;
@@ -16307,6 +16395,12 @@ body:not(:has(.landing-page)) .profile-page .payment-flow-step small {
 
   .signal-admin-row:not([data-webhook="true"]):not(.signal-admin-strategy-row) {
     grid-template-columns: minmax(0, 1fr) 64px;
+  }
+
+  .signal-admin-policy-editor,
+  .signal-admin-policy-editor.compact,
+  .signal-admin-policy-add {
+    grid-template-columns: 1fr;
   }
 }
 

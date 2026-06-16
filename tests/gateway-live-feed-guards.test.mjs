@@ -79,16 +79,16 @@ test('shouldResetCandleSeries detects when fresh intraday rows should replace st
   );
 });
 
-test('signal length normalization is used for live signal notifications and strategy reports', () => {
+test('confirmed signal length normalization is used for live signal notifications and strategy reports', () => {
   assert.match(
     initSource,
-    /normalizeSignalSeriesLength\(pane\.chart\.getStrategySignalSeries\(\), candles\.length\)/,
-    'notification counts should align worker signals to the current candle window',
+    /normalizeConfirmedSignalSeriesLength\(\s*pane\.chart\.getStrategySignalSeries\(\),\s*candles,\s*pane\.chart\.config\.timeframe,\s*\)/,
+    'notification counts should align worker signals to the current confirmed candle window',
   );
   assert.match(
     strategyReportPanelSource,
-    /normalizeSignalSeriesLength\(chart\.getStrategySignalSeries\(\), candles\.length\)/,
-    'strategy report refresh should align worker signals to candle length before slicing',
+    /normalizeConfirmedSignalSeriesLength\(\s*chart\.getStrategySignalSeries\(\),\s*candles,\s*chart\.config\.timeframe,\s*\)/,
+    'strategy report refresh should align worker signals to confirmed candle length before slicing',
   );
 });
 
@@ -120,7 +120,7 @@ test('strategy signal consumers wait for the latest compute result to avoid flic
   );
   assert.match(
     strategyReportPanelSource,
-    /if \(chart\.isStrategyComputePending\?\.\(\) && latestResult\) \{/,
+    /if \(chart\.isStrategyComputePending\?\.\(\)\) \{/,
     'strategy report refresh should keep current trades visible while strategy signals are recomputing',
   );
 });

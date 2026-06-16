@@ -208,6 +208,37 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
   listWrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;padding-right:2px;margin-bottom:12px;min-height:0;';
   listPanel.appendChild(listWrap);
 
+  const serverParamBox = document.createElement('div');
+  serverParamBox.style.cssText = 'display:none;margin-bottom:12px;padding:10px;border:1px solid #354964;border-radius:8px;background:#101827;';
+  const serverParamTitle = document.createElement('div');
+  serverParamTitle.textContent = '서버 전략 파라미터 프로필';
+  serverParamTitle.style.cssText = 'font-size:12px;font-weight:800;color:#d8ecff;margin-bottom:4px;';
+  const serverParamHint = document.createElement('div');
+  serverParamHint.textContent = '현재 활성 전략의 파라미터를 전역 또는 현재 종목 기준으로 저장하고, 저장된 전역+종목별 값을 차트에 적용합니다.';
+  serverParamHint.style.cssText = 'font-size:11px;color:#9fb4cf;line-height:1.45;margin-bottom:8px;';
+  const serverParamActions = document.createElement('div');
+  serverParamActions.style.cssText = 'display:flex;flex-wrap:wrap;gap:7px;align-items:center;';
+  const serverParamStatus = document.createElement('span');
+  serverParamStatus.style.cssText = 'font-size:11px;color:#9fb4cf;';
+  const createServerParamButton = (label: string) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.style.cssText = 'padding:5px 9px;border-radius:6px;border:1px solid #3d5877;background:#16243a;color:#d8ecff;font-size:11px;cursor:pointer;';
+    return button;
+  };
+  const saveGlobalParamBtn = createServerParamButton('전역 저장');
+  const saveSymbolParamBtn = createServerParamButton('현재 종목 저장');
+  const loadParamBtn = createServerParamButton('서버값 불러오기');
+  serverParamActions.appendChild(saveGlobalParamBtn);
+  serverParamActions.appendChild(saveSymbolParamBtn);
+  serverParamActions.appendChild(loadParamBtn);
+  serverParamActions.appendChild(serverParamStatus);
+  serverParamBox.appendChild(serverParamTitle);
+  serverParamBox.appendChild(serverParamHint);
+  serverParamBox.appendChild(serverParamActions);
+  listPanel.insertBefore(serverParamBox, listWrap);
+
   const registerPanel = document.createElement('div');
   registerPanel.style.cssText = 'display:none;';
   body.appendChild(registerPanel);
@@ -436,6 +467,110 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     donchianTrendGrid.appendChild(wrap);
     return input;
   };
+
+  const setServerParamStatus = (message: string, ok = true) => {
+    serverParamStatus.textContent = message;
+    serverParamStatus.style.color = ok ? '#a6f5cb' : '#ffb4b4';
+  };
+
+  const getActiveStrategyParamProfile = (scope: 'global' | 'symbol') => {
+    const strategyId = chart.getActiveStrategyId?.();
+    if (!strategyId) throw new Error('활성 전략이 없습니다.');
+    const symbolId = scope === 'symbol' ? String(chart.config?.symbol ?? '').trim().toUpperCase() : null;
+    if (scope === 'symbol' && !symbolId) throw new Error('현재 종목을 확인할 수 없습니다.');
+    const strategyName = chart.getActiveStrategyName?.() ?? strategyId;
+    const params = chart.getStrategyParams?.(strategyId) ?? {};
+    return {
+      strategyId,
+      symbolId,
+      name: symbolId ? `${strategyName} ${symbolId}` : `${strategyName} global`,
+      params,
+      enabled: true,
+    };
+  };
+
+  const fetchStrategyParameterSettings = async () => {
+    const response = await fetch('/admin/strategy-params', { cache: 'no-store' });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload?.ok !== true) {
+      throw new Error(payload?.message || '전략 파라미터를 불러오지 못했습니다.');
+    }
+    return payload.strategyParams ?? { profiles: [] };
+  };
+
+  const saveActiveStrategyParamsToServer = async (scope: 'global' | 'symbol') => {
+    const profile = getActiveStrategyParamProfile(scope);
+    const settings = await fetchStrategyParameterSettings();
+    const profiles = Array.isArray(settings.profiles) ? settings.profiles : [];
+    const profileId = `${profile.strategyId}:${profile.symbolId ?? 'global'}`;
+    const nextProfiles = [
+      ...profiles.filter((item: any) => item?.id !== profileId),
+      profile,
+    ];
+    const response = await fetch('/admin/strategy-params', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ strategyParams: { profiles: nextProfiles } }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload?.ok !== true) {
+      throw new Error(payload?.message || '전략 파라미터 저장에 실패했습니다.');
+    }
+    return payload.strategyParams;
+  };
+
+  const loadActiveStrategyParamsFromServer = async () => {
+    const strategyId = chart.getActiveStrategyId?.();
+    if (!strategyId) throw new Error('활성 전략이 없습니다.');
+    const symbolId = String(chart.config?.symbol ?? '').trim().toUpperCase();
+    const settings = await fetchStrategyParameterSettings();
+    const profiles = Array.isArray(settings.profiles) ? settings.profiles : [];
+    const globalProfile = profiles.find((profile: any) => (
+      profile?.enabled !== false && profile.strategyId === strategyId && !profile.symbolId
+    ));
+    const symbolProfile = profiles.find((profile: any) => (
+      profile?.enabled !== false && profile.strategyId === strategyId && profile.symbolId === symbolId
+    ));
+    const patch = {
+      ...(globalProfile?.params ?? {}),
+      ...(symbolProfile?.params ?? {}),
+    };
+    if (Object.keys(patch).length === 0) throw new Error('적용할 서버 파라미터가 없습니다.');
+    chart.setStrategyParams?.(strategyId, patch);
+    onApply();
+    render();
+    return patch;
+  };
+
+  saveGlobalParamBtn.addEventListener('click', async () => {
+    try {
+      setServerParamStatus('전역 저장 중...');
+      await saveActiveStrategyParamsToServer('global');
+      setServerParamStatus('전역 프로필 저장 완료');
+    } catch (error) {
+      setServerParamStatus(error instanceof Error ? error.message : String(error), false);
+    }
+  });
+
+  saveSymbolParamBtn.addEventListener('click', async () => {
+    try {
+      setServerParamStatus('현재 종목 저장 중...');
+      await saveActiveStrategyParamsToServer('symbol');
+      setServerParamStatus('현재 종목 프로필 저장 완료');
+    } catch (error) {
+      setServerParamStatus(error instanceof Error ? error.message : String(error), false);
+    }
+  });
+
+  loadParamBtn.addEventListener('click', async () => {
+    try {
+      setServerParamStatus('서버값 적용 중...');
+      await loadActiveStrategyParamsFromServer();
+      setServerParamStatus('서버 파라미터 적용 완료');
+    } catch (error) {
+      setServerParamStatus(error instanceof Error ? error.message : String(error), false);
+    }
+  });
 
   const createDonchianTrendModeSelect = (key: string, labelText: string) => {
     const wrap = document.createElement('label');
@@ -859,6 +994,9 @@ export function openStrategyModal(chart: any, onApply: () => void, options?: { m
     const activeSupportsRiskLines = activeIsDoubleBreak
       || activeIsDonchianTrend
       || (activeIsBollinger && chart.getBollingerRiskConfig?.().enabled);
+
+    serverParamBox.style.display = isAdmin && activeId && chart.getStrategyParams ? 'block' : 'none';
+    serverParamStatus.textContent = '';
 
     listWrap.innerHTML = '';
     strategies.forEach((s) => {

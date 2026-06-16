@@ -30,7 +30,7 @@ import {
 } from '../strategy/strategy-service';
 import { GRID_ATR_BNF_SROUTER_PRESETS, inferGridAtrBnfSrouterPreset } from '../strategy/strategies/grid-atr-bnf-srouter-v1';
 import { getStrategyHistoryDiagnostic } from '../strategy/strategy-history';
-import { normalizeSignalSeriesLength } from '../strategy/signal-series';
+import { normalizeConfirmedSignalSeriesLength } from '../strategy/signal-series';
 import {
   openChartSettingsModal,
   openIndicatorModal,
@@ -2818,6 +2818,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       onModeChange: (mode, prevMode) => {
         const paneId = paneState.activePaneId;
         strategyReportOpenByPane.set(paneId, mode !== 'collapsed');
+        if (prevMode === 'collapsed' && mode !== 'collapsed') {
+          requestStrategyReportAfterNextCompute(paneId);
+          getActivePane().chart.recomputeStrategySignals?.(0);
+        }
         const shouldCollapseIndicators = (prevMode === 'collapsed' && mode !== 'collapsed')
           || (mode === 'expanded' && prevMode !== 'expanded');
         if (shouldCollapseIndicators) {
@@ -3011,7 +3015,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         day: '2-digit',
       });
       const candles = pane.chart.getCandles();
-      const series = normalizeSignalSeriesLength(pane.chart.getStrategySignalSeries(), candles.length);
+      const series = normalizeConfirmedSignalSeriesLength(
+        pane.chart.getStrategySignalSeries(),
+        candles,
+        pane.chart.config.timeframe,
+      );
       if (!series.length) return 0;
       return series.reduce<number>((acc, value, index) => {
         if (Number(value) === 0) return acc;
@@ -3067,7 +3075,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         day: '2-digit',
       });
       const candles = pane.chart.getCandles();
-      const series = normalizeSignalSeriesLength(pane.chart.getStrategySignalSeries(), candles.length);
+      const series = normalizeConfirmedSignalSeriesLength(
+        pane.chart.getStrategySignalSeries(),
+        candles,
+        pane.chart.config.timeframe,
+      );
       const symbol = pane.chart.config.symbol;
       const found: Array<{
         key: string;

@@ -58,6 +58,21 @@ test('expanded strategy report refreshes after timeframe recompute without manua
     /onModeChange: \(mode, prevMode\) => \{[\s\S]*?strategyReportOpenByPane\.set\(paneId, mode !== 'collapsed'\);/,
     'unfolding the report panel should mark it open for subsequent strategy recomputes',
   );
+  assert.match(
+    initSource,
+    /if \(prevMode === 'collapsed' && mode !== 'collapsed'\) \{[\s\S]*?requestStrategyReportAfterNextCompute\(paneId\);[\s\S]*?getActivePane\(\)\.chart\.recomputeStrategySignals\?\.\(0\);[\s\S]*?\}/,
+    'unfolding the report panel should request a fresh strategy recompute before reporting',
+  );
+  assert.match(
+    panelSource,
+    /onModeChange\?\.\(mode, prevMode\);\s*if \(wasCollapsed && mode !== 'collapsed'\) \{\s*refresh\(\);/,
+    'panel mode changes should be visible to the app before an unfold refresh runs',
+  );
+  assert.match(
+    panelSource,
+    /if \(chart\.isStrategyComputePending\?\.\(\)\) \{\s*reportStale = true;\s*renderAll\(\);\s*return;\s*\}/,
+    'unfold refresh should not replace the report with zero values while strategy recompute is pending',
+  );
 });
 
 test('live current-candle patches do not schedule strategy recomputation', () => {

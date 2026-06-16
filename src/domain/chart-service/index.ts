@@ -8,3 +8,5 @@ export * from './profile-avatars.ts';
 export * from './fixtures.ts';
 export * from './notifications.ts';
 export * from './presentation.ts';
+export * from './signal-policy.ts';
+export * from './strategy-parameters.ts';

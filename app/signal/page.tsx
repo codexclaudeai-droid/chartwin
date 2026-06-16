@@ -30,8 +30,8 @@ export default async function SignalPage() {
     <main className="signal-admin-page">
       <div className="signal-admin-hero">
         <span>TRADINGCORE SIGNAL</span>
-        <h1>전략시그널 관리</h1>
-        <p>슈퍼관리자 권한으로 종목 노출, 웹훅 수신, 사용자용 전략 표시를 관리합니다.</p>
+        <h1>시그널 정책 관리</h1>
+        <p>슈퍼관리자 권한으로 차트전략, EA전략, 실제체결 기준을 전체 종목 또는 특정 종목별로 관리합니다.</p>
       </div>
       <SignalAdminPanel />
     </main>

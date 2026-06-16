@@ -21,6 +21,7 @@ import {
   type StrategyParamValue,
   type StrategySignal,
 } from '../strategy/strategy-service';
+import { normalizeConfirmedSignalSeriesLength } from '../strategy/signal-series';
 import {
   calculateAutoTrendlineChannel,
   simulateAutoTrendlineChannelStrategy,
@@ -2910,6 +2911,14 @@ export class SimpleChart {
     return -1;
   }
 
+  private normalizeStrategySignalsForCandles(
+    signals: readonly unknown[],
+    candles: CandleData[] = this.data,
+  ): StrategySignal[] {
+    return normalizeConfirmedSignalSeriesLength(signals, candles, this.config.timeframe)
+      .map((value) => (value > 0 ? 1 : value < 0 ? -1 : 0)) as StrategySignal[];
+  }
+
   private updateSignalAnimationLoop(): void {
     const latestIsVisible = this.latestStrategySignalIndex >= this.startIndex && this.latestStrategySignalIndex < this.endIndex;
     const nowMs = performance.now();
@@ -3249,7 +3258,7 @@ export class SimpleChart {
       this.strategyComputePending = false;
       const previousLatestIndex = this.latestStrategySignalIndex;
       const previousSignals = this.strategySignals;
-      this.strategySignals = message.signals;
+      this.strategySignals = this.normalizeStrategySignalsForCandles(message.signals);
       this.latestStrategySignalIndex = this.computeLatestSignalIndex(this.strategySignals);
       this.armLatestSignalAnimation(previousLatestIndex, previousSignals);
       this.drawSignalLayer(this.lastDrawMeta);
@@ -3337,7 +3346,7 @@ export class SimpleChart {
       }
       const previousLatestIndex = this.latestStrategySignalIndex;
       const previousSignals = this.strategySignals;
-      this.strategySignals = signals;
+      this.strategySignals = this.normalizeStrategySignalsForCandles(signals);
       this.latestStrategySignalIndex = this.computeLatestSignalIndex(this.strategySignals);
       this.armLatestSignalAnimation(previousLatestIndex, previousSignals);
       this.drawSignalLayer(this.lastDrawMeta);
@@ -4201,7 +4210,7 @@ export class SimpleChart {
         result.shortSignals.forEach((signal) => {
           if (signal.index >= 0 && signal.index < signals.length) signals[signal.index] = -1;
         });
-        return signals;
+        return this.normalizeStrategySignalsForCandles(signals, candles);
       } catch {
         return [];
       }
@@ -4247,7 +4256,10 @@ export class SimpleChart {
         __strategyParams: strategy.params ?? {},
         __symbol: this.config.symbol,
       };
-      return candles.map((_, index) => toSignal(strategyFn(context, index, ta)));
+      return this.normalizeStrategySignalsForCandles(
+        candles.map((_, index) => toSignal(strategyFn(context, index, ta))),
+        candles,
+      );
     } catch {
       return [];
     }

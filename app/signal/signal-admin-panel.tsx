@@ -1,6 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import {
+  DEFAULT_SIGNAL_POLICY_SETTINGS,
+  SIGNAL_EXECUTION_MODES,
+  SIGNAL_FILL_MODELS,
+  SIGNAL_SOURCES,
+  normalizeSignalPolicySettings,
+  type SignalExecutionMode,
+  type SignalFillModel,
+  type SignalPolicy,
+  type SignalPolicySettings,
+  type SignalSource,
+} from '../../src/domain/chart-service/signal-policy.ts';
 import { readRequiredJsonPayload } from './signal-admin-json';
 
 type SymbolItem = {
@@ -27,7 +39,7 @@ type StatusState = {
 
 const SYMBOL_GROUPS: SymbolGroup[] = [
   {
-    label: 'Index',
+    label: 'Index Futures',
     webhook: true,
     symbols: [
       { id: 'NQ1!', desc: 'E-mini Nasdaq-100 Futures' },
@@ -91,18 +103,45 @@ const STRATEGIES: StrategyItem[] = [
 
 const DEFAULT_USER_STRATEGY_ID = 'strategy_js_grid_martingale';
 
+const SOURCE_LABELS: Record<SignalSource, string> = {
+  chart_strategy: '차트전략',
+  ea_strategy: 'EA전략',
+  actual_fill: '실제체결',
+};
+
+const EXECUTION_LABELS: Record<SignalExecutionMode, string> = {
+  simple_signal: '단순 시그널',
+  advanced_order_plan: '고급 주문계획',
+  ea_signal: 'EA 시그널',
+  actual_fill: '실제체결 기준',
+};
+
+const FILL_MODEL_LABELS: Record<SignalFillModel, string> = {
+  ohlc_conservative: 'OHLC 보수적',
+  ohlc_optimistic: 'OHLC 낙관적',
+  ohlc_candle_path: 'OHLC 경로추정',
+  next_open: '다음 봉 시가',
+  next_tick: '다음 틱',
+  tick_replay: '틱 리플레이',
+  actual_fill: '실제 체결',
+};
+
 export function SignalAdminPanel() {
   const [hiddenSymbols, setHiddenSymbols] = useState<Set<string>>(new Set());
   const [disabledSymbols, setDisabledSymbols] = useState<Set<string>>(new Set());
   const [hiddenStrategies, setHiddenStrategies] = useState<Set<string>>(new Set());
   const [mgmtVisible, setMgmtVisible] = useState(false);
   const [selectedStrategyId, setSelectedStrategyId] = useState(DEFAULT_USER_STRATEGY_ID);
+  const [signalPolicy, setSignalPolicy] = useState<SignalPolicySettings>(DEFAULT_SIGNAL_POLICY_SETTINGS);
+  const [draftSymbolId, setDraftSymbolId] = useState('NQ1!');
   const [loading, setLoading] = useState(true);
   const [savingSymbols, setSavingSymbols] = useState(false);
   const [savingStrategies, setSavingStrategies] = useState(false);
+  const [savingPolicy, setSavingPolicy] = useState(false);
   const [authStatus, setAuthStatus] = useState<StatusState>(null);
   const [symbolStatus, setSymbolStatus] = useState<StatusState>(null);
   const [strategyStatus, setStrategyStatus] = useState<StatusState>(null);
+  const [policyStatus, setPolicyStatus] = useState<StatusState>(null);
 
   useEffect(() => {
     void loadSettings();
@@ -110,7 +149,7 @@ export function SignalAdminPanel() {
 
   const symbolSummary = useMemo(() => {
     if (hiddenSymbols.size === 0 && disabledSymbols.size === 0) {
-      return '모든 종목이 정상 노출 중입니다.';
+      return '모든 종목 표시, 웹훅 수신 활성';
     }
     return `숨김 ${hiddenSymbols.size}개 / 웹훅 중지 ${disabledSymbols.size}개`;
   }, [disabledSymbols, hiddenSymbols]);
@@ -119,9 +158,14 @@ export function SignalAdminPanel() {
     const visibleCount = STRATEGIES.length - hiddenStrategies.size;
     const selected = STRATEGIES.find((strategy) => strategy.id === selectedStrategyId);
     return visibleCount > 0
-      ? `노출 ${visibleCount}개 / 사용자용 ${selected?.name ?? DEFAULT_USER_STRATEGY_ID}`
-      : '모든 전략이 숨김 상태입니다.';
+      ? `노출 ${visibleCount}개 / 사용자 기본 ${selected?.name ?? DEFAULT_USER_STRATEGY_ID}`
+      : '모든 전략이 숨김 상태입니다';
   }, [hiddenStrategies, selectedStrategyId]);
+
+  const policySummary = useMemo(() => {
+    const globalPolicy = signalPolicy.globalPolicy;
+    return `${SOURCE_LABELS[globalPolicy.source]} / ${EXECUTION_LABELS[globalPolicy.executionMode]} / 예외 ${signalPolicy.symbolPolicies.length}개`;
+  }, [signalPolicy]);
 
   async function loadSettings() {
     setLoading(true);
@@ -133,9 +177,10 @@ export function SignalAdminPanel() {
       const validatePayload = await readRequiredJsonPayload(validateResponse);
       if (!validatePayload.ok) throw new Error(validatePayload.message || 'unauthorized');
 
-      const [symbolsPayload, strategiesPayload] = await Promise.all([
+      const [symbolsPayload, strategiesPayload, policyPayload] = await Promise.all([
         fetchJson('/admin/symbols'),
         fetchJson('/admin/strategies'),
+        fetchJson('/admin/signal-policy'),
       ]);
 
       setHiddenSymbols(new Set((symbolsPayload.hidden ?? []).map((symbol: string) => symbol.toUpperCase())));
@@ -143,6 +188,7 @@ export function SignalAdminPanel() {
       setHiddenStrategies(new Set(strategiesPayload.hidden ?? []));
       setMgmtVisible(Boolean(strategiesPayload.mgmtVisible));
       setSelectedStrategyId(strategiesPayload.selectedStrategyId || DEFAULT_USER_STRATEGY_ID);
+      setSignalPolicy(normalizeSignalPolicySettings(policyPayload.signalPolicy, strategiesPayload.selectedStrategyId));
       setAuthStatus({ type: 'ok', message: '슈퍼관리자 권한이 확인되었습니다.' });
     } catch (error) {
       setAuthStatus({ type: 'err', message: `불러오기 실패: ${toReadableErrorMessage(error)}` });
@@ -183,7 +229,7 @@ export function SignalAdminPanel() {
       setSelectedStrategyId(payload.selectedStrategyId || nextSelected);
       setStrategyStatus({
         type: 'ok',
-        message: `저장 완료 - 관리버튼 ${mgmtVisible ? 'ON' : 'OFF'} / 사용자용 ${payload.selectedStrategyId}`,
+        message: `저장 완료 - 관리버튼 ${mgmtVisible ? 'ON' : 'OFF'} / 사용자 기본 ${payload.selectedStrategyId}`,
       });
     } catch (error) {
       setStrategyStatus({ type: 'err', message: `저장 실패: ${toReadableErrorMessage(error)}` });
@@ -192,20 +238,89 @@ export function SignalAdminPanel() {
     }
   }
 
+  async function saveSignalPolicy() {
+    const confirmed = window.confirm(
+      '시그널 정책을 변경하면 전체 차트의 시그널 표시, 리포트 계산, 알림 기준이 바뀔 수 있습니다. 저장할까요?',
+    );
+    if (!confirmed) return;
+
+    setSavingPolicy(true);
+    try {
+      const payload = await postJson('/admin/signal-policy', { signalPolicy });
+      const normalized = normalizeSignalPolicySettings(payload.signalPolicy, selectedStrategyId);
+      setSignalPolicy(normalized);
+      setPolicyStatus({
+        type: 'ok',
+        message: `저장 완료 - ${SOURCE_LABELS[normalized.globalPolicy.source]} 기준, 종목 예외 ${normalized.symbolPolicies.length}개`,
+      });
+    } catch (error) {
+      setPolicyStatus({ type: 'err', message: `저장 실패: ${toReadableErrorMessage(error)}` });
+    } finally {
+      setSavingPolicy(false);
+    }
+  }
+
   function toggleSymbolVisibility(symbolId: string) {
-    setHiddenSymbols((current) => toggleSetValue(current, symbolId.toUpperCase(), true));
+    setHiddenSymbols((current) => toggleSetValue(current, symbolId.toUpperCase()));
   }
 
   function toggleSymbolWebhook(symbolId: string) {
-    setDisabledSymbols((current) => toggleSetValue(current, symbolId.toUpperCase(), true));
+    setDisabledSymbols((current) => toggleSetValue(current, symbolId.toUpperCase()));
   }
 
   function toggleStrategyVisibility(strategyId: string) {
     setHiddenStrategies((current) => {
-      const next = toggleSetValue(current, strategyId, true);
+      const next = toggleSetValue(current, strategyId);
       if (next.has(selectedStrategyId)) setSelectedStrategyId(DEFAULT_USER_STRATEGY_ID);
       return next;
     });
+  }
+
+  function updateGlobalPolicy(patch: Partial<SignalPolicy>) {
+    setSignalPolicy((current) => normalizeSignalPolicySettings({
+      ...current,
+      globalPolicy: { ...current.globalPolicy, ...patch },
+    }, selectedStrategyId));
+  }
+
+  function updateSymbolPolicy(symbolId: string, patch: Partial<SignalPolicy>) {
+    setSignalPolicy((current) => normalizeSignalPolicySettings({
+      ...current,
+      symbolPolicies: current.symbolPolicies.map((policy) => (
+        policy.symbolId === symbolId ? { ...policy, ...patch } : policy
+      )),
+    }, selectedStrategyId));
+  }
+
+  function addOrReplaceSymbolPolicy() {
+    const symbolId = draftSymbolId.trim().toUpperCase();
+    if (!symbolId) {
+      setPolicyStatus({ type: 'err', message: '종목 ID를 입력해 주세요.' });
+      return;
+    }
+
+    setSignalPolicy((current) => {
+      const nextSymbolPolicy: SignalPolicy = {
+        ...current.globalPolicy,
+        scope: 'symbol',
+        symbolId,
+      };
+      return normalizeSignalPolicySettings({
+        ...current,
+        symbolPolicies: [
+          ...current.symbolPolicies.filter((policy) => policy.symbolId !== symbolId),
+          nextSymbolPolicy,
+        ],
+      }, selectedStrategyId);
+    });
+    setPolicyStatus({ type: 'ok', message: `${symbolId} 종목 예외를 추가했습니다. 저장 버튼을 눌러 반영해 주세요.` });
+  }
+
+  function removeSymbolPolicy(symbolId: string) {
+    setSignalPolicy((current) => normalizeSignalPolicySettings({
+      ...current,
+      symbolPolicies: current.symbolPolicies.filter((policy) => policy.symbolId !== symbolId),
+    }, selectedStrategyId));
   }
 
   return (
@@ -213,7 +328,7 @@ export function SignalAdminPanel() {
       <section className="signal-admin-card signal-admin-auth">
         <div>
           <span className="signal-admin-kicker">Super Admin</span>
-          <h2>전략시그널 관리</h2>
+          <h2>시그널 관리 콘솔</h2>
         </div>
         <button className="button secondary" type="button" onClick={loadSettings} disabled={loading}>
           {loading ? '확인 중' : '새로고침'}
@@ -226,8 +341,77 @@ export function SignalAdminPanel() {
           <section className="signal-admin-card">
             <div className="signal-admin-section-head">
               <div>
+                <span className="signal-admin-kicker">Signal Policy</span>
+                <h2>시그널 실행 정책</h2>
+              </div>
+              <span className="signal-admin-summary">{policySummary}</span>
+            </div>
+
+            <PolicyEditor
+              title="전체 종목 기본 정책"
+              policy={signalPolicy.globalPolicy}
+              strategyOptions={STRATEGIES}
+              onChange={updateGlobalPolicy}
+            />
+
+            <div className="signal-admin-policy-note">
+              차트전략 단순 옵션은 기존 코인 차트처럼 확정 시그널 중심으로 표시합니다. 고급 주문계획은 전고점/전저점, 지정가/스탑, 손익비, 추적손절, 세션/스프레드 제약까지 리포트 계산 기준으로 확장하기 위한 옵션입니다.
+            </div>
+
+            <div className="signal-admin-policy-add">
+              <input
+                className="signal-admin-input"
+                value={draftSymbolId}
+                onChange={(event) => setDraftSymbolId(event.target.value)}
+                placeholder="예: NQ1!, XAUUSD"
+              />
+              <button className="button secondary" type="button" onClick={addOrReplaceSymbolPolicy}>
+                종목 예외 추가
+              </button>
+            </div>
+
+            {signalPolicy.symbolPolicies.length > 0 ? (
+              <div className="signal-admin-list">
+                {signalPolicy.symbolPolicies.map((policy) => (
+                  <div className="signal-admin-policy-card" key={policy.symbolId}>
+                    <div className="signal-admin-section-head compact">
+                      <div>
+                        <span className="signal-admin-kicker">Symbol Override</span>
+                        <h2>{policy.symbolId}</h2>
+                      </div>
+                      <button
+                        className="button secondary"
+                        type="button"
+                        onClick={() => policy.symbolId && removeSymbolPolicy(policy.symbolId)}
+                      >
+                        예외 제거
+                      </button>
+                    </div>
+                    <PolicyEditor
+                      title={`${policy.symbolId} 정책`}
+                      policy={policy}
+                      strategyOptions={STRATEGIES}
+                      onChange={(patch) => policy.symbolId && updateSymbolPolicy(policy.symbolId, patch)}
+                      compact
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="signal-admin-actions">
+              <button className="button" type="button" onClick={saveSignalPolicy} disabled={savingPolicy}>
+                {savingPolicy ? '저장 중' : '시그널 정책 저장'}
+              </button>
+              <StatusMessage status={policyStatus} compact />
+            </div>
+          </section>
+
+          <section className="signal-admin-card">
+            <div className="signal-admin-section-head">
+              <div>
                 <span className="signal-admin-kicker">Symbols</span>
-                <h2>종목 관리</h2>
+                <h2>종목 표시 / 웹훅 관리</h2>
               </div>
               <span className="signal-admin-summary">{symbolSummary}</span>
             </div>
@@ -251,13 +435,13 @@ export function SignalAdminPanel() {
                           </div>
                           <ToggleControl
                             checked={visible}
-                            label={visible ? 'ON' : 'OFF'}
+                            label={visible ? '표시' : '숨김'}
                             onChange={() => toggleSymbolVisibility(symbol.id)}
                           />
                           {group.webhook ? (
                             <ToggleControl
                               checked={webhookEnabled}
-                              label={webhookEnabled ? 'ON' : 'OFF'}
+                              label={webhookEnabled ? '수신' : '중지'}
                               tone="blue"
                               onChange={() => toggleSymbolWebhook(symbol.id)}
                             />
@@ -271,7 +455,7 @@ export function SignalAdminPanel() {
             </div>
             <div className="signal-admin-actions">
               <button className="button" type="button" onClick={saveSymbols} disabled={savingSymbols}>
-                {savingSymbols ? '저장 중' : '변경사항 저장'}
+                {savingSymbols ? '저장 중' : '종목 설정 저장'}
               </button>
               <StatusMessage status={symbolStatus} compact />
             </div>
@@ -281,22 +465,22 @@ export function SignalAdminPanel() {
             <div className="signal-admin-section-head">
               <div>
                 <span className="signal-admin-kicker">Strategies</span>
-                <h2>전략 시그널 설정</h2>
+                <h2>전략 노출 / 기본 전략</h2>
               </div>
               <span className="signal-admin-summary">{strategySummary}</span>
             </div>
             <div className="signal-admin-list">
               <div className="signal-admin-row signal-admin-strategy-row">
                 <div>
-                  <strong>JS보기 / 수정 / 삭제 버튼</strong>
-                  <small>개발자 화면의 전략 설정 모달에서만 보이는 관리 버튼입니다.</small>
+                  <strong>개발자 화면 전략 관리 버튼</strong>
+                  <small>/dev 전략 설정 모달에서 JS 보기, 수정, 삭제 버튼 노출 여부입니다.</small>
                 </div>
                 <ToggleControl
                   checked={mgmtVisible}
                   label={mgmtVisible ? 'ON' : 'OFF'}
                   onChange={() => setMgmtVisible((value) => !value)}
                 />
-                <span className="signal-admin-fixed">고정</span>
+                <span className="signal-admin-fixed">관리</span>
               </div>
               {STRATEGIES.map((strategy) => {
                 const visible = !hiddenStrategies.has(strategy.id);
@@ -309,7 +493,7 @@ export function SignalAdminPanel() {
                     </div>
                     <ToggleControl
                       checked={visible}
-                      label={visible ? 'ON' : 'OFF'}
+                      label={visible ? '표시' : '숨김'}
                       onChange={() => toggleStrategyVisibility(strategy.id)}
                     />
                     <label className="signal-admin-radio">
@@ -320,7 +504,7 @@ export function SignalAdminPanel() {
                         disabled={!visible}
                         onChange={() => setSelectedStrategyId(strategy.id)}
                       />
-                      <span>{selected ? 'ON' : 'OFF'}</span>
+                      <span>{selected ? '기본' : '선택'}</span>
                     </label>
                   </div>
                 );
@@ -335,6 +519,90 @@ export function SignalAdminPanel() {
           </section>
         </>
       ) : null}
+    </div>
+  );
+}
+
+function PolicyEditor({
+  title,
+  policy,
+  strategyOptions,
+  onChange,
+  compact = false,
+}: Readonly<{
+  title: string;
+  policy: SignalPolicy;
+  strategyOptions: StrategyItem[];
+  onChange: (patch: Partial<SignalPolicy>) => void;
+  compact?: boolean;
+}>) {
+  return (
+    <div className={`signal-admin-policy-editor${compact ? ' compact' : ''}`}>
+      <div className="signal-admin-policy-title">
+        <strong>{title}</strong>
+        <ToggleControl
+          checked={policy.enabled}
+          label={policy.enabled ? '사용' : '중지'}
+          onChange={() => onChange({ enabled: !policy.enabled })}
+        />
+      </div>
+      <label>
+        <span>시그널 출처</span>
+        <select
+          className="signal-admin-select"
+          value={policy.source}
+          onChange={(event) => onChange({ source: event.target.value as SignalSource })}
+        >
+          {SIGNAL_SOURCES.map((source) => (
+            <option key={source} value={source}>{SOURCE_LABELS[source]}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <span>전략 / 프로필</span>
+        <select
+          className="signal-admin-select"
+          value={strategyOptions.some((strategy) => strategy.id === policy.strategyId) ? policy.strategyId : '__custom__'}
+          onChange={(event) => {
+            if (event.target.value !== '__custom__') onChange({ strategyId: event.target.value });
+          }}
+        >
+          {strategyOptions.map((strategy) => (
+            <option key={strategy.id} value={strategy.id}>{strategy.name}</option>
+          ))}
+          <option value="__custom__">EA 또는 실제체결 프로필 직접 입력</option>
+        </select>
+        <input
+          className="signal-admin-input"
+          value={policy.strategyId}
+          onChange={(event) => onChange({ strategyId: event.target.value })}
+          placeholder="strategy id 또는 EA profile id"
+        />
+      </label>
+      <label>
+        <span>진입/청산 방식</span>
+        <select
+          className="signal-admin-select"
+          value={policy.executionMode}
+          onChange={(event) => onChange({ executionMode: event.target.value as SignalExecutionMode })}
+        >
+          {SIGNAL_EXECUTION_MODES.map((mode) => (
+            <option key={mode} value={mode}>{EXECUTION_LABELS[mode]}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <span>체결/백테스트 기준</span>
+        <select
+          className="signal-admin-select"
+          value={policy.fillModel}
+          onChange={(event) => onChange({ fillModel: event.target.value as SignalFillModel })}
+        >
+          {SIGNAL_FILL_MODELS.map((model) => (
+            <option key={model} value={model}>{FILL_MODEL_LABELS[model]}</option>
+          ))}
+        </select>
+      </label>
     </div>
   );
 }
@@ -386,13 +654,10 @@ async function postJson(url: string, body: Record<string, unknown>) {
   return payload;
 }
 
-function toggleSetValue(current: Set<string>, value: string, checkedMeansDelete: boolean) {
+function toggleSetValue(current: Set<string>, value: string) {
   const next = new Set(current);
-  if (checkedMeansDelete ? next.has(value) : !next.has(value)) {
-    next.delete(value);
-  } else {
-    next.add(value);
-  }
+  if (next.has(value)) next.delete(value);
+  else next.add(value);
   return next;
 }
 

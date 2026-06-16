@@ -3,7 +3,7 @@ import type { TimeframeKey } from '../../catalog/time';
 import { isBetaAppVariant } from '../../app/runtime';
 import { fetchGatewayReportCandles } from '../../data/gateway-live-feed';
 import { getSymbolPricePrecision } from '../../data/market-data-sources';
-import { normalizeSignalSeriesLength } from '../../strategy/signal-series';
+import { normalizeConfirmedSignalSeriesLength } from '../../strategy/signal-series';
 import type { DisplayCurrency } from '../../types/market';
 import { bindTooltipBadge } from './tooltip-badge';
 
@@ -1979,12 +1979,12 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
 
     body.style.display = mode === 'collapsed' ? 'none' : 'flex';
     tabRow.style.display = mode === 'collapsed' ? 'none' : 'flex';
+    onModeChange?.(mode, prevMode);
     if (wasCollapsed && mode !== 'collapsed') {
       refresh();
     } else {
       renderAll();
     }
-    onModeChange?.(mode, prevMode);
   };
 
   let dragging = false;
@@ -2089,7 +2089,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
   const buildCurrentReportSignature = (): string => {
     const chart = getActiveChart();
     const candles = chart.getCandles();
-    const signals = normalizeSignalSeriesLength(chart.getStrategySignalSeries(), candles.length);
+    const signals = normalizeConfirmedSignalSeriesLength(
+      chart.getStrategySignalSeries(),
+      candles,
+      chart.config.timeframe,
+    );
     const closes = candles.map((c) => Number(c.close));
     const times = candles.map((c) => Number(c.time ?? NaN));
     const nAll = closes.length;
@@ -2239,7 +2243,7 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     reportStale = false;
     const chart = getActiveChart();
     syncLatestMetaFromActiveChart();
-    if (chart.isStrategyComputePending?.() && latestResult) {
+    if (chart.isStrategyComputePending?.()) {
       reportStale = true;
       renderAll();
       return;
@@ -2248,7 +2252,11 @@ export function createStrategyReportPanel<TChart extends StrategyReportChartLike
     const candles = chart.getCandles();
     const closes = candles.map((c) => Number(c.close));
     const times = candles.map((c) => Number(c.time ?? NaN));
-    const signals = normalizeSignalSeriesLength(chart.getStrategySignalSeries(), candles.length);
+    const signals = normalizeConfirmedSignalSeriesLength(
+      chart.getStrategySignalSeries(),
+      candles,
+      chart.config.timeframe,
+    );
     const nAll = closes.length;
     let start = 0;
     let end = nAll;
