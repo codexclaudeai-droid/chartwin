@@ -234,7 +234,7 @@ test('dev strategy modal exposes server parameter profile sync controls', () => 
   assert.match(source, /\/admin\/strategy-params/);
   assert.match(source, /saveActiveStrategyParamsToServer/);
   assert.match(source, /loadActiveStrategyParamsFromServer/);
-  assert.match(source, /?꾩옱 醫낅ぉ ???);
+  assert.match(source, /saveSymbolParamBtn/);
 });
 
 test('dev page exposes visible strategy parameter server panel', () => {
@@ -243,13 +243,26 @@ test('dev page exposes visible strategy parameter server panel', () => {
   const css = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(page, /DevStrategyParamsPanel/);
-  assert.match(panel, /?꾨왂 ?뚮씪誘명꽣 ?쒕쾭 ?ㅼ젙/);
+  assert.match(panel, /STRATEGY DEV/);
   assert.match(panel, /\/admin\/strategy-params/);
-  assert.match(panel, /?꾩뿭/);
-  assert.match(panel, /醫낅ぉ蹂?);
+  assert.match(panel, /server-strategy-params-updated/);
+  assert.match(panel, /strategy-param-scope/);
   assert.match(css, /\.dev-strategy-params-panel/);
 });
 
+test('chart runtime auto-applies server strategy parameter profiles', () => {
+  const initSource = fs.readFileSync(new URL('../src/app/init.ts', import.meta.url), 'utf8');
+  const chartSource = fs.readFileSync(new URL('../src/chart/SimpleChart.ts', import.meta.url), 'utf8');
+
+  assert.match(initSource, /\/admin\/strategy-params/);
+  assert.match(initSource, /resolveServerStrategyParams/);
+  assert.match(initSource, /applyServerStrategyParamsToChart/);
+  assert.match(initSource, /server-strategy-params-updated/);
+  assert.match(chartSource, /setStrategyParamOverrides/);
+  assert.match(chartSource, /strategyParamOverrides/);
+  assert.match(chartSource, /strategyParams: this\.getStrategyParams\(strategy\.id\)/);
+  assert.match(chartSource, /__strategyParams: this\.getStrategyParams\(strategy\.id\)/);
+});
 test('signal app page enforces super admin access before rendering panel', () => {
   const page = fs.readFileSync(new URL('../app/signal/page.tsx', import.meta.url), 'utf8');
 

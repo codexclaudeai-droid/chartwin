@@ -119,6 +119,7 @@ export function DevStrategyParamsPanel() {
       const payload = await postStrategyParams(nextProfiles);
       const savedProfiles = payload.strategyParams?.profiles ?? nextProfiles;
       setProfiles(savedProfiles);
+      notifyStrategyParamsUpdated(payload);
       setStatus({
         type: 'ok',
         message: `${normalizedSymbol ?? '전역'} 프로필 저장 완료`,
@@ -137,6 +138,7 @@ export function DevStrategyParamsPanel() {
       const nextProfiles = profiles.filter((profile) => profile.id !== selectedProfile.id);
       const payload = await postStrategyParams(nextProfiles);
       setProfiles(payload.strategyParams?.profiles ?? nextProfiles);
+      notifyStrategyParamsUpdated(payload);
       setStatus({ type: 'ok', message: '프로필 삭제 완료' });
       setParamsText(DEFAULT_PARAMS);
     } catch (error) {
@@ -229,6 +231,10 @@ export function DevStrategyParamsPanel() {
       )}
     </aside>
   );
+}
+
+function notifyStrategyParamsUpdated(payload: StrategyParameterPayload): void {
+  window.dispatchEvent(new CustomEvent('server-strategy-params-updated', { detail: payload }));
 }
 
 async function fetchStrategyParams(): Promise<StrategyParameterPayload> {

@@ -431,6 +431,7 @@ export class SimpleChart {
   private smartMoneyConceptsCacheKey = '';
   private smartMoneyConceptsCache: SmartMoneyConceptsResult = EMPTY_SMART_MONEY_CONCEPTS_RESULT;
   private strategies: StrategyDefinition[] = loadStrategies();
+  private strategyParamOverrides = new Map<string, Record<string, StrategyParamValue>>();
   private activeStrategyId: string | null = null;
   private strategySignals: StrategySignal[] = [];
   private latestStrategySignalIndex = -1;
@@ -3084,7 +3085,23 @@ export class SimpleChart {
   public getStrategyParams(strategyId: string | null = this.activeStrategyId): Record<string, StrategyParamValue> {
     if (!strategyId) return {};
     const strategy = this.strategies.find((item) => item.id === strategyId);
-    return { ...(strategy?.params ?? {}) };
+    const overrides = this.strategyParamOverrides.get(strategyId) ?? {};
+    return { ...(strategy?.params ?? {}), ...overrides };
+  }
+
+  public setStrategyParamOverrides(
+    strategyId: string,
+    overrides: Record<string, StrategyParamValue>,
+    options: { skipRefresh?: boolean } = {},
+  ): void {
+    if (!strategyId) return;
+    const previous = this.strategyParamOverrides.get(strategyId) ?? {};
+    const next = { ...overrides };
+    if (JSON.stringify(previous) === JSON.stringify(next)) return;
+    this.strategyParamOverrides.set(strategyId, next);
+    if (strategyId === DOUBLE_BREAK_STRATEGY_ID) this.invalidateDoubleBreakResultCache();
+    if (!options.skipRefresh && strategyId === this.activeStrategyId) this.requestStrategyCompute(0);
+    if (!options.skipRefresh) this.draw();
   }
 
   public setStrategyParams(
@@ -3160,7 +3177,12 @@ export class SimpleChart {
   }
 
   private getActiveStrategy(): StrategyDefinition | null {
-    return this.strategies.find((s) => s.id === this.activeStrategyId && s.active) ?? null;
+    const strategy = this.strategies.find((s) => s.id === this.activeStrategyId && s.active) ?? null;
+    if (!strategy) return null;
+    return {
+      ...strategy,
+      params: this.getStrategyParams(strategy.id),
+    };
   }
 
   private initStrategyWorker(): void {
@@ -3365,7 +3387,7 @@ export class SimpleChart {
       changedFrom,
       previousSignals: this.strategySignals,
       doubleBreakConfig: this.getDoubleBreakConfig(),
-      strategyParams: strategy.params ?? {},
+      strategyParams: this.getStrategyParams(strategy.id),
       symbol: this.config.symbol,
     });
   }
@@ -4253,7 +4275,7 @@ export class SimpleChart {
         volume: candles.map((candle) => Number(candle.volume)),
         cvd: calculateCvd(candles),
         __doubleBreakConfig: this.getDoubleBreakConfig(),
-        __strategyParams: strategy.params ?? {},
+        __strategyParams: this.getStrategyParams(strategy.id),
         __symbol: this.config.symbol,
       };
       return this.normalizeStrategySignalsForCandles(
@@ -4805,7 +4827,7 @@ export class SimpleChart {
     }
 
     if (this.activeStrategyId === AUTO_TRENDLINE_CHANNEL_STRATEGY_ID) {
-      const result = simulateAutoTrendlineChannelStrategy(this.data, this.getActiveStrategy()?.params ?? {});
+      const result = simulateAutoTrendlineChannelStrategy(this.data, this.getStrategyParams(AUTO_TRENDLINE_CHANNEL_STRATEGY_ID));
       for (let i = start; i < end; i += 1) {
         const signal = this.strategySignals[i] ?? 0;
         if (!signal) continue;
@@ -4821,7 +4843,7 @@ export class SimpleChart {
     }
 
     if (this.activeStrategyId === DONCHIAN_TREND_FOLLOWING_STRATEGY_ID) {
-      const result = simulateDonchianTrendFollowingStrategy(this.data, this.getActiveStrategy()?.params ?? {});
+      const result = simulateDonchianTrendFollowingStrategy(this.data, this.getStrategyParams(DONCHIAN_TREND_FOLLOWING_STRATEGY_ID));
       for (let i = start; i < end; i += 1) {
         const signal = this.strategySignals[i] ?? 0;
         if (!signal) continue;
@@ -7252,7 +7274,7 @@ export class SimpleChart {
       this.activeStrategyId === AUTO_TRENDLINE_CHANNEL_STRATEGY_ID
       && this.strategySignalVisible
     )
-      ? calculateAutoTrendlineChannel(this.data, this.getActiveStrategy()?.params ?? {})
+      ? calculateAutoTrendlineChannel(this.data, this.getStrategyParams(AUTO_TRENDLINE_CHANNEL_STRATEGY_ID))
       : null;
     const doubleBreakResult = this.getDoubleBreakResult();
     const doubleBreakExitLevels = new Map<number, number[]>();

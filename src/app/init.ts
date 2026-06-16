@@ -26,6 +26,7 @@ import {
   saveStrategies,
   setAdminMgmtButtonsVisible,
   type StrategyDefinition,
+  type StrategyParamValue,
   type StrategySignal,
 } from '../strategy/strategy-service';
 import { GRID_ATR_BNF_SROUTER_PRESETS, inferGridAtrBnfSrouterPreset } from '../strategy/strategies/grid-atr-bnf-srouter-v1';
@@ -107,11 +108,18 @@ type AdminStrategyUiConfig = {
   mgmtVisible: boolean;
   selectedStrategyId: string;
 };
+type ServerStrategyParamProfile = {
+  strategyId: string;
+  symbolId: string | null;
+  params: Record<string, StrategyParamValue>;
+  enabled: boolean;
+};
 const adminStrategyUiConfig: AdminStrategyUiConfig = {
   hidden: [],
   mgmtVisible: false,
   selectedStrategyId: DEFAULT_BETA_STRATEGY_ID,
 };
+let serverStrategyParamProfiles: ServerStrategyParamProfile[] = [];
 
 const applyAdminStrategyUiConfig = (json: unknown): void => {
   const record = (typeof json === 'object' && json !== null) ? json as Record<string, unknown> : null;
@@ -135,6 +143,51 @@ void fetch('/admin/strategies', { cache: 'no-store' })
   .then((json: unknown) => {
     applyAdminStrategyUiConfig(json);
     window.dispatchEvent(new CustomEvent('admin-strategy-ui-config-updated'));
+  })
+  .catch(() => {});
+
+const normalizeServerStrategyParamProfiles = (json: unknown): ServerStrategyParamProfile[] => {
+  const record = (typeof json === 'object' && json !== null) ? json as Record<string, unknown> : null;
+  const strategyParams = (typeof record?.strategyParams === 'object' && record.strategyParams !== null)
+    ? record.strategyParams as Record<string, unknown>
+    : null;
+  const rawProfiles = Array.isArray(strategyParams?.profiles) ? strategyParams.profiles : [];
+  return rawProfiles
+    .map((item): ServerStrategyParamProfile | null => {
+      if (typeof item !== 'object' || item === null) return null;
+      const profile = item as Record<string, unknown>;
+      const strategyId = typeof profile.strategyId === 'string' ? profile.strategyId.trim() : '';
+      if (!strategyId) return null;
+      const symbolText = typeof profile.symbolId === 'string'
+        ? profile.symbolId.trim().toUpperCase()
+        : '';
+      const params: Record<string, StrategyParamValue> = {};
+      if (typeof profile.params === 'object' && profile.params !== null && !Array.isArray(profile.params)) {
+        Object.entries(profile.params as Record<string, unknown>).forEach(([key, value]) => {
+          if (
+            typeof value === 'string'
+            || typeof value === 'number'
+            || typeof value === 'boolean'
+          ) {
+            params[key] = value;
+          }
+        });
+      }
+      return {
+        strategyId,
+        symbolId: symbolText || null,
+        params,
+        enabled: profile.enabled !== false,
+      };
+    })
+    .filter((profile): profile is ServerStrategyParamProfile => profile != null);
+};
+
+void fetch('/admin/strategy-params', { cache: 'no-store' })
+  .then((response) => response.json())
+  .then((json: unknown) => {
+    serverStrategyParamProfiles = normalizeServerStrategyParamProfiles(json);
+    window.dispatchEvent(new CustomEvent('server-strategy-params-updated', { detail: json }));
   })
   .catch(() => {});
 // 앱 시작 시 API 키 로드
@@ -587,6 +640,42 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     } catch {
       // ignore
     }
+  };
+  const resolveServerStrategyParams = (
+    strategyId: string | null | undefined,
+    symbol: string,
+  ): Record<string, StrategyParamValue> => {
+    if (!strategyId) return {};
+    const normalizedSymbol = canonicalizeUiSymbol(symbol).trim().toUpperCase();
+    const globalProfile = serverStrategyParamProfiles.find((profile) => (
+      profile.enabled
+      && profile.strategyId === strategyId
+      && profile.symbolId == null
+    ));
+    const symbolProfile = serverStrategyParamProfiles.find((profile) => (
+      profile.enabled
+      && profile.strategyId === strategyId
+      && profile.symbolId === normalizedSymbol
+    ));
+    return {
+      ...(globalProfile?.params ?? {}),
+      ...(symbolProfile?.params ?? {}),
+    };
+  };
+  const applyServerStrategyParamsToChart = (chart: {
+    config: { symbol: string };
+    getActiveStrategyId?: () => string | null;
+    setStrategyParamOverrides?: (
+      strategyId: string,
+      overrides: Record<string, StrategyParamValue>,
+      options?: { skipRefresh?: boolean },
+    ) => void;
+  }, options: { skipRefresh?: boolean } = {}): boolean => {
+    const strategyId = chart.getActiveStrategyId?.();
+    if (!strategyId || !chart.setStrategyParamOverrides) return false;
+    const params = resolveServerStrategyParams(strategyId, chart.config.symbol);
+    chart.setStrategyParamOverrides(strategyId, params, options);
+    return Object.keys(params).length > 0;
   };
   const syncSrouterPresetForSymbol = (chart: {
     getActiveStrategyId?: () => string | null;
@@ -1131,12 +1220,24 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     if (!isBetaApp) return;
     paneControllers.forEach((pane) => {
       const changed = applyUserFacingStrategy(pane.chart);
+      applyServerStrategyParamsToChart(pane.chart);
       if (changed) pane.refreshChartUi();
     });
     refreshStrategyReport();
   };
   window.addEventListener('admin-strategy-ui-config-updated', () => {
     applyUserFacingStrategyToAllPanes();
+  });
+  window.addEventListener('server-strategy-params-updated', (event) => {
+    const detail = event instanceof CustomEvent ? event.detail : null;
+    if (detail) {
+      serverStrategyParamProfiles = normalizeServerStrategyParamProfiles(detail);
+    }
+    paneControllers.forEach((pane) => {
+      applyServerStrategyParamsToChart(pane.chart);
+      pane.refreshChartUi();
+    });
+    refreshStrategyReport();
   });
 
   const updateGridByCount = (count: number, orientation?: 'cols' | 'rows') => {
@@ -1237,6 +1338,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     if (persistedTimeframe) {
       chart.setTimeframe(persistedTimeframe);
     }
+    applyServerStrategyParamsToChart(chart, { skipRefresh: true });
     tfSelect.value = chart.config.timeframe;
     const persistCurrentChartDrawings = () => {
       saveDrawingEntry(chart.config.symbol, chart.config.timeframe, chart, rawCandles);
@@ -1478,6 +1580,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       refreshStrategySignalDesktopButton = strategySignalDesktopBtn.refreshSignalVisibilityIcon;
     }
     const handleChartSettingsChanged = () => {
+      applyServerStrategyParamsToChart(chart);
       refreshChartUi();
       persistChartUserSettingsForChart(chart);
     };
@@ -1963,7 +2066,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           // ? config.symbol 먼저 갱신 → binanceFeed.reload()가 올바른 심볼로 연결
           const canonical = canonicalizeUiSymbol(selectedSymbol);
           chart.config.symbol = canonical;
+          applyServerStrategyParamsToChart(chart, { skipRefresh: true });
           syncSrouterPresetForSymbol(chart, canonical);
+          applyServerStrategyParamsToChart(chart, { skipRefresh: true });
           saveSymbol(canonical);
           await applyDefaultQuoteCurrencyForSymbol(canonical);
           ohlcHeaderDisplay.innerHTML = '';
@@ -2065,7 +2170,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (symbol) {
         const canonical = canonicalizeUiSymbol(symbol);
         pane.chart.config.symbol = canonical;
+        applyServerStrategyParamsToChart(pane.chart, { skipRefresh: true });
         syncSrouterPresetForSymbol(pane.chart, canonical);
+        applyServerStrategyParamsToChart(pane.chart, { skipRefresh: true });
         saveSymbol(canonical);
         void pane.applyDefaultQuoteCurrencyForSymbol(canonical);
       }
@@ -2710,7 +2817,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           const pane = getActivePane();
           const canonical = canonicalizeUiSymbol(symbolId);
           pane.chart.config.symbol = canonical;
+          applyServerStrategyParamsToChart(pane.chart, { skipRefresh: true });
           syncSrouterPresetForSymbol(pane.chart, canonical);
+          applyServerStrategyParamsToChart(pane.chart, { skipRefresh: true });
           saveSymbol(canonical);
           void pane.applyDefaultQuoteCurrencyForSymbol(canonical).then(() => {
             if (pane.chart.config.symbol !== canonical) return;
