@@ -1,77 +1,12 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "chartwin",
-  "main": "./worker/index.js",
+  "name": "chart-engine-dev",
   "compatibility_date": "2026-06-16",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
-  "workers_dev": true,
-  "assets": {
-    "directory": "./dist",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
-  },
-  "routes": [
-    {
-      "pattern": "www.tradingcore.co",
-      "zone_name": "tradingcore.co",
-      "custom_domain": true
-    },
-    {
-      "pattern": "dev.tradingcore.co",
-      "zone_name": "tradingcore.co",
-      "custom_domain": true
-    },
-    {
-      "pattern": "tradingcore.co",
-      "zone_name": "tradingcore.co",
-      "custom_domain": true
-    }
-  ],
-  "triggers": {
-    "crons": [
-      "* * * * *"
-    ]
-  },
-  "vars": {
-    "CHART_SERVICE_BASE_URL": "https://tradingcore.co",
-    "CHART_SERVICE_DATABASE_SSL_MODE": "require",
-    "CHART_SERVICE_EMAIL_DELIVERY_LIMIT": "50",
-    "CHART_SERVICE_EMAIL_PROVIDER": "cloudflare",
-    "CHART_SERVICE_REPOSITORY": "postgres",
-    "CHART_SERVICE_RUNTIME_TARGET": "cloudflare-workers",
-    "CHART_SERVICE_TELEGRAM_CRON_ENABLED": "false",
-    "DATA_GATEWAY_URL": "https://minority-iowa-retrieve-contest.trycloudflare.com",
-    "NODE_ENV": "production"
-  },
+  "pages_build_output_dir": "./dist",
   "kv_namespaces": [
     {
       "binding": "CANDLES_KV",
       "id": "7dae3d119aba44a8a8a268d82b4e0fe7"
     }
-  ],
-  "send_email": [
-    {
-      "name": "EMAIL",
-      "allowed_sender_addresses": [
-        "verify@tradingcore.co",
-        "auth@tradingcore.co",
-        "support@tradingcore.co",
-        "noreply@tradingcore.co"
-      ]
-    }
-  ],
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "d37800743102465385b1e66861a0369d"
-    }
-  ],
-  "observability": {
-    "enabled": true,
-    "logs": {
-      "enabled": true
-    }
-  }
+  ]
 }

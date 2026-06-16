@@ -1,28 +1,32 @@
-# Cloudflare deployment baseline
+# Cloudflare deployment safety
 
-This repository uses Cloudflare Workers as the primary deployment target for both Codex app sessions and cloud-mode work.
+This repository is the chart engine development surface. It must not deploy to the
+production `chartwin` Worker or any `tradingcore.co` route.
 
 ## Source of truth
 
-- Worker name: `chartwin`
-- Worker entrypoint: `worker/index.js`
-- Static asset directory: `dist`
-- Default Worker URL: `https://chartwin.<account-subdomain>.workers.dev`
-- Cloudflare config: `wrangler.jsonc`
-- Required Worker bindings: `ASSETS`, `CANDLES_KV`, `HYPERDRIVE`, `EMAIL`
+- Production full-stack Worker: managed outside this repository.
+- Chart engine Cloudflare target: Pages project `chart-engine-dev`.
+- Build output: `dist`.
+- Cloudflare config: `wrangler.jsonc`.
+- Deploy guard: `scripts/guard-cloudflare-deploy.mjs`.
 
 ## Commands
 
 - Local app build: `npm run build`
-- Cloudflare preview: `npm run preview:cloudflare`
-- Cloudflare deploy: `npm run deploy:cloudflare`
-- Cloudflare production deploy from `main`: `npm run deploy:cloudflare:prod`
+- Cloudflare Pages preview: `npm run preview:cloudflare`
+- Cloudflare Pages development deploy: `npm run deploy:cloudflare`
+- Production Cloudflare deploy: intentionally blocked by `npm run deploy:cloudflare:prod`
 
-## Notes
+## Guardrails
 
-- `wrangler deploy` updates the existing `chartwin` Worker and its bound routes/domains. The local `wrangler.jsonc` now carries the production custom domains, cron trigger, and non-secret bindings so deployments do not wipe dashboard-only Worker settings.
-- `netlify.toml` is retained only as a legacy reference from the pre-Cloudflare setup.
-- Local gateway traffic still uses `http://127.0.0.1:8787` on localhost and same-origin requests in deployed environments.
-- The candle APIs continue to reuse the existing route modules under `functions/*`; `worker/index.js` is a thin Workers fetch wrapper around those handlers.
-- The webhook candle API depends on a Worker KV namespace binding named `CANDLES_KV`. If this binding is missing, `/candles?...&debug=1` returns `ok:false`, `message:"CANDLES_KV binding missing"`, and stored webhook candles cannot be rendered.
-- Configure the binding in Cloudflare Dashboard: Workers & Pages > `chartwin` > Settings > Bindings. Use variable name `CANDLES_KV` and select the namespace that stores candle keys such as `index:NQ1!:1m` and `commodity:XAUUSD:1m`.
+- `wrangler deploy` is not allowed from this repository.
+- `wrangler.jsonc` must stay a Pages config with `pages_build_output_dir`.
+- The config must not contain Worker-only fields such as `main`, `assets`,
+  `routes`, or `workers_dev`.
+- The config must not reference `chartwin`, `tradingcore.co`,
+  `CHART_SERVICE_*`, `DATA_GATEWAY_URL`, `hyperdrive`, or `send_email`.
+- `npm run deploy:cloudflare` runs the guard before `wrangler pages deploy`.
+
+If the production full-stack Worker needs deployment, use the full-stack
+repository or its Cloudflare pipeline. Do not use this chart engine workspace.

@@ -1,46 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
 
-const packageJson = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8'));
-const wranglerSource = fs.readFileSync(path.resolve('wrangler.jsonc'), 'utf8');
-const deploymentDoc = fs.readFileSync(path.resolve('docs/cloudflare-deployment.md'), 'utf8');
 const workerModule = await import(`../worker/index.js?cacheBust=${Date.now()}`);
-
-test('Cloudflare deploy scripts target Workers instead of Pages', () => {
-  assert.match(packageJson.scripts['preview:cloudflare'], /wrangler dev/);
-  assert.match(packageJson.scripts['deploy:cloudflare'], /wrangler deploy/);
-  assert.match(packageJson.scripts['deploy:cloudflare:prod'], /wrangler deploy/);
-  assert.doesNotMatch(packageJson.scripts['preview:cloudflare'], /pages dev/);
-  assert.doesNotMatch(packageJson.scripts['deploy:cloudflare'], /pages deploy/);
-  assert.doesNotMatch(packageJson.scripts['deploy:cloudflare:prod'], /pages deploy/);
-});
-
-test('wrangler config defines a Worker entrypoint and static asset binding', () => {
-  assert.match(wranglerSource, /"main"\s*:\s*"\.\/worker\/index\.js"/);
-  assert.match(wranglerSource, /"assets"\s*:\s*\{/);
-  assert.match(wranglerSource, /"binding"\s*:\s*"ASSETS"/);
-  assert.doesNotMatch(wranglerSource, /pages_build_output_dir/);
-});
-
-test('wrangler config preserves the existing chartwin Worker routes and bindings', () => {
-  assert.match(wranglerSource, /"compatibility_flags"\s*:\s*\[\s*"nodejs_compat"\s*\]/);
-  assert.match(wranglerSource, /"workers_dev"\s*:\s*true/);
-  assert.match(wranglerSource, /"pattern"\s*:\s*"www\.tradingcore\.co"/);
-  assert.match(wranglerSource, /"pattern"\s*:\s*"dev\.tradingcore\.co"/);
-  assert.match(wranglerSource, /"pattern"\s*:\s*"tradingcore\.co"/);
-  assert.match(wranglerSource, /"binding"\s*:\s*"HYPERDRIVE"/);
-  assert.match(wranglerSource, /"name"\s*:\s*"EMAIL"/);
-  assert.match(wranglerSource, /"crons"\s*:\s*\[\s*"\* \* \* \* \*"\s*\]/);
-  assert.match(wranglerSource, /"DATA_GATEWAY_URL"\s*:\s*"https:\/\/minority-iowa-retrieve-contest\.trycloudflare\.com"/);
-});
-
-test('deployment doc describes Workers as the primary target', () => {
-  assert.match(deploymentDoc, /Cloudflare Workers as the primary deployment target/i);
-  assert.match(deploymentDoc, /wrangler deploy/);
-  assert.doesNotMatch(deploymentDoc, /Settings > Functions/);
-});
 
 test('Worker handles API routes without asset fallback', async () => {
   const worker = workerModule.default;

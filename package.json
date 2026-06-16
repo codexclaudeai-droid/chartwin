@@ -9,9 +9,9 @@
     "backend:dev": "node server/data-gateway.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "preview:cloudflare": "npm run build && wrangler dev",
-    "deploy:cloudflare": "npm run build && wrangler deploy",
-    "deploy:cloudflare:prod": "npm run build && wrangler deploy"
+    "preview:cloudflare": "npm run build && node scripts/guard-cloudflare-deploy.mjs && wrangler pages dev dist",
+    "deploy:cloudflare": "npm run build && node scripts/guard-cloudflare-deploy.mjs && wrangler pages deploy dist --project-name chart-engine-dev",
+    "deploy:cloudflare:prod": "node scripts/guard-cloudflare-deploy.mjs --deny-prod-deploy"
   },
   "devDependencies": {
     "@types/moo": "^0.5.10",
