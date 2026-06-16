@@ -861,7 +861,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     refreshHeader: () => void;
     startLive: () => void;
     stopLive: () => void;
-    reloadLiveData: () => Promise<void>;
+    reloadLiveData: () => Promise<boolean>;
     applyDefaultQuoteCurrencyForSymbol: (symbol: string) => Promise<void>;
   };
 
@@ -1882,7 +1882,11 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       },
     });
 
+    let liveReloadGeneration = 0;
     const reloadLiveData = async () => {
+      const reloadGeneration = ++liveReloadGeneration;
+      const reloadSymbol = chart.config.symbol;
+      const reloadTimeframe = chart.config.timeframe;
       liveRunning = true;
       fallbackTicker.stopLive();
       binanceFeed.stop();
@@ -1894,6 +1898,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const selectedFeed = useBinance ? binanceFeed : gatewayFeed;
       suppressSignalNoticesUntilNextReadyCompute(paneId);
       const ok = await selectedFeed.reload();
+      if (reloadGeneration !== liveReloadGeneration) return false;
+      if (reloadSymbol !== chart.config.symbol || reloadTimeframe !== chart.config.timeframe) return false;
       const now = performance.now();
       lastViewportInputAt = now;
       lastOlderHistoryLoadAt = now;
@@ -1902,12 +1908,14 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         gatewayFeed.stop();
         if (!useBinance) {
           setLiveStatus(chart.getCandles().length ? 'connecting' : 'idle');
-          return;
+          return false;
         }
         applyMockData();
         setLiveStatus('fallback');
         fallbackTicker.startLive();
+        return false;
       }
+      return true;
     };
     let liveRunning = false;
     const applyCurrencySelection = async () => {
@@ -1961,7 +1969,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           saveSymbol(canonical);
           await applyDefaultQuoteCurrencyForSymbol(canonical);
           ohlcHeaderDisplay.innerHTML = '';
-          void reloadLiveData().then(() => {
+          void reloadLiveData().then((applied) => {
+            if (!applied) return;
             restoreCurrentChartDrawings();
             recomputeStrategyThenRefreshReport(paneId, chart);
           });
@@ -1979,7 +1988,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         saveTimeframe(timeframe);
         ohlcHeaderDisplay.innerHTML = '';
         requestStrategyReportAfterNextCompute(paneId);
-        void reloadLiveData().then(() => {
+        void reloadLiveData().then((applied) => {
+          if (!applied) return;
           const hasStoredTarget = restoreCurrentChartDrawings({ clearWhenMissing: false });
           if (hasStoredTarget) {
             persistCurrentChartDrawings();
@@ -2705,7 +2715,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           syncSrouterPresetForSymbol(pane.chart, canonical);
           saveSymbol(canonical);
           void pane.applyDefaultQuoteCurrencyForSymbol(canonical).then(() => {
-            void pane.reloadLiveData().then(() => {
+            if (pane.chart.config.symbol !== canonical) return;
+            void pane.reloadLiveData().then((applied) => {
+              if (!applied) return;
               recomputeStrategyThenRefreshReport(paneState.activePaneId, pane.chart);
             });
           });
@@ -3209,7 +3221,8 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       pane.chart.setTimeframe(nextTimeframe);
       saveTimeframe(nextTimeframe);
       requestStrategyReportAfterNextCompute(paneState.activePaneId);
-      void pane.reloadLiveData().finally(() => {
+      void pane.reloadLiveData().then((applied) => {
+        if (!applied) return;
         applyRangeToChart(pane.chart, label);
       });
       return;

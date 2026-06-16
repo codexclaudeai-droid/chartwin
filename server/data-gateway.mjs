@@ -55,7 +55,7 @@ const DEFAULT_MT45_TICK_STORAGE = DEFAULT_MT45_PROFILE.tickStorage;
 
 /** @typedef {{time:number,open:number,high:number,low:number,close:number,volume:number}} Candle */
 
-/** @type {{adminToken:string, webhookPassphrase:string, providers: Record<string, string>, symbolProviders: Record<string, Record<string, string>>, binance?: {storedSymbols?: string[], backfillLimit?: number, reconnectMs?: number}, kis?: Record<string, unknown>, mt45?: {activePlatform?: string, profiles?: Record<string, {apiKey?: string, priceStep?: number, symbols?: Array<{market?: string, symbol?: string, tickStorageEnabled?: boolean, priceStep?: number}>, tickStorage?: {enabled?: boolean, retentionDays?: number, flushIntervalMs?: number, maxBatchSize?: number}}>}}}} */
+/** @type {{adminToken:string, webhookPassphrase:string, providers: Record<string, string>, symbolProviders: Record<string, Record<string, string>>, binance?: {storedSymbols?: string[], backfillLimit?: number, reconnectMs?: number}, kis?: Record<string, unknown>, mt45?: {activePlatform?: string, profiles?: Record<string, {apiKey?: string, priceStep?: number, symbols?: Array<{market?: string, symbol?: string, tickStorageEnabled?: boolean, priceStep?: number, sourceUtcOffsetHours?: number}>, tickStorage?: {enabled?: boolean, retentionDays?: number, flushIntervalMs?: number, maxBatchSize?: number}}>}}}} */
 let runtimeConfig;
 
 /** @type {Map<string, Candle[]>} */
@@ -207,11 +207,13 @@ function normalizeMt45SymbolRules(rawSymbols = []) {
     const symbol = canonicalizeSymbolByMarket(market, raw.symbol);
     if (!market || !symbol) continue;
     const priceStep = Math.max(0, Number(raw.priceStep) || 0);
+    const sourceUtcOffsetHours = Math.max(-14, Math.min(14, Number(raw.sourceUtcOffsetHours) || 0));
     byKey.set(`${market}:${symbol}`, {
       market,
       symbol,
       tickStorageEnabled: normalizeBoolean(raw.tickStorageEnabled, false),
       priceStep,
+      sourceUtcOffsetHours,
     });
   }
   return Array.from(byKey.values()).sort((a, b) => `${a.market}:${a.symbol}`.localeCompare(`${b.market}:${b.symbol}`));
@@ -302,7 +304,7 @@ function normalizeSymbol(input) {
 
 function canonicalizeSymbolByMarket(market, symbol) {
   const normalized = normalizeSymbol(symbol);
-  if (market === 'index' && (normalized === 'NAS100' || normalized === 'NQ')) return 'NQ1!';
+  if ((market === 'index' || market === 'futures') && (normalized === 'NAS100' || normalized === 'NQ')) return 'NQ1!';
   if (market === 'index' && normalized === '^IXIC') return 'NASDAQ';
   return normalized;
 }
@@ -311,6 +313,7 @@ const FX_QUOTES = ['USD', 'EUR', 'JPY', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD', 'KRW'
 
 function inferMarketFromSymbol(symbol) {
   const upper = normalizeSymbol(symbol);
+  if (upper === 'NQ1!' || upper === 'NQ' || upper === 'NAS100') return 'futures';
   // commodity
   if (/^(XAU|XAG|XPT|USO|WTI|BRENT)/.test(upper)) return 'commodity';
   // fx: exactly 6 uppercase letters, both halves in FX_QUOTES
@@ -656,6 +659,7 @@ function getMt45SymbolConfig(market, symbol, platformRaw) {
     market: normalizedMarket,
     symbol: normalizedSymbol,
     priceStep: rule?.priceStep || profile.priceStep || 0,
+    sourceUtcOffsetHours: rule?.sourceUtcOffsetHours || 0,
     tickStorageEnabled: Boolean(rule?.tickStorageEnabled),
   };
 }
@@ -1124,6 +1128,7 @@ async function handleMt45TickIngest(req, res) {
 
   const ticks = normalizeMt45Ticks(body, {
     source: getMt45RequestPlatform(body),
+    getSourceUtcOffsetHours: (tick) => getMt45SymbolConfig(tick.market, tick.symbol, tick.source).sourceUtcOffsetHours,
   });
   if (!ticks.length) {
     sendJson(res, 400, {

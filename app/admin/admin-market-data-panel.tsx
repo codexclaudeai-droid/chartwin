@@ -10,6 +10,7 @@ type Mt45SymbolRule = {
   symbol: string;
   tickStorageEnabled: boolean;
   priceStep: number;
+  sourceUtcOffsetHours: number;
 };
 
 type Mt45TickStorageSettings = {
@@ -62,8 +63,8 @@ type NormalizedMt45Settings = {
 };
 
 const DEFAULT_SYMBOLS: Mt45SymbolRule[] = [
-  { market: 'futures', symbol: 'NQ1!', tickStorageEnabled: false, priceStep: 0.25 },
-  { market: 'commodity', symbol: 'XAUUSD', tickStorageEnabled: false, priceStep: 0.1 },
+  { market: 'futures', symbol: 'NQ1!', tickStorageEnabled: false, priceStep: 0.25, sourceUtcOffsetHours: 3 },
+  { market: 'commodity', symbol: 'XAUUSD', tickStorageEnabled: false, priceStep: 0.1, sourceUtcOffsetHours: 3 },
 ];
 
 const DEFAULT_TICK_STORAGE: Required<Mt45TickStorageSettings> = {
@@ -199,7 +200,7 @@ export function AdminMarketDataPanel() {
     updateActiveProfile({
       symbols: [
         ...activeProfile.symbols,
-        { market: 'futures', symbol: '', tickStorageEnabled: false, priceStep: 0 },
+        { market: 'futures', symbol: '', tickStorageEnabled: false, priceStep: 0, sourceUtcOffsetHours: 0 },
       ],
     });
   }
@@ -384,6 +385,7 @@ export function AdminMarketDataPanel() {
                   <th>Symbol</th>
                   <th>Raw tick 저장</th>
                   <th>Price step</th>
+                  <th>Source UTC offset</th>
                   <th>관리</th>
                 </tr>
               </thead>
@@ -430,6 +432,16 @@ export function AdminMarketDataPanel() {
                       />
                     </td>
                     <td>
+                      <input
+                        max={14}
+                        min={-14}
+                        step="0.5"
+                        type="number"
+                        value={rule.sourceUtcOffsetHours}
+                        onChange={(event) => updateSymbolRule(index, { sourceUtcOffsetHours: clampSourceUtcOffsetHours(event.target.value) })}
+                      />
+                    </td>
+                    <td>
                       <button className="button secondary compact" type="button" onClick={() => removeSymbolRule(index)}>
                         삭제
                       </button>
@@ -438,7 +450,7 @@ export function AdminMarketDataPanel() {
                 ))}
                 {!activeProfile.symbols.length && (
                   <tr>
-                    <td colSpan={5}>등록된 종목 규칙이 없습니다.</td>
+                    <td colSpan={6}>등록된 종목 규칙이 없습니다.</td>
                   </tr>
                 )}
               </tbody>
@@ -449,6 +461,7 @@ export function AdminMarketDataPanel() {
         <p className="notice compact">
           Price step은 시간 tick이 아니라 가격 최소 단위입니다. 풋프린트/CVD의 price level을 묶을 때 쓰며,
           예를 들어 NQ/ES는 보통 0.25, 달러 단위 상품은 0.01, 금은 브로커 가격 단위에 맞춰 0.01 또는 0.1로 둡니다.
+          Source UTC offset은 EA가 보내는 MT5/브로커 원천 시간이 UTC보다 몇 시간 앞서는지 입력합니다. 예: MT5 서버 시간이 UTC+3이면 3을 입력합니다. 거래소 시간대(예: 시카고)는 차트 표시용 타임존으로 별도 처리합니다.
         </p>
         <p className="notice compact">
           기본 운영값은 Tick DB 저장 OFF입니다. 정밀 검증이 필요할 때만 ON으로 바꾸고 7일, 14일, 30일 보관기간을 선택하세요.
@@ -514,7 +527,14 @@ function normalizeClientSymbolRules(rules: Mt45SymbolRule[] | undefined): Mt45Sy
     symbol: String(rule.symbol || '').toUpperCase(),
     tickStorageEnabled: Boolean(rule.tickStorageEnabled),
     priceStep: Math.max(0, Number(rule.priceStep) || 0),
+    sourceUtcOffsetHours: clampSourceUtcOffsetHours(rule.sourceUtcOffsetHours),
   }));
+}
+
+function clampSourceUtcOffsetHours(value: unknown): number {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(-14, Math.min(14, number));
 }
 
 async function fetchJson(url: string) {

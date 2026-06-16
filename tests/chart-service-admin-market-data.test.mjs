@@ -21,6 +21,7 @@ test('admin market data route proxies settings without exposing gateway admin to
   assert.match(routeSource, /DATA_GATEWAY_URL/);
   assert.match(routeSource, /DATA_GATEWAY_ADMIN_TOKEN/);
   assert.match(routeSource, /x-admin-token/);
+  assert.match(routeSource, /data gateway unauthorized: check DATA_GATEWAY_ADMIN_TOKEN/);
   assert.match(routeSource, /assertSuperAdminActor/);
   assert.doesNotMatch(routeSource, /assertAdminActor/);
 
@@ -48,6 +49,8 @@ test('admin market data route proxies settings without exposing gateway admin to
   assert.match(panelSource, /admin-market-data-mini-toggle/);
   assert.match(panelSource, /Tick DB 마스터가 ON이어도 여기서 ON으로 선택한 종목만 raw tick을 저장합니다/);
   assert.match(panelSource, /Price step은 시간 tick이 아니라 가격 최소 단위/);
+  assert.match(panelSource, /sourceUtcOffsetHours/);
+  assert.match(panelSource, /Source UTC offset/);
   assert.match(panelSource, /window\.confirm/);
   assert.match(panelSource, /슈퍼관리자 권한/);
   assert.match(panelSource, /DB 용량과 비용/);
@@ -107,8 +110,12 @@ test('data gateway stores independent MT4 and MT5 profile settings', async () =>
   assert.match(gatewaySource, /const profiles = mergeMt45Profiles/);
   assert.match(gatewaySource, /symbols: normalizeMt45SymbolRules\(profileRaw\?\.symbols/);
   assert.match(gatewaySource, /tickStorageEnabled: Boolean\(rule\?\.tickStorageEnabled\)/);
+  assert.match(gatewaySource, /sourceUtcOffsetHours/);
+  assert.match(gatewaySource, /getSourceUtcOffsetHours/);
   assert.match(gatewaySource, /const platform = getMt45RequestPlatform\(body\)/);
   assert.match(gatewaySource, /isMt45ApiKeyConfigured\(platform\)/);
   assert.match(gatewaySource, /getMt45SymbolConfig\(tick\.market, tick\.symbol, tick\.source\)/);
   assert.match(gatewaySource, /source: getMt45RequestPlatform\(body\)/);
+  assert.match(gatewaySource, /upper === 'NQ1!'/);
+  assert.match(gatewaySource, /return 'futures'/);
 });

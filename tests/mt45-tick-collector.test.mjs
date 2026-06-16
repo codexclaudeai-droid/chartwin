@@ -32,6 +32,7 @@ test('MT45 tick normalizer accepts EA webrequest batches and infers sell side fr
       bid: 17750.25,
       ask: 17750.5,
       source: 'mt45',
+      sourceUtcOffsetHours: 0,
       accountId: null,
     },
   ]);
@@ -47,6 +48,27 @@ test('MT45 tick normalizer uses platform defaults as raw tick source', () => {
   }, { source: 'mt5' });
 
   assert.equal(ticks[0].source, 'mt5');
+});
+
+test('MT45 tick normalizer converts source-local exchange time to UTC with configured offset', () => {
+  const ticks = normalizeMt45Ticks({
+    market: 'commodity',
+    symbol: 'XAUUSD',
+    ticks: [
+      {
+        // Source clock is UTC+3, so this represents 2024-04-24 00:00:10Z after normalization.
+        time: 1713927610,
+        price: 2330.5,
+        volume: 1,
+      },
+    ],
+  }, {
+    source: 'mt5',
+    getSourceUtcOffsetHours: (tick) => (tick.market === 'commodity' && tick.symbol === 'XAUUSD' ? 3 : 0),
+  });
+
+  assert.equal(ticks[0].time, 1713916810);
+  assert.equal(ticks[0].sourceUtcOffsetHours, 3);
 });
 
 test('MT45 tick aggregator keeps live candle in memory and finalizes only closed one minute candles', () => {

@@ -239,6 +239,7 @@ export function createGatewayLiveFeed({
   let abortController: AbortController | null = null;
   let socket: WebSocket | null = null;
   let connecting = false;
+  let fetchGeneration = 0;
   let fastSyncConfig = loadGatewayFastSyncConfig();
 
   const stopPolling = () => {
@@ -256,6 +257,12 @@ export function createGatewayLiveFeed({
     if (!abortController) return;
     abortController.abort();
     abortController = null;
+  };
+
+  const cancelActiveFetch = () => {
+    fetchGeneration += 1;
+    stopFetch();
+    connecting = false;
   };
 
   const stopSocket = () => {
@@ -327,8 +334,11 @@ export function createGatewayLiveFeed({
     onLiveTick?.();
   };
 
-  const pollOnce = async (fullReload: boolean): Promise<boolean> => {
-    if (connecting) return false;
+  const pollOnce = async (fullReload: boolean, options: { forceRestart?: boolean } = {}): Promise<boolean> => {
+    if (connecting) {
+      if (!options.forceRestart) return false;
+      cancelActiveFetch();
+    }
 
     const symbol = chart.config.symbol;
     if (disabledSymbols.has(normalizeSymbol(symbol))) {
@@ -337,8 +347,9 @@ export function createGatewayLiveFeed({
     }
 
     connecting = true;
-    stopFetch();
-    abortController = new AbortController();
+    const fetchId = ++fetchGeneration;
+    const controller = new AbortController();
+    abortController = controller;
 
     try {
       const market = inferGatewayMarket(symbol);
@@ -350,8 +361,10 @@ export function createGatewayLiveFeed({
         symbol,
         timeframe,
         limit,
-        abortController.signal,
+        controller.signal,
       );
+
+      if (fetchId !== fetchGeneration) return false;
 
       if (!running) {
         onStatusChange?.('idle');
@@ -367,11 +380,15 @@ export function createGatewayLiveFeed({
       onStatusChange?.('live');
       return true;
     } catch {
-      if (running) onStatusChange?.(chart.getCandles().length ? 'connecting' : 'idle');
+      if (fetchId === fetchGeneration && running) {
+        onStatusChange?.(chart.getCandles().length ? 'connecting' : 'idle');
+      }
       return false;
     } finally {
-      abortController = null;
-      connecting = false;
+      if (fetchId === fetchGeneration) {
+        abortController = null;
+        connecting = false;
+      }
     }
   };
 
@@ -435,13 +452,13 @@ export function createGatewayLiveFeed({
     };
   };
 
-  const restart = async (reloadHistory: boolean): Promise<boolean> => {
+  const restart = async (reloadHistory: boolean, options: { forceRestart?: boolean } = {}): Promise<boolean> => {
     onStatusChange?.('connecting');
     if (disabledSymbols.has(normalizeSymbol(chart.config.symbol))) {
       onStatusChange?.('idle');
       return false;
     }
-    const ok = await pollOnce(reloadHistory);
+    const ok = await pollOnce(reloadHistory, options);
     if (!running) return false;
     if (ok) setupWebSocket();
     setupPolling();
@@ -455,14 +472,14 @@ export function createGatewayLiveFeed({
 
   const reload = async (): Promise<boolean> => {
     running = true;
-    return restart(true);
+    return restart(true, { forceRestart: true });
   };
 
   const stop = () => {
     running = false;
     stopPolling();
     stopFastPolling();
-    stopFetch();
+    cancelActiveFetch();
     stopSocket();
     onStatusChange?.('idle');
   };

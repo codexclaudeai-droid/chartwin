@@ -48,6 +48,25 @@ function pickFirstFinite(row, keys) {
   return NaN;
 }
 
+function clampSourceUtcOffsetHours(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(-14, Math.min(14, number));
+}
+
+function getSourceUtcOffsetHours(defaults, context) {
+  if (typeof defaults.getSourceUtcOffsetHours === 'function') {
+    return clampSourceUtcOffsetHours(defaults.getSourceUtcOffsetHours(context));
+  }
+  return clampSourceUtcOffsetHours(
+    context.row?.sourceUtcOffsetHours
+      ?? context.row?.utcOffsetHours
+      ?? defaults.sourceUtcOffsetHours
+      ?? defaults.utcOffsetHours
+      ?? 0,
+  );
+}
+
 function getInputTicks(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.ticks)) return payload.ticks;
@@ -68,7 +87,12 @@ export function normalizeMt45Ticks(payload, defaults = {}) {
       if (!row || typeof row !== 'object') return null;
       const market = normalizeMarket(row.market ?? baseMarket);
       const symbol = normalizeSymbol(row.symbol ?? baseSymbol);
-      const time = parseUnixTimeSec(row.time ?? row.timestamp ?? row.ts ?? row.datetime);
+      const source = String((row.source ?? baseSource) || 'mt45');
+      const sourceUtcOffsetHours = getSourceUtcOffsetHours(defaults, { market, symbol, source, row });
+      const rawTime = parseUnixTimeSec(row.time ?? row.timestamp ?? row.ts ?? row.datetime);
+      const time = Number.isFinite(rawTime)
+        ? rawTime - Math.round(sourceUtcOffsetHours * 3600)
+        : NaN;
       const bid = pickFirstFinite(row, ['bid']);
       const ask = pickFirstFinite(row, ['ask']);
       const price = pickFirstFinite(row, ['price', 'last', 'close']);
@@ -87,7 +111,8 @@ export function normalizeMt45Ticks(payload, defaults = {}) {
         side: VALID_SIDES.has(side) ? side : 'unknown',
         bid: Number.isFinite(bid) ? bid : null,
         ask: Number.isFinite(ask) ? ask : null,
-        source: String((row.source ?? baseSource) || 'mt45'),
+        source,
+        sourceUtcOffsetHours,
         accountId: row.accountId ?? row.account_id ?? row.account ?? baseAccountId,
       };
     })

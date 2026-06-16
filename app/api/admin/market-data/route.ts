@@ -66,6 +66,12 @@ async function proxyGatewayJson(
     ok: false,
     message: 'invalid gateway response',
   }));
+  if (response.status === 401 && String(payload?.message || '').toLowerCase() === 'unauthorized') {
+    return NextResponse.json({
+      ok: false,
+      message: 'data gateway unauthorized: check DATA_GATEWAY_ADMIN_TOKEN',
+    }, { status: 401 });
+  }
   return NextResponse.json(payload, { status: response.status });
 }
 
