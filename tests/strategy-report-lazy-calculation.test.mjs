@@ -87,6 +87,29 @@ test('live current-candle patches do not schedule strategy recomputation', () =>
   );
 });
 
+test('live current-candle patches do not mark strategy report or signal notifications stale', () => {
+  const updateHandlers = [...initSource.matchAll(
+    /updateLastCandle: \(patch\) => \{[\s\S]*?\n\s*}\,(\r?\n\s*(?:}\,|limit:|onDataApplied:))/g,
+  )].map((match) => match[0]);
+
+  assert.ok(updateHandlers.length >= 3, 'expected fallback, binance, and gateway live update handlers');
+  updateHandlers.forEach((handler) => {
+    assert.doesNotMatch(
+      handler,
+      /markStrategyReportStale\(\)/,
+      'current-candle live patches should not touch report stale state or signal notification counters',
+    );
+  });
+
+  const addHandlers = [...initSource.matchAll(
+    /addNewCandle: \(candle\) => \{[\s\S]*?\n\s*}\,/g,
+  )].map((match) => match[0]);
+  assert.ok(
+    addHandlers.some((handler) => /markStrategyReportStale\(\)/.test(handler)),
+    'completed candle boundaries should still mark the strategy report stale',
+  );
+});
+
 test('manual strategy report refresh requests a fresh strategy recompute first', () => {
   assert.match(
     chartSource,

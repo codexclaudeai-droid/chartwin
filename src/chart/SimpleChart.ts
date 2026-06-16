@@ -252,6 +252,7 @@ const CHART_FONT_STACK = `-apple-system, BlinkMacSystemFont, 'Trebuchet MS', Rob
 const CHART_TEXT_PRIMARY = '#e3e8f2';
 const CHART_TEXT_SECONDARY = '#c2ccdf';
 const CHART_TEXT_MUTED = '#b3bfd4';
+const LATEST_SIGNAL_ANIMATION_DURATION_MS = 4500;
 const HLINE_DEFAULT_WIDTH = 1.2;
 const LOCK_ICON_CLOSED_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 1 1 8 0v3"></path></svg>';
 const LOCK_ICON_OPEN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M16 11V8a4 4 0 1 0-8 0"></path></svg>';
@@ -453,6 +454,7 @@ export class SimpleChart {
   private signalAnimationFrame = 0;
   private signalAnimationActive = false;
   private lastSignalDrawTimeMs = 0;
+  private latestSignalAnimationUntilMs = 0;
   private signalLayerDrawFrame = 0;
   private lastAuxiliaryAlertEvalMs = 0;
   private strategyRequestId = 0;
@@ -2910,9 +2912,11 @@ export class SimpleChart {
 
   private updateSignalAnimationLoop(): void {
     const latestIsVisible = this.latestStrategySignalIndex >= this.startIndex && this.latestStrategySignalIndex < this.endIndex;
+    const nowMs = performance.now();
     const shouldAnimate = this.strategySignalVisible
       && latestIsVisible
-      && this.focusedTradeRange == null;
+      && this.focusedTradeRange == null
+      && this.isLatestSignalAnimationLive(nowMs);
     if (shouldAnimate) {
       if (!this.signalAnimationActive) {
         this.signalAnimationActive = true;
@@ -2933,6 +2937,12 @@ export class SimpleChart {
 
   private handleSignalAnimationTick = (timeMs: number) => {
     if (!this.signalAnimationActive) return;
+    if (!this.isLatestSignalAnimationLive(timeMs)) {
+      this.signalAnimationActive = false;
+      this.signalAnimationFrame = 0;
+      this.drawSignalLayer(this.lastDrawMeta, timeMs);
+      return;
+    }
     // Throttle to ~30fps to avoid starving crosshair interaction on desktop.
     if (timeMs - this.lastSignalDrawTimeMs >= 33) {
       this.lastSignalDrawTimeMs = timeMs;
@@ -2940,6 +2950,23 @@ export class SimpleChart {
     }
     this.signalAnimationFrame = window.requestAnimationFrame(this.handleSignalAnimationTick);
   };
+
+  private isLatestSignalAnimationLive(timeMs = performance.now()): boolean {
+    return this.latestSignalAnimationUntilMs > 0 && timeMs < this.latestSignalAnimationUntilMs;
+  }
+
+  private armLatestSignalAnimation(previousLatestIndex: number, previousSignals: StrategySignal[]): void {
+    const latestIndex = this.latestStrategySignalIndex;
+    if (latestIndex < 0) {
+      this.latestSignalAnimationUntilMs = 0;
+      return;
+    }
+    const previousValue = previousSignals[latestIndex] ?? 0;
+    const nextValue = this.strategySignals[latestIndex] ?? 0;
+    if (latestIndex !== previousLatestIndex || previousValue !== nextValue) {
+      this.latestSignalAnimationUntilMs = performance.now() + LATEST_SIGNAL_ANIMATION_DURATION_MS;
+    }
+  }
 
   private normalizeDoubleBreakConfig(config: Partial<DoubleBreakConfig>): DoubleBreakConfig {
     const next = { ...DOUBLE_BREAK_DEFAULT_CONFIG, ...config };
@@ -3220,8 +3247,11 @@ export class SimpleChart {
       if (message.requestId !== this.strategyRequestId) return;
       this.pendingStrategyRequestId = message.requestId;
       this.strategyComputePending = false;
+      const previousLatestIndex = this.latestStrategySignalIndex;
+      const previousSignals = this.strategySignals;
       this.strategySignals = message.signals;
       this.latestStrategySignalIndex = this.computeLatestSignalIndex(this.strategySignals);
+      this.armLatestSignalAnimation(previousLatestIndex, previousSignals);
       this.drawSignalLayer(this.lastDrawMeta);
       this.updateSignalAnimationLoop();
       this.onStrategyComputed?.();
@@ -3244,6 +3274,7 @@ export class SimpleChart {
     this.strategySignals = [];
     this.signalHitAreas = [];
     this.latestStrategySignalIndex = -1;
+    this.latestSignalAnimationUntilMs = 0;
     this.updateSignalAnimationLoop();
     this.initStrategyWorker();
   }
@@ -3286,6 +3317,7 @@ export class SimpleChart {
       this.strategySignals = [];
       this.signalHitAreas = [];
       this.latestStrategySignalIndex = -1;
+      this.latestSignalAnimationUntilMs = 0;
       this.drawSignalLayer(this.lastDrawMeta);
       this.updateSignalAnimationLoop();
       return;
@@ -3303,8 +3335,11 @@ export class SimpleChart {
           if (signal.index >= 0 && signal.index < signals.length) signals[signal.index] = -1;
         });
       }
+      const previousLatestIndex = this.latestStrategySignalIndex;
+      const previousSignals = this.strategySignals;
       this.strategySignals = signals;
       this.latestStrategySignalIndex = this.computeLatestSignalIndex(this.strategySignals);
+      this.armLatestSignalAnimation(previousLatestIndex, previousSignals);
       this.drawSignalLayer(this.lastDrawMeta);
       this.updateSignalAnimationLoop();
       this.onStrategyComputed?.();
@@ -4879,6 +4914,7 @@ export class SimpleChart {
       const entryPrice = candle.close;
       const entryY = meta.getY(entryPrice);
       const isLatest = gi === latestSignalIndex;
+      const shouldPulseLatest = isLatest && this.isLatestSignalAnimationLive(timeMs);
       const detail = signalRiskDetails.get(gi);
       if (this.strategyRiskLinesVisible && detail && (gi === this.hoveredSignalCandleIndex || gi === this.focusedSignalCandleIndex)) {
         const fromX = x + meta.candleW * 0.55;
@@ -4888,7 +4924,7 @@ export class SimpleChart {
           label: 'ENTRY',
           color: '#6ea8ff',
           dash: [6, 3],
-          alpha: isLatest ? 0.95 : 0.7,
+          alpha: shouldPulseLatest ? 0.95 : 0.7,
         });
         const stopColor = '#ff6b6b';
         if (typeof detail.stopLoss === 'number' && Number.isFinite(detail.stopLoss)) {
@@ -4898,7 +4934,7 @@ export class SimpleChart {
             label: 'SL',
             color: stopColor,
             dash: [2, 3],
-            alpha: isLatest ? 1 : 0.72,
+            alpha: shouldPulseLatest ? 1 : 0.72,
           });
         }
         detail.takeProfits.forEach((price, idx) => {
@@ -4912,7 +4948,7 @@ export class SimpleChart {
             label,
             color,
             dash: idx === 0 ? [4, 3] : [8, 4],
-            alpha: isLatest ? 1 : (idx === 0 ? 0.68 : 0.64),
+            alpha: shouldPulseLatest ? 1 : (idx === 0 ? 0.68 : 0.64),
           });
         });
       }
@@ -4921,7 +4957,7 @@ export class SimpleChart {
       const label = isLong ? 'B' : 'S';
 
       const phase = (Math.sin(timeMs * 0.008) + 1) / 2;
-      const pulseAlpha = isLatest ? (0.65 + phase * 0.35) : 1;
+      const pulseAlpha = shouldPulseLatest ? (0.65 + phase * 0.35) : 1;
 
       // callout box dimensions
       const bW = 18;
@@ -4937,7 +4973,7 @@ export class SimpleChart {
       const radius = bW * 0.5; // for hit area
 
       // latest: expanding glow ring
-      if (isLatest) {
+      if (shouldPulseLatest) {
         const ringR = (bW * 0.525) + phase * (bW * 0.675);
         const ringAlpha = (1 - phase) * 0.55;
         ctx.save();

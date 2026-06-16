@@ -137,11 +137,21 @@ test('trade focus remains active during normal desktop mouse movement', () => {
   );
 });
 
-test('trade focus disables latest signal animation until the focus is cleared', () => {
+test('latest signal animation is temporary and trade focus suppresses pulse drawing', () => {
   assert.match(
     source,
-    /const shouldAnimate = this\.strategySignalVisible\s*&& latestIsVisible\s*&& this\.focusedTradeRange == null;/,
-    'latest signal animation should pause while a trade focus overlay is active',
+    /const LATEST_SIGNAL_ANIMATION_DURATION_MS\s*=\s*4500;/,
+    'latest signal animation should be bounded instead of running forever',
+  );
+  assert.match(
+    source,
+    /private isLatestSignalAnimationLive\(timeMs = performance\.now\(\)\): boolean \{[\s\S]*?return this\.latestSignalAnimationUntilMs > 0 && timeMs < this\.latestSignalAnimationUntilMs;[\s\S]*?\}/,
+    'chart should expose a time gate for latest-signal pulse rendering',
+  );
+  assert.match(
+    source,
+    /const shouldAnimate = this\.strategySignalVisible[\s\S]*?&& this\.focusedTradeRange == null[\s\S]*?&& this\.isLatestSignalAnimationLive\(nowMs\);/,
+    'latest signal animation should pause while focused and expire after the bounded window',
   );
   assert.match(
     source,
@@ -160,8 +170,8 @@ test('trade focus disables latest signal animation until the focus is cleared', 
   );
   assert.match(
     source,
-    /const latestSignalIndex = this\.focusedTradeRange \? -1 : this\.latestStrategySignalIndex;/,
-    'trade focus should suppress latest-signal pulse rendering even on non-animated signal redraws',
+    /const shouldPulseLatest = isLatest && this\.isLatestSignalAnimationLive\(timeMs\);/,
+    'non-animated signal redraws should render the latest signal statically after the pulse window',
   );
 });
 

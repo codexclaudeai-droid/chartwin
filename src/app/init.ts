@@ -1705,7 +1705,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             high: convertPrice(patch.high),
             low: convertPrice(patch.low),
           });
-          markStrategyReportStale();
         },
       },
       getData: () => rawCandles,
@@ -1764,7 +1763,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           if (patch.footprint) last.footprint = patch.footprint;
           if (gapMode === 'smooth') {
             applyDisplayCurrencyToChart();
-            markStrategyReportStale();
             return;
           }
           chart.updateLastCandle({
@@ -1777,7 +1775,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             volumeDelta: last.volumeDelta,
             footprint: toDisplayFootprint(last.footprint),
           });
-          markStrategyReportStale();
         },
       },
       limit: BINANCE_DIRECT_INITIAL_HISTORY_LIMIT,
@@ -1853,7 +1850,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           if (Number.isFinite(patch.volume)) last.volume = patch.volume;
           if (gapMode === 'smooth') {
             applyDisplayCurrencyToChart();
-            markStrategyReportStale();
             return;
           }
           chart.updateLastCandle({
@@ -1862,7 +1858,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             low: convertPrice(last.low),
             volume: last.volume,
           });
-          markStrategyReportStale();
         },
       },
       limit: 3000,
