@@ -6,6 +6,7 @@ import {
   getAsyncChartServicePersistence,
 } from '../../src/server/chart-service/index.ts';
 import { ChartRuntime } from '../chart/chart-runtime';
+import { DevStrategyParamsPanel } from './strategy-params-panel';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,5 +27,10 @@ export default async function DevChartPage() {
     redirect('/login?redirect=/dev');
   }
 
-  return <ChartRuntime accessVerified />;
+  return (
+    <>
+      <DevStrategyParamsPanel />
+      <ChartRuntime accessVerified />
+    </>
+  );
 }

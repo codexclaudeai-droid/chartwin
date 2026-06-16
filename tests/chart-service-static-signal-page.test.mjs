@@ -234,7 +234,20 @@ test('dev strategy modal exposes server parameter profile sync controls', () => 
   assert.match(source, /\/admin\/strategy-params/);
   assert.match(source, /saveActiveStrategyParamsToServer/);
   assert.match(source, /loadActiveStrategyParamsFromServer/);
-  assert.match(source, /현재 종목 저장/);
+  assert.match(source, /?꾩옱 醫낅ぉ ???);
+});
+
+test('dev page exposes visible strategy parameter server panel', () => {
+  const page = fs.readFileSync(new URL('../app/dev/page.tsx', import.meta.url), 'utf8');
+  const panel = fs.readFileSync(new URL('../app/dev/strategy-params-panel.tsx', import.meta.url), 'utf8');
+  const css = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(page, /DevStrategyParamsPanel/);
+  assert.match(panel, /?꾨왂 ?뚮씪誘명꽣 ?쒕쾭 ?ㅼ젙/);
+  assert.match(panel, /\/admin\/strategy-params/);
+  assert.match(panel, /?꾩뿭/);
+  assert.match(panel, /醫낅ぉ蹂?);
+  assert.match(css, /\.dev-strategy-params-panel/);
 });
 
 test('signal app page enforces super admin access before rendering panel', () => {

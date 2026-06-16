@@ -10942,6 +10942,176 @@ body:has(.chart-runtime-page) .chart-runtime-page {
   height: 100vh;
 }
 
+.dev-strategy-params-panel {
+  color: #e9f2ff;
+  position: fixed;
+  right: 14px;
+  top: 14px;
+  z-index: 2600;
+}
+
+.dev-strategy-params-toggle {
+  background: linear-gradient(135deg, #2d7dff, #25d796);
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
+  color: #ffffff;
+  cursor: pointer;
+  font: 850 12px/1 "Segoe UI", Arial, sans-serif;
+  min-height: 34px;
+  padding: 0 14px;
+}
+
+.dev-strategy-params-card {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(45, 125, 255, 0.045)),
+    rgba(7, 14, 25, 0.95);
+  border: 1px solid rgba(125, 183, 255, 0.22);
+  border-radius: 10px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  max-height: calc(100vh - 70px);
+  overflow: auto;
+  padding: 14px;
+  width: min(380px, calc(100vw - 28px));
+}
+
+.dev-strategy-params-head {
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(125, 183, 255, 0.16);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding-bottom: 10px;
+}
+
+.dev-strategy-params-head span {
+  color: #67d8a6;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+}
+
+.dev-strategy-params-head h2 {
+  color: #ffffff;
+  font-size: 16px;
+  margin: 3px 0 0;
+}
+
+.dev-strategy-params-head strong {
+  color: rgba(233, 242, 255, 0.58);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.dev-strategy-params-card label {
+  color: rgba(233, 242, 255, 0.66);
+  display: grid;
+  font-size: 11px;
+  font-weight: 850;
+  gap: 6px;
+}
+
+.dev-strategy-params-card input,
+.dev-strategy-params-card select,
+.dev-strategy-params-card textarea {
+  background: rgba(2, 7, 19, 0.62);
+  border: 1px solid rgba(125, 183, 255, 0.22);
+  border-radius: 8px;
+  color: #e9f2ff;
+  font: 700 12px/1.35 "Segoe UI", Arial, sans-serif;
+  outline: 0;
+  padding: 9px 10px;
+}
+
+.dev-strategy-params-card input:disabled {
+  color: rgba(233, 242, 255, 0.36);
+  opacity: 0.68;
+}
+
+.dev-strategy-params-card textarea {
+  font-family: Consolas, "Courier New", monospace;
+  min-height: 130px;
+  resize: vertical;
+}
+
+.dev-strategy-params-scope {
+  display: flex;
+  gap: 12px;
+}
+
+.dev-strategy-params-scope label {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+}
+
+.dev-strategy-params-scope input {
+  accent-color: #2d7dff;
+}
+
+.dev-strategy-params-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.dev-strategy-params-actions button {
+  background: rgba(125, 183, 255, 0.16);
+  border: 1px solid rgba(125, 183, 255, 0.22);
+  border-radius: 8px;
+  color: #e9f2ff;
+  cursor: pointer;
+  font: 850 12px/1 "Segoe UI", Arial, sans-serif;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.dev-strategy-params-actions button:nth-child(2) {
+  background: rgba(37, 215, 150, 0.18);
+  border-color: rgba(37, 215, 150, 0.28);
+}
+
+.dev-strategy-params-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.dev-strategy-params-status {
+  border: 1px solid rgba(125, 183, 255, 0.18);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 750;
+  margin: 0;
+  padding: 9px 10px;
+}
+
+.dev-strategy-params-status.ok {
+  background: rgba(11, 74, 45, 0.36);
+  border-color: rgba(73, 255, 145, 0.22);
+  color: #a6f5cb;
+}
+
+.dev-strategy-params-status.err {
+  background: rgba(96, 18, 18, 0.42);
+  border-color: rgba(255, 109, 109, 0.34);
+  color: #ffb4b4;
+}
+
+.dev-strategy-params-status.info {
+  color: rgba(233, 242, 255, 0.7);
+}
+
+.dev-strategy-params-note {
+  color: rgba(233, 242, 255, 0.54);
+  font-size: 11px;
+  line-height: 1.55;
+  margin: 0;
+}
+
 body:not(:has(.landing-page)) .chart-preview-page {
   align-items: center;
   background:
