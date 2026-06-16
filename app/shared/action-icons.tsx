@@ -62,3 +62,43 @@ export function AddRowActionIcon() {
     </svg>
   );
 }
+
+export function ChevronUpActionIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="lucide lucide-chevron-up-icon lucide-chevron-up"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="m18 15-6-6-6 6" />
+    </svg>
+  );
+}
+
+export function ChevronDownActionIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="lucide lucide-chevron-down-icon lucide-chevron-down"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}

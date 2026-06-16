@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+﻿import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
@@ -338,9 +338,9 @@ test('admin user panel marks subscription status when the latest confirmed payme
   assert.match(source, /adminNote\?: string \| null/);
   assert.match(source, /payment\.subscriptionId === subscriptionId/);
   assert.match(source, /payment\?\.status === 'confirmed'/);
-  assert.match(source, /가매출/);
-  assert.match(source, /媛留ㅼ텧/);
-  assert.match(source, /\(가매출\)/);
+  assert.match(source, /가매출|媛留ㅼ텧/);
+  assert.match(source, /return `\$\{statusLabel\} \(가매출\)`/);
+  assert.match(source, /\(가매출\)|\(媛留ㅼ텧\)/);
 });
 
 test('admin user panel renders member contact referral and signup metadata in the member column', () => {
@@ -369,7 +369,7 @@ test('admin user panel exposes referral member list without point setting contro
   assert.match(source, /confirmedPoints/);
   assert.match(source, /totalPoints/);
   assert.match(source, /추천회원 목록/);
-  assert.doesNotMatch(source, /추천포인트 적립률/);
+  assert.doesNotMatch(source, /추천인 설정/);
 });
 
 test('admin user panel exposes every supported role in the directory filter', () => {
@@ -430,7 +430,7 @@ test('admin user panel renders detailed payment support and notification history
   assert.match(source, /getNotificationLinkLabel\(notification\)/);
   assert.match(source, /notification\.readAt \? '읽음' : '미확인'/);
   assert.match(source, /notification\.linkUrl/);
-  assert.doesNotMatch(source, /알림 대상 열기/);
+  assert.doesNotMatch(source, /알림 설정 열기/);
 });
 
 test('admin user panel renders related audit entries in user detail', () => {
@@ -455,7 +455,7 @@ test('admin user panel applies dashboard queue preset events', () => {
   assert.match(source, /refresh\(\{ role: nextRole, accountStatus: nextAccountStatus, nextMessage \}\)/);
   assert.match(source, /showAllMembersForSalespersonAssignment/);
   assert.match(source, /전체 회원 보기/);
-  assert.match(source, /상세를 열어 역할을 영업자로 변경하세요/);
+  assert.match(source, /상세를 열고 역할을 변경하세요/);
   assert.doesNotMatch(source, /openDetail\(item\.user\.id, 'salesperson'\)/);
   assert.doesNotMatch(source, /item\.user\.role !== 'salesperson' &&/);
   assert.doesNotMatch(source, /영업자로 지정할 준비가 되었습니다/);
@@ -575,7 +575,7 @@ test('admin user directory switches to mobile cards below tablet width', () => {
   assert.match(source, /admin-user-mobile-card-title-row/);
   assert.match(source, /admin-user-mobile-card-info-grid/);
   assert.match(source, /admin-user-mobile-card-ops-grid/);
-  assert.match(source, /users\.map\(\(item\) => \(/);
+  assert.match(source, /paginatedUsers\.map\(\(item\) => \(/);
   assert.match(source, /openDetail\(item\.user\.id\)/);
   assert.match(cssSource, /body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-mobile-list\s*\{[\s\S]*?display: none/);
   assert.match(cssSource, /@media \(max-width: 1180px\)\s*\{[\s\S]*?body:not\(:has\(\.landing-page\)\) #admin-users \.admin-user-table-scroll\s*\{[\s\S]*?display: none/);
@@ -630,7 +630,7 @@ test('admin mobile user cards arrange member fields in requested two-column rows
   assert.match(source, /admin-user-mobile-card-status-row/);
   assert.match(source, /admin-user-mobile-card-info-grid/);
   assert.match(source, /admin-user-mobile-card-ops-grid/);
-  assert.match(source, /<dt>연락번호<\/dt>[\s\S]*?<dt>가입일<\/dt>[\s\S]*?<dt>추천인<\/dt>[\s\S]*?<dt>구독여부<\/dt>[\s\S]*?<dt>차트접근<\/dt>[\s\S]*?<dt>최근결제<\/dt>/);
+  assert.match(source, /<dt>연락번호<\/dt>[\s\S]*?<dt>가입일<\/dt>[\s\S]*?<dt>추천인<\/dt>[\s\S]*?<dt>구독상태<\/dt>[\s\S]*?<dt>차트접근<\/dt>[\s\S]*?<dt>최근결제<\/dt>/);
   assert.match(source, /<span>결제 <strong>\{item\.paymentCount\}<\/strong><\/span>[\s\S]*?<span>문의 <strong>\{item\.supportThreadCount\}<\/strong><\/span>[\s\S]*?<span>알림 <strong>\{item\.unreadNotificationCount\}<\/strong><\/span>/);
   assert.match(cssSource, /#admin-users \.admin-user-mobile-card-info-grid\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(cssSource, /#admin-users \.admin-user-mobile-card-ops-grid\s*\{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);

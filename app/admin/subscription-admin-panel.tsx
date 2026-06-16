@@ -84,12 +84,15 @@ const SUBSCRIPTION_QUICK_MEMOS: SubscriptionQuickMemo[] = [
     supports: (item) => item.subscription.status === 'cancel_requested' || item.subscription.status === 'refund_requested',
   },
 ];
+const ADMIN_SUBSCRIPTION_PAGE_SIZE = 10;
+const ADMIN_SUBSCRIPTION_PAGE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 export function SubscriptionAdminPanel() {
   const [items, setItems] = useState<AdminSubscriptionQueueItem[]>([]);
   const [activeFilterKey, setActiveFilterKey] = useState('all');
   const [dashboardFilterNotice, setDashboardFilterNotice] = useState<string | null>(null);
   const [subscriptionOperationNotes, setSubscriptionOperationNotes] = useState<Record<string, string>>({});
+  const [currentSubscriptionPage, setCurrentSubscriptionPage] = useState(1);
   const [message, setMessage] = useState(
     '관리자 확인으로 구독 승인, 취소, 환불 요청을 처리합니다.',
   );
@@ -115,6 +118,10 @@ export function SubscriptionAdminPanel() {
       unsubscribeQueuePreset();
     };
   }, []);
+
+  useEffect(() => {
+    setCurrentSubscriptionPage(1);
+  }, [activeFilterKey]);
 
   async function refresh(options: SubscriptionAdminPanelRefreshOptions = {}) {
     setIsBusy(true);
@@ -302,6 +309,12 @@ export function SubscriptionAdminPanel() {
 
   const activeFilter = getSubscriptionQueueFilterPreset(activeFilterKey);
   const filteredItems = filterSubscriptionQueueItems(items, activeFilterKey);
+  const subscriptionPageCount = Math.max(1, Math.ceil(filteredItems.length / ADMIN_SUBSCRIPTION_PAGE_SIZE));
+  const safeCurrentSubscriptionPage = Math.min(currentSubscriptionPage, subscriptionPageCount);
+  const paginatedItems = filteredItems.slice(
+    (safeCurrentSubscriptionPage - 1) * ADMIN_SUBSCRIPTION_PAGE_SIZE,
+    safeCurrentSubscriptionPage * ADMIN_SUBSCRIPTION_PAGE_SIZE,
+  );
 
   return (
     <>
@@ -349,7 +362,7 @@ export function SubscriptionAdminPanel() {
             </tr>
           </thead>
           <tbody>
-            {filteredItems.map((item) => {
+            {paginatedItems.map((item) => {
               const currentNote = subscriptionOperationNotes[item.subscription.id] || '';
               const canSubmitNote = canSubmitAdminOperationNote(currentNote);
               const quickMemos = SUBSCRIPTION_QUICK_MEMOS.filter((memo) => memo.supports(item));
@@ -415,7 +428,7 @@ export function SubscriptionAdminPanel() {
           </tbody>
         </table>
         <div className="admin-subscription-mobile-list" aria-label="모바일 구독관리 카드 목록">
-          {filteredItems.map((item) => {
+          {paginatedItems.map((item) => {
             const currentNote = subscriptionOperationNotes[item.subscription.id] || '';
             const canSubmitNote = canSubmitAdminOperationNote(currentNote);
             const quickMemos = SUBSCRIPTION_QUICK_MEMOS.filter((memo) => memo.supports(item));
@@ -492,6 +505,21 @@ export function SubscriptionAdminPanel() {
             <p className="admin-subscription-mobile-empty">대기 중인 구독 요청이 없습니다.</p>
           )}
         </div>
+        {filteredItems.length > ADMIN_SUBSCRIPTION_PAGE_SIZE ? (
+          <nav className="admin-pagination" aria-label="구독관리 목록 페이지">
+            {ADMIN_SUBSCRIPTION_PAGE_NUMBERS.filter((pageNumber) => pageNumber <= subscriptionPageCount).map((pageNumber) => (
+              <button
+                className={`admin-pagination-button${safeCurrentSubscriptionPage === pageNumber ? ' active' : ''}`}
+                type="button"
+                key={pageNumber}
+                aria-current={safeCurrentSubscriptionPage === pageNumber ? 'page' : undefined}
+                onClick={() => setCurrentSubscriptionPage(pageNumber)}
+              >
+                {pageNumber}
+              </button>
+            ))}
+          </nav>
+        ) : null}
       </section>
       {confirmationDialog}
     </>

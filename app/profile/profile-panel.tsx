@@ -1088,8 +1088,9 @@ function formatServiceEndCountdown(value: string): string {
   const endStart = Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
   const diffDays = Math.ceil((endStart - todayStart) / 86_400_000);
 
+  if (diffDays < 0) return '구독종료';
   if (diffDays === 0) return 'D-Day';
-  return diffDays > 0 ? `D-${diffDays}` : `D+${Math.abs(diffDays)}`;
+  return `D-${diffDays}`;
 }
 
 function formatProfileSubscriptionPlanLabel(planId: string | null): string {

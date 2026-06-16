@@ -127,6 +127,43 @@ test('admin dashboard panel renders the priority action with anchored admin sect
   assert.match(userSource, /id="admin-users"/);
 });
 
+test('admin operation lists paginate queues ten items at a time', () => {
+  const paymentSource = fs.readFileSync(new URL('../app/admin/admin-panel.tsx', import.meta.url), 'utf8');
+  const subscriptionSource = fs.readFileSync(new URL('../app/admin/subscription-admin-panel.tsx', import.meta.url), 'utf8');
+  const supportSource = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
+  const auditSource = fs.readFileSync(new URL('../app/admin/audit-log-panel.tsx', import.meta.url), 'utf8');
+  const userSource = fs.readFileSync(new URL('../app/admin/user-admin-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(paymentSource, /ADMIN_PAYMENT_PAGE_SIZE = 10/);
+  assert.match(paymentSource, /paginatedPayments/);
+  assert.match(paymentSource, /admin-pagination/);
+  assert.match(paymentSource, /filteredPayments\.slice/);
+
+  assert.match(subscriptionSource, /ADMIN_SUBSCRIPTION_PAGE_SIZE = 10/);
+  assert.match(subscriptionSource, /paginatedItems/);
+  assert.match(subscriptionSource, /admin-pagination/);
+  assert.match(subscriptionSource, /filteredItems\.slice/);
+
+  assert.match(supportSource, /ADMIN_SUPPORT_THREAD_PAGE_SIZE = 10/);
+  assert.match(supportSource, /paginatedThreads/);
+  assert.match(supportSource, /admin-pagination/);
+  assert.match(supportSource, /filteredThreads\.slice/);
+
+  assert.match(auditSource, /ADMIN_AUDIT_LOG_PAGE_SIZE = 10/);
+  assert.match(auditSource, /paginatedEntries/);
+  assert.match(auditSource, /admin-pagination/);
+  assert.match(auditSource, /entries\.slice/);
+
+  assert.match(userSource, /ADMIN_USER_PAGE_SIZE = 10/);
+  assert.match(userSource, /paginatedUsers/);
+  assert.match(userSource, /admin-pagination/);
+  assert.match(userSource, /users\.slice/);
+
+  assert.match(styleSource, /\.admin-pagination/);
+  assert.match(styleSource, /\.admin-pagination-button/);
+});
+
 test('admin dashboard summary cards route directly to each operation filter', () => {
   const dashboardSource = fs.readFileSync(new URL('../app/admin/admin-dashboard-panel.tsx', import.meta.url), 'utf8');
 

@@ -51,6 +51,7 @@ type SupportThreadListItem = {
 
 const SUPPORT_THREAD_PAGE_SIZE = 10;
 const SUPPORT_THREAD_PAGE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const SUPPORT_THREAD_READ_STORAGE_KEY = 'my-chart-lib.support.read-threads.v1';
 const SUPPORT_THREAD_CATEGORY_TABS = [
   { key: 'all', label: '전체' },
   { key: 'deposit', label: formatSupportCategoryLabel('deposit') },
@@ -75,6 +76,7 @@ export function SupportPanel() {
   const [showAuthPromptModal, setShowAuthPromptModal] = useState(false);
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
   const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(() => new Set());
+  const [readThreadIds, setReadThreadIds] = useState<Set<string>>(() => new Set());
   const [threadEditById, setThreadEditById] = useState<Record<string, { title: string; body: string }>>({});
   const targetThreadId = searchParams.get('thread');
   const isDepositCategory = category === 'deposit';
@@ -98,6 +100,7 @@ export function SupportPanel() {
   useEffect(() => {
     void refresh();
     void refreshAuthSession();
+    setReadThreadIds(readSupportThreadIds());
   }, []);
 
   useEffect(() => {
@@ -110,6 +113,7 @@ export function SupportPanel() {
       next.add(targetThreadId);
       return next;
     });
+    markSupportThreadRead(targetThreadId);
   }, [targetThreadId, threads]);
 
   useEffect(() => {
@@ -197,7 +201,18 @@ export function SupportPanel() {
         next.delete(threadId);
       } else {
         next.add(threadId);
+        markSupportThreadRead(threadId);
       }
+      return next;
+    });
+  }
+
+  function markSupportThreadRead(threadId: string) {
+    setReadThreadIds((current) => {
+      if (current.has(threadId)) return current;
+      const next = new Set(current);
+      next.add(threadId);
+      writeSupportThreadIds(next);
       return next;
     });
   }
@@ -412,6 +427,7 @@ export function SupportPanel() {
               title: item.thread.title,
               body: getCustomerMessage(item)?.body ?? '',
             };
+            const isUnreadThread = isSupportThreadUnread(item.thread, readThreadIds);
             const cardClassName = [
               'thread-card',
               item.thread.status === 'answered' ? 'support-thread-answered' : '',
@@ -446,6 +462,7 @@ export function SupportPanel() {
                       }
                     >
                       {item.thread.visibility === 'private' ? <PrivateSupportThreadLockIcon /> : null}
+                      {isUnreadThread ? <SupportThreadNewBadge /> : null}
                       <span>{formatSupportThreadDisplayTitle(item.thread)}</span>
                     </span>
                   </button>
@@ -575,6 +592,32 @@ function getSupportMessageDisplayBody(thread: SupportThreadListItem['thread'], b
 }
 
 const formatSupportMessageDisplayBody = getSupportMessageDisplayBody;
+
+function isSupportThreadUnread(
+  thread: SupportThreadListItem['thread'],
+  readThreadIds: Set<string>,
+): boolean {
+  return !readThreadIds.has(thread.id);
+}
+
+function readSupportThreadIds(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SUPPORT_THREAD_READ_STORAGE_KEY) || '[]');
+    return new Set(Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeSupportThreadIds(threadIds: Set<string>) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(SUPPORT_THREAD_READ_STORAGE_KEY, JSON.stringify(Array.from(threadIds)));
+}
+
+function SupportThreadNewBadge() {
+  return <span className="support-thread-new-badge">New</span>;
+}
 
 function SupportReplyReturnIcon({ className }: { className: string }) {
   return (

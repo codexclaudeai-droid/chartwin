@@ -85,6 +85,8 @@ const PAYMENT_QUICK_MEMOS: PaymentQuickMemo[] = [
     supports: (item) => item.payment.status === 'pending' || item.payment.status === 'requested',
   },
 ];
+const ADMIN_PAYMENT_PAGE_SIZE = 10;
+const ADMIN_PAYMENT_PAGE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 function formatAdminPaymentMethodLabel(method: string): string {
   if (method === 'usdt') return 'USDT';
@@ -112,6 +114,7 @@ export function AdminPanel() {
   const [activeFilterKey, setActiveFilterKey] = useState('all');
   const [dashboardFilterNotice, setDashboardFilterNotice] = useState<string | null>(null);
   const [operationNotes, setOperationNotes] = useState<Record<string, string>>({});
+  const [currentPaymentPage, setCurrentPaymentPage] = useState(1);
   const [message, setMessage] = useState('관리자 계정으로 로그인하면 결제 요청 큐를 불러옵니다.');
   const [isBusy, setIsBusy] = useState(false);
   const { confirmAdminAction, confirmationDialog } = useAdminActionConfirmation();
@@ -135,6 +138,10 @@ export function AdminPanel() {
       unsubscribeQueuePreset();
     };
   }, []);
+
+  useEffect(() => {
+    setCurrentPaymentPage(1);
+  }, [activeFilterKey]);
 
   async function refresh(options: AdminPanelRefreshOptions = {}) {
     setIsBusy(true);
@@ -339,6 +346,12 @@ export function AdminPanel() {
 
   const activeFilter = getPaymentQueueFilterPreset(activeFilterKey);
   const filteredPayments = filterPaymentQueueItems(payments, activeFilterKey);
+  const paymentPageCount = Math.max(1, Math.ceil(filteredPayments.length / ADMIN_PAYMENT_PAGE_SIZE));
+  const safeCurrentPaymentPage = Math.min(currentPaymentPage, paymentPageCount);
+  const paginatedPayments = filteredPayments.slice(
+    (safeCurrentPaymentPage - 1) * ADMIN_PAYMENT_PAGE_SIZE,
+    safeCurrentPaymentPage * ADMIN_PAYMENT_PAGE_SIZE,
+  );
 
   return (
     <>
@@ -382,7 +395,7 @@ export function AdminPanel() {
           </tr>
         </thead>
         <tbody>
-          {filteredPayments.map((item) => {
+          {paginatedPayments.map((item) => {
             const paymentDisplayId = formatAdminDisplayId(
               '결제',
               getAdminDisplaySequence(payments, (paymentItem) => paymentItem.payment.id === item.payment.id),
@@ -424,7 +437,7 @@ export function AdminPanel() {
         </tbody>
       </table>
       <div className="admin-payment-mobile-list" aria-label="모바일 입금관리 카드 목록">
-        {filteredPayments.map((item) => {
+        {paginatedPayments.map((item) => {
           const paymentDisplayId = formatAdminDisplayId(
             '결제',
             getAdminDisplaySequence(payments, (paymentItem) => paymentItem.payment.id === item.payment.id),
@@ -476,6 +489,21 @@ export function AdminPanel() {
           <p className="admin-payment-mobile-empty">표시할 결제 요청이 없습니다.</p>
         )}
       </div>
+      {filteredPayments.length > ADMIN_PAYMENT_PAGE_SIZE ? (
+        <nav className="admin-pagination" aria-label="입금관리 목록 페이지">
+          {ADMIN_PAYMENT_PAGE_NUMBERS.filter((pageNumber) => pageNumber <= paymentPageCount).map((pageNumber) => (
+            <button
+              className={`admin-pagination-button${safeCurrentPaymentPage === pageNumber ? ' active' : ''}`}
+              type="button"
+              key={pageNumber}
+              aria-current={safeCurrentPaymentPage === pageNumber ? 'page' : undefined}
+              onClick={() => setCurrentPaymentPage(pageNumber)}
+            >
+              {pageNumber}
+            </button>
+          ))}
+        </nav>
+      ) : null}
     </section>
     {confirmationDialog}
     </>

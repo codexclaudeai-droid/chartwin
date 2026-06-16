@@ -3680,6 +3680,11 @@ body:has(.landing-page) .site-footer {
   gap: 8px;
 }
 
+.admin-symbols-order-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
 @media (max-width: 760px) {
   .admin-symbols-header,
   .admin-symbols-form-actions {
@@ -6712,6 +6717,37 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 .thread-list {
   display: grid;
   gap: 14px;
+}
+
+.admin-pagination {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin: 16px 0 0;
+}
+
+.admin-pagination-button {
+  appearance: none;
+  background: rgba(2, 7, 19, 0.34);
+  border: 1px solid rgba(125, 183, 255, 0.15);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 800;
+  height: 34px;
+  min-width: 34px;
+  padding: 0 10px;
+}
+
+.admin-pagination-button.active,
+.admin-pagination-button:hover,
+.admin-pagination-button:focus-visible {
+  background: rgba(76, 141, 255, 0.2);
+  border-color: rgba(125, 183, 255, 0.46);
+  color: #ffffff;
+  outline: 0;
 }
 
 .thread-card {
@@ -12049,6 +12085,23 @@ body:not(:has(.landing-page)) .support-private-lock svg {
   stroke-linejoin: round;
   stroke-width: 2;
   width: 15px;
+}
+
+body:not(:has(.landing-page)) .support-thread-new-badge {
+  align-items: center;
+  background: rgba(255, 74, 112, 0.16);
+  border: 1px solid rgba(255, 118, 146, 0.58);
+  border-radius: 999px;
+  color: #ffb7c6;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 900;
+  height: 18px;
+  letter-spacing: 0;
+  line-height: 1;
+  padding: 0 6px;
+  text-transform: uppercase;
 }
 
 body:not(:has(.landing-page)) .support-thread-title-button:hover,

@@ -37,6 +37,7 @@ type SupportThreadListItem = {
     status: string;
     visibility: string;
     createdAt: string;
+    updatedAt: string;
   };
   author: {
     email: string;
@@ -53,6 +54,10 @@ type SupportAdminPanelRefreshOptions = {
   nextMessage?: string;
 };
 
+const ADMIN_SUPPORT_THREAD_READ_STORAGE_KEY = 'my-chart-lib.admin.support.read-threads.v1';
+const ADMIN_SUPPORT_THREAD_PAGE_SIZE = 10;
+const ADMIN_SUPPORT_THREAD_PAGE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
 export function SupportAdminPanel() {
   const replyInputRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const handledDeepLinkRef = useRef<string | null>(null);
@@ -63,6 +68,8 @@ export function SupportAdminPanel() {
   const [highlightedThreadId, setHighlightedThreadId] = useState<string | null>(null);
   const [replyByThreadId, setReplyByThreadId] = useState<Record<string, string>>({});
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
+  const [readThreadIds, setReadThreadIds] = useState<Set<string>>(() => new Set());
+  const [currentSupportPage, setCurrentSupportPage] = useState(1);
   const [threadEditById, setThreadEditById] = useState<Record<string, { title: string; body: string }>>({});
   const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
   const [replyEditById, setReplyEditById] = useState<Record<string, string>>({});
@@ -71,6 +78,7 @@ export function SupportAdminPanel() {
 
   useEffect(() => {
     void refresh();
+    setReadThreadIds(readAdminSupportThreadIds());
     const unsubscribeRefresh = subscribeAdminRefreshEvent((detail) => {
       if (detail.source === 'support') return;
       void refresh();
@@ -99,6 +107,11 @@ export function SupportAdminPanel() {
     setDashboardFilterNotice(null);
     setDeepLinkedThreadId(targetThreadId);
     setHighlightedThreadId(targetThreadId);
+    const targetThreadIndex = sortSupportThreadsByCreatedAtDesc(threads)
+      .findIndex((item) => item.thread.id === targetThreadId);
+    if (targetThreadIndex >= 0) {
+      setCurrentSupportPage(Math.floor(targetThreadIndex / ADMIN_SUPPORT_THREAD_PAGE_SIZE) + 1);
+    }
 
     window.setTimeout(() => {
       const targetCard = document.getElementById(getAdminSupportThreadDomId(targetThreadId));
@@ -109,9 +122,16 @@ export function SupportAdminPanel() {
 
       targetCard.scrollIntoView({ block: 'center', behavior: 'smooth' });
       replyInputRefs.current[targetThreadId]?.focus();
+      const deepLinkedThread = threads.find((item) => item.thread.id === targetThreadId) ?? null;
+      if (deepLinkedThread) markAdminSupportThreadRead(deepLinkedThread.thread.id);
       setMessage(`${targetThreadId} 문의로 이동했습니다. 바로 답변할 수 있습니다.`);
     }, 0);
   }, [threads]);
+
+  useEffect(() => {
+    if (deepLinkedThreadId) return;
+    setCurrentSupportPage(1);
+  }, [activeFilterKey, deepLinkedThreadId]);
 
   async function refresh(options: SupportAdminPanelRefreshOptions = {}) {
     setIsBusy(true);
@@ -274,9 +294,25 @@ export function SupportAdminPanel() {
     setActiveFilterKey('all');
   }
 
+  function markAdminSupportThreadRead(threadId: string) {
+    setReadThreadIds((current) => {
+      if (current.has(threadId)) return current;
+      const next = new Set(current);
+      next.add(threadId);
+      writeAdminSupportThreadIds(next);
+      return next;
+    });
+  }
+
   const activeFilter = getSupportThreadFilterPreset(activeFilterKey);
   const orderedThreads = sortSupportThreadsByCreatedAtDesc(threads);
   const filteredThreads = filterSupportThreads(orderedThreads, activeFilterKey);
+  const supportPageCount = Math.max(1, Math.ceil(filteredThreads.length / ADMIN_SUPPORT_THREAD_PAGE_SIZE));
+  const safeCurrentSupportPage = Math.min(currentSupportPage, supportPageCount);
+  const paginatedThreads = filteredThreads.slice(
+    (safeCurrentSupportPage - 1) * ADMIN_SUPPORT_THREAD_PAGE_SIZE,
+    safeCurrentSupportPage * ADMIN_SUPPORT_THREAD_PAGE_SIZE,
+  );
   const deepLinkedThread = deepLinkedThreadId
     ? threads.find((item) => item.thread.id === deepLinkedThreadId) ?? null
     : null;
@@ -374,7 +410,7 @@ export function SupportAdminPanel() {
       />
       <p className="notice compact admin-support-filter-summary">현재 필터: {activeFilter.label} / 표시 {filteredThreads.length}건</p>
       <div className="thread-list admin-support-thread-list">
-        {filteredThreads.map((item) => {
+        {paginatedThreads.map((item) => {
           const isEditingThread = editingThreadId === item.thread.id;
           const threadDisplayId = formatAdminDisplayId(
             '문의',
@@ -384,6 +420,7 @@ export function SupportAdminPanel() {
             title: item.thread.title,
             body: getThreadEditMessage(item)?.body ?? '',
           };
+          const isUnreadThread = isAdminSupportThreadUnread(item.thread, readThreadIds);
 
           return (
           <article
@@ -407,6 +444,7 @@ export function SupportAdminPanel() {
                     }
                   >
                     {item.thread.visibility === 'private' ? <PrivateSupportThreadLockIcon /> : null}
+                    {isUnreadThread ? <SupportThreadNewBadge /> : null}
                     <span>{item.thread.title}</span>
                   </span>
                   <span className="admin-support-thread-actions" role="group" aria-label="게시글 관리">
@@ -419,7 +457,11 @@ export function SupportAdminPanel() {
                   </span>
                 </h3>
               </div>
-              <a className="text-link compact admin-support-detail-link" href={createAdminSupportThreadUrl(item.thread.id)}>
+              <a
+                className="text-link compact admin-support-detail-link"
+                href={createAdminSupportThreadUrl(item.thread.id)}
+                onClick={() => markAdminSupportThreadRead(item.thread.id)}
+              >
                 상세 답변 링크
               </a>
             </header>
@@ -573,6 +615,21 @@ export function SupportAdminPanel() {
           </article>
         )}
       </div>
+      {filteredThreads.length > ADMIN_SUPPORT_THREAD_PAGE_SIZE ? (
+        <nav className="admin-pagination" aria-label="고객센터 목록 페이지">
+          {ADMIN_SUPPORT_THREAD_PAGE_NUMBERS.filter((pageNumber) => pageNumber <= supportPageCount).map((pageNumber) => (
+            <button
+              className={`admin-pagination-button${safeCurrentSupportPage === pageNumber ? ' active' : ''}`}
+              type="button"
+              key={pageNumber}
+              aria-current={safeCurrentSupportPage === pageNumber ? 'page' : undefined}
+              onClick={() => setCurrentSupportPage(pageNumber)}
+            >
+              {pageNumber}
+            </button>
+          ))}
+        </nav>
+      ) : null}
     </section>
   );
 }
@@ -582,6 +639,32 @@ function formatDateTime(value: string): string {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function isAdminSupportThreadUnread(
+  thread: SupportThreadListItem['thread'],
+  readThreadIds: Set<string>,
+): boolean {
+  return !readThreadIds.has(thread.id);
+}
+
+function readAdminSupportThreadIds(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ADMIN_SUPPORT_THREAD_READ_STORAGE_KEY) || '[]');
+    return new Set(Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeAdminSupportThreadIds(threadIds: Set<string>) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(ADMIN_SUPPORT_THREAD_READ_STORAGE_KEY, JSON.stringify(Array.from(threadIds)));
+}
+
+function SupportThreadNewBadge() {
+  return <span className="support-thread-new-badge">New</span>;
 }
 
 function SupportReplyReturnIcon({ className }: { className: string }) {

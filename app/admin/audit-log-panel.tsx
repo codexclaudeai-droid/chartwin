@@ -50,12 +50,15 @@ const AUDIT_LOG_REFRESH_SOURCE_LABELS: Record<AdminRefreshSource, string> = {
   users: '회원 작업',
   webInfo: '웹정보 설정',
 };
+const ADMIN_AUDIT_LOG_PAGE_SIZE = 10;
+const ADMIN_AUDIT_LOG_PAGE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 export function AuditLogPanel() {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [action, setAction] = useState('');
   const [targetType, setTargetType] = useState('');
   const [targetId, setTargetId] = useState('');
+  const [currentAuditPage, setCurrentAuditPage] = useState(1);
   const [message, setMessage] = useState('관리자 로그인 후 감사 로그를 확인할 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
   const latestFilterRef = useRef<AuditLogFilterInput>({ action: '', targetType: '', targetId: '' });
@@ -73,6 +76,7 @@ export function AuditLogPanel() {
       setAction(preset.action);
       setTargetType(preset.targetType);
       setTargetId(nextTargetId);
+      setCurrentAuditPage(1);
       void refresh({ action: preset.action, targetType: preset.targetType, targetId: nextTargetId, nextMessage: `${preset.label} 감사 로그 필터를 적용했습니다.` });
     });
 
@@ -111,8 +115,16 @@ export function AuditLogPanel() {
     setAction(preset.action);
     setTargetType(preset.targetType);
     setTargetId('');
+    setCurrentAuditPage(1);
     void refresh({ action: preset.action, targetType: preset.targetType, targetId: '' });
   }
+
+  const auditPageCount = Math.max(1, Math.ceil(entries.length / ADMIN_AUDIT_LOG_PAGE_SIZE));
+  const safeCurrentAuditPage = Math.min(currentAuditPage, auditPageCount);
+  const paginatedEntries = entries.slice(
+    (safeCurrentAuditPage - 1) * ADMIN_AUDIT_LOG_PAGE_SIZE,
+    safeCurrentAuditPage * ADMIN_AUDIT_LOG_PAGE_SIZE,
+  );
 
   return (
     <section className="card wide" id="admin-audit-logs">
@@ -159,11 +171,21 @@ export function AuditLogPanel() {
           onChange={(event) => setTargetId(event.target.value)}
           placeholder="대상 ID 예: support_123"
         />
-        <button className="button" type="button" onClick={() => void refresh()} disabled={isBusy}>검색</button>
+        <button
+          className="button"
+          type="button"
+          onClick={() => {
+            setCurrentAuditPage(1);
+            void refresh();
+          }}
+          disabled={isBusy}
+        >
+          검색
+        </button>
       </div>
       <p className="notice">{message}</p>
       <div className="thread-list">
-        {entries.map((entry) => {
+        {paginatedEntries.map((entry) => {
           const auditTargetLink = getAdminAuditTargetLink(entry.log.targetType, entry.log.targetId);
 
           return (
@@ -219,6 +241,21 @@ export function AuditLogPanel() {
         })}
         {entries.length === 0 && <p className="notice">표시할 감사 로그가 없습니다.</p>}
       </div>
+      {entries.length > ADMIN_AUDIT_LOG_PAGE_SIZE ? (
+        <nav className="admin-pagination" aria-label="감사로그 목록 페이지">
+          {ADMIN_AUDIT_LOG_PAGE_NUMBERS.filter((pageNumber) => pageNumber <= auditPageCount).map((pageNumber) => (
+            <button
+              className={`admin-pagination-button${safeCurrentAuditPage === pageNumber ? ' active' : ''}`}
+              type="button"
+              key={pageNumber}
+              aria-current={safeCurrentAuditPage === pageNumber ? 'page' : undefined}
+              onClick={() => setCurrentAuditPage(pageNumber)}
+            >
+              {pageNumber}
+            </button>
+          ))}
+        </nav>
+      ) : null}
     </section>
   );
 }

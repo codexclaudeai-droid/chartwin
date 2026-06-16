@@ -6,10 +6,11 @@ import {
   SYMBOL_CATALOG,
   getSymbolIconUrl,
   isSymbolAppliedToChart,
+  moveManagedSymbolOrder,
   persistSymbolRegistry,
   setSymbolChartApplied,
 } from '../../src/catalog/symbols.ts';
-import { DeleteActionIcon, EditActionIcon } from '../shared/action-icons';
+import { ChevronDownActionIcon, ChevronUpActionIcon, DeleteActionIcon, EditActionIcon } from '../shared/action-icons';
 import { IconButton } from '../shared/icon-button';
 import { AdminRefreshButton } from './admin-refresh-button';
 
@@ -175,6 +176,14 @@ export function AdminSymbolsPanel() {
     setMessage(`${symbol.item.id} 종목을 차트페이지에 ${nextApplied ? '적용' : '미적용'}했습니다.`);
   }
 
+  function moveSymbolOrder(symbol: ManagedSymbolRef, direction: -1 | 1) {
+    const moved = moveManagedSymbolOrder(symbol.item.id, symbol.category, symbol.source, direction);
+    if (!moved) return;
+    persistSymbolRegistry();
+    setVersion((current) => current + 1);
+    setMessage(`${symbol.item.id} 종목 순서를 ${direction < 0 ? '위로' : '아래로'} 이동했습니다.`);
+  }
+
   return (
     <section id="admin-symbols" className="card admin-symbols-panel">
       <div className="admin-symbols-header">
@@ -318,6 +327,24 @@ export function AdminSymbolsPanel() {
                       </td>
                       <td>
                         <div className="admin-symbols-row-actions">
+                          <div className="admin-symbols-order-actions" role="group" aria-label={`${symbol.item.id} 순서 변경`}>
+                            <IconButton
+                              className="action-icon-button"
+                              label={`${symbol.item.id} 위로 이동`}
+                              onClick={() => moveSymbolOrder(symbol, -1)}
+                              disabled={!canMoveManagedSymbolOrder(symbol, -1)}
+                            >
+                              <ChevronUpActionIcon />
+                            </IconButton>
+                            <IconButton
+                              className="action-icon-button"
+                              label={`${symbol.item.id} 아래로 이동`}
+                              onClick={() => moveSymbolOrder(symbol, 1)}
+                              disabled={!canMoveManagedSymbolOrder(symbol, 1)}
+                            >
+                              <ChevronDownActionIcon />
+                            </IconButton>
+                          </div>
                           <IconButton className="action-icon-button edit" label={`${symbol.item.id} 종목 수정`} onClick={() => startEdit(symbol)}>
                             <EditActionIcon />
                           </IconButton>
@@ -345,7 +372,12 @@ export function AdminSymbolsPanel() {
 
 function listManagedSymbols(): ManagedSymbolRef[] {
   const rows: ManagedSymbolRef[] = [];
-  Object.entries(SYMBOL_CATALOG).forEach(([category, items]) => {
+  Object.entries(SYMBOL_CATALOG).sort(([categoryA], [categoryB]) => {
+    if (categoryA === categoryB) return 0;
+    if (categoryA === 'Index Futures') return -1;
+    if (categoryB === 'Index Futures') return 1;
+    return 0;
+  }).forEach(([category, items]) => {
     items.forEach((item) => {
       rows.push({
         source: 'builtin',
@@ -362,6 +394,15 @@ function listManagedSymbols(): ManagedSymbolRef[] {
     });
   });
   return rows;
+}
+
+function canMoveManagedSymbolOrder(symbol: ManagedSymbolRef, direction: -1 | 1): boolean {
+  const siblings = listManagedSymbols().filter((item) =>
+    item.source === symbol.source && item.category === symbol.category,
+  );
+  const index = siblings.findIndex((item) => item.item.id === symbol.item.id);
+  const nextIndex = index + direction;
+  return index >= 0 && nextIndex >= 0 && nextIndex < siblings.length;
 }
 
 function getManagedSymbolIconUrl(symbol: ManagedSymbolRef): string | undefined {

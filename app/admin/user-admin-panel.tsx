@@ -56,6 +56,8 @@ const ROLE_OPTIONS: Array<{ value: UserRole; label: string }> = [
   { value: 'admin', label: formatUserRoleLabel('admin') },
   { value: 'super_admin', label: formatUserRoleLabel('super_admin') },
 ];
+const ADMIN_USER_PAGE_SIZE = 10;
+const ADMIN_USER_PAGE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 type AdminUserDirectoryItem = {
   user: {
@@ -257,6 +259,7 @@ export function UserAdminPanel() {
   const [role, setRole] = useState('all');
   const [accountStatus, setAccountStatus] = useState('all');
   const [dashboardFilterNotice, setDashboardFilterNotice] = useState<string | null>(null);
+  const [currentUserPage, setCurrentUserPage] = useState(1);
   const [message, setMessage] = useState('관리자 로그인 후 회원 목록을 조회할 수 있습니다.');
   const [detailMessage, setDetailMessage] = useState('회원을 선택하면 상세 운영 상태를 볼 수 있습니다.');
   const [isBusy, setIsBusy] = useState(false);
@@ -327,6 +330,7 @@ export function UserAdminPanel() {
     }
 
     setUsers(payload.users);
+    setCurrentUserPage(1);
     setMessage(filterOverride.nextMessage ?? `회원 ${payload.users.length}명을 불러왔습니다.`);
   }
 
@@ -639,6 +643,12 @@ export function UserAdminPanel() {
     })
     : null;
   const userDirectorySummary = getUserDirectorySummary(users);
+  const userPageCount = Math.max(1, Math.ceil(users.length / ADMIN_USER_PAGE_SIZE));
+  const safeCurrentUserPage = Math.min(currentUserPage, userPageCount);
+  const paginatedUsers = users.slice(
+    (safeCurrentUserPage - 1) * ADMIN_USER_PAGE_SIZE,
+    safeCurrentUserPage * ADMIN_USER_PAGE_SIZE,
+  );
   const isDetailMode = detail !== null;
   const detailUserSequence = detail
     ? getAdminDisplaySequence(users, (item) => item.user.id === detail.user.id)
@@ -749,7 +759,7 @@ export function UserAdminPanel() {
             </tr>
           </thead>
           <tbody>
-            {users.map((item) => {
+            {paginatedUsers.map((item) => {
               const userDisplayId = formatAdminDisplayId(
                 '회원',
                 getAdminDisplaySequence(users, (userItem) => userItem.user.id === item.user.id),
@@ -762,8 +772,8 @@ export function UserAdminPanel() {
                     <strong>{item.user.name}</strong>
                     <div className="member-directory-actions">
                       <button className="button secondary" type="button" onClick={() => openDetail(item.user.id)} disabled={isBusy}>
-                        상세
-                      </button>
+                상세 보기
+              </button>
                     </div>
                   </div>
                   <small title={item.user.id}>{userDisplayId}</small>
@@ -825,7 +835,7 @@ export function UserAdminPanel() {
         </table>
       </div>
       <div className="admin-user-mobile-list" aria-label="모바일 회원 카드 목록">
-        {users.map((item) => (
+        {paginatedUsers.map((item) => (
           <article className="admin-user-mobile-card" key={`mobile-${item.user.id}`}>
             <div className="admin-user-mobile-card-title-row">
               <div>
@@ -862,7 +872,7 @@ export function UserAdminPanel() {
                 <dd>{item.referrer?.email ?? '없음'}</dd>
               </div>
               <div>
-                <dt>구독여부</dt>
+                <dt>구독상태</dt>
                 <dd>{formatAdminUserSubscriptionStatusLabel(item.subscription, item.latestPayment)}</dd>
               </div>
               <div>
@@ -889,6 +899,21 @@ export function UserAdminPanel() {
           <p className="admin-user-mobile-empty">표시할 회원이 없습니다.</p>
         )}
       </div>
+      {users.length > ADMIN_USER_PAGE_SIZE ? (
+        <nav className="admin-pagination" aria-label="회원관리 목록 페이지">
+          {ADMIN_USER_PAGE_NUMBERS.filter((pageNumber) => pageNumber <= userPageCount).map((pageNumber) => (
+            <button
+              className={`admin-pagination-button${safeCurrentUserPage === pageNumber ? ' active' : ''}`}
+              type="button"
+              key={pageNumber}
+              aria-current={safeCurrentUserPage === pageNumber ? 'page' : undefined}
+              onClick={() => setCurrentUserPage(pageNumber)}
+            >
+              {pageNumber}
+            </button>
+          ))}
+        </nav>
+      ) : null}
       </>
       )}
       {detail && (

@@ -446,7 +446,8 @@ test('admin support panel renders quick filters before the thread list', () => {
   assert.match(source, /aria-label="고객센터 빠른 필터"/);
   assert.match(source, /getSupportThreadFilterCount/);
   assert.match(source, /quick-filter-count/);
-  assert.match(source, /filteredThreads\.map/);
+  assert.match(source, /filteredThreads\.slice/);
+  assert.match(source, /paginatedThreads\.map/);
 });
 
 test('admin support panel applies dashboard queue preset events', () => {
@@ -724,6 +725,26 @@ test('private support threads show a lock icon before the title', () => {
   assert.match(adminPanelSource, /admin-support-private-thread-title/);
   assert.match(adminPanelSource, /aria-label="비공개 게시글"/);
   assert.match(styleSource, /\.support-private-lock/);
+});
+
+test('support thread lists show New badges before unread titles and clear them on content view', () => {
+  const panelSource = fs.readFileSync(new URL('../app/support/support-panel.tsx', import.meta.url), 'utf8');
+  const adminPanelSource = fs.readFileSync(new URL('../app/admin/support-admin-panel.tsx', import.meta.url), 'utf8');
+  const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /SUPPORT_THREAD_READ_STORAGE_KEY/);
+  assert.match(panelSource, /isSupportThreadUnread\(item\.thread, readThreadIds\)/);
+  assert.match(panelSource, /<SupportThreadNewBadge \/>[\s\S]*?<span>\{formatSupportThreadDisplayTitle\(item\.thread\)\}<\/span>/);
+  assert.match(panelSource, /markSupportThreadRead\(threadId\)/);
+  assert.match(panelSource, /toggleThreadExpanded\(item\.thread\.id\)/);
+
+  assert.match(adminPanelSource, /ADMIN_SUPPORT_THREAD_READ_STORAGE_KEY/);
+  assert.match(adminPanelSource, /isAdminSupportThreadUnread\(item\.thread, readThreadIds\)/);
+  assert.match(adminPanelSource, /<SupportThreadNewBadge \/>[\s\S]*?<span>\{item\.thread\.title\}<\/span>/);
+  assert.match(adminPanelSource, /markAdminSupportThreadRead\(deepLinkedThread\.thread\.id\)/);
+  assert.match(adminPanelSource, /markAdminSupportThreadRead\(item\.thread\.id\)/);
+
+  assert.match(styleSource, /\.support-thread-new-badge\s*\{/);
 });
 
 test('member support list hides payment ids from deposit request titles and bodies', () => {

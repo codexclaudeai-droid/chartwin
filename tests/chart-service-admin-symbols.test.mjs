@@ -73,6 +73,32 @@ test('admin symbol list exposes a chart apply toggle per symbol', () => {
   assert.match(cssSource, /\.admin-symbols-apply-switch\.active\s*\{[\s\S]*?background:\s*transparent/);
 });
 
+test('admin symbol list can reorder symbols with chevron buttons for the chart picker', () => {
+  const panelSource = fs.readFileSync(new URL('../app/admin/admin-symbols-panel.tsx', import.meta.url), 'utf8');
+  const catalogSource = fs.readFileSync(new URL('../src/catalog/symbols.ts', import.meta.url), 'utf8');
+  const modalSource = fs.readFileSync(new URL('../src/ui/modal-handlers.ts', import.meta.url), 'utf8');
+  const iconSource = fs.readFileSync(new URL('../app/shared/action-icons.tsx', import.meta.url), 'utf8');
+
+  assert.match(catalogSource, /const INDEX_FUTURES_CATEGORY = 'Index Futures'/);
+  assert.match(catalogSource, /function getOrderedSymbolCatalogEntries/);
+  assert.match(catalogSource, /categoryA === INDEX_FUTURES_CATEGORY/);
+  assert.match(catalogSource, /categoryB === INDEX_FUTURES_CATEGORY/);
+  assert.match(catalogSource, /export function moveManagedSymbolOrder/);
+  assert.match(catalogSource, /group\.splice\(nextIndex, 0, group\.splice\(currentIndex, 1\)\[0\]\)/);
+  assert.match(catalogSource, /getOrderedSymbolCatalogEntries\(SYMBOL_CATALOG\)/);
+
+  assert.match(panelSource, /moveManagedSymbolOrder/);
+  assert.match(panelSource, /moveSymbolOrder\(symbol, -1\)/);
+  assert.match(panelSource, /moveSymbolOrder\(symbol, 1\)/);
+  assert.match(panelSource, /ChevronUpActionIcon/);
+  assert.match(panelSource, /ChevronDownActionIcon/);
+  assert.match(panelSource, /admin-symbols-order-actions/);
+
+  assert.match(iconSource, /export function ChevronUpActionIcon/);
+  assert.match(iconSource, /export function ChevronDownActionIcon/);
+  assert.match(modalSource, /const catalog = getAllSymbolCatalog\(\)/);
+});
+
 test('symbol registry persists chart application state for hidden symbols', () => {
   const catalogSource = fs.readFileSync(new URL('../src/catalog/symbols.ts', import.meta.url), 'utf8');
 

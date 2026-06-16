@@ -1,6 +1,7 @@
 ﻿export type SymbolCatalogItem = { id: string; label: string; desc: string; category: string; iconUrl?: string };
 
 const SYMBOL_STORAGE_KEY = 'my-chart-lib.symbol-registry.v1';
+const INDEX_FUTURES_CATEGORY = 'Index Futures';
 const NASDAQ_FUTURES_CANONICAL_SYMBOL = 'NQ1!';
 const NASDAQ_FUTURES_LABEL = 'NAS100 ft';
 const NASDAQ_FUTURES_DESC = 'NAS100 ft';
@@ -270,6 +271,15 @@ export function persistSymbolRegistry(): void {
 export const hiddenSymbols   = new Set<string>();
 export const disabledSymbols = new Set<string>();
 
+function getOrderedSymbolCatalogEntries<T>(catalog: Record<string, T[]>): Array<[string, T[]]> {
+  return Object.entries(catalog).sort(([categoryA], [categoryB]) => {
+    if (categoryA === categoryB) return 0;
+    if (categoryA === INDEX_FUTURES_CATEGORY) return -1;
+    if (categoryB === INDEX_FUTURES_CATEGORY) return 1;
+    return 0;
+  });
+}
+
 export async function loadAdminConfig(): Promise<void> {
   try {
     const hostname = window.location.hostname;
@@ -293,7 +303,7 @@ export async function loadAdminConfig(): Promise<void> {
 
 export function getAllSymbolCatalog(): Record<string, SymbolCatalogItem[]> {
   const catalog: Record<string, SymbolCatalogItem[]> = {};
-  for (const [category, items] of Object.entries(SYMBOL_CATALOG)) {
+  for (const [category, items] of getOrderedSymbolCatalogEntries(SYMBOL_CATALOG)) {
     const visible = items.filter((item) => !hiddenSymbols.has(normalizeCatalogSymbolId(item.id)));
     if (visible.length) catalog[category] = visible.map((item) => ({ ...item, category }));
   }
@@ -303,6 +313,33 @@ export function getAllSymbolCatalog(): Record<string, SymbolCatalogItem[]> {
     catalog[item.category].push(item);
   }
   return catalog;
+}
+
+export function moveManagedSymbolOrder(symbolId: string, category: string, source: 'builtin' | 'custom', direction: -1 | 1): boolean {
+  const normalized = normalizeCatalogSymbolId(symbolId);
+  if (source === 'custom') {
+    const categoryIndexes = CUSTOM_SYMBOLS
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.category === category)
+      .map(({ index }) => index);
+    const currentCategoryIndex = categoryIndexes.findIndex((index) =>
+      normalizeCatalogSymbolId(CUSTOM_SYMBOLS[index].id) === normalized,
+    );
+    const nextCategoryIndex = currentCategoryIndex + direction;
+    if (currentCategoryIndex < 0 || nextCategoryIndex < 0 || nextCategoryIndex >= categoryIndexes.length) return false;
+    const currentIndex = categoryIndexes[currentCategoryIndex];
+    const nextIndex = categoryIndexes[nextCategoryIndex];
+    CUSTOM_SYMBOLS.splice(nextIndex, 0, CUSTOM_SYMBOLS.splice(currentIndex, 1)[0]);
+    return true;
+  }
+
+  const group = SYMBOL_CATALOG[category] ?? [];
+  const currentIndex = group.findIndex((item) => normalizeCatalogSymbolId(item.id) === normalized);
+  if (currentIndex < 0) return false;
+  const nextIndex = currentIndex + direction;
+  if (nextIndex < 0 || nextIndex >= group.length) return false;
+  group.splice(nextIndex, 0, group.splice(currentIndex, 1)[0]);
+  return true;
 }
 
 export function isSymbolAppliedToChart(symbolId: string): boolean {
