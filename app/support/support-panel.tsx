@@ -52,6 +52,7 @@ type SupportThreadListItem = {
 const SUPPORT_THREAD_PAGE_SIZE = 10;
 const SUPPORT_THREAD_PAGE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 const SUPPORT_THREAD_READ_STORAGE_KEY = 'my-chart-lib.support.read-threads.v1';
+const SUPPORT_THREAD_NEW_BADGE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SUPPORT_THREAD_CATEGORY_TABS = [
   { key: 'all', label: '전체' },
   { key: 'deposit', label: formatSupportCategoryLabel('deposit') },
@@ -597,7 +598,9 @@ function isSupportThreadUnread(
   thread: SupportThreadListItem['thread'],
   readThreadIds: Set<string>,
 ): boolean {
-  return !readThreadIds.has(thread.id);
+  if (readThreadIds.has(thread.id)) return false;
+  const createdAtMs = new Date(thread.createdAt).getTime();
+  return Number.isFinite(createdAtMs) && Date.now() - createdAtMs <= SUPPORT_THREAD_NEW_BADGE_MAX_AGE_MS;
 }
 
 function readSupportThreadIds(): Set<string> {

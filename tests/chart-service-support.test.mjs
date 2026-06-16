@@ -733,13 +733,17 @@ test('support thread lists show New badges before unread titles and clear them o
   const styleSource = fs.readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
   assert.match(panelSource, /SUPPORT_THREAD_READ_STORAGE_KEY/);
+  assert.match(panelSource, /SUPPORT_THREAD_NEW_BADGE_MAX_AGE_MS = 24 \* 60 \* 60 \* 1000/);
   assert.match(panelSource, /isSupportThreadUnread\(item\.thread, readThreadIds\)/);
+  assert.match(panelSource, /Date\.now\(\) - createdAtMs <= SUPPORT_THREAD_NEW_BADGE_MAX_AGE_MS/);
   assert.match(panelSource, /<SupportThreadNewBadge \/>[\s\S]*?<span>\{formatSupportThreadDisplayTitle\(item\.thread\)\}<\/span>/);
   assert.match(panelSource, /markSupportThreadRead\(threadId\)/);
   assert.match(panelSource, /toggleThreadExpanded\(item\.thread\.id\)/);
 
   assert.match(adminPanelSource, /ADMIN_SUPPORT_THREAD_READ_STORAGE_KEY/);
+  assert.match(adminPanelSource, /ADMIN_SUPPORT_THREAD_NEW_BADGE_MAX_AGE_MS = 24 \* 60 \* 60 \* 1000/);
   assert.match(adminPanelSource, /isAdminSupportThreadUnread\(item\.thread, readThreadIds\)/);
+  assert.match(adminPanelSource, /Date\.now\(\) - createdAtMs <= ADMIN_SUPPORT_THREAD_NEW_BADGE_MAX_AGE_MS/);
   assert.match(adminPanelSource, /<SupportThreadNewBadge \/>[\s\S]*?<span>\{item\.thread\.title\}<\/span>/);
   assert.match(adminPanelSource, /markAdminSupportThreadRead\(deepLinkedThread\.thread\.id\)/);
   assert.match(adminPanelSource, /markAdminSupportThreadRead\(item\.thread\.id\)/);

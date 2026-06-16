@@ -55,6 +55,7 @@ type SupportAdminPanelRefreshOptions = {
 };
 
 const ADMIN_SUPPORT_THREAD_READ_STORAGE_KEY = 'my-chart-lib.admin.support.read-threads.v1';
+const ADMIN_SUPPORT_THREAD_NEW_BADGE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const ADMIN_SUPPORT_THREAD_PAGE_SIZE = 10;
 const ADMIN_SUPPORT_THREAD_PAGE_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
@@ -645,7 +646,9 @@ function isAdminSupportThreadUnread(
   thread: SupportThreadListItem['thread'],
   readThreadIds: Set<string>,
 ): boolean {
-  return !readThreadIds.has(thread.id);
+  if (readThreadIds.has(thread.id)) return false;
+  const createdAtMs = new Date(thread.createdAt).getTime();
+  return Number.isFinite(createdAtMs) && Date.now() - createdAtMs <= ADMIN_SUPPORT_THREAD_NEW_BADGE_MAX_AGE_MS;
 }
 
 function readAdminSupportThreadIds(): Set<string> {
