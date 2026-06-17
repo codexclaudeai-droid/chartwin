@@ -119,6 +119,18 @@ test('profile service end countdown labels expired subscriptions as ended instea
   assert.doesNotMatch(panelSource, /D\+\$\{Math\.abs\(diffDays\)\}/);
 });
 
+test('profile subscription status labels ended trials and expired subscriptions', () => {
+  const panelSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+
+  assert.match(panelSource, /function formatProfileSubscriptionStatusLabel/);
+  assert.match(panelSource, /status === 'trial_expired'\) return '무료체험종료'/);
+  assert.match(panelSource, /status === 'expired'\) return '구독만료'/);
+  assert.match(panelSource, /status === 'trial_active'\) return '무료체험종료'/);
+  assert.match(panelSource, /status === 'active'\) return '구독만료'/);
+  assert.match(panelSource, /formatProfileSubscriptionStatusLabel\(subscriptionStatus, dashboard\.subscription\?\.endsAt\)/);
+  assert.match(panelSource, /formatProfileSubscriptionStatusLabel\(subscription\.status, subscription\.endsAt\)/);
+});
+
 test('profile image upload route stores the avatar data url on the dashboard user', async () => {
   const repository = getChartServiceRepository();
   const { session } = createSessionForUser(repository, {

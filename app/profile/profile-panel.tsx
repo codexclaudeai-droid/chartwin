@@ -915,7 +915,7 @@ export function ProfilePanel() {
           <div className="summary-grid">
             <article className="mini-card">
               <span>구독</span>
-              <strong>{formatSubscriptionStatusLabel(subscriptionStatus)}</strong>
+              <strong>{formatProfileSubscriptionStatusLabel(subscriptionStatus, dashboard.subscription?.endsAt)}</strong>
               {dashboard.subscription?.startsAt && (
                 <p>시작일 {formatDateTime(dashboard.subscription.startsAt)}</p>
               )}
@@ -982,7 +982,7 @@ export function ProfilePanel() {
                       <p>{formatProfileSubscriptionPlanLabel(subscription.planId)}</p>
                     </div>
                     <div>
-                      <span className="badge">{formatSubscriptionStatusLabel(subscription.status)}</span>
+                      <span className="badge">{formatProfileSubscriptionStatusLabel(subscription.status, subscription.endsAt)}</span>
                       <p>{formatDateTime(subscription.updatedAt)}</p>
                     </div>
                   </div>
@@ -1091,6 +1091,25 @@ function formatServiceEndCountdown(value: string): string {
   if (diffDays < 0) return '구독종료';
   if (diffDays === 0) return 'D-Day';
   return `D-${diffDays}`;
+}
+
+function formatProfileSubscriptionStatusLabel(status: SubscriptionStatus, endsAt?: string | null): string {
+  if (status === 'trial_expired') return '무료체험종료';
+  if (status === 'expired') return '구독만료';
+
+  if (isProfileSubscriptionEnded(endsAt)) {
+    if (status === 'trial_active') return '무료체험종료';
+    if (status === 'active') return '구독만료';
+  }
+
+  return formatSubscriptionStatusLabel(status);
+}
+
+function isProfileSubscriptionEnded(endsAt?: string | null): boolean {
+  if (!endsAt) return false;
+
+  const endsAtMs = new Date(endsAt).getTime();
+  return Number.isFinite(endsAtMs) && endsAtMs < Date.now();
 }
 
 function formatProfileSubscriptionPlanLabel(planId: string | null): string {
