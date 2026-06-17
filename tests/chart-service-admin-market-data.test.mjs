@@ -117,6 +117,7 @@ test('data gateway stores independent MT4 and MT5 profile settings', async () =>
   assert.match(gatewaySource, /isMt45ApiKeyConfigured\(platform\)/);
   assert.match(gatewaySource, /getMt45SymbolConfig\(tick\.market, tick\.symbol, tick\.source\)/);
   assert.match(gatewaySource, /source: getMt45RequestPlatform\(body\)/);
-  assert.match(gatewaySource, /upper === 'NQ1!'/);
+  assert.match(gatewaySource, /normalized === 'NQ1!'/);
+  assert.match(gatewaySource, /normalized === 'NAS100FUTURES'/);
   assert.match(gatewaySource, /return 'futures'/);
 });

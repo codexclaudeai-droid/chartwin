@@ -3,12 +3,18 @@
 const SYMBOL_STORAGE_KEY = 'my-chart-lib.symbol-registry.v1';
 const INDEX_FUTURES_CATEGORY = 'Index Futures';
 const NASDAQ_FUTURES_CANONICAL_SYMBOL = 'NQ1!';
-const NASDAQ_FUTURES_LABEL = 'NAS100 ft';
-const NASDAQ_FUTURES_DESC = 'NAS100 ft';
+const NASDAQ_FUTURES_LABEL = 'NAS100 Futures';
+const NASDAQ_FUTURES_DESC = 'NAS100 Futures';
 
 function normalizeCatalogSymbolId(id: string): string {
   const normalized = String(id || '').trim().toUpperCase();
-  if (normalized === 'NAS100' || normalized === 'NQ') return NASDAQ_FUTURES_CANONICAL_SYMBOL;
+  if (
+    normalized === 'NAS100'
+    || normalized === 'NQ'
+    || normalized === 'NAS100FT'
+    || normalized === 'NAS100.FT'
+    || normalized === 'NAS100FUTURES'
+  ) return NASDAQ_FUTURES_CANONICAL_SYMBOL;
   return normalized;
 }
 

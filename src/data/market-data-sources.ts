@@ -6,6 +6,9 @@ import { getBucketStartSec, shiftBucketSec } from '../chart/axis-utils';
 const INDEX_SYMBOLS_2DP = new Set([
   'NQ1!',
   'NAS100',
+  'NAS100FT',
+  'NAS100.FT',
+  'NAS100FUTURES',
   'NASDAQ',
   'NDX',
   'IXIC',
@@ -226,7 +229,8 @@ export function generateDummyData(count: number, timeframe: TimeframeKey): Candl
 
 export function getSymbolPricePrecision(symbol: string, quoteCurrency: DisplayCurrency = 'USDT'): number {
   const normalized = symbol.trim().toUpperCase().replace(/\.P$/, '');
-  if (INDEX_SYMBOLS_2DP.has(normalized)) return 2;
+  const compact = normalized.replace(/[\s_-]+/g, '');
+  if (INDEX_SYMBOLS_2DP.has(normalized) || INDEX_SYMBOLS_2DP.has(compact)) return 2;
   if (quoteCurrency === 'JPY' || quoteCurrency === 'KRW') return 0;
   if (quoteCurrency === 'EUR' || quoteCurrency === 'USD' || quoteCurrency === 'USDT') {
     if (normalized === 'XRPUSDT') return 4;

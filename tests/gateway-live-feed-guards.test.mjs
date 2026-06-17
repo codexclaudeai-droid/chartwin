@@ -160,6 +160,19 @@ test('gateway read/write paths use candle guards for stale history and corrupt r
   assert.match(pagesWebhookSource, /shouldResetCandleSeries\(existing, candles, \{/);
 });
 
+test('gateway server canonicalizes Nasdaq index futures to the futures store', () => {
+  assert.match(
+    gatewayServerSource,
+    /function canonicalizeMarketSymbol\(marketRaw, symbolRaw\) \{[\s\S]*?return \{ market: 'futures', symbol: 'NQ1!' \};/,
+    'NQ aliases should read and write through futures:NQ1! even when a request uses market=index',
+  );
+  assert.match(
+    gatewayServerSource,
+    /normalized === 'NAS100FT'[\s\S]*?normalized === 'NAS100\.FT'[\s\S]*?normalized === 'NAS100FUTURES'/,
+    'broker aliases such as NAS100FT and NAS100 Futures should resolve to NQ1!',
+  );
+});
+
 test('gateway live patches use incremental chart updates instead of full setData snapshots', () => {
   assert.match(
     gatewayLiveFeedSource,

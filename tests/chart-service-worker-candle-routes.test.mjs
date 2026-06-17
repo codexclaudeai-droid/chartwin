@@ -18,13 +18,17 @@ test('OpenNext Worker exposes gateway candle routes used by the chart feed', () 
 
 test('market candle query module keeps gateway-compatible symbol normalization', async () => {
   const {
+    canonicalizeMarketCandleMarket,
     canonicalizeMarketCandleSymbol,
     createMarketCandleSelectStatement,
     mapMarketCandleRows,
     normalizeMarketCandleInput,
   } = await import('../src/server/chart-service/market-candles.ts');
 
+  assert.equal(canonicalizeMarketCandleMarket('index', 'NQ1!'), 'futures');
+  assert.equal(canonicalizeMarketCandleMarket('index', 'NAS100 Futures'), 'futures');
   assert.equal(canonicalizeMarketCandleSymbol('index', 'NAS100'), 'NQ1!');
+  assert.equal(canonicalizeMarketCandleSymbol('index', 'NAS100 Futures'), 'NQ1!');
   assert.equal(canonicalizeMarketCandleSymbol('index', '^IXIC'), 'NASDAQ');
 
   const statement = createMarketCandleSelectStatement({
@@ -40,7 +44,7 @@ test('market candle query module keeps gateway-compatible symbol normalization',
   assert.match(statement.sql, /order by time desc/i);
   assert.match(statement.sql, /order by time asc/i);
   assert.deepEqual(statement.values, [
-    'index',
+    'futures',
     'NQ1!',
     '1m',
     '2024-04-24T00:00:00.000Z',
@@ -112,7 +116,7 @@ test('market candle module creates tables and upserts webhook candles', async ()
   assert.match(statement?.sql ?? '', /insert into market_candles/i);
   assert.match(statement?.sql ?? '', /on conflict \(market, symbol, timeframe, time\) do update/i);
   assert.deepEqual(statement?.values.slice(0, 9), [
-    'index',
+    'futures',
     'NQ1!',
     '1m',
     '2024-04-24T00:00:00.000Z',

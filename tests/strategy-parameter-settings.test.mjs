@@ -16,7 +16,7 @@ test('strategy parameter settings normalize global and symbol profiles', () => {
       },
       {
         strategyId: 'strategy_js_grid_martingale',
-        symbolId: 'nq1!',
+        symbolId: 'NAS100 Futures',
         params: { gridStep: 40, takeProfitSteps: 1.8 },
       },
       { strategyId: '', params: { ignored: 1 } },

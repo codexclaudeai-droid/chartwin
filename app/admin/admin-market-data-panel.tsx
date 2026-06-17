@@ -397,7 +397,7 @@ export function AdminMarketDataPanel() {
                         value={rule.market}
                         onChange={(event) => updateSymbolRule(index, { market: event.target.value })}
                       >
-                        <option value="futures">futures</option>
+                        <option value="futures">Index Futures</option>
                         <option value="index">index</option>
                         <option value="commodity">commodity</option>
                         <option value="fx">fx</option>
@@ -408,7 +408,7 @@ export function AdminMarketDataPanel() {
                       <input
                         value={rule.symbol}
                         onChange={(event) => updateSymbolRule(index, { symbol: event.target.value.toUpperCase() })}
-                        placeholder="NQ1!"
+                        placeholder="NAS100 Futures"
                       />
                     </td>
                     <td>

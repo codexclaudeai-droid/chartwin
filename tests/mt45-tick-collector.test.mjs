@@ -132,6 +132,19 @@ test('MT45 tick aggregator keeps live candle in memory and finalizes only closed
   assert.equal(third.liveCandle.open, 101);
 });
 
+test('MT45 tick normalizer accepts MT-facing Nasdaq futures market aliases', () => {
+  const ticks = normalizeMt45Ticks({
+    market: 'Index Futures',
+    symbol: 'NAS100 Futures',
+    time: 1713916810,
+    price: 17750.25,
+    volume: 1,
+  });
+
+  assert.equal(ticks[0].market, 'futures');
+  assert.equal(ticks[0].symbol, 'NQ1!');
+});
+
 test('MT45 tick aggregator falls back to tick count volume when broker volume is zero', () => {
   const aggregator = createMt45TickAggregator({ priceStep: 0.25 });
 

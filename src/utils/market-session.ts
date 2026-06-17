@@ -1,8 +1,9 @@
 import type { DisplayCurrency } from '../types/market';
 
 const KRW_INDEX_SYMBOLS = new Set(['KOSPI', 'KOSPI200', 'KOSDAQ']);
-const USD_INDEX_SYMBOLS = new Set(['NQ1!', 'NAS100', 'NDX', 'NASDAQ', 'IXIC', 'SPX500', 'HKG33', 'HSI', '^GSPC', '^IXIC', '^DJI', '^FTSE']);
+const USD_INDEX_SYMBOLS = new Set(['NQ1!', 'NAS100', 'NAS100FT', 'NAS100.FT', 'NAS100FUTURES', 'NDX', 'NASDAQ', 'IXIC', 'SPX500', 'HKG33', 'HSI', '^GSPC', '^IXIC', '^DJI', '^FTSE']);
 const USD_COMMODITY_SYMBOLS = new Set(['XAUUSD', 'XAGUSD']);
+const NASDAQ_FUTURES_SYMBOLS = new Set(['NAS100', 'NQ1!', 'NQ', 'NAS100FT', 'NAS100.FT', 'NAS100FUTURES']);
 
 export function getChicagoWeekdayHourMinute(now: Date): { weekday: string; hour: number; minute: number } {
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -138,12 +139,14 @@ export function isKrxIndexLikeSymbol(symbol: string): boolean {
 
 export function isNasdaqFuturesLikeSymbol(symbol: string): boolean {
   const upper = symbol.trim().toUpperCase();
-  return upper === 'NAS100' || upper === 'NQ1!' || upper === 'NQ';
+  const compact = upper.replace(/[\s_-]+/g, '');
+  return NASDAQ_FUTURES_SYMBOLS.has(upper) || NASDAQ_FUTURES_SYMBOLS.has(compact);
 }
 
 export function canonicalizeUiSymbol(symbol: string): string {
   const upper = symbol.trim().toUpperCase();
-  if (upper === 'NAS100' || upper === 'NQ') return 'NQ1!';
+  const compact = upper.replace(/[\s_-]+/g, '');
+  if (NASDAQ_FUTURES_SYMBOLS.has(upper) || NASDAQ_FUTURES_SYMBOLS.has(compact)) return 'NQ1!';
   if (upper === '^IXIC') return 'NASDAQ';
   return upper;
 }

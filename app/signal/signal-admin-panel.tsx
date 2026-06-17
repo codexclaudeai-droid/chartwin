@@ -22,7 +22,7 @@ type SymbolItem = {
 
 type SymbolGroup = {
   label: string;
-  webhook: boolean;
+  providerLabel?: string;
   symbols: SymbolItem[];
 };
 
@@ -40,9 +40,9 @@ type StatusState = {
 const SYMBOL_GROUPS: SymbolGroup[] = [
   {
     label: 'Index Futures',
-    webhook: true,
+    providerLabel: 'MT4/5',
     symbols: [
-      { id: 'NQ1!', desc: 'NAS100 ft' },
+      { id: 'NQ1!', desc: 'NAS100 Futures' },
       { id: 'SPX500', desc: 'S&P 500' },
       { id: 'HSI', desc: 'Hang Seng' },
       { id: 'KOSPI', desc: 'Korea Composite Stock Price Index' },
@@ -52,7 +52,7 @@ const SYMBOL_GROUPS: SymbolGroup[] = [
   },
   {
     label: 'Crypto Spot',
-    webhook: false,
+    providerLabel: 'BINANCE',
     symbols: [
       { id: 'BTCUSDT', desc: 'Bitcoin / USDT' },
       { id: 'ETHUSDT', desc: 'Ethereum / USDT' },
@@ -64,7 +64,7 @@ const SYMBOL_GROUPS: SymbolGroup[] = [
   },
   {
     label: 'Crypto Futures',
-    webhook: false,
+    providerLabel: 'BINANCE',
     symbols: [
       { id: 'BTCUSDT.P', desc: 'BTCUSDT Perpetual Futures' },
       { id: 'ETHUSDT.P', desc: 'ETHUSDT Perpetual Futures' },
@@ -76,7 +76,7 @@ const SYMBOL_GROUPS: SymbolGroup[] = [
   },
   {
     label: 'Commodity',
-    webhook: true,
+    providerLabel: 'MT4/5',
     symbols: [
       { id: 'XAUUSD', desc: 'Gold / USD' },
       { id: 'WTI1!', desc: 'WTI Crude Oil Futures' },
@@ -293,7 +293,7 @@ export function SignalAdminPanel() {
   }
 
   function addOrReplaceSymbolPolicy() {
-    const symbolId = draftSymbolId.trim().toUpperCase();
+    const symbolId = canonicalizeSignalSymbolId(draftSymbolId);
     if (!symbolId) {
       setPolicyStatus({ type: 'err', message: '종목 ID를 입력해 주세요.' });
       return;
@@ -363,7 +363,7 @@ export function SignalAdminPanel() {
                 className="signal-admin-input"
                 value={draftSymbolId}
                 onChange={(event) => setDraftSymbolId(event.target.value)}
-                placeholder="예: NQ1!, XAUUSD"
+                placeholder="예: NAS100 Futures, XAUUSD"
               />
               <button className="button secondary" type="button" onClick={addOrReplaceSymbolPolicy}>
                 종목 예외 추가
@@ -420,15 +420,21 @@ export function SignalAdminPanel() {
                 <div className="signal-admin-group" key={group.label}>
                   <div className="signal-admin-group-title">
                     <span>{group.label}</span>
-                    {group.webhook ? <em>WEBHOOK</em> : null}
+                    {group.providerLabel ? <em>{group.providerLabel}</em> : null}
                   </div>
                   <div className="signal-admin-list">
                     {group.symbols.map((symbol) => {
                       const symbolId = symbol.id.toUpperCase();
                       const visible = !hiddenSymbols.has(symbolId);
                       const webhookEnabled = !disabledSymbols.has(symbolId);
+                      const feedControllable = group.providerLabel === 'MT4/5';
                       return (
-                        <div className="signal-admin-row" data-webhook={group.webhook} key={symbol.id}>
+                        <div
+                          className="signal-admin-row"
+                          data-provider={group.providerLabel ?? ''}
+                          data-webhook={feedControllable ? 'true' : 'false'}
+                          key={symbol.id}
+                        >
                           <div>
                             <strong>{symbol.id}</strong>
                             <small>{symbol.desc}</small>
@@ -438,7 +444,7 @@ export function SignalAdminPanel() {
                             label={visible ? '표시' : '숨김'}
                             onChange={() => toggleSymbolVisibility(symbol.id)}
                           />
-                          {group.webhook ? (
+                          {feedControllable ? (
                             <ToggleControl
                               checked={webhookEnabled}
                               label={webhookEnabled ? '수신' : '중지'}
@@ -521,6 +527,21 @@ export function SignalAdminPanel() {
       ) : null}
     </div>
   );
+}
+
+function canonicalizeSignalSymbolId(value: string): string {
+  const raw = value.trim().toUpperCase();
+  const normalized = raw.replace(/\s+/g, '');
+  if (
+    normalized === 'NAS100'
+    || normalized === 'NQ'
+    || normalized === 'NAS100FT'
+    || normalized === 'NAS100.FT'
+    || normalized === 'NAS100FUTURES'
+  ) {
+    return 'NQ1!';
+  }
+  return raw;
 }
 
 function PolicyEditor({

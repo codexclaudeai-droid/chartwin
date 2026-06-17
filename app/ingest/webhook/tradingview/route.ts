@@ -1,5 +1,6 @@
 import {
   MarketCandleRequestError,
+  canonicalizeMarketCandleMarket,
   canonicalizeMarketCandleSymbol,
   normalizeMarketCandleMarket,
   normalizeMarketCandleTimeframe,
@@ -22,7 +23,8 @@ export async function POST(request: Request) {
 
   const requestedMarket = normalizeMarketCandleMarket(payload.market);
   const inferredMarket = inferMarketFromSymbol(payload.symbol);
-  const market = inferredMarket === 'futures' && requestedMarket ? requestedMarket : inferredMarket;
+  const selectedMarket = inferredMarket === 'futures' && requestedMarket ? requestedMarket : inferredMarket;
+  const market = canonicalizeMarketCandleMarket(selectedMarket, payload.symbol);
   const symbol = canonicalizeMarketCandleSymbol(market, payload.symbol);
   const timeframe = normalizeMarketCandleTimeframe(payload.timeframe || payload.interval || '1m');
   const candles = Array.isArray(payload.candles) ? payload.candles : [];
@@ -65,9 +67,8 @@ function inferMarketFromSymbol(symbol: unknown): string | null {
     const fxQuotes = ['USD', 'EUR', 'JPY', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD', 'KRW', 'CNH', 'HKD', 'SGD'];
     if (fxQuotes.includes(upper.slice(0, 3)) && fxQuotes.includes(upper.slice(3))) return 'fx';
   }
-  if (/^([A-Z]{2,5}\d{2,4}|SPX500|NAS100|NQ1!|NDX|NASDAQ|\^IXIC|IXIC|HSI|DAX|NIKKEI|KOSPI|KOSDAQ|KOSPI200)$/.test(upper)) {
-    return 'index';
-  }
+  if (upper === 'NQ1!' || upper === 'NAS100' || upper === 'NQ' || upper === 'NAS100FT' || upper === 'NAS100.FT' || upper === 'NAS100FUTURES') return 'futures';
+  if (/^([A-Z]{2,5}\d{2,4}|SPX500|NDX|NASDAQ|\^IXIC|IXIC|HSI|DAX|NIKKEI|KOSPI|KOSDAQ|KOSPI200)$/.test(upper)) return 'index';
   return 'futures';
 }
 

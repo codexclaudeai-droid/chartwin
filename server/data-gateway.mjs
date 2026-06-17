@@ -77,7 +77,8 @@ function splitCandleKey(key) {
   const symbol = parts[1];
   const timeframe = parts.slice(2).join(':');
   if (!market || !symbol || !timeframe) return null;
-  return { market, symbol: canonicalizeSymbolByMarket(market, symbol), timeframe };
+  const canonical = canonicalizeMarketSymbol(market, symbol);
+  return { market: canonical.market, symbol: canonical.symbol, timeframe };
 }
 
 async function persistCandleStore() {
@@ -151,15 +152,17 @@ function sendWebSocketText(socket, payload) {
 }
 
 function streamKey(market, symbol, timeframe) {
-  return candleKey(market, canonicalizeSymbolByMarket(market, symbol), timeframe);
+  const canonical = canonicalizeMarketSymbol(market, symbol);
+  return candleKey(canonical.market, canonical.symbol, timeframe);
 }
 
 function broadcastLiveCandle(market, symbol, timeframe, candle) {
-  const key = streamKey(market, symbol, timeframe);
+  const canonical = canonicalizeMarketSymbol(market, symbol);
+  const key = streamKey(canonical.market, canonical.symbol, timeframe);
   const message = JSON.stringify({
     type: 'candle',
-    market,
-    symbol: canonicalizeSymbolByMarket(market, symbol),
+    market: canonical.market,
+    symbol: canonical.symbol,
     timeframe,
     candle,
   });
@@ -169,7 +172,13 @@ function broadcastLiveCandle(market, symbol, timeframe, candle) {
 }
 
 function normalizeMarket(input) {
-  const market = String(input || '').trim().toLowerCase();
+  const raw = String(input || '').trim().toLowerCase();
+  const compact = raw.replace(/[\s_-]+/g, '');
+  const market = compact === 'indexfutures'
+    || compact === 'nasdaqfutures'
+    || compact === 'nas100futures'
+    ? 'futures'
+    : raw;
   return ALLOWED_MARKETS.includes(market) ? market : null;
 }
 
@@ -203,8 +212,8 @@ function normalizeMt45SymbolRules(rawSymbols = []) {
   const byKey = new Map();
   for (const raw of rules) {
     if (!raw || typeof raw !== 'object') continue;
-    const market = normalizeMarket(raw.market) || inferMarketFromSymbol(raw.symbol);
-    const symbol = canonicalizeSymbolByMarket(market, raw.symbol);
+    const inferredMarket = normalizeMarket(raw.market) || inferMarketFromSymbol(raw.symbol);
+    const { market, symbol } = canonicalizeMarketSymbol(inferredMarket, raw.symbol);
     if (!market || !symbol) continue;
     const priceStep = Math.max(0, Number(raw.priceStep) || 0);
     const sourceUtcOffsetHours = Math.max(-14, Math.min(14, Number(raw.sourceUtcOffsetHours) || 0));
@@ -304,16 +313,38 @@ function normalizeSymbol(input) {
 
 function canonicalizeSymbolByMarket(market, symbol) {
   const normalized = normalizeSymbol(symbol);
-  if ((market === 'index' || market === 'futures') && (normalized === 'NAS100' || normalized === 'NQ')) return 'NQ1!';
+  if ((market === 'index' || market === 'futures') && isNasdaqIndexFuturesSymbol(normalized)) return 'NQ1!';
   if (market === 'index' && normalized === '^IXIC') return 'NASDAQ';
   return normalized;
+}
+
+function isNasdaqIndexFuturesSymbol(symbol) {
+  const normalized = normalizeSymbol(symbol);
+  return normalized === 'NQ1!'
+    || normalized === 'NAS100'
+    || normalized === 'NQ'
+    || normalized === 'NAS100FT'
+    || normalized === 'NAS100.FT'
+    || normalized === 'NAS100FUTURES';
+}
+
+function canonicalizeMarketSymbol(marketRaw, symbolRaw) {
+  const normalizedMarket = normalizeMarket(marketRaw);
+  const normalizedSymbol = normalizeSymbol(symbolRaw);
+  if (isNasdaqIndexFuturesSymbol(normalizedSymbol)) {
+    return { market: 'futures', symbol: 'NQ1!' };
+  }
+  return {
+    market: normalizedMarket,
+    symbol: canonicalizeSymbolByMarket(normalizedMarket, normalizedSymbol),
+  };
 }
 
 const FX_QUOTES = ['USD', 'EUR', 'JPY', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD', 'KRW', 'CNH', 'HKD', 'SGD'];
 
 function inferMarketFromSymbol(symbol) {
   const upper = normalizeSymbol(symbol);
-  if (upper === 'NQ1!' || upper === 'NQ' || upper === 'NAS100') return 'futures';
+  if (isNasdaqIndexFuturesSymbol(upper)) return 'futures';
   // commodity
   if (/^(XAU|XAG|XPT|USO|WTI|BRENT)/.test(upper)) return 'commodity';
   // fx: exactly 6 uppercase letters, both halves in FX_QUOTES
@@ -534,7 +565,8 @@ function sanitizeCandles(rows, timeframe) {
 }
 
 function upsertCandles(market, symbol, timeframe, incomingCandles) {
-  const key = candleKey(market, symbol, timeframe);
+  const canonical = canonicalizeMarketSymbol(market, symbol);
+  const key = candleKey(canonical.market, canonical.symbol, timeframe);
   const current = candleStore.get(key) || [];
   const sanitizedIncoming = sanitizeCandles(incomingCandles, timeframe);
   const baseRows = shouldResetCandleSeries(current, sanitizedIncoming, {
@@ -548,7 +580,7 @@ function upsertCandles(market, symbol, timeframe, incomingCandles) {
     .slice(-MAX_CANDLES_PER_KEY);
   candleStore.set(key, merged);
   schedulePersistCandleStore();
-  persistMarketCandlesToPostgres(market, symbol, timeframe, incomingCandles);
+  persistMarketCandlesToPostgres(canonical.market, canonical.symbol, timeframe, incomingCandles);
   return merged;
 }
 
@@ -572,12 +604,14 @@ function mergeLiveCandle(existing, incoming) {
 }
 
 function applyLiveCandle(market, symbol, timeframe, incomingCandle, options = {}) {
-  const canonicalSymbol = canonicalizeSymbolByMarket(market, symbol);
+  const canonical = canonicalizeMarketSymbol(market, symbol);
+  const canonicalMarket = canonical.market;
+  const canonicalSymbol = canonical.symbol;
   const sanitized = sanitizeCandles([incomingCandle], timeframe);
   const incoming = sanitized[0];
-  if (!market || !canonicalSymbol || !timeframe || !incoming) return [];
+  if (!canonicalMarket || !canonicalSymbol || !timeframe || !incoming) return [];
 
-  const key = candleKey(market, canonicalSymbol, timeframe);
+  const key = candleKey(canonicalMarket, canonicalSymbol, timeframe);
   const current = candleStore.get(key) || [];
   if (shouldResetCandleSeries(current, [incoming], {
     timeframeSec: timeframeToSeconds(timeframe),
@@ -585,7 +619,7 @@ function applyLiveCandle(market, symbol, timeframe, incomingCandle, options = {}
   })) {
     candleStore.set(key, [incoming]);
     schedulePersistCandleStore();
-    broadcastLiveCandle(market, canonicalSymbol, timeframe, incoming);
+    broadcastLiveCandle(canonicalMarket, canonicalSymbol, timeframe, incoming);
     return [incoming];
   }
   const last = current[current.length - 1];
@@ -593,22 +627,22 @@ function applyLiveCandle(market, symbol, timeframe, incomingCandle, options = {}
   if (last && last.time === incoming.time) {
     const merged = mergeLiveCandle(last, incoming);
     nextRows = current.slice(0, -1).concat(merged);
-    broadcastLiveCandle(market, canonicalSymbol, timeframe, merged);
+    broadcastLiveCandle(canonicalMarket, canonicalSymbol, timeframe, merged);
   } else if (last && incoming.time < last.time) {
     const map = new Map(current.map((candle) => [candle.time, candle]));
     const merged = mergeLiveCandle(map.get(incoming.time), incoming);
     map.set(incoming.time, merged);
     nextRows = Array.from(map.values()).sort((a, b) => a.time - b.time);
-    broadcastLiveCandle(market, canonicalSymbol, timeframe, merged);
+    broadcastLiveCandle(canonicalMarket, canonicalSymbol, timeframe, merged);
   } else {
     nextRows = current.concat(incoming);
-    broadcastLiveCandle(market, canonicalSymbol, timeframe, incoming);
+    broadcastLiveCandle(canonicalMarket, canonicalSymbol, timeframe, incoming);
   }
   const trimmed = nextRows.slice(-MAX_CANDLES_PER_KEY);
   candleStore.set(key, trimmed);
   schedulePersistCandleStore();
   if (options.persistToPostgres !== false) {
-    persistMarketCandlesToPostgres(market, canonicalSymbol, timeframe, [incoming]);
+    persistMarketCandlesToPostgres(canonicalMarket, canonicalSymbol, timeframe, [incoming]);
   }
   return trimmed;
 }
@@ -652,8 +686,8 @@ function getMt45EnabledRetentionDays() {
 
 function getMt45SymbolConfig(market, symbol, platformRaw) {
   const profile = getMt45Profile(runtimeConfig.mt45, platformRaw);
-  const normalizedMarket = normalizeMarket(market) || inferMarketFromSymbol(symbol);
-  const normalizedSymbol = canonicalizeSymbolByMarket(normalizedMarket, symbol);
+  const inferredMarket = normalizeMarket(market) || inferMarketFromSymbol(symbol);
+  const { market: normalizedMarket, symbol: normalizedSymbol } = canonicalizeMarketSymbol(inferredMarket, symbol);
   const rule = profile.symbols.find((item) => item.market === normalizedMarket && item.symbol === normalizedSymbol);
   return {
     market: normalizedMarket,
@@ -741,9 +775,12 @@ function mergeSymbolProviders(raw) {
     if (!market || !symbolsRaw || typeof symbolsRaw !== 'object') continue;
     if (!merged[market]) merged[market] = {};
     for (const [symbolRaw, providerRaw] of Object.entries(symbolsRaw)) {
-      const symbol = canonicalizeSymbolByMarket(market, symbolRaw);
+      const { market: canonicalMarket, symbol } = canonicalizeMarketSymbol(market, symbolRaw);
       const provider = normalizeProvider(providerRaw);
-      if (symbol && provider) merged[market][symbol] = provider;
+      if (canonicalMarket && symbol && provider) {
+        if (!merged[canonicalMarket]) merged[canonicalMarket] = {};
+        merged[canonicalMarket][symbol] = provider;
+      }
     }
   }
   return merged;
@@ -760,11 +797,7 @@ async function loadCandleStore() {
     if (!keyParts) continue;
     const sanitized = sanitizeCandles(rows, keyParts.timeframe).slice(-MAX_CANDLES_PER_KEY);
     if (!sanitized.length) continue;
-    const canonicalKey = candleKey(
-      keyParts.market,
-      canonicalizeSymbolByMarket(keyParts.market, keyParts.symbol),
-      keyParts.timeframe,
-    );
+    const canonicalKey = candleKey(keyParts.market, keyParts.symbol, keyParts.timeframe);
     const existing = candleStore.get(canonicalKey) || [];
     const mergedByTime = new Map(existing.map((candle) => [candle.time, candle]));
     sanitized.forEach((candle) => mergedByTime.set(candle.time, candle));
@@ -780,19 +813,21 @@ async function persistRuntimeConfig() {
 }
 
 function getProviderForMarket(market, symbol = '') {
-  const canonicalSymbol = canonicalizeSymbolByMarket(market, symbol);
-  const symbolProvider = runtimeConfig.symbolProviders?.[market]?.[canonicalSymbol];
+  const canonical = canonicalizeMarketSymbol(market, symbol);
+  const canonicalMarket = canonical.market || market;
+  const canonicalSymbol = canonical.symbol;
+  const symbolProvider = runtimeConfig.symbolProviders?.[canonicalMarket]?.[canonicalSymbol];
   if (symbolProvider) {
-    const normalized = normalizeProvider(symbolProvider) || DEFAULT_PROVIDER_BY_MARKET[market] || 'webhook';
+    const normalized = normalizeProvider(symbolProvider) || DEFAULT_PROVIDER_BY_MARKET[canonicalMarket] || 'webhook';
     return resolveProviderForSymbol({
-      market,
+      market: canonicalMarket,
       symbol: canonicalSymbol,
       configuredProvider: normalized,
       hasKisCredentials: hasKisCredentials(runtimeConfig.kis),
-    }) || DEFAULT_PROVIDER_BY_MARKET[market] || 'webhook';
+    }) || DEFAULT_PROVIDER_BY_MARKET[canonicalMarket] || 'webhook';
   }
-  const fromConfig = runtimeConfig.providers[market];
-  return normalizeProvider(fromConfig) || DEFAULT_PROVIDER_BY_MARKET[market] || 'webhook';
+  const fromConfig = runtimeConfig.providers[canonicalMarket];
+  return normalizeProvider(fromConfig) || DEFAULT_PROVIDER_BY_MARKET[canonicalMarket] || 'webhook';
 }
 
 function getKisEnabledSymbols() {
@@ -898,8 +933,8 @@ async function handleWebhookIngest(req, res) {
 
   const requestedMarket = normalizeMarket(body.market);
   const inferredMarket = inferMarketFromSymbol(body.symbol);
-  const market = inferredMarket === 'futures' && requestedMarket ? requestedMarket : inferredMarket;
-  const symbol = canonicalizeSymbolByMarket(market, body.symbol);
+  const selectedMarket = inferredMarket || requestedMarket;
+  const { market, symbol } = canonicalizeMarketSymbol(selectedMarket, body.symbol);
   const timeframe = normalizeTimeframe(body.timeframe || body.interval || '1m');
   const candles = sanitizeCandles(body.candles, timeframe);
 
@@ -947,8 +982,7 @@ async function handleApiIngest(req, res) {
     return;
   }
 
-  const market = normalizeMarket(body.market);
-  const symbol = canonicalizeSymbolByMarket(market, body.symbol);
+  const { market, symbol } = canonicalizeMarketSymbol(body.market, body.symbol);
   const timeframe = normalizeTimeframe(body.timeframe || '1m');
   const candles = sanitizeCandles(body.candles, timeframe);
 
@@ -982,8 +1016,10 @@ async function handleApiIngest(req, res) {
 }
 
 function handleGetCandles(req, res, url) {
-  const market = normalizeMarket(url.searchParams.get('market'));
-  const symbol = canonicalizeSymbolByMarket(market, url.searchParams.get('symbol'));
+  const { market, symbol } = canonicalizeMarketSymbol(
+    url.searchParams.get('market'),
+    url.searchParams.get('symbol'),
+  );
   const timeframe = normalizeTimeframe(url.searchParams.get('timeframe') || '1m');
   const limit = clampLimit(url.searchParams.get('limit'));
   const rawMode = isRawMode(url.searchParams.get('raw'));
@@ -1170,8 +1206,10 @@ async function handleMt45TickIngest(req, res) {
 }
 
 async function handleGetReportCandles(req, res, url) {
-  const market = normalizeMarket(url.searchParams.get('market'));
-  const symbol = canonicalizeSymbolByMarket(market, url.searchParams.get('symbol'));
+  const { market, symbol } = canonicalizeMarketSymbol(
+    url.searchParams.get('market'),
+    url.searchParams.get('symbol'),
+  );
   const timeframe = normalizeTimeframe(url.searchParams.get('timeframe') || '1m');
   const limit = Math.max(1, Math.min(100000, Math.floor(Number(url.searchParams.get('limit')) || 5000)));
   const fromSec = url.searchParams.get('from');
@@ -1226,8 +1264,10 @@ function handleDeleteCandles(req, res, url) {
     return;
   }
 
-  const market = normalizeMarket(url.searchParams.get('market'));
-  const symbol = canonicalizeSymbolByMarket(market, url.searchParams.get('symbol'));
+  const { market, symbol } = canonicalizeMarketSymbol(
+    url.searchParams.get('market'),
+    url.searchParams.get('symbol'),
+  );
   const timeframe = normalizeTimeframe(url.searchParams.get('timeframe') || '1m');
 
   if (!market || !symbol || !timeframe) {
@@ -1280,8 +1320,10 @@ function handleWebSocketUpgrade(req, socket) {
     return;
   }
 
-  const market = normalizeMarket(url.searchParams.get('market'));
-  const symbol = canonicalizeSymbolByMarket(market, url.searchParams.get('symbol'));
+  const { market, symbol } = canonicalizeMarketSymbol(
+    url.searchParams.get('market'),
+    url.searchParams.get('symbol'),
+  );
   const timeframe = normalizeTimeframe(url.searchParams.get('timeframe') || '1m');
   const secKey = req.headers['sec-websocket-key'];
   if (!market || !symbol || !timeframe || typeof secKey !== 'string') {

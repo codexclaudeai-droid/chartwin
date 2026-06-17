@@ -2,11 +2,22 @@ const DEFAULT_TIMEFRAME = '1m';
 const VALID_SIDES = new Set(['buy', 'sell', 'unknown']);
 
 function normalizeMarket(input) {
-  return String(input || '').trim().toLowerCase();
+  const raw = String(input || '').trim().toLowerCase();
+  const compact = raw.replace(/[\s_-]+/g, '');
+  if (compact === 'indexfutures' || compact === 'nasdaqfutures' || compact === 'nas100futures') return 'futures';
+  return raw;
 }
 
 function normalizeSymbol(input) {
-  return String(input || '').trim().toUpperCase().replace(/\s+/g, '');
+  const normalized = String(input || '').trim().toUpperCase().replace(/\s+/g, '');
+  if (
+    normalized === 'NAS100'
+    || normalized === 'NQ'
+    || normalized === 'NAS100FT'
+    || normalized === 'NAS100.FT'
+    || normalized === 'NAS100FUTURES'
+  ) return 'NQ1!';
+  return normalized;
 }
 
 function toFiniteNumber(value) {

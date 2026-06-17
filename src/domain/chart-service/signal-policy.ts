@@ -208,6 +208,16 @@ function normalizeStrategyId(value: unknown, fallback: string): string {
 
 function normalizeSymbolId(value: unknown): string | null {
   const text = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  const normalized = text.replace(/\s+/g, '');
+  if (
+    normalized === 'NAS100'
+    || normalized === 'NQ'
+    || normalized === 'NAS100FT'
+    || normalized === 'NAS100.FT'
+    || normalized === 'NAS100FUTURES'
+  ) {
+    return 'NQ1!';
+  }
   return text || null;
 }
 

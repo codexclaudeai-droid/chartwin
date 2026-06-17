@@ -50,7 +50,13 @@ const MARKET_CANDLE_COLUMNS = [
 ] as const;
 
 export function normalizeMarketCandleMarket(input: unknown): string | null {
-  const market = String(input ?? '').trim().toLowerCase();
+  const raw = String(input ?? '').trim().toLowerCase();
+  const compact = raw.replace(/[\s_-]+/g, '');
+  const market = compact === 'indexfutures'
+    || compact === 'nasdaqfutures'
+    || compact === 'nas100futures'
+    ? 'futures'
+    : raw;
   return (ALLOWED_MARKETS as readonly string[]).includes(market) ? market : null;
 }
 
@@ -64,13 +70,37 @@ export function normalizeMarketCandleSymbol(input: unknown): string {
 
 export function canonicalizeMarketCandleSymbol(market: string | null, symbol: unknown): string {
   const normalized = normalizeMarketCandleSymbol(symbol);
-  if (market === 'index' && (normalized === 'NAS100' || normalized === 'NQ')) return 'NQ1!';
+  if (
+    (market === 'index' || market === 'futures')
+    && (
+      normalized === 'NQ1!'
+      || normalized === 'NAS100'
+      || normalized === 'NQ'
+      || normalized === 'NAS100FT'
+      || normalized === 'NAS100.FT'
+      || normalized === 'NAS100FUTURES'
+    )
+  ) return 'NQ1!';
   if (market === 'index' && normalized === '^IXIC') return 'NASDAQ';
   return normalized;
 }
 
+export function canonicalizeMarketCandleMarket(market: string | null, symbol: unknown): string | null {
+  const normalized = normalizeMarketCandleSymbol(symbol);
+  if (
+    normalized === 'NQ1!'
+    || normalized === 'NAS100'
+    || normalized === 'NQ'
+    || normalized === 'NAS100FT'
+    || normalized === 'NAS100.FT'
+    || normalized === 'NAS100FUTURES'
+  ) return 'futures';
+  return market;
+}
+
 export function createMarketCandleSelectStatement(query: MarketCandleQuery): PostgresStatement {
-  const market = normalizeMarketCandleMarket(query.market) ?? '';
+  const requestedMarket = normalizeMarketCandleMarket(query.market);
+  const market = canonicalizeMarketCandleMarket(requestedMarket, query.symbol) ?? '';
   const symbol = canonicalizeMarketCandleSymbol(market, query.symbol);
   const timeframe = normalizeMarketCandleTimeframe(query.timeframe);
   const values: unknown[] = [market, symbol, timeframe];
@@ -161,7 +191,8 @@ export function normalizeMarketCandleInput(candle: unknown): MarketCandle | null
 }
 
 export function createMarketCandleUpsertStatement(input: MarketCandleUpsertInput): PostgresStatement | null {
-  const market = normalizeMarketCandleMarket(input.market) ?? '';
+  const requestedMarket = normalizeMarketCandleMarket(input.market);
+  const market = canonicalizeMarketCandleMarket(requestedMarket, input.symbol) ?? '';
   const symbol = canonicalizeMarketCandleSymbol(market, input.symbol);
   const timeframe = normalizeMarketCandleTimeframe(input.timeframe);
   const rows = (Array.isArray(input.candles) ? input.candles : [])
@@ -261,7 +292,8 @@ export function aggregateMarketCandlesToTimeframe(
 }
 
 export async function selectMarketCandles(query: MarketCandleQuery): Promise<MarketCandle[]> {
-  const market = normalizeMarketCandleMarket(query.market);
+  const requestedMarket = normalizeMarketCandleMarket(query.market);
+  const market = canonicalizeMarketCandleMarket(requestedMarket, query.symbol);
   const symbol = canonicalizeMarketCandleSymbol(market, query.symbol);
   const timeframe = normalizeMarketCandleTimeframe(query.timeframe);
   if (!market || !symbol || !timeframe) {
@@ -305,7 +337,8 @@ export async function selectMarketCandles(query: MarketCandleQuery): Promise<Mar
 }
 
 export async function upsertMarketCandles(input: MarketCandleUpsertInput): Promise<number> {
-  const market = normalizeMarketCandleMarket(input.market);
+  const requestedMarket = normalizeMarketCandleMarket(input.market);
+  const market = canonicalizeMarketCandleMarket(requestedMarket, input.symbol);
   const symbol = canonicalizeMarketCandleSymbol(market, input.symbol);
   const timeframe = normalizeMarketCandleTimeframe(input.timeframe);
   const statement = createMarketCandleUpsertStatement({

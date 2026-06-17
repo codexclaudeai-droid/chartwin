@@ -22,7 +22,7 @@ test('signal policy normalization keeps advanced chart strategy options', () => 
     },
     symbolPolicies: [
       {
-        symbolId: 'nq1!',
+        symbolId: 'NAS100 Futures',
         source: 'ea_strategy',
         strategyId: 'mt5-nq-breakout',
         executionMode: 'ea_signal',

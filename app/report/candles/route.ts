@@ -1,5 +1,6 @@
 import {
   MarketCandleRequestError,
+  canonicalizeMarketCandleMarket,
   canonicalizeMarketCandleSymbol,
   normalizeMarketCandleMarket,
   normalizeMarketCandleTimeframe,
@@ -10,7 +11,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const market = normalizeMarketCandleMarket(url.searchParams.get('market'));
+  const requestedMarket = normalizeMarketCandleMarket(url.searchParams.get('market'));
+  const market = canonicalizeMarketCandleMarket(requestedMarket, url.searchParams.get('symbol'));
   const symbol = canonicalizeMarketCandleSymbol(market, url.searchParams.get('symbol'));
   const timeframe = normalizeMarketCandleTimeframe(url.searchParams.get('timeframe') || '1m');
   const limit = Math.max(1, Math.min(100000, Math.floor(Number(url.searchParams.get('limit')) || 5000)));

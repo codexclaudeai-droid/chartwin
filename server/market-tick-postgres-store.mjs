@@ -12,7 +12,10 @@ const MARKET_TICK_COLUMNS = [
 ];
 
 function normalizeMarket(input) {
-  return String(input || '').trim().toLowerCase();
+  const raw = String(input || '').trim().toLowerCase();
+  const compact = raw.replace(/[\s_-]+/g, '');
+  if (compact === 'indexfutures' || compact === 'nasdaqfutures' || compact === 'nas100futures') return 'futures';
+  return raw;
 }
 
 function normalizeSymbol(input) {

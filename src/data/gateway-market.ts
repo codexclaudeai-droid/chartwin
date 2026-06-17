@@ -2,11 +2,11 @@ export type GatewayMarket = 'futures' | 'index' | 'commodity' | 'fx';
 export type GatewayReportMarket = 'crypto' | GatewayMarket;
 
 const FX_QUOTES = ['USD', 'EUR', 'JPY', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD', 'KRW', 'CNH', 'HKD', 'SGD'];
-const NASDAQ_INDEX_FUTURES_SYMBOLS = new Set(['NQ1!', 'NAS100', 'NQ']);
+const NASDAQ_INDEX_FUTURES_SYMBOLS = new Set(['NQ1!', 'NAS100', 'NQ', 'NAS100FT', 'NAS100.FT', 'NAS100FUTURES']);
 
 export function normalizeSymbol(symbol: string): string {
   const normalized = symbol.replace(/\s+/g, '').toUpperCase();
-  if (normalized === 'NAS100' || normalized === 'NQ') return 'NQ1!';
+  if (NASDAQ_INDEX_FUTURES_SYMBOLS.has(normalized)) return 'NQ1!';
   if (normalized === '^IXIC') return 'NASDAQ';
   return normalized;
 }
