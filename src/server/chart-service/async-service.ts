@@ -209,19 +209,24 @@ export async function requestAsyncFreeTrial(
   const user = await repository.getUserById(input.actor.id);
   if (!user) throw new Error(`User not found: ${input.actor.id}`);
 
-  const [existingSubscription, policy, usageRecords, allowance] = await Promise.all([
+  const [existingSubscription, policy, usageRecords, allowance, subscriptions] = await Promise.all([
     repository.getSubscriptionByUserId(user.id),
     getEffectiveFreeTrialPolicySettings(repository, input.requestedAt),
     repository.listFreeTrialUsageRecordsByUserId(user.id),
     repository.getFreeTrialUserAllowanceByUserId(user.id),
+    repository.listSubscriptions(),
   ]);
+  const trialHistoryCount = getFreeTrialHistoryCount(
+    usageRecords,
+    subscriptions.filter((subscription) => subscription.userId === user.id),
+  );
   const subscriptionStatus = existingSubscription?.status ?? SUBSCRIPTION_STATUSES.none;
   const activeTrialHasEnded = existingSubscription?.status === SUBSCRIPTION_STATUSES.trialActive &&
     !hasFreeTrialTimeRemaining(existingSubscription.endsAt, input.requestedAt);
   if (existingSubscription?.status === SUBSCRIPTION_STATUSES.trialActive) {
     const extensionEligibility = tryResolveFreeTrialEligibility({
       existingSubscription,
-      usageCount: usageRecords.length,
+      usageCount: trialHistoryCount,
       policy,
       allowance,
     });
@@ -263,7 +268,7 @@ export async function requestAsyncFreeTrial(
 
   const eligibility = resolveFreeTrialEligibility({
     existingSubscription,
-    usageCount: usageRecords.length,
+    usageCount: trialHistoryCount,
     policy,
     allowance,
   });
@@ -397,6 +402,16 @@ function isFreeTrialSubscriptionStatus(status: SubscriptionRecord['status']): bo
   return status === SUBSCRIPTION_STATUSES.trialRequested ||
     status === SUBSCRIPTION_STATUSES.trialActive ||
     status === SUBSCRIPTION_STATUSES.trialExpired;
+}
+
+function getFreeTrialHistoryCount(
+  usageRecords: FreeTrialUsageRecord[],
+  subscriptions: SubscriptionRecord[],
+): number {
+  const trialSubscriptionCount = subscriptions
+    .filter((subscription) => isFreeTrialSubscriptionStatus(subscription.status))
+    .length;
+  return Math.max(usageRecords.length, trialSubscriptionCount);
 }
 
 async function getEffectiveFreeTrialPolicySettings(

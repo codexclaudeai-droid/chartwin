@@ -172,6 +172,40 @@ test('free trial request is limited to one lifetime trial per account', async ()
   assert.equal(subscription?.endsAt, '2026-05-30T00:00:00.000Z');
 });
 
+test('free trial request is blocked when an older trial exists behind the latest subscription', async () => {
+  const repository = createAsyncChartServiceRepository(createMockChartServiceRepository());
+  const previousTrial = await repository.getSubscriptionByUserId('user_trial');
+  assert.ok(previousTrial);
+  await repository.saveSubscription({
+    ...previousTrial,
+    status: SUBSCRIPTION_STATUSES.trialExpired,
+    endsAt: '2026-05-30T00:00:00.000Z',
+    updatedAt: '2026-05-30T00:00:00.000Z',
+  });
+  await repository.saveSubscription({
+    id: 'sub_cancelled_after_trial',
+    userId: 'user_trial',
+    planId: 'plan_monthly',
+    status: SUBSCRIPTION_STATUSES.cancelled,
+    startsAt: '2026-06-01T00:00:00.000Z',
+    endsAt: '2026-06-10T00:00:00.000Z',
+    approvedByAdminId: 'admin_1',
+    approvedAt: '2026-06-01T00:00:00.000Z',
+    cancelledAt: '2026-06-10T00:00:00.000Z',
+    refundedAt: null,
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-10T00:00:00.000Z',
+  });
+
+  await assert.rejects(
+    () => requestAsyncFreeTrial(repository, {
+      actor: { id: 'user_trial', role: 'member' },
+      requestedAt: '2026-06-11T00:00:00.000Z',
+    }),
+    /1/,
+  );
+});
+
 test('free trial event policy can temporarily reopen expired trial accounts', async () => {
   const repository = createAsyncChartServiceRepository(createMockChartServiceRepository());
   const previousTrial = await repository.getSubscriptionByUserId('user_trial');
