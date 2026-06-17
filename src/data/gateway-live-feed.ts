@@ -14,6 +14,7 @@ export {
   shouldUseBinanceDirect,
 } from './gateway-market';
 import { sanitizeGatewayCandles } from './gateway-candle-sanitize';
+import type { FootprintPriceLevel } from '../types.ts';
 
 export type CandleDataLike = {
   time: number;
@@ -22,6 +23,10 @@ export type CandleDataLike = {
   low: number;
   close: number;
   volume: number;
+  buyVolume?: number;
+  sellVolume?: number;
+  volumeDelta?: number;
+  footprint?: FootprintPriceLevel[];
 };
 
 type ChartLike = {
@@ -120,6 +125,63 @@ function canAggregateGatewayFallback(timeframe: TimeframeKey): boolean {
   return Number.isFinite(targetSec) && targetSec > 60 && targetSec % 60 === 0;
 }
 
+function cloneFootprint(levels: FootprintPriceLevel[] | undefined): FootprintPriceLevel[] | undefined {
+  return levels?.map((level) => ({ ...level }));
+}
+
+function mergeFootprintLevels(
+  current: FootprintPriceLevel[] | undefined,
+  incoming: FootprintPriceLevel[] | undefined,
+): FootprintPriceLevel[] | undefined {
+  if (!current?.length && !incoming?.length) return undefined;
+  const levels = new Map<number, FootprintPriceLevel>();
+  [...(current ?? []), ...(incoming ?? [])].forEach((level) => {
+    const price = Number(level.price);
+    if (!Number.isFinite(price)) return;
+    const existing = levels.get(price) ?? {
+      price,
+      buyVolume: 0,
+      sellVolume: 0,
+      volumeDelta: 0,
+      totalVolume: 0,
+    };
+    existing.buyVolume += Number(level.buyVolume) || 0;
+    existing.sellVolume += Number(level.sellVolume) || 0;
+    existing.volumeDelta = existing.buyVolume - existing.sellVolume;
+    existing.totalVolume = existing.buyVolume + existing.sellVolume;
+    levels.set(price, existing);
+  });
+  return Array.from(levels.values()).sort((a, b) => a.price - b.price);
+}
+
+function enrichAggregatedCandle(target: CandleDataLike, source: CandleDataLike): void {
+  if (Number.isFinite(source.buyVolume)) {
+    target.buyVolume = (target.buyVolume ?? 0) + Number(source.buyVolume);
+  }
+  if (Number.isFinite(source.sellVolume)) {
+    target.sellVolume = (target.sellVolume ?? 0) + Number(source.sellVolume);
+  }
+  if (Number.isFinite(source.volumeDelta)) {
+    target.volumeDelta = (target.volumeDelta ?? 0) + Number(source.volumeDelta);
+  } else if (Number.isFinite(source.buyVolume) && Number.isFinite(source.sellVolume)) {
+    target.volumeDelta = (target.volumeDelta ?? 0) + Number(source.buyVolume) - Number(source.sellVolume);
+  }
+  target.footprint = mergeFootprintLevels(target.footprint, source.footprint);
+}
+
+function hasSameFootprint(a: FootprintPriceLevel[] | undefined, b: FootprintPriceLevel[] | undefined): boolean {
+  if (!a?.length && !b?.length) return true;
+  if (!a?.length || !b?.length || a.length !== b.length) return false;
+  return a.every((level, index) => {
+    const other = b[index];
+    return level.price === other.price
+      && level.buyVolume === other.buyVolume
+      && level.sellVolume === other.sellVolume
+      && level.volumeDelta === other.volumeDelta
+      && level.totalVolume === other.totalVolume;
+  });
+}
+
 export function aggregateGatewayCandlesToTimeframe(
   candles: CandleDataLike[],
   timeframe: TimeframeKey,
@@ -137,13 +199,14 @@ export function aggregateGatewayCandlesToTimeframe(
       const bucketTime = Math.floor(candle.time / targetSec) * targetSec;
       const existing = buckets.get(bucketTime);
       if (!existing) {
-        buckets.set(bucketTime, { ...candle, time: bucketTime });
+        buckets.set(bucketTime, { ...candle, time: bucketTime, footprint: cloneFootprint(candle.footprint) });
         return;
       }
       existing.high = Math.max(existing.high, candle.high);
       existing.low = Math.min(existing.low, candle.low);
       existing.close = candle.close;
       existing.volume += candle.volume;
+      enrichAggregatedCandle(existing, candle);
     });
 
   return Array.from(buckets.values()).sort((a, b) => a.time - b.time);
@@ -307,6 +370,10 @@ export function createGatewayLiveFeed({
       && a.low === b.low
       && a.close === b.close
       && a.volume === b.volume
+      && a.buyVolume === b.buyVolume
+      && a.sellVolume === b.sellVolume
+      && a.volumeDelta === b.volumeDelta
+      && hasSameFootprint(a.footprint, b.footprint)
     );
 
     const currentMap = new Map<number, CandleDataLike>();
@@ -351,6 +418,10 @@ export function createGatewayLiveFeed({
           high: row.high,
           low: row.low,
           volume: row.volume,
+          buyVolume: row.buyVolume,
+          sellVolume: row.sellVolume,
+          volumeDelta: row.volumeDelta,
+          footprint: cloneFootprint(row.footprint),
         });
         applied = true;
         return;

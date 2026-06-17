@@ -38,6 +38,33 @@ test('sanitizeGatewayCandles keeps the latest plausible price cluster for NQ his
   assert.deepEqual(rows.map((row) => row.close), [30520, 30535]);
 });
 
+test('sanitizeGatewayCandles preserves MT enriched volume and normalizes footprint maps', () => {
+  const rows = sanitizeGatewayCandles([
+    {
+      time: 1781550540,
+      open: 4311,
+      high: 4312,
+      low: 4310,
+      close: 4311.5,
+      volume: 8,
+      buyVolume: 5,
+      sellVolume: 3,
+      footprint: {
+        4311: { buyVolume: 2, sellVolume: 1 },
+        4311.5: { buyVolume: 3, sellVolume: 2 },
+      },
+    },
+  ]);
+
+  assert.equal(rows[0].buyVolume, 5);
+  assert.equal(rows[0].sellVolume, 3);
+  assert.equal(rows[0].volumeDelta, 2);
+  assert.deepEqual(rows[0].footprint, [
+    { price: 4311, buyVolume: 2, sellVolume: 1, volumeDelta: 1, totalVolume: 3 },
+    { price: 4311.5, buyVolume: 3, sellVolume: 2, volumeDelta: 1, totalVolume: 5 },
+  ]);
+});
+
 test('normalizeSignalSeriesLength pads missing worker signals with zeros to match candle count', () => {
   assert.deepEqual(normalizeSignalSeriesLength([1, 0, -1], 5), [1, 0, -1, 0, 0]);
   assert.deepEqual(normalizeSignalSeriesLength([1, 0, -1, 1], 2), [1, 0]);
@@ -148,6 +175,11 @@ test('gateway live patches use incremental chart updates instead of full setData
     gatewayLiveFeedSource,
     /if \(row\.time === latest\.time && !hasSameCandleValues\(latest, row\)\) \{[\s\S]*?chart\.updateLastCandle\(\{/,
     'current MT candle ticks should patch the last candle without clearing strategy signals',
+  );
+  assert.match(
+    gatewayLiveFeedSource,
+    /buyVolume: row\.buyVolume,[\s\S]*sellVolume: row\.sellVolume,[\s\S]*volumeDelta: row\.volumeDelta,[\s\S]*footprint: cloneFootprint\(row\.footprint\)/,
+    'MT live patches should preserve CVD and footprint source fields',
   );
   assert.match(
     gatewayLiveFeedSource,

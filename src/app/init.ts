@@ -1940,6 +1940,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             high: convertPrice(candle.high),
             low: convertPrice(candle.low),
             close: convertPrice(candle.close),
+            footprint: toDisplayFootprint(candle.footprint),
           });
           markStrategyReportStale();
         },
@@ -1951,6 +1952,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           if (Number.isFinite(patch.high)) last.high = patch.high;
           if (Number.isFinite(patch.low)) last.low = patch.low;
           if (Number.isFinite(patch.volume)) last.volume = patch.volume;
+          if (Number.isFinite(patch.buyVolume)) last.buyVolume = patch.buyVolume;
+          if (Number.isFinite(patch.sellVolume)) last.sellVolume = patch.sellVolume;
+          if (Number.isFinite(patch.volumeDelta)) last.volumeDelta = patch.volumeDelta;
+          if (patch.footprint) last.footprint = patch.footprint;
           if (gapMode === 'smooth') {
             applyDisplayCurrencyToChart();
             return;
@@ -1961,6 +1966,10 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
             high: convertPrice(last.high),
             low: convertPrice(last.low),
             volume: last.volume,
+            buyVolume: last.buyVolume,
+            sellVolume: last.sellVolume,
+            volumeDelta: last.volumeDelta,
+            footprint: toDisplayFootprint(last.footprint),
           });
         },
       },
