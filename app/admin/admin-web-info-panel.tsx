@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AddRowActionIcon, DeleteActionIcon } from '../shared/action-icons';
 import { IconButton } from '../shared/icon-button';
+import { formatAdminDateTime } from './admin-date-format';
 import { AdminRefreshButton } from './admin-refresh-button';
 import { dispatchAdminRefreshEvent } from './admin-refresh-events';
 
@@ -205,7 +206,7 @@ export function AdminWebInfoPanel({ mode }: Readonly<{ mode: 'terms' | 'privacy'
       </form>
       <p className="notice">{message}</p>
       {settings.updatedAt && (
-        <p className="notice compact">마지막 수정: {new Date(settings.updatedAt).toLocaleString('ko-KR')}</p>
+        <p className="notice compact">마지막 수정: {formatAdminDateTime(settings.updatedAt)}</p>
       )}
     </section>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { formatPaymentAmountUsd } from '../../src/domain/chart-service/index.ts';
 import { useAdminActionConfirmation } from './admin-action-confirmation-dialog';
+import { formatAdminDateTime, formatAdminDateTimeParts } from './admin-date-format';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
 import { formatAdminDisplayId, getAdminDisplaySequence } from './admin-display-id';
 import { canSubmitAdminOperationNote, normalizeAdminOperationNote } from './admin-operation-note';
@@ -527,20 +528,9 @@ export function SubscriptionAdminPanel() {
 }
 
 function formatSubscriptionDateTime(value: string): string {
-  return new Intl.DateTimeFormat('ko-KR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
+  return formatAdminDateTime(value);
 }
 
 function formatSubscriptionDateTimeParts(value: string): [string, string] {
-  const date = new Date(value);
-  return [
-    new Intl.DateTimeFormat('ko-KR', {
-      dateStyle: 'medium',
-    }).format(date),
-    new Intl.DateTimeFormat('ko-KR', {
-      timeStyle: 'short',
-    }).format(date),
-  ];
+  return formatAdminDateTimeParts(value);
 }

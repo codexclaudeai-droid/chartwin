@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { NumberStepper } from '../shared/number-stepper';
+import { formatAdminDateTime } from './admin-date-format';
 import { AdminRefreshButton } from './admin-refresh-button';
 
 type FreeTrialPolicySettings = {
@@ -154,7 +155,7 @@ export function AdminTrialPolicyPanel() {
       </form>
       <p className="notice">{message}</p>
       {settings.updatedAt && (
-        <p className="notice compact">마지막 수정: {new Date(settings.updatedAt).toLocaleString('ko-KR')}</p>
+        <p className="notice compact">마지막 수정: {formatAdminDateTime(settings.updatedAt)}</p>
       )}
     </section>
   );

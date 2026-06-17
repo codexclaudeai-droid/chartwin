@@ -33,6 +33,8 @@ test('creating a support thread notifies admins with direct reply links', () => 
   assert.equal(adminNotifications[0].linkUrl, adminLink);
   assert.equal(adminNotifications[0].title, 'Need chart help');
   assert.doesNotMatch(adminNotifications[0].title, /New support request/i);
+  assert.doesNotMatch(adminNotifications[0].body, /opened a .* request/i);
+  assert.equal(adminNotifications[0].body, 'member@example.com: Need help reading the signal panel.');
   assert.match(adminNotifications[0].body, /Need help reading/);
   assert.equal(superAdminNotifications.length, 1);
   assert.equal(superAdminNotifications[0].linkUrl, adminLink);

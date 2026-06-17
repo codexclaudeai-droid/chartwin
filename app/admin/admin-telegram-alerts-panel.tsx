@@ -6,6 +6,7 @@ import { getAllSymbolCatalog } from '../../src/catalog/symbols.ts';
 import { loadStrategies } from '../../src/strategy/strategy-service.ts';
 import { DeleteActionIcon, EditActionIcon } from '../shared/action-icons';
 import { IconButton } from '../shared/icon-button';
+import { formatAdminDateTime } from './admin-date-format';
 import { AdminRefreshButton } from './admin-refresh-button';
 
 type SignalEventType = 'buy' | 'sell' | 'stop_loss' | 'take_profit';
@@ -601,8 +602,7 @@ function upsertProfile(current: PublicTelegramProfile[], profile: PublicTelegram
 }
 
 function formatDate(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+  return formatAdminDateTime(value);
 }
 
 function formatFilterList(values: string[], fallback: string) {

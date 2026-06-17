@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { DeleteActionIcon, EditActionIcon } from '../shared/action-icons';
 import { IconButton } from '../shared/icon-button';
+import { formatAdminDateTime } from './admin-date-format';
 import { dispatchAdminAuditLogPresetEvent } from './admin-audit-log-preset-events';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
 import { formatAdminDisplayId, getAdminDisplaySequence } from './admin-display-id';
@@ -636,10 +637,7 @@ export function SupportAdminPanel() {
 }
 
 function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat('ko-KR', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(value));
+  return formatAdminDateTime(value);
 }
 
 function isAdminSupportThreadUnread(

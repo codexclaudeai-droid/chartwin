@@ -430,6 +430,9 @@ test('admin user panel renders detailed payment support and notification history
   assert.match(source, /getNotificationLinkLabel\(notification\)/);
   assert.match(source, /notification\.readAt \? '읽음' : '미확인'/);
   assert.match(source, /notification\.linkUrl/);
+  assert.match(source, /formatDateTime\(payment\.updatedAt\)/);
+  assert.match(source, /formatDateTime\(thread\.updatedAt\)/);
+  assert.match(source, /formatDateTime\(notification\.createdAt\)/);
   assert.doesNotMatch(source, /알림 설정 열기/);
 });
 

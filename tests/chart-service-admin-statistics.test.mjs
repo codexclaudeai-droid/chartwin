@@ -106,20 +106,22 @@ test('admin statistics panel renders sidebar-linked sub pages period controls mi
   assert.match(panelSource, /일별/);
   assert.match(panelSource, /월별/);
   assert.match(panelSource, /년도별/);
+  assert.match(panelSource, /isPeriodMenuOpen/);
+  assert.match(panelSource, /statistics-period-trigger/);
+  assert.match(panelSource, /role="menuitemradio"/);
   assert.match(panelSource, /statistics-y-axis/);
   assert.match(panelSource, /statistics-bar/);
-  assert.match(panelSource, /statistics-line/);
+  assert.doesNotMatch(panelSource, /statistics-line/);
   assert.match(panelSource, /activeMetricMeta\.anchorId/);
   assert.doesNotMatch(panelSource, /aria-label="통계 종류"[\s\S]*button/);
-  assert.match(panelSource, /\(index \+ 0\.5\) \/ length/);
-  assert.match(panelSource, /r="2"/);
+  assert.match(panelSource, /getStatisticsChartTitle/);
   assert.match(cssSource, /\.statistics-chart/);
+  assert.match(cssSource, /\.statistics-chart-header/);
+  assert.match(cssSource, /\.statistics-period-options/);
   assert.match(cssSource, /\.statistics-y-axis/);
   assert.match(cssSource, /\.statistics-bar/);
-  assert.match(cssSource, /height: calc\(100% - 36px\)/);
-  assert.match(cssSource, /width: calc\(100% - 28px\)/);
-  assert.match(cssSource, /stroke-width: 2\.1/);
-  assert.match(cssSource, /stroke-width: 1\.5/);
+  assert.match(cssSource, /linear-gradient\(180deg, #1ed6ec 0%, #0bb2cf 54%, #0789ad 100%\)/);
+  assert.match(cssSource, /border-radius:\s*8px/);
 });
 
 test('admin statistics submenu uses dark admin tab styling', () => {

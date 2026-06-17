@@ -7,6 +7,7 @@ import { DeleteActionIcon, EditActionIcon } from '../shared/action-icons';
 import { IconButton } from '../shared/icon-button';
 import { NumberStepper } from '../shared/number-stepper';
 import { RichTextEditor } from '../shared/rich-text-editor';
+import { formatAdminDateTime } from './admin-date-format';
 import { AdminRefreshButton } from './admin-refresh-button';
 import { dispatchAdminRefreshEvent } from './admin-refresh-events';
 
@@ -499,15 +500,7 @@ function formatNoticePopupSchedule(value: NoticePopupScheduleValue): string {
 }
 
 function formatNoticePopupDateTime(value: string | null): string {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatAdminDateTime(value);
 }
 
 function formatNoticePopupMonth(date: Date): string {

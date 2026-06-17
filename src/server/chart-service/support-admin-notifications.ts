@@ -270,7 +270,7 @@ function formatSupportRequestSummary(input: {
   message: SupportMessageRecord;
   author: ServiceUserRecord;
 }): string {
-  return `${input.author.email} opened a ${input.thread.category} request: ${input.message.body}`;
+  return `${input.author.email}: ${input.message.body}`;
 }
 
 function formatSupportRequestAdminEmailBody(input: {

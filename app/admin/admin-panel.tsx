@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAdminActionConfirmation } from './admin-action-confirmation-dialog';
+import { formatAdminDateTime } from './admin-date-format';
 import { AdminDashboardFilterNotice } from './admin-dashboard-filter-notice';
 import { formatAdminDisplayId, getAdminDisplaySequence } from './admin-display-id';
 import { canSubmitAdminOperationNote, normalizeAdminOperationNote } from './admin-operation-note';
@@ -94,12 +95,7 @@ function formatAdminPaymentMethodLabel(method: string): string {
 }
 
 function formatAdminPaymentDateTime(value: string): string {
-  return new Date(value).toLocaleString('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatAdminDateTime(value);
 }
 
 function formatCompactTransactionId(transactionId: string): string {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { AdminRefreshButton } from './admin-refresh-button';
 
 type StatisticsPeriodKey = 'daily' | 'monthly' | 'yearly';
@@ -56,6 +57,7 @@ export function AdminStatisticsPanel() {
   const [statistics, setStatistics] = useState<StatisticsSummary | null>(null);
   const [activeMetric, setActiveMetric] = useState<StatisticsMetricKey>('sales');
   const [activePeriod, setActivePeriod] = useState<StatisticsPeriodKey>('daily');
+  const [isPeriodMenuOpen, setIsPeriodMenuOpen] = useState(false);
   const [message, setMessage] = useState('관리자 통계 데이터를 불러오는 중입니다.');
   const [isBusy, setIsBusy] = useState(false);
 
@@ -91,6 +93,7 @@ export function AdminStatisticsPanel() {
 
   const dataset = statistics?.[activePeriod][activeMetric] ?? null;
   const activeMetricMeta = METRIC_OPTIONS.find((option) => option.key === activeMetric) ?? METRIC_OPTIONS[0];
+  const activePeriodLabel = PERIOD_OPTIONS.find((option) => option.key === activePeriod)?.label ?? PERIOD_OPTIONS[0].label;
 
   return (
     <section className="card wide" id="admin-statistics">
@@ -115,19 +118,6 @@ export function AdminStatisticsPanel() {
           </a>
         ))}
       </nav>
-      <div className="quick-filter-row" aria-label="통계 기간 단위">
-        {PERIOD_OPTIONS.map((option) => (
-          <button
-            aria-pressed={activePeriod === option.key}
-            className={`button secondary${activePeriod === option.key ? ' active' : ''}`}
-            key={option.key}
-            onClick={() => setActivePeriod(option.key)}
-            type="button"
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
       {dataset && (
         <>
           <div className="statistics-summary-row">
@@ -138,11 +128,48 @@ export function AdminStatisticsPanel() {
             </div>
             <div className="mini-card">
               <span>표시 단위</span>
-              <strong>{PERIOD_OPTIONS.find((option) => option.key === activePeriod)?.label}</strong>
-              <p>막대는 구간별 수치, 선형은 누적 수치입니다.</p>
+              <strong>{activePeriodLabel}</strong>
+              <p>막대 높이로 구간별 흐름을 빠르게 비교합니다.</p>
             </div>
           </div>
-          <div className="statistics-chart" aria-label={`${activeMetricMeta.label} ${activePeriod} 혼합 차트`}>
+          <div className="statistics-chart" aria-label={`${activeMetricMeta.label} ${activePeriod} 막대 차트`}>
+            <div className="statistics-chart-header">
+              <div>
+                <h3>{getStatisticsChartTitle(activeMetric)}</h3>
+                <span>{dataset.unit}</span>
+              </div>
+              <div className="statistics-period-menu">
+                <button
+                  aria-expanded={isPeriodMenuOpen}
+                  aria-haspopup="menu"
+                  className="statistics-period-trigger"
+                  onClick={() => setIsPeriodMenuOpen((current) => !current)}
+                  type="button"
+                >
+                  {activePeriodLabel}
+                  <ChevronDown aria-hidden="true" size={15} />
+                </button>
+                {isPeriodMenuOpen && (
+                  <div className="statistics-period-options" role="menu" aria-label="통계 기간 단위">
+                    {PERIOD_OPTIONS.map((option) => (
+                      <button
+                        aria-checked={activePeriod === option.key}
+                        className={activePeriod === option.key ? 'active' : ''}
+                        key={option.key}
+                        onClick={() => {
+                          setActivePeriod(option.key);
+                          setIsPeriodMenuOpen(false);
+                        }}
+                        role="menuitemradio"
+                        type="button"
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="statistics-y-axis" aria-label="y축 수치">
               {dataset.yAxisTicks.map((tick) => (
                 <span key={tick}>{formatValue(tick, dataset.unit)}</span>
@@ -161,17 +188,6 @@ export function AdminStatisticsPanel() {
                   </div>
                 ))}
               </div>
-              <svg className="statistics-line" preserveAspectRatio="none" viewBox="0 0 100 100" aria-hidden="true">
-                <path d={createLinePath(dataset.series, dataset.maxValue)} />
-                {dataset.series.map((point, index) => (
-                  <circle
-                    cx={getLineX(index, dataset.series.length)}
-                    cy={getLineY(point.lineValue, dataset.maxValue)}
-                    key={point.label}
-                    r="2"
-                  />
-                ))}
-              </svg>
             </div>
           </div>
           <table className="table statistics-table">
@@ -209,29 +225,13 @@ function getBarHeight(value: number, maxValue: number): number {
   return Math.max(4, Math.round((value / Math.max(1, maxValue)) * 100));
 }
 
-function createLinePath(
-  series: StatisticsDataset['series'],
-  maxValue: number,
-): string {
-  if (series.length === 0) return '';
-
-  return series
-    .map((point, index) => {
-      const command = index === 0 ? 'M' : 'L';
-      return `${command} ${getLineX(index, series.length)} ${getLineY(point.lineValue, maxValue)}`;
-    })
-    .join(' ');
-}
-
-function getLineX(index: number, length: number): number {
-  return length <= 1 ? 50 : Math.round(((index + 0.5) / length) * 100);
-}
-
-function getLineY(value: number, maxValue: number): number {
-  return Math.max(4, 96 - Math.round((value / Math.max(1, maxValue)) * 90));
-}
-
 function formatValue(value: number, unit: string): string {
   if (unit === 'USD') return `$${value.toLocaleString('en-US')}`;
   return `${value.toLocaleString('ko-KR')}${unit}`;
+}
+
+function getStatisticsChartTitle(metric: StatisticsMetricKey): string {
+  if (metric === 'sales') return '매출 추이';
+  if (metric === 'signups') return '가입자 추이';
+  return '방문자 추이';
 }

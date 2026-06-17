@@ -5190,96 +5190,185 @@ body:not(:has(.landing-page)) .pricing-auth-cta {
 }
 
 .statistics-chart {
-  background: linear-gradient(180deg, rgba(255, 253, 247, 0.9), rgba(247, 241, 229, 0.72));
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(14, 165, 233, 0.12), transparent 34%),
+    linear-gradient(145deg, rgba(7, 13, 20, 0.98), rgba(12, 22, 32, 0.94));
+  border: 1px solid rgba(83, 104, 122, 0.24);
+  border-radius: 8px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   display: grid;
   gap: 12px;
-  grid-template-columns: 88px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   margin: 16px 0;
-  min-height: 320px;
-  padding: 18px;
+  min-height: 300px;
+  overflow: hidden;
+  padding: 18px 20px 20px;
+  position: relative;
+}
+
+.statistics-chart::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 46%);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.statistics-chart-header {
+  align-items: center;
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.statistics-chart-header h3 {
+  color: rgba(241, 247, 255, 0.94);
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.statistics-chart-header span {
+  color: rgba(205, 219, 235, 0.62);
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 3px;
+}
+
+.statistics-period-menu {
+  position: relative;
+  z-index: 3;
+}
+
+.statistics-period-trigger {
+  align-items: center;
+  background: rgba(12, 19, 29, 0.84);
+  border: 1px solid rgba(108, 127, 148, 0.24);
+  border-radius: 6px;
+  color: rgba(229, 239, 250, 0.88);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  gap: 6px;
+  height: 34px;
+  justify-content: center;
+  padding: 0 10px;
+}
+
+.statistics-period-trigger:hover,
+.statistics-period-trigger:focus-visible {
+  border-color: rgba(30, 214, 236, 0.45);
+  color: #ffffff;
+  outline: 0;
+}
+
+.statistics-period-options {
+  background: rgba(8, 14, 22, 0.98);
+  border: 1px solid rgba(87, 111, 133, 0.34);
+  border-radius: 8px;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.34);
+  display: grid;
+  gap: 4px;
+  min-width: 96px;
+  padding: 6px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+}
+
+.statistics-period-options button {
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: rgba(211, 225, 242, 0.76);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.statistics-period-options button:hover,
+.statistics-period-options button.active {
+  background: rgba(16, 184, 211, 0.16);
+  color: #f7fdff;
 }
 
 .statistics-y-axis {
-  color: var(--muted);
+  color: rgba(198, 211, 226, 0.72);
   display: flex;
   flex-direction: column;
   font-size: 12px;
   font-weight: 800;
-  height: 220px;
+  height: 214px;
   justify-content: space-between;
-  padding: 4px 0 32px;
+  padding: 0 0 34px;
+  position: relative;
   text-align: right;
+  z-index: 1;
 }
 
 .statistics-plot {
-  border-left: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  min-height: 250px;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(121, 140, 160, 0.12) 0,
+      rgba(121, 140, 160, 0.12) 1px,
+      transparent 1px,
+      transparent 53px
+    );
+  border-bottom: 1px solid rgba(111, 128, 145, 0.2);
+  min-height: 238px;
+  overflow-x: auto;
   position: relative;
+  z-index: 1;
 }
 
 .statistics-bars {
   align-items: end;
   display: grid;
-  gap: 10px;
-  grid-auto-columns: minmax(54px, 1fr);
+  gap: 16px;
+  grid-auto-columns: minmax(42px, 1fr);
   grid-auto-flow: column;
-  height: 220px;
-  overflow-x: auto;
-  padding: 4px 14px 0;
+  height: 214px;
+  min-width: 100%;
+  padding: 0 12px;
 }
 
 .statistics-bar-column {
   align-items: center;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   height: 100%;
   justify-content: flex-end;
-  min-width: 54px;
+  min-width: 42px;
 }
 
 .statistics-bar {
-  background: linear-gradient(180deg, var(--accent), rgba(12, 102, 90, 0.62));
-  border-radius: 10px 10px 0 0;
-  box-shadow: 0 10px 24px rgba(12, 102, 90, 0.16);
+  background: linear-gradient(180deg, #1ed6ec 0%, #0bb2cf 54%, #0789ad 100%);
+  border: 1px solid rgba(95, 237, 255, 0.26);
+  border-radius: 4px 4px 2px 2px;
+  box-shadow: 0 9px 20px rgba(8, 188, 220, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.24);
   min-height: 8px;
-  width: 100%;
+  width: 20px;
 }
 
 .statistics-bar-column span {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
+  color: rgba(205, 216, 229, 0.7);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
   min-height: 24px;
   text-align: center;
   word-break: keep-all;
-}
-
-.statistics-line {
-  color: var(--danger);
-  inset: 4px 14px 32px;
-  height: calc(100% - 36px);
-  overflow: visible;
-  pointer-events: none;
-  position: absolute;
-  width: calc(100% - 28px);
-}
-
-.statistics-line path {
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2.1;
-}
-
-.statistics-line circle {
-  fill: #fff;
-  stroke: currentColor;
-  stroke-width: 1.5;
 }
 
 .statistics-table {
