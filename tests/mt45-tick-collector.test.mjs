@@ -132,6 +132,67 @@ test('MT45 tick aggregator keeps live candle in memory and finalizes only closed
   assert.equal(third.liveCandle.open, 101);
 });
 
+test('MT45 tick aggregator falls back to tick count volume when broker volume is zero', () => {
+  const aggregator = createMt45TickAggregator({ priceStep: 0.25 });
+
+  const first = aggregator.applyTick({
+    market: 'commodity',
+    symbol: 'XAUUSD',
+    time: 1713916810,
+    price: 2330,
+    quantity: 0,
+    side: 'unknown',
+    source: 'mt5',
+  });
+  const second = aggregator.applyTick({
+    market: 'commodity',
+    symbol: 'XAUUSD',
+    time: 1713916820,
+    price: 2330.25,
+    quantity: 0,
+    side: 'unknown',
+    source: 'mt5',
+  });
+
+  assert.equal(first.liveCandle.volume, 1);
+  assert.equal(first.liveCandle.volumeDelta, 0);
+  assert.equal(second.liveCandle.volume, 2);
+  assert.equal(second.liveCandle.buyVolume, 1);
+  assert.equal(second.liveCandle.sellVolume, 0);
+  assert.equal(second.liveCandle.volumeDelta, 1);
+  assert.deepEqual(second.liveCandle.footprint[2330.25], { buyVolume: 1, sellVolume: 0 });
+});
+
+test('MT45 tick aggregator infers the first tick side of a new minute from previous close', () => {
+  const aggregator = createMt45TickAggregator({ priceStep: 0.25 });
+
+  aggregator.applyTick({
+    market: 'futures',
+    symbol: 'NQ1!',
+    time: 1713916810,
+    price: 100,
+    quantity: 0,
+    side: 'unknown',
+    source: 'mt5',
+  });
+
+  const rollover = aggregator.applyTick({
+    market: 'futures',
+    symbol: 'NQ1!',
+    time: 1713916861,
+    price: 99.75,
+    quantity: 0,
+    side: 'unknown',
+    source: 'mt5',
+  });
+
+  assert.equal(rollover.finalizedCandles.length, 1);
+  assert.equal(rollover.liveCandle.volume, 1);
+  assert.equal(rollover.liveCandle.buyVolume, 0);
+  assert.equal(rollover.liveCandle.sellVolume, 1);
+  assert.equal(rollover.liveCandle.volumeDelta, -1);
+});
+
 test('MT45 tick aggregator can resolve price step per symbol', () => {
   const aggregator = createMt45TickAggregator({
     priceStep: (tick) => (tick.symbol === 'NQ1!' ? 0.25 : 0.1),

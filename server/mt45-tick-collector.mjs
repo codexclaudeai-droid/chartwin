@@ -130,6 +130,21 @@ function getTradeVolumes(side, quantity) {
   return { buyVolume: 0, sellVolume: 0 };
 }
 
+function normalizeTickQuantity(value) {
+  const quantity = Number(value);
+  // Many MT CFD/futures feeds expose price ticks but no exchange volume.
+  // Use one tick as the minimum tick-volume unit so volume indicators do not go blank.
+  return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+}
+
+function inferSideFromReference(tick, referencePrice) {
+  if (tick.side === 'buy' || tick.side === 'sell') return tick.side;
+  if (!Number.isFinite(tick.price) || !Number.isFinite(referencePrice)) return tick.side;
+  if (tick.price > referencePrice) return 'buy';
+  if (tick.price < referencePrice) return 'sell';
+  return tick.side;
+}
+
 function countDecimals(value) {
   const raw = String(value);
   const [, decimals = ''] = raw.split('.');
@@ -143,9 +158,10 @@ function normalizePriceLevel(price, priceStep) {
   return Number((Math.round(price / step) * step).toFixed(decimals));
 }
 
-function createCandleFromTick(tick, priceStep) {
-  const quantity = Math.max(0, Number(tick.quantity) || 0);
-  const { buyVolume, sellVolume } = getTradeVolumes(tick.side, quantity);
+function createCandleFromTick(tick, priceStep, referencePrice = NaN) {
+  const quantity = normalizeTickQuantity(tick.quantity);
+  const side = inferSideFromReference(tick, referencePrice);
+  const { buyVolume, sellVolume } = getTradeVolumes(side, quantity);
   const priceLevel = normalizePriceLevel(tick.price, priceStep);
   return {
     time: floorToOneMinute(tick.time),
@@ -164,8 +180,9 @@ function createCandleFromTick(tick, priceStep) {
 }
 
 function applyTickToCandle(candle, tick, priceStep) {
-  const quantity = Math.max(0, Number(tick.quantity) || 0);
-  const { buyVolume, sellVolume } = getTradeVolumes(tick.side, quantity);
+  const quantity = normalizeTickQuantity(tick.quantity);
+  const side = inferSideFromReference(tick, candle.close);
+  const { buyVolume, sellVolume } = getTradeVolumes(side, quantity);
   const priceLevel = normalizePriceLevel(tick.price, priceStep);
   const currentLevel = candle.footprint[priceLevel] || { buyVolume: 0, sellVolume: 0 };
   candle.high = Math.max(candle.high, tick.price);
@@ -214,7 +231,7 @@ export function createMt45TickAggregator(options = {}) {
 
       if (bucketTime > existing.time) {
         finalizedCandles.push({ ...existing });
-        const liveCandle = createCandleFromTick(tick, priceStep);
+        const liveCandle = createCandleFromTick(tick, priceStep, existing.close);
         liveCandles.set(key, liveCandle);
         return { timeframe, liveCandle: { ...liveCandle }, finalizedCandles };
       }
