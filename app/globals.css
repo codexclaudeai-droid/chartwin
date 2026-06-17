@@ -17891,8 +17891,8 @@ body:not(:has(.landing-page)) .profile-page .button.secondary.compact.push-notif
 }
 
 .admin-telegram-alerts-checks label {
-  background: color-mix(in srgb, var(--admin-panel) 92%, var(--accent) 5%);
-  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  background: color-mix(in srgb, var(--panel) 94%, var(--accent) 6%);
+  border: 0;
   border-radius: 8px;
   gap: 6px;
   min-height: 34px;
@@ -18043,15 +18043,17 @@ body:not(:has(.landing-page)) .profile-page .button.secondary.compact.push-notif
 
 .admin-telegram-alerts-filter-dropdown summary {
   align-items: center;
-  background: color-mix(in srgb, var(--admin-panel) 88%, #ffffff 6%);
+  background: color-mix(in srgb, var(--panel) 94%, var(--accent) 6%);
   border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
   border-radius: 8px;
-  color: var(--text);
+  color: var(--ink);
   cursor: pointer;
   display: flex;
+  gap: 8px;
+  justify-content: space-between;
   min-height: 40px;
   overflow: hidden;
-  padding: 9px 32px 9px 11px;
+  padding: 9px 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -18060,17 +18062,26 @@ body:not(:has(.landing-page)) .profile-page .button.secondary.compact.push-notif
   display: none;
 }
 
-.admin-telegram-alerts-filter-dropdown summary::after {
+.admin-telegram-alerts-filter-dropdown summary > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-telegram-alerts-filter-dropdown summary svg {
   color: var(--muted);
-  content: "v";
-  font-size: 11px;
-  position: absolute;
-  right: 12px;
-  top: 13px;
+  flex: 0 0 auto;
+  height: 15px;
+  transition: transform 160ms ease;
+  width: 15px;
+}
+
+.admin-telegram-alerts-filter-dropdown details[open] summary svg {
+  transform: rotate(180deg);
 }
 
 .admin-telegram-alerts-filter-menu {
-  background: color-mix(in srgb, var(--admin-panel) 96%, #ffffff 4%);
+  background: #fffdf7;
   border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
   border-radius: 8px;
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
@@ -18087,6 +18098,24 @@ body:not(:has(.landing-page)) .profile-page .button.secondary.compact.push-notif
   z-index: 20;
 }
 
+.admin-telegram-alerts-filter-menu {
+  scrollbar-color: color-mix(in srgb, var(--muted) 42%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+.admin-telegram-alerts-filter-menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.admin-telegram-alerts-filter-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-telegram-alerts-filter-menu::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 38%, transparent);
+  border-radius: 999px;
+}
+
 .admin-telegram-alerts-filter-menu label,
 .admin-telegram-alerts-filter-clear,
 .admin-telegram-alerts-filter-empty {
@@ -18100,6 +18129,8 @@ body:not(:has(.landing-page)) .profile-page .button.secondary.compact.push-notif
   cursor: pointer;
   display: flex;
   gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .admin-telegram-alerts-filter-menu label:hover,
@@ -18108,19 +18139,17 @@ body:not(:has(.landing-page)) .profile-page .button.secondary.compact.push-notif
 }
 
 .admin-telegram-alerts-filter-menu label > span {
-  display: grid;
-  gap: 2px;
+  display: block;
   min-width: 0;
 }
 
-.admin-telegram-alerts-filter-menu strong,
-.admin-telegram-alerts-filter-menu small {
+.admin-telegram-alerts-filter-menu strong {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.admin-telegram-alerts-filter-menu small,
 .admin-telegram-alerts-filter-empty {
   color: var(--muted);
   font-size: 11px;
@@ -18372,6 +18401,63 @@ body:not(:has(.landing-page)) .profile-page .button.secondary.compact.push-notif
 .admin-telegram-alerts-form textarea {
   min-height: 88px;
   resize: vertical;
+}
+
+.admin-telegram-alerts-form .admin-telegram-alerts-filter-menu label {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.admin-telegram-alerts-form .admin-telegram-alerts-filter-menu input[type="checkbox"] {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--line) 88%, var(--accent) 12%);
+  flex: 0 0 auto;
+  height: 14px;
+  min-height: 0;
+  padding: 0;
+  width: 14px;
+}
+
+.admin-telegram-alerts-form .admin-telegram-alerts-filter-menu label > span {
+  color: var(--ink);
+  display: block;
+  min-width: 0;
+}
+
+.admin-telegram-alerts-form .admin-telegram-alerts-filter-menu strong {
+  display: block;
+}
+
+.admin-telegram-alerts-form .admin-telegram-alerts-switch,
+.admin-telegram-alerts-form .admin-telegram-alerts-checks,
+.admin-telegram-alerts-form .admin-telegram-alerts-checks label {
+  align-items: center;
+  display: flex;
+}
+
+.admin-telegram-alerts-form .admin-telegram-alerts-switch,
+.admin-telegram-alerts-form .admin-telegram-alerts-checks {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-telegram-alerts-form .admin-telegram-alerts-checks label {
+  border: 0;
+  box-shadow: none;
+  gap: 6px;
+}
+
+.admin-telegram-alerts-form .admin-telegram-alerts-switch input[type="checkbox"],
+.admin-telegram-alerts-form .admin-telegram-alerts-checks input[type="checkbox"] {
+  flex: 0 0 auto;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+  width: 16px;
 }
 
 @media (max-width: 980px) {

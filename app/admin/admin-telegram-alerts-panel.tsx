@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Plus, Send } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Plus, Send } from 'lucide-react';
 import { getAllSymbolCatalog } from '../../src/catalog/symbols.ts';
 import { loadStrategies } from '../../src/strategy/strategy-service.ts';
 import { DeleteActionIcon, EditActionIcon } from '../shared/action-icons';
@@ -546,7 +546,10 @@ function FilterDropdown({
     <div className="admin-telegram-alerts-filter-dropdown">
       <span>{label}</span>
       <details>
-        <summary>{formatDropdownSummary(values, options, emptyLabel)}</summary>
+        <summary>
+          <span>{formatDropdownSummary(values, options, emptyLabel)}</span>
+          <ChevronDown aria-hidden="true" />
+        </summary>
         <div className="admin-telegram-alerts-filter-menu">
           <button className="admin-telegram-alerts-filter-clear" type="button" onClick={onClear}>
             {emptyLabel}
@@ -560,7 +563,6 @@ function FilterDropdown({
               />
               <span>
                 <strong>{option.label}</strong>
-                <small>{formatOptionMeta(option)}</small>
               </span>
             </label>
           )) : (
@@ -614,10 +616,6 @@ function formatDropdownSummary(values: string[], options: DropdownOption[], empt
     return option?.label ?? values[0];
   }
   return `${values.length}개 선택`;
-}
-
-function formatOptionMeta(option: DropdownOption) {
-  return [option.group, option.id, option.description].filter(Boolean).join(' / ');
 }
 
 function mergeSelectedOptions(options: DropdownOption[], values: string[]) {
