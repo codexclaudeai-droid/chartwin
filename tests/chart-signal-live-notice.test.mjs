@@ -70,6 +70,20 @@ test('chart signal notice posts new buy sell signals to Telegram alert API', () 
   assert.doesNotMatch(initSource, /signalPolicy\.source !== 'chart_strategy'\) return;/);
   assert.doesNotMatch(initSource, /signalPolicy\.strategyId && signalPolicy\.strategyId !== strategyId\) return;/);
   assert.match(initSource, /postTelegramSignalAlert\(paneId, latestSignal\);/);
+  assert.match(
+    initSource,
+    /if \(!latestSignal\) return;\s*postTelegramSignalAlert\(paneId, latestSignal\);\s*if \(document\.visibilityState !== 'visible'\) return;\s*showSignalNoticePopup\(latestSignal\);/,
+  );
+});
+
+test('chart subscribes to server signal SSE events and deduplicates local signal keys', () => {
+  assert.match(initSource, /new EventSource\('\/api\/signals\/stream'\)/);
+  assert.match(initSource, /eventSource\.addEventListener\('signals\.changed', handleChanged\)/);
+  assert.match(initSource, /parseServerSignalRealtimePayload/);
+  assert.match(initSource, /const key = `\$\{pane\.paneId\}:\$\{symbol\}:\$\{timeSec\}:\$\{signalValue\}`;/);
+  assert.match(initSource, /if \(announcedSignalKeys\.has\(key\)\) return;/);
+  assert.match(initSource, /announcedSignalKeys\.add\(key\);/);
+  assert.match(initSource, /void pane\.reloadLiveData\(\)\.then/);
 });
 
 test('chart signal notice refreshes the open strategy report after a new signal', () => {

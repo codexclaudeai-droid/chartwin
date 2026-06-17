@@ -127,6 +127,23 @@ type ServerStrategyParamProfile = {
   params: Record<string, StrategyParamValue>;
   enabled: boolean;
 };
+type ServerSignalEvent = {
+  id: string;
+  eventType: 'buy' | 'sell' | 'stop_loss' | 'take_profit';
+  strategyId: string;
+  strategyName: string | null;
+  symbolId: string;
+  timeframe: string | null;
+  price: number | null;
+  stopLossPrice: number | null;
+  takeProfitPrices: number[];
+  occurredAt: string;
+};
+type ServerSignalRealtimePayload = {
+  type: 'signals.changed';
+  signalEvent: ServerSignalEvent;
+  emittedAt: string;
+};
 const adminStrategyUiConfig: AdminStrategyUiConfig = {
   hidden: [],
   mgmtVisible: false,
@@ -169,6 +186,56 @@ const resolveAdminSignalPolicyForSymbol = (symbol: string): AdminSignalPolicy | 
   if (!settings) return null;
   const symbolId = canonicalizeUiSymbol(symbol).trim().toUpperCase();
   return settings.symbolPolicies.find((policy) => policy.symbolId === symbolId) ?? settings.globalPolicy;
+};
+
+const parseServerSignalRealtimePayload = (value: string): ServerSignalRealtimePayload | null => {
+  try {
+    const record = JSON.parse(value) as Record<string, unknown>;
+    if (!record || record.type !== 'signals.changed') return null;
+    const signalEvent = parseServerSignalEvent(record.signalEvent);
+    if (!signalEvent) return null;
+    return {
+      type: 'signals.changed',
+      signalEvent,
+      emittedAt: typeof record.emittedAt === 'string' ? record.emittedAt : new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const parseServerSignalEvent = (value: unknown): ServerSignalEvent | null => {
+  const record = (typeof value === 'object' && value !== null) ? value as Record<string, unknown> : null;
+  if (!record) return null;
+  const eventType = typeof record.eventType === 'string' ? record.eventType.trim() : '';
+  if (eventType !== 'buy' && eventType !== 'sell' && eventType !== 'stop_loss' && eventType !== 'take_profit') return null;
+  const id = typeof record.id === 'string' ? record.id.trim() : '';
+  const strategyId = typeof record.strategyId === 'string' ? record.strategyId.trim() : '';
+  const symbolId = typeof record.symbolId === 'string' ? record.symbolId.trim().toUpperCase() : '';
+  const occurredAt = typeof record.occurredAt === 'string' ? record.occurredAt.trim() : '';
+  if (!id || !strategyId || !symbolId || !Number.isFinite(Date.parse(occurredAt))) return null;
+  return {
+    id,
+    eventType,
+    strategyId,
+    strategyName: typeof record.strategyName === 'string' && record.strategyName.trim() ? record.strategyName.trim() : null,
+    symbolId,
+    timeframe: typeof record.timeframe === 'string' && record.timeframe.trim() ? record.timeframe.trim() : null,
+    price: readNullableFiniteNumber(record.price),
+    stopLossPrice: readNullableFiniteNumber(record.stopLossPrice),
+    takeProfitPrices: Array.isArray(record.takeProfitPrices)
+      ? record.takeProfitPrices
+        .map(readNullableFiniteNumber)
+        .filter((item): item is number => item !== null)
+      : [],
+    occurredAt: new Date(occurredAt).toISOString(),
+  };
+};
+
+const readNullableFiniteNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 const applyAdminStrategyUiConfig = (json: unknown): void => {
@@ -3323,10 +3390,68 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         return true;
       });
     };
+    const handleServerSignalEvent = (signalEvent: ServerSignalEvent) => {
+      if (signalEvent.eventType !== 'buy' && signalEvent.eventType !== 'sell') return;
+      const timeSec = Math.floor(Date.parse(signalEvent.occurredAt) / 1000);
+      if (!Number.isFinite(timeSec)) return;
+      const signalValue = signalEvent.eventType === 'buy' ? 1 : -1;
+      const side: 'LONG' | 'SHORT' = signalValue > 0 ? 'LONG' : 'SHORT';
+      const symbol = canonicalizeUiSymbol(signalEvent.symbolId).trim().toUpperCase();
+      const entry = signalEvent.price;
+      if (entry === null || !Number.isFinite(entry)) return;
+
+      paneControllers.forEach((pane) => {
+        const paneSymbol = canonicalizeUiSymbol(pane.chart.config.symbol).trim().toUpperCase();
+        if (paneSymbol !== symbol) return;
+        if (signalEvent.timeframe && pane.chart.config.timeframe !== signalEvent.timeframe) return;
+        const paneStrategyId = pane.chart.getActiveStrategyId?.();
+        if (paneStrategyId && paneStrategyId !== signalEvent.strategyId) return;
+
+        const key = `${pane.paneId}:${symbol}:${timeSec}:${signalValue}`;
+        if (announcedSignalKeys.has(key)) return;
+        announcedSignalKeys.add(key);
+
+        const notice = {
+          key,
+          side,
+          symbol,
+          entry,
+          timeSec,
+          timezone: pane.chart.config.timezone,
+        };
+
+        if (document.visibilityState === 'visible') {
+          showSignalNoticePopup(notice);
+          speakSignalNotice(notice.side);
+        }
+        if (pane.paneId === paneState.activePaneId) {
+          refreshStrategyReportOnNewSignal(pane.paneId);
+        }
+        void pane.reloadLiveData().then((applied) => {
+          if (applied) {
+            pane.chart.recomputeStrategySignals?.(0);
+          }
+        });
+      });
+    };
+    const startServerSignalRealtimeStream = () => {
+      if (typeof EventSource === 'undefined') return;
+      const eventSource = new EventSource('/api/signals/stream');
+      const handleChanged = (event: Event) => {
+        const payload = parseServerSignalRealtimePayload(String((event as MessageEvent).data ?? ''));
+        if (!payload) return;
+        handleServerSignalEvent(payload.signalEvent);
+      };
+      const cleanup = () => {
+        eventSource.removeEventListener('signals.changed', handleChanged);
+        eventSource.close();
+      };
+      eventSource.addEventListener('signals.changed', handleChanged);
+      window.addEventListener('beforeunload', cleanup, { once: true });
+    };
     notifyLiveSignalsForPane = (paneId: number) => {
       const detected = findUnannouncedTodaySignals(paneId);
       if (!detected.length) return;
-      if (document.visibilityState !== 'visible') return;
       const latestSignal = detected
         .sort((a, b) => a.timeSec - b.timeSec)
         .at(-1);
@@ -3488,6 +3613,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       notifyLiveSignals();
       refreshSignalNotification();
     }, 60_000);
+    startServerSignalRealtimeStream();
     refreshStrategyReport();
     applyViewportOffsets();
   }

@@ -28,6 +28,7 @@ import type {
   ServiceUserRecord,
   SignupAgreementRecord,
   SignalAdminSettingsRecord,
+  SignalEventRecord,
   SocialAuthAccountRecord,
   TelegramBotProfileRecord,
   TelegramDeliveryLogRecord,
@@ -655,6 +656,48 @@ export function mapTelegramSignalWatchStateToPostgresRow(record: TelegramSignalW
     last_signal_candle_time: record.lastSignalCandleTime,
     last_signal_event_type: record.lastSignalEventType,
     updated_at: record.updatedAt,
+  };
+}
+
+export function mapSignalEventFromPostgresRow(row: PostgresRow): SignalEventRecord {
+  return {
+    id: readString(row.id),
+    eventType: readString(row.event_type) as SignalEventRecord['eventType'],
+    source: readString(row.source) as SignalEventRecord['source'],
+    origin: readString(row.origin) as SignalEventRecord['origin'],
+    strategyId: readString(row.strategy_id),
+    strategyName: readNullableString(row.strategy_name),
+    symbolId: readString(row.symbol_id),
+    timeframe: readNullableString(row.timeframe),
+    price: readNullableNumber(row.price),
+    stopLossPrice: readNullableNumber(row.stop_loss_price),
+    takeProfitPrices: readJsonArray(row.take_profit_prices_json)
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value)),
+    executionMode: readNullableString(row.execution_mode),
+    fillModel: readNullableString(row.fill_model),
+    occurredAt: readIsoString(row.occurred_at),
+    createdAt: readIsoString(row.created_at),
+  };
+}
+
+export function mapSignalEventToPostgresRow(record: SignalEventRecord): PostgresRow {
+  return {
+    id: record.id,
+    event_type: record.eventType,
+    source: record.source,
+    origin: record.origin,
+    strategy_id: record.strategyId,
+    strategy_name: record.strategyName,
+    symbol_id: record.symbolId,
+    timeframe: record.timeframe,
+    price: record.price,
+    stop_loss_price: record.stopLossPrice,
+    take_profit_prices_json: JSON.stringify(record.takeProfitPrices),
+    execution_mode: record.executionMode,
+    fill_model: record.fillModel,
+    occurred_at: record.occurredAt,
+    created_at: record.createdAt,
   };
 }
 

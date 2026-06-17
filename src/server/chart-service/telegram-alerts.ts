@@ -22,6 +22,9 @@ export type TelegramSignalEvent = {
   eventType: TelegramSignalEventType;
   strategyId: string;
   strategyName?: string;
+  signalSource?: string;
+  executionMode?: string;
+  fillModel?: string;
   symbolId: string;
   timeframe?: string;
   price?: number;

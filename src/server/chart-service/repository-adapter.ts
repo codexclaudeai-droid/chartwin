@@ -31,6 +31,7 @@ const MEMORY_REPOSITORY_SCHEMA_VERSION = [
   'sales-teams-v1',
   'payment-transfer-settings-v1',
   'telegram-signal-watch-state-v1',
+  'signal-events-v1',
 ].join('-');
 
 export type ChartServiceRepositoryAdapterKind = 'memory' | 'postgres';

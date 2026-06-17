@@ -528,6 +528,37 @@ export function getChartServiceDatabaseTables(): DatabaseTable[] {
       ],
     },
     {
+      name: 'signal_events',
+      columns: {
+        id: { type: 'text', primaryKey: true },
+        event_type: {
+          type: 'text',
+          check: "event_type in ('buy', 'sell', 'stop_loss', 'take_profit')",
+        },
+        source: {
+          type: 'text',
+          check: "source in ('chart_strategy', 'ea_strategy', 'actual_fill')",
+        },
+        origin: { type: 'text' },
+        strategy_id: { type: 'text' },
+        strategy_name: { type: 'text', nullable: true },
+        symbol_id: { type: 'text' },
+        timeframe: { type: 'text', nullable: true },
+        price: { type: 'numeric', nullable: true },
+        stop_loss_price: { type: 'numeric', nullable: true },
+        take_profit_prices_json: { type: 'jsonb', default: "'[]'::jsonb" },
+        execution_mode: { type: 'text', nullable: true },
+        fill_model: { type: 'text', nullable: true },
+        occurred_at: { type: 'timestamptz' },
+        created_at: { type: 'timestamptz', default: 'now()' },
+      },
+      indexes: [
+        { name: 'idx_signal_events_symbol_time', columns: ['symbol_id', 'timeframe', 'occurred_at'] },
+        { name: 'idx_signal_events_strategy_time', columns: ['strategy_id', 'occurred_at'] },
+        { name: 'idx_signal_events_created_at', columns: ['created_at'] },
+      ],
+    },
+    {
       name: 'signup_agreements',
       columns: {
         id: { type: 'text', primaryKey: true },

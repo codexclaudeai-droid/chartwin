@@ -5,6 +5,7 @@ import type {
   PaymentRequestRecord,
   ReferralLedgerRecord,
   SignalPolicySettings,
+  SignalSource,
   StrategyParameterSettings,
   SubscriptionPlan,
   SubscriptionRecord,
@@ -240,6 +241,26 @@ export type TelegramSignalWatchStateRecord = {
   updatedAt: string;
 };
 
+export type SignalEventOrigin = 'browser_chart' | 'server_monitor' | 'ea_api' | 'actual_fill_api';
+
+export type SignalEventRecord = {
+  id: string;
+  eventType: TelegramSignalEventType;
+  source: SignalSource;
+  origin: SignalEventOrigin;
+  strategyId: string;
+  strategyName: string | null;
+  symbolId: string;
+  timeframe: string | null;
+  price: number | null;
+  stopLossPrice: number | null;
+  takeProfitPrices: number[];
+  executionMode: string | null;
+  fillModel: string | null;
+  occurredAt: string;
+  createdAt: string;
+};
+
 export type SignupAgreementRecord = {
   id: string;
   userId: string;
@@ -344,6 +365,8 @@ export type ChartServiceRepository = {
   saveTelegramDeliveryLog(log: TelegramDeliveryLogRecord): void;
   getTelegramSignalWatchState(key: string): TelegramSignalWatchStateRecord | null;
   saveTelegramSignalWatchState(state: TelegramSignalWatchStateRecord): void;
+  listSignalEvents(limit?: number): SignalEventRecord[];
+  saveSignalEvent(event: SignalEventRecord): void;
   listSignupAgreementsByUserId(userId: string): SignupAgreementRecord[];
   saveSignupAgreement(agreement: SignupAgreementRecord): void;
   listReferralLedgersByPaymentId(paymentRequestId: string): ReferralLedgerRecord[];

@@ -22,6 +22,7 @@ import type {
   SalesTeamRecord,
   SignupAgreementRecord,
   SignalAdminSettingsRecord,
+  SignalEventRecord,
   TelegramBotProfileRecord,
   TelegramDeliveryLogRecord,
   TelegramSignalWatchStateRecord,
@@ -107,6 +108,8 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
     typeof persistence.repository.saveTelegramDeliveryLog === 'function' &&
     typeof persistence.repository.getTelegramSignalWatchState === 'function' &&
     typeof persistence.repository.saveTelegramSignalWatchState === 'function' &&
+    typeof persistence.repository.listSignalEvents === 'function' &&
+    typeof persistence.repository.saveSignalEvent === 'function' &&
     typeof persistence.repository.getSupportMessageById === 'function' &&
     typeof persistence.repository.listSupportMessagesByThreadId === 'function' &&
     typeof persistence.repository.deleteSupportMessage === 'function' &&
@@ -136,6 +139,8 @@ function hasMemoryRepositoryCapabilities(repository: ChartServiceRepository): bo
     typeof repository.saveTelegramDeliveryLog === 'function' &&
     typeof repository.getTelegramSignalWatchState === 'function' &&
     typeof repository.saveTelegramSignalWatchState === 'function' &&
+    typeof repository.listSignalEvents === 'function' &&
+    typeof repository.saveSignalEvent === 'function' &&
     typeof repository.listSupportMessagesByThreadId === 'function' &&
     typeof repository.deleteSupportMessage === 'function' &&
     typeof repository.deleteSupportMessagesByThreadId === 'function';
@@ -192,6 +197,7 @@ function copyRecoverableMemoryRepositoryRecords(
     __fallbackTelegramSignalWatchStates?: TelegramSignalWatchStateRecord[];
   };
   copyRecords(() => fallbackSource.__fallbackTelegramSignalWatchStates ?? [], target.saveTelegramSignalWatchState);
+  copyRecords(() => source.listSignalEvents?.(1000) ?? [], target.saveSignalEvent);
 }
 
 function copyRecords<RecordType>(
@@ -231,6 +237,7 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
     __fallbackTelegramBotProfiles?: TelegramBotProfileRecord[];
     __fallbackTelegramDeliveryLogs?: TelegramDeliveryLogRecord[];
     __fallbackTelegramSignalWatchStates?: TelegramSignalWatchStateRecord[];
+    __fallbackSignalEvents?: SignalEventRecord[];
     __fallbackPaymentTransferSettings?: PaymentTransferSettingsRecord | null;
     __fallbackPublicBoardPosts?: PublicBoardPostRecord[];
     __fallbackNoticePopups?: NoticePopupRecord[];
@@ -246,6 +253,7 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
   mutableRepository.__fallbackTelegramBotProfiles ??= [];
   mutableRepository.__fallbackTelegramDeliveryLogs ??= [];
   mutableRepository.__fallbackTelegramSignalWatchStates ??= [];
+  mutableRepository.__fallbackSignalEvents ??= [];
   mutableRepository.__fallbackPaymentTransferSettings ??= null;
   mutableRepository.__fallbackPublicBoardPosts ??= getDefaultPublicBoardPosts();
   mutableRepository.__fallbackNoticePopups ??= [];
@@ -528,6 +536,29 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
         rows.push(structuredClone(watchState));
       }
       mutableRepository.__fallbackTelegramSignalWatchStates = rows;
+    };
+  }
+
+  if (typeof mutableRepository.listSignalEvents !== 'function') {
+    mutableRepository.listSignalEvents = (limit = 100) => (
+      mutableRepository.__fallbackSignalEvents ?? []
+    )
+      .slice()
+      .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt) || right.createdAt.localeCompare(left.createdAt))
+      .slice(0, Math.max(0, Math.floor(limit)))
+      .map((event) => structuredClone(event));
+  }
+
+  if (typeof mutableRepository.saveSignalEvent !== 'function') {
+    mutableRepository.saveSignalEvent = (event) => {
+      const rows = mutableRepository.__fallbackSignalEvents ?? [];
+      const index = rows.findIndex((item) => item.id === event.id);
+      if (index >= 0) {
+        rows[index] = structuredClone(event);
+      } else {
+        rows.push(structuredClone(event));
+      }
+      mutableRepository.__fallbackSignalEvents = rows;
     };
   }
 

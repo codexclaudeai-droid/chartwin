@@ -55,6 +55,8 @@ import {
   mapSalesTeamToPostgresRow,
   mapSignupAgreementFromPostgresRow,
   mapSignupAgreementToPostgresRow,
+  mapSignalEventFromPostgresRow,
+  mapSignalEventToPostgresRow,
   mapSignalAdminSettingsFromPostgresRow,
   mapSignalAdminSettingsToPostgresRow,
   mapSocialAuthAccountFromPostgresRow,
@@ -98,6 +100,7 @@ import type {
   ServiceUserRecord,
   SignupAgreementRecord,
   SignalAdminSettingsRecord,
+  SignalEventRecord,
   SocialAuthAccountRecord,
   SocialAuthProvider,
   TelegramBotProfileRecord,
@@ -509,6 +512,22 @@ export function createPostgresAsyncChartServiceRepository(
         ['key'],
       ));
     },
+    async listSignalEvents(limit = 100): Promise<SignalEventRecord[]> {
+      await ensureTelegramAlertTables();
+      const events = await selectMany('signal_events', mapSignalEventFromPostgresRow, {}, {
+        orderBy: ['occurred_at', 'created_at'],
+        direction: 'desc',
+      });
+      return events.slice(0, Math.max(0, Math.floor(limit)));
+    },
+    async saveSignalEvent(event: SignalEventRecord): Promise<void> {
+      await ensureTelegramAlertTables();
+      await execute(createPostgresUpsertStatement(
+        'signal_events',
+        mapSignalEventToPostgresRow(event),
+        ['id'],
+      ));
+    },
     async listSignupAgreementsByUserId(userId: string): Promise<SignupAgreementRecord[]> {
       return selectMany('signup_agreements', mapSignupAgreementFromPostgresRow, { user_id: userId }, {
         orderBy: ['created_at'],
@@ -671,6 +690,28 @@ const TELEGRAM_ALERT_TABLE_STATEMENTS = [
   )`,
   'create index if not exists idx_telegram_signal_watch_states_updated_at on telegram_signal_watch_states (updated_at)',
   'create index if not exists idx_telegram_signal_watch_states_symbol on telegram_signal_watch_states (symbol_id, timeframe)',
+  `create table if not exists signal_events (
+    id text primary key,
+    event_type text,
+    source text,
+    origin text,
+    strategy_id text,
+    strategy_name text,
+    symbol_id text,
+    timeframe text,
+    price numeric,
+    stop_loss_price numeric,
+    take_profit_prices_json jsonb default '[]'::jsonb,
+    execution_mode text,
+    fill_model text,
+    occurred_at timestamptz,
+    created_at timestamptz default now(),
+    check (event_type in ('buy', 'sell', 'stop_loss', 'take_profit')),
+    check (source in ('chart_strategy', 'ea_strategy', 'actual_fill'))
+  )`,
+  'create index if not exists idx_signal_events_symbol_time on signal_events (symbol_id, timeframe, occurred_at)',
+  'create index if not exists idx_signal_events_strategy_time on signal_events (strategy_id, occurred_at)',
+  'create index if not exists idx_signal_events_created_at on signal_events (created_at)',
 ] as const;
 
 function normalizeIdPrefix(prefix: string): string {

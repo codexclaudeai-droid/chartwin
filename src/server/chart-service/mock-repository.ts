@@ -34,6 +34,7 @@ import type {
   ServiceUserRecord,
   SignupAgreementRecord,
   SignalAdminSettingsRecord,
+  SignalEventRecord,
   SocialAuthAccountRecord,
   SocialAuthProvider,
   TelegramBotProfileRecord,
@@ -70,6 +71,7 @@ export type MockChartServiceState = {
   telegramBotProfiles: TelegramBotProfileRecord[];
   telegramDeliveryLogs: TelegramDeliveryLogRecord[];
   telegramSignalWatchStates: TelegramSignalWatchStateRecord[];
+  signalEvents: SignalEventRecord[];
   signupAgreements: SignupAgreementRecord[];
   publicBoardPosts: PublicBoardPostRecord[];
   noticePopups: NoticePopupRecord[];
@@ -158,6 +160,7 @@ export function createMockChartServiceState(): MockChartServiceState {
     telegramBotProfiles: [],
     telegramDeliveryLogs: [],
     telegramSignalWatchStates: [],
+    signalEvents: [],
     signupAgreements: [],
     publicBoardPosts: getDefaultPublicBoardPosts(),
     noticePopups: [],
@@ -252,6 +255,7 @@ export function createMockChartServiceRepository(
   state.telegramBotProfiles ??= [];
   state.telegramDeliveryLogs ??= [];
   state.telegramSignalWatchStates ??= [];
+  state.signalEvents ??= [];
   state.signupAgreements ??= [];
   state.publicBoardPosts ??= getDefaultPublicBoardPosts();
   state.noticePopups ??= [];
@@ -485,6 +489,16 @@ export function createMockChartServiceRepository(
       } else {
         state.telegramSignalWatchStates.push(structuredClone(watchState));
       }
+    },
+    listSignalEvents(limit = 100) {
+      return state.signalEvents
+        .slice()
+        .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt) || right.createdAt.localeCompare(left.createdAt))
+        .slice(0, Math.max(0, Math.floor(limit)))
+        .map((event) => structuredClone(event));
+    },
+    saveSignalEvent(event) {
+      upsertById(state.signalEvents, event);
     },
     listSignupAgreementsByUserId(userId) {
       return state.signupAgreements

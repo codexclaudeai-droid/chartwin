@@ -366,14 +366,12 @@ test('server Telegram monitor scans closed candles since the last check so delay
 
   const sentMessages = [];
   const result = await runTelegramSignalMonitorOnce(repository, {
-    now: '1970-01-01T00:04:30.000Z',
+    now: '1970-01-01T00:21:30.000Z',
     strategies: [strategy],
-    candleProvider: async () => [
-      { time: 60, open: 10, high: 11, low: 9, close: 10, volume: 1 },
-      { time: 120, open: 10, high: 12, low: 9, close: 11, volume: 1 },
-      { time: 180, open: 11, high: 12, low: 10, close: 10, volume: 1 },
-      { time: 240, open: 10, high: 13, low: 9, close: 12, volume: 1 },
-    ],
+    candleProvider: async () => Array.from({ length: 21 }, (_, index) => {
+      const time = (index + 1) * 60;
+      return { time, open: 10, high: 12, low: 9, close: index === 1 ? 11 : 10, volume: 1 };
+    }),
     telegramFetch: async (_url, init) => {
       sentMessages.push(JSON.parse(init.body).text);
       return { ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: sentMessages.length } }) };
@@ -386,7 +384,7 @@ test('server Telegram monitor scans closed candles since the last check so delay
   assert.equal(sentMessages.length, 1);
   assert.match(sentMessages[0], /BUY BTCUSDT/);
   assert.match(sentMessages[0], /Time: 70\.01\.01 09:02:00 KST/);
-  assert.equal(watchState?.lastCheckedCandleTime, 180);
+  assert.equal(watchState?.lastCheckedCandleTime, 1200);
   assert.equal(watchState?.lastSignalCandleTime, 120);
   assert.equal(watchState?.lastSignalEventType, 'buy');
 });
@@ -590,29 +588,27 @@ test('browser Telegram signal API allows delayed confirmations on earlier candle
   assert.equal(watchState?.lastSignalEventType, 'sell');
 });
 
-test('Cloudflare deploy config keeps Telegram monitor cron paused while preserving the scheduled worker', async () => {
+test('Cloudflare deploy config enables Telegram monitor catch-up cron', async () => {
   const wranglerConfig = fs.readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
   const customWorker = fs.readFileSync(new URL('../cloudflare-worker.ts', import.meta.url), 'utf8');
   const scheduledSource = fs.readFileSync(new URL('../src/server/chart-service/cloudflare-scheduled.ts', import.meta.url), 'utf8');
 
   assert.match(wranglerConfig, /"main"\s*:\s*"\.\/cloudflare-worker\.ts"/);
-  assert.match(wranglerConfig, /CHART_SERVICE_TELEGRAM_CRON_ENABLED"\s*:\s*"false"/);
-  assert.match(wranglerConfig, /Telegram monitor cron is intentionally paused/);
-  assert.doesNotMatch(wranglerConfig, /^\s*"triggers"\s*:/m);
-  assert.doesNotMatch(wranglerConfig, /^\s*"crons"\s*:\s*\[\s*"\* \* \* \* \*"/m);
+  assert.match(wranglerConfig, /CHART_SERVICE_TELEGRAM_CRON_ENABLED"\s*:\s*"true"/);
+  assert.match(wranglerConfig, /^\s*"triggers"\s*:/m);
+  assert.match(wranglerConfig, /^\s*"crons"\s*:\s*\[\s*"\* \* \* \* \*"/m);
   assert.match(customWorker, /from '\.\/\.open-next\/worker\.js'/);
   assert.match(customWorker, /scheduled/);
   assert.match(customWorker, /runScheduledTelegramSignalMonitor/);
   assert.match(scheduledSource, /isTelegramSignalCronEnabled/);
-  assert.match(scheduledSource, /telegram-signal-monitor-disabled/);
 
   const { runScheduledTelegramSignalMonitor } = await import('../src/server/chart-service/cloudflare-scheduled.ts');
   const result = await runScheduledTelegramSignalMonitor({
     CHART_SERVICE_REPOSITORY: 'memory',
-    CHART_SERVICE_TELEGRAM_CRON_ENABLED: 'false',
+    CHART_SERVICE_TELEGRAM_CRON_ENABLED: 'true',
   });
 
-  assert.equal(result.disabled, true);
+  assert.equal(result.disabled, undefined);
   assert.equal(result.jobCount, 0);
   assert.equal(result.sentCount, 0);
 });

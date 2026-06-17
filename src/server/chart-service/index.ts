@@ -22,6 +22,8 @@ export * from './web-push.ts';
 export * from './telegram-alerts.ts';
 export * from './telegram-signal-monitor.ts';
 export * from './telegram-signal-monitor-runner.ts';
+export * from './signal-events.ts';
+export * from './signal-realtime.ts';
 export * from './signal-push-notifications.ts';
 export * from './server-candles.ts';
 export * from './server-strategy-signals.ts';
