@@ -58,6 +58,11 @@ type AdminPanelRefreshOptions = {
   nextMessage?: string;
 };
 
+type AdminPaymentOperationOptions = {
+  defaultAdminNote?: string;
+  provisionalSale?: boolean;
+};
+
 type PaymentQuickMemo = {
   key: string;
   label: string;
@@ -76,12 +81,6 @@ const PAYMENT_QUICK_MEMOS: PaymentQuickMemo[] = [
     key: 'deposit-rejected',
     label: '미입금/반려',
     note: '미입금/반려',
-    supports: (item) => item.payment.status === 'pending' || item.payment.status === 'requested',
-  },
-  {
-    key: 'provisional-sale',
-    label: '가매출',
-    note: '가매출 구독승인',
     supports: (item) => item.payment.status === 'pending' || item.payment.status === 'requested',
   },
 ];
@@ -157,13 +156,18 @@ export function AdminPanel() {
     setMessage(options.nextMessage ?? `결제 요청 ${payload.payments.length}건을 불러왔습니다.`);
   }
 
-  async function runOperation(paymentId: string, operation: 'confirm' | 'refund' | 'reject') {
-    const adminNote = normalizeAdminOperationNote(operationNotes[paymentId] || '');
+  async function runOperation(
+    paymentId: string,
+    operation: 'confirm' | 'refund' | 'reject',
+    options: AdminPaymentOperationOptions = {},
+  ) {
+    const adminNote = normalizeAdminOperationNote(operationNotes[paymentId] || options.defaultAdminNote || '');
     if (!canSubmitAdminOperationNote(adminNote)) {
       setMessage('관리자 처리 메모를 입력한 뒤 작업을 실행해주세요.');
       return;
     }
-    if (!await confirmAdminAction(`payment.${operation}`, paymentId)) {
+    const confirmationAction = options.provisionalSale ? 'payment.provisionalSale' : `payment.${operation}`;
+    if (!await confirmAdminAction(confirmationAction, paymentId)) {
       return;
     }
 
@@ -179,7 +183,7 @@ export function AdminPanel() {
       body: JSON.stringify({
         paymentId,
         adminNote,
-        provisionalSale: operation === 'confirm' && isProvisionalSaleNote(adminNote),
+        provisionalSale: options.provisionalSale === true,
       }),
     });
     const payload = await response.json();
@@ -225,10 +229,6 @@ export function AdminPanel() {
       ...currentNotes,
       [paymentId]: note,
     }));
-  }
-
-  function isProvisionalSaleNote(note: string): boolean {
-    return note.includes('가매출');
   }
 
   function renderPaymentFlowStatus(item: AdminPaymentQueueItem) {
@@ -322,6 +322,19 @@ export function AdminPanel() {
           {(item.payment.status === 'pending' || item.payment.status === 'requested') && (
             <button className="button" type="button" onClick={() => runOperation(item.payment.id, 'confirm')} disabled={isBusy || !canSubmitAdminOperationNote(operationNotes[item.payment.id] || '')}>
               입금 확인
+            </button>
+          )}
+          {(item.payment.status === 'pending' || item.payment.status === 'requested') && (
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => runOperation(item.payment.id, 'confirm', {
+                defaultAdminNote: '가매출승인',
+                provisionalSale: true,
+              })}
+              disabled={isBusy}
+            >
+              가매출승인
             </button>
           )}
           {item.payment.status === 'confirmed' && (

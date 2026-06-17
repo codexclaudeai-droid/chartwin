@@ -9,6 +9,7 @@ export type AdminActionConfirmationDetails = {
 
 export const ADMIN_ACTION_CONFIRMATION_LABELS: Record<string, string> = {
   'payment.confirm': '입금 확인',
+  'payment.provisionalSale': '가매출승인',
   'payment.refund': '환불 처리',
   'payment.reject': '결제 반려',
   'subscription.approve': '구독 승인',

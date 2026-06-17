@@ -1718,7 +1718,16 @@ export async function confirmAsyncManualPaymentRequest(
     linkUrl: createProfilePaymentLink(payment.id),
     createdAt: input.confirmedAt,
   });
-  if (!input.provisionalSale && nextSubscription.status === SUBSCRIPTION_STATUSES.paymentRequested) {
+  if (input.provisionalSale && nextSubscription.status === SUBSCRIPTION_STATUSES.active) {
+    await createAsyncUserNotification(repository, {
+      userId: payment.userId,
+      category: 'subscription',
+      title: '구독이 활성화되었습니다',
+      body: '구독 승인이 완료되어 차트 서비스를 이용할 수 있습니다.',
+      linkUrl: createProfilePaymentLink(payment.id),
+      createdAt: input.confirmedAt,
+    });
+  } else if (nextSubscription.status === SUBSCRIPTION_STATUSES.paymentRequested) {
     const paymentUser = await repository.getUserById(payment.userId);
     if (paymentUser) {
       await notifyAsyncAdminsAboutSubscriptionApprovalRequest(repository, {

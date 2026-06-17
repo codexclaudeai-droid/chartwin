@@ -285,10 +285,13 @@ test('admin payment panel exposes quick memo buttons for required admin notes', 
   assert.match(source, /key: 'deposit-rejected'/);
   assert.match(source, /label: '미입금\/반려'/);
   assert.match(source, /note: '미입금\/반려'/);
-  assert.match(source, /key: 'provisional-sale'/);
-  assert.match(source, /label: '가매출'/);
-  assert.match(source, /note: '가매출 구독승인'/);
-  assert.match(source, /provisionalSale: operation === 'confirm' && isProvisionalSaleNote\(adminNote\)/);
+  assert.match(source, /type AdminPaymentOperationOptions/);
+  assert.match(source, /defaultAdminNote\?: string/);
+  assert.match(source, /provisionalSale\?: boolean/);
+  assert.match(source, /provisionalSale: options\.provisionalSale === true/);
+  assert.match(source, /가매출승인/);
+  assert.doesNotMatch(source, /isProvisionalSaleNote/);
+  assert.doesNotMatch(source, /note\.includes\('가매출'\)/);
   assert.doesNotMatch(source, /TXID 수신주소\/금액 일치 확인/);
   assert.doesNotMatch(source, /환불 사유 확인 후 처리/);
   assert.match(cssSource, /\.quick-memo-row/);

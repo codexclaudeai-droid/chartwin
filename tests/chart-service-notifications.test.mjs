@@ -222,6 +222,36 @@ test('subscription activation approval creates a subscription notification', () 
   assert.equal(notifications.at(0)?.linkUrl, '/profile#payment-pay_pending');
 });
 
+test('async provisional sale confirmation creates a subscription approval notification for the member', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const request = await createAsyncAuthenticatedManualPaymentRequest(repository, {
+    actor: { id: 'user_trial', role: 'member' },
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T12:00:00.000Z',
+    depositorName: 'Trial User',
+  });
+
+  const result = await confirmAsyncManualPaymentRequest(repository, {
+    paymentId: request.payment.id,
+    admin: { id: 'admin_1', role: 'admin' },
+    confirmedAt: '2026-05-23T12:10:00.000Z',
+    adminNote: '가매출승인',
+    provisionalSale: true,
+  });
+  const notifications = await repository.listNotificationsByUserId('user_trial');
+  const approvalNotice = notifications.find((notification) => (
+    notification.category === 'subscription' &&
+    notification.title === '구독이 활성화되었습니다'
+  ));
+
+  assert.equal(result.subscription.status, 'active');
+  assert.ok(approvalNotice);
+  assert.match(approvalNotice.body, /구독 승인/);
+  assert.equal(approvalNotice.linkUrl, `/profile#payment-${request.payment.id}`);
+});
+
 test('payment rejection creates a user notification with the admin note', () => {
   const repository = createMockChartServiceRepository();
 
