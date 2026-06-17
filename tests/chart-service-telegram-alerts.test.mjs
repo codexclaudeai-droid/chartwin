@@ -470,6 +470,50 @@ test('browser Telegram signal API shares watch state to suppress server monitor 
   assert.equal(syncRepository.listTelegramDeliveryLogs().length, 0);
 });
 
+test('browser Telegram signal API allows delayed confirmations on earlier candles when the signal is new', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  await repository.saveTelegramBotProfile(createProfile({
+    id: 'telegram_profile_delayed_browser_confirmation',
+    strategyIds: ['strategy_js_grid_martingale'],
+    symbolIds: ['BTCUSDT'],
+    timeframeIds: ['1m'],
+  }));
+  await repository.saveTelegramSignalWatchState({
+    key: 'strategy_js_grid_martingale:BTCUSDT:1m',
+    strategyId: 'strategy_js_grid_martingale',
+    symbolId: 'BTCUSDT',
+    timeframe: '1m',
+    lastCheckedCandleTime: 300,
+    lastSignalCandleTime: 60,
+    lastSignalEventType: 'buy',
+    updatedAt: '1970-01-01T00:05:00.000Z',
+  });
+
+  const sentMessages = [];
+  const result = await sendAsyncTelegramAlertForSignalWithWatchState(repository, {
+    eventType: 'sell',
+    strategyId: 'strategy_js_grid_martingale',
+    symbolId: 'BTCUSDT',
+    timeframe: '1m',
+    price: 99,
+    occurredAt: '1970-01-01T00:04:00.000Z',
+  }, async (_url, init) => {
+    sentMessages.push(JSON.parse(init.body).text);
+    return { ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: sentMessages.length } }) };
+  });
+
+  const watchState = await repository.getTelegramSignalWatchState('strategy_js_grid_martingale:BTCUSDT:1m');
+
+  assert.equal(result.suppressedCount, 0);
+  assert.equal(result.sentCount, 1);
+  assert.equal(sentMessages.length, 1);
+  assert.match(sentMessages[0], /SELL BTCUSDT/);
+  assert.equal(watchState?.lastCheckedCandleTime, 300);
+  assert.equal(watchState?.lastSignalCandleTime, 240);
+  assert.equal(watchState?.lastSignalEventType, 'sell');
+});
+
 test('Cloudflare deploy config keeps Telegram monitor cron paused while preserving the scheduled worker', async () => {
   const wranglerConfig = fs.readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
   const customWorker = fs.readFileSync(new URL('../cloudflare-worker.ts', import.meta.url), 'utf8');

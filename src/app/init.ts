@@ -2962,7 +2962,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     };
     const announcedSignalKeys = new Set<string>();
     const signalNoticeBaselineKeyByPane = new Map<number, string>();
-    const signalNoticeLiveAfterTimeSecByPane = new Map<number, number>();
     const signalNoticeSuppressNextReadyComputeByPane = new Set<number>();
     const getSignalNoticeHost = (): HTMLDivElement => {
       const w = window as typeof window & { __signalNoticeHost__?: HTMLDivElement };
@@ -3166,15 +3165,6 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (!candles.length || !Array.isArray(series) || !series.length) return false;
       return series.length >= candles.length;
     };
-    const getSignalNoticeLatestCandleTimeSec = (paneId: number): number => {
-      const pane = paneControllers.get(paneId) ?? ensurePane(paneId);
-      const candles = pane.chart.getCandles();
-      for (let i = candles.length - 1; i >= 0; i -= 1) {
-        const sec = Number(candles[i]?.time);
-        if (Number.isFinite(sec)) return sec;
-      }
-      return Number.NaN;
-    };
     const collectTodaySignalNotices = (paneId: number): Array<{
       key: string;
       side: 'LONG' | 'SHORT';
@@ -3236,26 +3226,18 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const baselineKey = getSignalNoticeBaselineKey(paneId);
       if (!baselineKey) {
         signalNoticeBaselineKeyByPane.delete(paneId);
-        signalNoticeLiveAfterTimeSecByPane.delete(paneId);
         return;
       }
       if (!isSignalNoticeSnapshotReady(paneId)) return;
       collectTodaySignalNotices(paneId).forEach((item) => {
         announcedSignalKeys.add(item.key);
       });
-      const liveAfterTimeSec = getSignalNoticeLatestCandleTimeSec(paneId);
-      if (Number.isFinite(liveAfterTimeSec)) {
-        signalNoticeLiveAfterTimeSecByPane.set(paneId, liveAfterTimeSec);
-      } else {
-        signalNoticeLiveAfterTimeSecByPane.delete(paneId);
-      }
       signalNoticeBaselineKeyByPane.set(paneId, baselineKey);
       signalNoticeSuppressNextReadyComputeByPane.delete(paneId);
     };
     suppressSignalNoticesUntilNextReadyCompute = (paneId: number) => {
       signalNoticeSuppressNextReadyComputeByPane.add(paneId);
       signalNoticeBaselineKeyByPane.delete(paneId);
-      signalNoticeLiveAfterTimeSecByPane.delete(paneId);
     };
     const findUnannouncedTodaySignals = (paneId: number): Array<{
       key: string;
@@ -3272,16 +3254,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         markExistingTodaySignalsAnnounced(paneId);
         return [];
       }
-      const liveAfterTimeSec = signalNoticeLiveAfterTimeSecByPane.get(paneId);
-      if (!Number.isFinite(liveAfterTimeSec)) {
-        markExistingTodaySignalsAnnounced(paneId);
-        return [];
-      }
       return collectTodaySignalNotices(paneId).filter((item) => {
-        if (item.timeSec <= liveAfterTimeSec) {
-          announcedSignalKeys.add(item.key);
-          return false;
-        }
         if (announcedSignalKeys.has(item.key)) return false;
         announcedSignalKeys.add(item.key);
         return true;

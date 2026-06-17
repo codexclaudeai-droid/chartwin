@@ -257,13 +257,24 @@ export async function sendAsyncTelegramAlertForSignalWithWatchState(
     timeframe,
   };
   const previous = await repository.getTelegramSignalWatchState(job.key);
-  if (previous && eventCandleTime <= previous.lastCheckedCandleTime) {
+  if (
+    previous &&
+    previous.lastSignalCandleTime === eventCandleTime &&
+    previous.lastSignalEventType === event.eventType
+  ) {
     return { sentCount: 0, failedCount: 0, logs: [], suppressedCount: 1 };
   }
 
   const delivery = await sendAsyncTelegramAlertForSignal(repository, event, fetcher);
+  const lastCheckedCandleTime = Math.max(previous?.lastCheckedCandleTime ?? eventCandleTime, eventCandleTime);
   await repository.saveTelegramSignalWatchState(
-    createTelegramSignalWatchState(job, eventCandleTime, eventCandleTime, event.eventType, new Date().toISOString()),
+    createTelegramSignalWatchState(
+      job,
+      lastCheckedCandleTime,
+      eventCandleTime,
+      event.eventType,
+      new Date().toISOString(),
+    ),
   );
   return { ...delivery, suppressedCount: 0 };
 }
