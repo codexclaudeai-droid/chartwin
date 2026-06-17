@@ -51,7 +51,7 @@ type MarkNotificationReadOptions = {
   refreshAfter?: boolean;
 };
 
-const NOTIFICATION_POLL_INTERVAL_MS = 60 * 1000;
+const NOTIFICATION_POLL_INTERVAL_MS = 10 * 1000;
 
 export function NotificationsPanel() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);

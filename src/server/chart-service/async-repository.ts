@@ -1,4 +1,6 @@
 import type { ChartServiceRepository } from './repository.ts';
+import type { NotificationRecord } from '../../domain/chart-service/index.ts';
+import { publishNotificationRecordRealtimeEvent } from './notification-realtime.ts';
 
 export type AsyncChartServiceRepository = {
   [MethodName in keyof ChartServiceRepository]: ChartServiceRepository[MethodName] extends (
@@ -22,6 +24,16 @@ export function createAsyncChartServiceRepository(
   for (const methodName of Object.keys(repository) as Array<keyof ChartServiceRepository>) {
     const method = repository[methodName];
     if (typeof method !== 'function') continue;
+
+    if (methodName === 'saveNotification') {
+      asyncRepository[methodName] = async (notification: NotificationRecord) => {
+        const result = (method as (methodNotification: NotificationRecord) => unknown)
+          .apply(repository, [notification]);
+        publishNotificationRecordRealtimeEvent(notification);
+        return result;
+      };
+      continue;
+    }
 
     asyncRepository[methodName] = async (...args: unknown[]) => (
       method as (...methodArgs: unknown[]) => unknown

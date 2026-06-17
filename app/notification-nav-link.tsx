@@ -7,6 +7,8 @@ import { formatNotificationBadgeCount } from '../src/domain/chart-service/index.
 import { playNotificationVoice } from '../src/domain/chart-service/notification-voice.ts';
 import { subscribeAuthSessionChangedEvent } from './auth-events';
 import {
+  dispatchNotificationsRefreshEvent,
+  subscribeNotificationRealtimeStream,
   subscribeNotificationsRefreshEvent,
   subscribeServiceWorkerNotificationsRefreshMessages,
 } from './notification-events';
@@ -21,7 +23,7 @@ import {
   normalizeNotificationTitle,
 } from './notifications/notification-display';
 
-const NOTIFICATION_BADGE_POLL_INTERVAL_MS = 60 * 1000;
+const NOTIFICATION_BADGE_POLL_INTERVAL_MS = 10 * 1000;
 
 export function NotificationNavLink() {
   const [badge, setBadge] = useState<string | null>(null);
@@ -30,10 +32,28 @@ export function NotificationNavLink() {
 
   useEffect(() => {
     let isMounted = true;
+    let isRealtimeSubscribed = false;
+    let unsubscribeRealtime = () => {};
+
+    function startRealtimeSubscription() {
+      if (isRealtimeSubscribed) return;
+      isRealtimeSubscribed = true;
+      unsubscribeRealtime = subscribeNotificationRealtimeStream(() => {
+        dispatchNotificationsRefreshEvent();
+      });
+    }
+
+    function stopRealtimeSubscription() {
+      if (!isRealtimeSubscribed) return;
+      isRealtimeSubscribed = false;
+      unsubscribeRealtime();
+      unsubscribeRealtime = () => {};
+    }
 
     async function refreshBadge(options: { force?: boolean } = {}) {
       const session = await getAuthSession(options);
       if (!session.authenticated) {
+        stopRealtimeSubscription();
         previousUnreadCountRef.current = null;
         if (isMounted) {
           setBadge(null);
@@ -41,6 +61,7 @@ export function NotificationNavLink() {
         }
         return;
       }
+      startRealtimeSubscription();
 
       const payload = await getNotificationSummary(options);
       if (!payload.ok || !payload.summary) {
@@ -103,6 +124,7 @@ export function NotificationNavLink() {
       unsubscribe();
       unsubscribeAuth();
       unsubscribeServiceWorker();
+      stopRealtimeSubscription();
     };
   }, []);
 

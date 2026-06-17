@@ -128,6 +128,7 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   const displaySource = fs.readFileSync(new URL('../app/notifications/notification-display.ts', import.meta.url), 'utf8');
   const navSource = fs.readFileSync(new URL('../app/notification-nav-link.tsx', import.meta.url), 'utf8');
   const profileSource = fs.readFileSync(new URL('../app/profile/profile-panel.tsx', import.meta.url), 'utf8');
+  const streamRouteSource = fs.readFileSync(new URL('../app/api/notifications/stream/route.ts', import.meta.url), 'utf8');
 
   assert.match(pageSource, /알림센터/);
   assert.match(pageSource, /운영 처리 결과, 구독 상태 변경, 고객센터 답변과 시스템 알림을 한 곳에서 확인합니다/);
@@ -158,6 +159,7 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(panelSource, /markNotificationRead\(notification\.id, \{ refreshAfter: false \}\)/);
   assert.match(panelSource, /window\.location\.assign\(notification\.linkUrl\)/);
   assert.match(panelSource, /NOTIFICATION_POLL_INTERVAL_MS/);
+  assert.match(panelSource, /const NOTIFICATION_POLL_INTERVAL_MS = 10 \* 1000/);
   assert.match(panelSource, /window\.setInterval/);
   assert.match(panelSource, /visibilitychange/);
   assert.match(panelSource, /document\.visibilityState === 'visible'/);
@@ -196,9 +198,15 @@ test('notifications page and panel use readable Korean copy instead of raw notif
   assert.match(navSource, /window\.location\.pathname/);
   assert.match(navSource, /href=\{notificationHref\}/);
   assert.match(navSource, /NOTIFICATION_BADGE_POLL_INTERVAL_MS/);
+  assert.match(navSource, /const NOTIFICATION_BADGE_POLL_INTERVAL_MS = 10 \* 1000/);
+  assert.match(navSource, /subscribeNotificationRealtimeStream/);
+  assert.match(navSource, /dispatchNotificationsRefreshEvent/);
   assert.match(navSource, /subscribeServiceWorkerNotificationsRefreshMessages/);
   assert.match(navSource, /window\.setInterval/);
   assert.match(navSource, /visibilitychange/);
   assert.match(navSource, /document\.visibilityState === 'visible'/);
   assert.match(profileSource, /getNotificationCenterHref\(dashboard\.notifications\.unreadCount\)/);
+  assert.match(streamRouteSource, /createNotificationRealtimeStream/);
+  assert.match(streamRouteSource, /getActorFromAsyncRequest/);
+  assert.match(streamRouteSource, /text\/event-stream/);
 });

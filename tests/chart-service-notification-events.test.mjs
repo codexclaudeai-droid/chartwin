@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   NOTIFICATIONS_REFRESH_EVENT,
   dispatchNotificationsRefreshEvent,
+  subscribeNotificationRealtimeStream,
   subscribeServiceWorkerNotificationsRefreshMessages,
   subscribeNotificationsRefreshEvent,
 } from '../app/notification-events.ts';
@@ -61,3 +62,48 @@ test('service worker notification messages fan out to browser refresh subscriber
 
   assert.equal(refreshCount, 1);
 });
+
+test('notification realtime stream subscribes to SSE changes and closes on cleanup', () => {
+  const eventSource = new FakeEventSource('/api/notifications/stream');
+  let refreshCount = 0;
+  const unsubscribe = subscribeNotificationRealtimeStream(() => {
+    refreshCount += 1;
+  }, () => eventSource);
+
+  eventSource.dispatchNamedEvent('notifications.changed', {
+    type: 'notifications.changed',
+    notificationId: 'notification_1',
+  });
+  eventSource.dispatchNamedEvent('notifications.ready', {
+    type: 'notifications.ready',
+  });
+  unsubscribe();
+  eventSource.dispatchNamedEvent('notifications.changed', {
+    type: 'notifications.changed',
+    notificationId: 'notification_2',
+  });
+
+  assert.equal(eventSource.url, '/api/notifications/stream');
+  assert.equal(eventSource.closeCount, 1);
+  assert.equal(refreshCount, 1);
+});
+
+class FakeEventSource extends EventTarget {
+  constructor(url) {
+    super();
+    this.url = url;
+    this.closeCount = 0;
+  }
+
+  close() {
+    this.closeCount += 1;
+  }
+
+  dispatchNamedEvent(type, data) {
+    const event = new Event(type);
+    Object.defineProperty(event, 'data', {
+      value: JSON.stringify(data),
+    });
+    this.dispatchEvent(event);
+  }
+}
