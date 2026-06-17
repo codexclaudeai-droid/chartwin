@@ -1,5 +1,16 @@
 const DEFAULT_TIMEFRAME = '1m';
 const VALID_SIDES = new Set(['buy', 'sell', 'unknown']);
+const TIMEFRAME_SECONDS = new Map([
+  ['1m', 60],
+  ['3m', 180],
+  ['5m', 300],
+  ['15m', 900],
+  ['30m', 1800],
+  ['1h', 3600],
+  ['2h', 7200],
+  ['4h', 14400],
+  ['1d', 86400],
+]);
 
 function normalizeMarket(input) {
   const raw = String(input || '').trim().toLowerCase();
@@ -23,6 +34,11 @@ function normalizeSymbol(input) {
 function toFiniteNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : NaN;
+}
+
+function normalizeTimeframe(input) {
+  const raw = String(input || DEFAULT_TIMEFRAME).trim();
+  return TIMEFRAME_SECONDS.has(raw) ? raw : DEFAULT_TIMEFRAME;
 }
 
 function parseUnixTimeSec(value) {
@@ -57,6 +73,11 @@ function pickFirstFinite(row, keys) {
     if (Number.isFinite(value)) return value;
   }
   return NaN;
+}
+
+function floorToTimeframe(timeSec, timeframe) {
+  const seconds = TIMEFRAME_SECONDS.get(normalizeTimeframe(timeframe)) || 60;
+  return Math.floor(timeSec / seconds) * seconds;
 }
 
 function clampSourceUtcOffsetHours(value) {
@@ -129,6 +150,56 @@ export function normalizeMt45Ticks(payload, defaults = {}) {
     })
     .filter((tick) => tick != null)
     .sort((a, b) => a.time - b.time);
+}
+
+export function normalizeMt45BackfillCandles(payload, defaults = {}) {
+  const parent = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+  const market = normalizeMarket(parent.market ?? defaults.market);
+  const symbol = normalizeSymbol(parent.symbol ?? defaults.symbol);
+  const timeframe = normalizeTimeframe(parent.timeframe ?? parent.interval ?? defaults.timeframe);
+  const sourceUtcOffsetHours = clampSourceUtcOffsetHours(
+    parent.sourceUtcOffsetHours
+      ?? parent.utcOffsetHours
+      ?? defaults.sourceUtcOffsetHours
+      ?? defaults.utcOffsetHours
+      ?? 0,
+  );
+  const rows = Array.isArray(parent.candles)
+    ? parent.candles
+    : (Array.isArray(payload) ? payload : []);
+  const candles = rows
+    .map((row) => {
+      if (!row || typeof row !== 'object') return null;
+      const closeRaw = pickFirstFinite(row, ['close', 'c']);
+      if (!Number.isFinite(closeRaw)) return null;
+      const openRaw = pickFirstFinite(row, ['open', 'o']);
+      const highRaw = pickFirstFinite(row, ['high', 'h']);
+      const lowRaw = pickFirstFinite(row, ['low', 'l']);
+      const rawTime = parseUnixTimeSec(row.time ?? row.timestamp ?? row.ts ?? row.datetime);
+      const time = Number.isFinite(rawTime)
+        ? floorToTimeframe(rawTime - Math.round(sourceUtcOffsetHours * 3600), timeframe)
+        : NaN;
+      const volume = pickFirstFinite(row, ['volume', 'tick_volume', 'tickVolume', 'real_volume', 'realVolume', 'v']);
+      if (!market || !symbol || !Number.isFinite(time)) return null;
+      return {
+        time,
+        open: Number.isFinite(openRaw) ? openRaw : closeRaw,
+        high: Number.isFinite(highRaw) ? highRaw : closeRaw,
+        low: Number.isFinite(lowRaw) ? lowRaw : closeRaw,
+        close: closeRaw,
+        volume: Number.isFinite(volume) ? volume : 0,
+      };
+    })
+    .filter((candle) => candle != null)
+    .sort((a, b) => a.time - b.time);
+
+  return {
+    market,
+    symbol,
+    timeframe,
+    sourceUtcOffsetHours,
+    candles,
+  };
 }
 
 function floorToOneMinute(timeSec) {

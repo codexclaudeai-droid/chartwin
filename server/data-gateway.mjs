@@ -8,7 +8,7 @@ import { createBinanceWebSocketCollector, mergeBinanceCollectorConfig } from './
 import { createKisWebSocketCollector, hasKisCredentials } from './kis-websocket-collector.mjs';
 import { createMarketCandlePostgresStoreFromEnv } from './market-candle-postgres-store.mjs';
 import { createMarketTickPostgresStoreFromEnv } from './market-tick-postgres-store.mjs';
-import { createMt45TickAggregator, normalizeMt45Ticks } from './mt45-tick-collector.mjs';
+import { createMt45TickAggregator, normalizeMt45BackfillCandles, normalizeMt45Ticks } from './mt45-tick-collector.mjs';
 import { sanitizeCandleSeries, shouldResetCandleSeries } from './candle-series-guards.mjs';
 import { getPreferredSymbolProviders, resolveProviderForSymbol } from './provider-routing.mjs';
 
@@ -1205,6 +1205,56 @@ async function handleMt45TickIngest(req, res) {
   });
 }
 
+async function handleMt45BackfillIngest(req, res) {
+  let body;
+  try {
+    body = await parseBody(req);
+  } catch (error) {
+    sendJson(res, 400, { ok: false, message: error.message });
+    return;
+  }
+
+  const platform = getMt45RequestPlatform(body);
+  if (!checkMt45Ingest(req, body)) {
+    sendJson(res, isMt45ApiKeyConfigured(platform) ? 401 : 503, {
+      ok: false,
+      message: isMt45ApiKeyConfigured(platform)
+        ? 'invalid mt45 api key'
+        : 'mt45 api key is not configured',
+    });
+    return;
+  }
+
+  const symbolConfig = getMt45SymbolConfig(body.market, body.symbol, platform);
+  const normalized = normalizeMt45BackfillCandles(body, {
+    source: platform,
+    sourceUtcOffsetHours: symbolConfig.sourceUtcOffsetHours,
+  });
+  const { market, symbol, timeframe, candles } = normalized;
+  if (!market || !symbol || !timeframe || !candles.length) {
+    sendJson(res, 400, {
+      ok: false,
+      message: 'market/symbol/timeframe/candles is required',
+      note: 'send {platform,apiKey,market,symbol,timeframe,candles:[{time,open,high,low,close,tick_volume}]}',
+    });
+    return;
+  }
+
+  const merged = upsertCandles(market, symbol, timeframe, candles);
+  sendJson(res, 202, {
+    ok: true,
+    accepted: candles.length,
+    stored: merged.length,
+    market,
+    symbol,
+    timeframe,
+    platform,
+    sourceUtcOffsetHours: normalized.sourceUtcOffsetHours,
+    firstTime: candles[0]?.time ?? null,
+    lastTime: candles.at(-1)?.time ?? null,
+  });
+}
+
 async function handleGetReportCandles(req, res, url) {
   const { market, symbol } = canonicalizeMarketSymbol(
     url.searchParams.get('market'),
@@ -1305,6 +1355,7 @@ function handleNotFound(res) {
       'POST /admin/mt45',
       'POST /ingest/webhook/tradingview',
       'POST /ingest/mt45/tick',
+      'POST /ingest/mt45/backfill',
       'POST /ingest/api/candles',
       'GET /candles?market=index&symbol=NQ1!&timeframe=1m&limit=300',
       'GET /report/candles?market=crypto&symbol=BTCUSDT&timeframe=1m&limit=5000',
@@ -1452,6 +1503,11 @@ const server = createServer(async (req, res) => {
 
   if (req.method === 'POST' && url.pathname === '/ingest/mt45/tick') {
     await handleMt45TickIngest(req, res);
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/ingest/mt45/backfill') {
+    await handleMt45BackfillIngest(req, res);
     return;
   }
 
