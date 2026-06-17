@@ -66,6 +66,9 @@ test('chart signal notice posts new buy sell signals to Telegram alert API', () 
   assert.match(initSource, /eventType: signal\.side === 'LONG' \? 'buy' : 'sell'/);
   assert.match(initSource, /strategyId/);
   assert.match(initSource, /strategyName/);
+  assert.match(initSource, /signalSource: signalPolicy\?\.source \?\? 'chart_strategy'/);
+  assert.doesNotMatch(initSource, /signalPolicy\.source !== 'chart_strategy'\) return;/);
+  assert.doesNotMatch(initSource, /signalPolicy\.strategyId && signalPolicy\.strategyId !== strategyId\) return;/);
   assert.match(initSource, /postTelegramSignalAlert\(paneId, latestSignal\);/);
 });
 

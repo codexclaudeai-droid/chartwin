@@ -1,4 +1,10 @@
 import { TIMEFRAME_SECONDS, type TimeframeKey } from '../../catalog/time.ts';
+import {
+  DEFAULT_STRATEGY_PARAMETER_SETTINGS,
+  normalizeStrategyParameterSettings,
+  resolveStrategyParamsForSymbol,
+  type StrategyParameterSettings,
+} from '../../domain/chart-service/index.ts';
 import type { AsyncChartServiceRepository } from './async-repository.ts';
 import type { StrategyDefinition, StrategySignal } from '../../strategy/strategy-service.ts';
 import type {
@@ -73,6 +79,7 @@ export async function runTelegramSignalMonitorOnce(
   const strategies = options.strategies ?? getDefaultServerStrategies();
   const candleProvider = options.candleProvider ?? createBinanceServerCandleProvider();
   const jobs = buildTelegramSignalMonitorJobs(await repository.listTelegramBotProfiles());
+  const strategyParameterSettings = await readServerStrategyParameterSettings(repository);
   const result: TelegramSignalMonitorResult = {
     jobCount: jobs.length,
     sentCount: 0,
@@ -97,6 +104,7 @@ export async function runTelegramSignalMonitorOnce(
         result.errors.push(`strategy not found: ${job.strategyId}`);
         continue;
       }
+      const strategyForJob = applyStrategyParameterSettings(strategy, strategyParameterSettings, job.symbolId);
 
       const candles = await candleProvider({
         symbol: job.symbolId,
@@ -106,7 +114,7 @@ export async function runTelegramSignalMonitorOnce(
       if (hasOpenTailCandle(candles, job.timeframe, nowSec)) {
         result.skippedOpenCandleCount += 1;
       }
-      const signals = computeServerStrategySignals({ strategy, candles, symbol: job.symbolId });
+      const signals = computeServerStrategySignals({ strategy: strategyForJob, candles, symbol: job.symbolId });
       const closed = getLatestClosedSignal({
         candles,
         signals,
@@ -190,6 +198,24 @@ export async function runTelegramSignalMonitorOnce(
   }
 
   return result;
+}
+
+async function readServerStrategyParameterSettings(
+  repository: AsyncChartServiceRepository,
+): Promise<StrategyParameterSettings> {
+  const settings = await repository.getSignalAdminSettings('default');
+  return normalizeStrategyParameterSettings(settings?.strategyParams ?? DEFAULT_STRATEGY_PARAMETER_SETTINGS);
+}
+
+function applyStrategyParameterSettings(
+  strategy: StrategyDefinition,
+  settings: StrategyParameterSettings,
+  symbolId: string,
+): StrategyDefinition {
+  return {
+    ...strategy,
+    params: resolveStrategyParamsForSymbol(settings, strategy.id, symbolId, strategy.params ?? {}),
+  };
 }
 
 async function notifySignalPushSubscribers(

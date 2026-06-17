@@ -255,6 +255,9 @@ test('chart runtime auto-applies server strategy parameter profiles', () => {
   const chartSource = fs.readFileSync(new URL('../src/chart/SimpleChart.ts', import.meta.url), 'utf8');
 
   assert.match(initSource, /\/admin\/strategy-params/);
+  assert.match(initSource, /signalPolicy/);
+  assert.match(initSource, /resolveAdminSignalPolicyForSymbol/);
+  assert.match(initSource, /signalPolicy\.source === 'chart_strategy'/);
   assert.match(initSource, /resolveServerStrategyParams/);
   assert.match(initSource, /applyServerStrategyParamsToChart/);
   assert.match(initSource, /server-strategy-params-updated/);

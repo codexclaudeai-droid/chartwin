@@ -16,6 +16,7 @@ import {
   sendTelegramAlertForSignal,
   toPublicTelegramBotProfile,
 } from '../src/server/chart-service/index.ts';
+import { DEFAULT_SIGNAL_POLICY_SETTINGS } from '../src/domain/chart-service/index.ts';
 
 const now = '2026-06-11T00:00:00.000Z';
 
@@ -388,6 +389,81 @@ test('server Telegram monitor scans closed candles since the last check so delay
   assert.equal(watchState?.lastCheckedCandleTime, 180);
   assert.equal(watchState?.lastSignalCandleTime, 120);
   assert.equal(watchState?.lastSignalEventType, 'buy');
+});
+
+test('server Telegram monitor applies stored strategy parameter profiles before computing signals', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const strategy = buildStrategyDefinition({
+    id: 'strategy_test_param_gated_signal',
+    name: 'Param Gated Signal Test',
+    description: 'Signals only when the server parameter profile enables it',
+    language: 'javascript',
+    params: { fireSignal: false },
+    sourceCode: `(
+      function(context, index) {
+        return context.__strategyParams.fireSignal === true && index === 1 ? 1 : 0;
+      }
+    )`,
+  });
+  await repository.saveSignalAdminSettings({
+    id: 'default',
+    hiddenSymbols: [],
+    disabledSymbols: [],
+    hiddenStrategyIds: [],
+    signalPolicy: DEFAULT_SIGNAL_POLICY_SETTINGS,
+    strategyParams: {
+      profiles: [
+        {
+          id: `${strategy.id}:BTCUSDT`,
+          strategyId: strategy.id,
+          symbolId: 'BTCUSDT',
+          name: 'BTCUSDT param gate',
+          params: { fireSignal: true },
+          enabled: true,
+        },
+      ],
+    },
+    strategyMgmtVisible: false,
+    selectedStrategyId: strategy.id,
+    updatedAt: now,
+  });
+  await repository.saveTelegramBotProfile(createProfile({
+    id: 'telegram_profile_param_gated',
+    strategyIds: [strategy.id],
+    symbolIds: ['BTCUSDT'],
+    timeframeIds: ['1m'],
+  }));
+  await repository.saveTelegramSignalWatchState({
+    key: `${strategy.id}:BTCUSDT:1m`,
+    strategyId: strategy.id,
+    symbolId: 'BTCUSDT',
+    timeframe: '1m',
+    lastCheckedCandleTime: 60,
+    lastSignalCandleTime: null,
+    lastSignalEventType: null,
+    updatedAt: '1970-01-01T00:01:00.000Z',
+  });
+
+  const sentMessages = [];
+  const result = await runTelegramSignalMonitorOnce(repository, {
+    now: '1970-01-01T00:04:30.000Z',
+    strategies: [strategy],
+    candleProvider: async () => [
+      { time: 60, open: 10, high: 11, low: 9, close: 10, volume: 1 },
+      { time: 120, open: 10, high: 12, low: 9, close: 11, volume: 1 },
+      { time: 180, open: 11, high: 12, low: 10, close: 10, volume: 1 },
+      { time: 240, open: 10, high: 13, low: 9, close: 12, volume: 1 },
+    ],
+    telegramFetch: async (_url, init) => {
+      sentMessages.push(JSON.parse(init.body).text);
+      return { ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: sentMessages.length } }) };
+    },
+  });
+
+  assert.equal(result.sentCount, 1);
+  assert.equal(sentMessages.length, 1);
+  assert.match(sentMessages[0], /BUY BTCUSDT/);
 });
 
 test('server Telegram monitor ignores still-open candles', async () => {

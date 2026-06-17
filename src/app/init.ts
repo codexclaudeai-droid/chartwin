@@ -107,6 +107,19 @@ type AdminStrategyUiConfig = {
   hidden: string[];
   mgmtVisible: boolean;
   selectedStrategyId: string;
+  signalPolicy: AdminSignalPolicySettings | null;
+};
+type AdminSignalPolicy = {
+  symbolId: string | null;
+  source: string;
+  strategyId: string;
+  executionMode: string;
+  fillModel: string;
+  enabled: boolean;
+};
+type AdminSignalPolicySettings = {
+  globalPolicy: AdminSignalPolicy | null;
+  symbolPolicies: AdminSignalPolicy[];
 };
 type ServerStrategyParamProfile = {
   strategyId: string;
@@ -118,8 +131,45 @@ const adminStrategyUiConfig: AdminStrategyUiConfig = {
   hidden: [],
   mgmtVisible: false,
   selectedStrategyId: DEFAULT_BETA_STRATEGY_ID,
+  signalPolicy: null,
 };
 let serverStrategyParamProfiles: ServerStrategyParamProfile[] = [];
+
+const normalizeAdminSignalPolicy = (value: unknown): AdminSignalPolicy | null => {
+  const record = (typeof value === 'object' && value !== null) ? value as Record<string, unknown> : null;
+  if (!record) return null;
+  const strategyId = typeof record.strategyId === 'string' ? record.strategyId.trim() : '';
+  const source = typeof record.source === 'string' ? record.source.trim() : '';
+  if (!strategyId || !source) return null;
+  const symbolText = typeof record.symbolId === 'string' ? record.symbolId.trim().toUpperCase() : '';
+  return {
+    symbolId: symbolText || null,
+    source,
+    strategyId,
+    executionMode: typeof record.executionMode === 'string' ? record.executionMode.trim() : '',
+    fillModel: typeof record.fillModel === 'string' ? record.fillModel.trim() : '',
+    enabled: record.enabled !== false,
+  };
+};
+
+const normalizeAdminSignalPolicySettings = (value: unknown): AdminSignalPolicySettings | null => {
+  const record = (typeof value === 'object' && value !== null) ? value as Record<string, unknown> : null;
+  if (!record) return null;
+  const globalPolicy = normalizeAdminSignalPolicy(record.globalPolicy);
+  const symbolPolicies = Array.isArray(record.symbolPolicies)
+    ? record.symbolPolicies
+      .map(normalizeAdminSignalPolicy)
+      .filter((policy): policy is AdminSignalPolicy => policy != null && Boolean(policy.symbolId))
+    : [];
+  return { globalPolicy, symbolPolicies };
+};
+
+const resolveAdminSignalPolicyForSymbol = (symbol: string): AdminSignalPolicy | null => {
+  const settings = adminStrategyUiConfig.signalPolicy;
+  if (!settings) return null;
+  const symbolId = canonicalizeUiSymbol(symbol).trim().toUpperCase();
+  return settings.symbolPolicies.find((policy) => policy.symbolId === symbolId) ?? settings.globalPolicy;
+};
 
 const applyAdminStrategyUiConfig = (json: unknown): void => {
   const record = (typeof json === 'object' && json !== null) ? json as Record<string, unknown> : null;
@@ -136,6 +186,7 @@ const applyAdminStrategyUiConfig = (json: unknown): void => {
   if (typeof record.selectedStrategyId === 'string' && record.selectedStrategyId.trim()) {
     adminStrategyUiConfig.selectedStrategyId = record.selectedStrategyId.trim();
   }
+  adminStrategyUiConfig.signalPolicy = normalizeAdminSignalPolicySettings(record.signalPolicy);
 };
 
 void fetch('/admin/strategies', { cache: 'no-store' })
@@ -1192,10 +1243,17 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   const paneControllers = new Map<number, PaneController>();
   paneState.allPaneIds = Array.from({ length: 8 }, (_, index) => index);
 
-  const resolveBetaStrategyId = (chart: { getStrategies: () => StrategyDefinition[] }): string | null => {
+  const resolveBetaStrategyId = (chart: {
+    config: { symbol: string };
+    getStrategies: () => StrategyDefinition[];
+  }): string | null => {
     const strategies = chart.getStrategies();
     if (!strategies.length) return null;
-    const requestedId = adminStrategyUiConfig.selectedStrategyId || DEFAULT_BETA_STRATEGY_ID;
+    const signalPolicy = resolveAdminSignalPolicyForSymbol(chart.config.symbol);
+    const policyStrategyId = signalPolicy?.enabled && signalPolicy.source === 'chart_strategy'
+      ? signalPolicy.strategyId
+      : '';
+    const requestedId = policyStrategyId || adminStrategyUiConfig.selectedStrategyId || DEFAULT_BETA_STRATEGY_ID;
     const requested = strategies.find((strategy) => strategy.id === requestedId && strategy.active);
     if (requested) return requested.id;
     const fallback = strategies.find((strategy) => strategy.id === DEFAULT_BETA_STRATEGY_ID && strategy.active);
@@ -1204,6 +1262,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
   };
 
   const applyUserFacingStrategy = (chart: {
+    config: { symbol: string };
     getActiveStrategyId?: () => string | null;
     getStrategies: () => StrategyDefinition[];
     setActiveStrategy: (strategyId: string | null) => void;
@@ -3067,6 +3126,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const strategyId = pane.chart.getActiveStrategyId();
       if (!strategyId) return;
 
+      const signalPolicy = resolveAdminSignalPolicyForSymbol(signal.symbol);
       const strategyName = pane.chart.getActiveStrategyName() ?? strategyId;
       const occurredAt = Number.isFinite(signal.timeSec)
         ? new Date(signal.timeSec * 1000).toISOString()
@@ -3079,6 +3139,9 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
           eventType: signal.side === 'LONG' ? 'buy' : 'sell',
           strategyId,
           strategyName,
+          signalSource: signalPolicy?.source ?? 'chart_strategy',
+          executionMode: signalPolicy?.executionMode,
+          fillModel: signalPolicy?.fillModel,
           symbolId: signal.symbol,
           timeframe: pane.chart.config.timeframe,
           price: signal.entry,
