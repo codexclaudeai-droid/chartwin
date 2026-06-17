@@ -71,6 +71,7 @@ import {
   getAsyncUserReferralSummary,
 } from './referral-program.ts';
 import {
+  notifyAsyncAdminsAboutPaymentRequest,
   notifyAsyncAdminsAboutSubscriptionApprovalRequest,
   notifyAsyncAdminsAboutSupportRequest,
 } from './support-admin-notifications.ts';
@@ -866,28 +867,40 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
   const amountUsd = Math.round(plan.basePriceUsd * (1 - plan.discountPercent / 100) * 100) / 100;
   const transactionId = normalizePaymentTransactionId(input.method, input.transactionId);
   const depositorName = normalizePaymentDepositorName(input.method, input.depositorName);
-  assertNoDuplicateAsyncSubscriptionRequest(await repository.listSubscriptions(), {
+  const duplicatedSubscription = findDuplicateAsyncSubscriptionRequest(await repository.listSubscriptions(), {
     userId: input.actor.id,
   });
+  const recoverableSubscription = await getRecoverableAsyncPaymentPendingSubscription(
+    repository,
+    duplicatedSubscription,
+  );
+  assertNoDuplicateAsyncSubscriptionRequest(duplicatedSubscription, recoverableSubscription);
 
-  const subscriptionId = await repository.nextId('sub');
+  const subscriptionId = recoverableSubscription?.id ?? await repository.nextId('sub');
   const paymentId = await repository.nextId('pay');
   const supportThreadId = await repository.nextId('support');
 
-  const subscription: SubscriptionRecord = {
-    id: subscriptionId,
-    userId: input.actor.id,
-    planId: plan.id,
-    status: SUBSCRIPTION_STATUSES.paymentPending,
-    startsAt: null,
-    endsAt: null,
-    approvedByAdminId: null,
-    approvedAt: null,
-    cancelledAt: null,
-    refundedAt: null,
-    createdAt: input.requestedAt,
-    updatedAt: input.requestedAt,
-  };
+  const subscription: SubscriptionRecord = recoverableSubscription
+    ? {
+      ...recoverableSubscription,
+      planId: plan.id,
+      status: SUBSCRIPTION_STATUSES.paymentPending,
+      updatedAt: input.requestedAt,
+    }
+    : {
+      id: subscriptionId,
+      userId: input.actor.id,
+      planId: plan.id,
+      status: SUBSCRIPTION_STATUSES.paymentPending,
+      startsAt: null,
+      endsAt: null,
+      approvedByAdminId: null,
+      approvedAt: null,
+      cancelledAt: null,
+      refundedAt: null,
+      createdAt: input.requestedAt,
+      updatedAt: input.requestedAt,
+    };
   const { thread: supportThread, message: supportMessage } = createDepositSupportThreadDraft({
     threadId: supportThreadId,
     messageId: await repository.nextId('support_msg'),
@@ -934,10 +947,10 @@ export async function createAsyncAuthenticatedManualPaymentRequest(
     createdAt: input.requestedAt,
   });
   if (referralLedger) await repository.saveReferralLedger(referralLedger);
-  await notifyAsyncAdminsAboutSupportRequest(repository, {
-    thread: supportThread,
-    message: supportMessage,
-    author: user,
+  await notifyAsyncAdminsAboutPaymentRequest(repository, {
+    payment,
+    plan,
+    user,
     createdAt: input.requestedAt,
   });
   await createAsyncUserNotification(repository, {
@@ -2422,11 +2435,11 @@ function normalizePaymentDepositorName(method: PaymentRequestRecord['method'], v
   return depositorName || null;
 }
 
-function assertNoDuplicateAsyncSubscriptionRequest(
+function findDuplicateAsyncSubscriptionRequest(
   subscriptions: SubscriptionRecord[],
   input: { userId: string },
-): void {
-  const duplicatedSubscription = subscriptions
+): SubscriptionRecord | null {
+  return subscriptions
     .filter((subscription) => subscription.userId === input.userId)
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .find((subscription) => (
@@ -2436,9 +2449,27 @@ function assertNoDuplicateAsyncSubscriptionRequest(
       subscription.status === SUBSCRIPTION_STATUSES.expiring ||
       subscription.status === SUBSCRIPTION_STATUSES.cancelRequested ||
       subscription.status === SUBSCRIPTION_STATUSES.refundRequested
-    ));
+    )) ?? null;
+}
 
+async function getRecoverableAsyncPaymentPendingSubscription(
+  repository: AsyncChartServiceRepository,
+  duplicatedSubscription: SubscriptionRecord | null,
+): Promise<SubscriptionRecord | null> {
+  if (!duplicatedSubscription || duplicatedSubscription.status !== SUBSCRIPTION_STATUSES.paymentPending) {
+    return null;
+  }
+  const existingPayment = (await repository.listPayments())
+    .find((payment) => payment.subscriptionId === duplicatedSubscription.id);
+  return existingPayment ? null : duplicatedSubscription;
+}
+
+function assertNoDuplicateAsyncSubscriptionRequest(
+  duplicatedSubscription: SubscriptionRecord | null,
+  recoverableSubscription: SubscriptionRecord | null,
+): void {
   if (!duplicatedSubscription) return;
+  if (recoverableSubscription) return;
   if (
     duplicatedSubscription.status === SUBSCRIPTION_STATUSES.paymentPending ||
     duplicatedSubscription.status === SUBSCRIPTION_STATUSES.paymentRequested

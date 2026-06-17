@@ -25,7 +25,7 @@ import { createUserNotification } from './notifications.ts';
 import { createProfilePaymentLink } from './notification-links.ts';
 import { getPaymentTransferSettingsForDisplay } from './payment-settings.ts';
 import { createReferralLedgerForPayment } from './referral-program.ts';
-import { notifyAdminsAboutSupportRequest } from './support-admin-notifications.ts';
+import { notifyAdminsAboutPaymentRequest } from './support-admin-notifications.ts';
 import {
   createFailedTransactionVerificationResult,
   verifyTronUsdtTransactionPayload,
@@ -100,28 +100,37 @@ export function createManualPaymentRequest(
   const amountUsd = calculatePlanAmountUsd(plan.basePriceUsd, plan.discountPercent);
   const transactionId = normalizePaymentTransactionId(input.method, input.transactionId);
   const depositorName = normalizePaymentDepositorName(input.method, input.depositorName);
-  assertNoDuplicateSubscriptionRequest(repository.listSubscriptions(), {
+  const duplicatedSubscription = findDuplicateSubscriptionRequest(repository.listSubscriptions(), {
     userId: input.userId,
   });
+  const recoverableSubscription = getRecoverablePaymentPendingSubscription(repository, duplicatedSubscription);
+  assertNoDuplicateSubscriptionRequest(duplicatedSubscription, recoverableSubscription);
 
-  const subscriptionId = repository.nextId('sub');
+  const subscriptionId = recoverableSubscription?.id ?? repository.nextId('sub');
   const paymentId = repository.nextId('pay');
   const supportThreadId = repository.nextId('support');
 
-  const subscription: SubscriptionRecord = {
-    id: subscriptionId,
-    userId: input.userId,
-    planId: plan.id,
-    status: SUBSCRIPTION_STATUSES.paymentPending,
-    startsAt: null,
-    endsAt: null,
-    approvedByAdminId: null,
-    approvedAt: null,
-    cancelledAt: null,
-    refundedAt: null,
-    createdAt: input.requestedAt,
-    updatedAt: input.requestedAt,
-  };
+  const subscription: SubscriptionRecord = recoverableSubscription
+    ? {
+      ...recoverableSubscription,
+      planId: plan.id,
+      status: SUBSCRIPTION_STATUSES.paymentPending,
+      updatedAt: input.requestedAt,
+    }
+    : {
+      id: subscriptionId,
+      userId: input.userId,
+      planId: plan.id,
+      status: SUBSCRIPTION_STATUSES.paymentPending,
+      startsAt: null,
+      endsAt: null,
+      approvedByAdminId: null,
+      approvedAt: null,
+      cancelledAt: null,
+      refundedAt: null,
+      createdAt: input.requestedAt,
+      updatedAt: input.requestedAt,
+    };
   const { thread: supportThread, message: supportMessage } = createDepositSupportThreadDraft({
     threadId: supportThreadId,
     messageId: repository.nextId('support_msg'),
@@ -168,10 +177,10 @@ export function createManualPaymentRequest(
     createdAt: input.requestedAt,
   });
   if (referralLedger) repository.saveReferralLedger(referralLedger);
-  notifyAdminsAboutSupportRequest(repository, {
-    thread: supportThread,
-    message: supportMessage,
-    author: user,
+  notifyAdminsAboutPaymentRequest(repository, {
+    payment,
+    plan,
+    user,
     createdAt: input.requestedAt,
   });
   createUserNotification(repository, {
@@ -185,11 +194,11 @@ export function createManualPaymentRequest(
   return { payment, subscription, supportThread, supportMessage };
 }
 
-function assertNoDuplicateSubscriptionRequest(
+function findDuplicateSubscriptionRequest(
   subscriptions: SubscriptionRecord[],
   input: { userId: string },
-): void {
-  const duplicatedSubscription = subscriptions
+): SubscriptionRecord | null {
+  return subscriptions
     .filter((subscription) => subscription.userId === input.userId)
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .find((subscription) => (
@@ -199,9 +208,27 @@ function assertNoDuplicateSubscriptionRequest(
       subscription.status === SUBSCRIPTION_STATUSES.expiring ||
       subscription.status === SUBSCRIPTION_STATUSES.cancelRequested ||
       subscription.status === SUBSCRIPTION_STATUSES.refundRequested
-    ));
+    )) ?? null;
+}
 
+function getRecoverablePaymentPendingSubscription(
+  repository: ChartServiceRepository,
+  duplicatedSubscription: SubscriptionRecord | null,
+): SubscriptionRecord | null {
+  if (!duplicatedSubscription || duplicatedSubscription.status !== SUBSCRIPTION_STATUSES.paymentPending) {
+    return null;
+  }
+  const existingPayment = repository.listPayments()
+    .find((payment) => payment.subscriptionId === duplicatedSubscription.id);
+  return existingPayment ? null : duplicatedSubscription;
+}
+
+function assertNoDuplicateSubscriptionRequest(
+  duplicatedSubscription: SubscriptionRecord | null,
+  recoverableSubscription: SubscriptionRecord | null,
+): void {
   if (!duplicatedSubscription) return;
+  if (recoverableSubscription) return;
   if (
     duplicatedSubscription.status === SUBSCRIPTION_STATUSES.paymentPending ||
     duplicatedSubscription.status === SUBSCRIPTION_STATUSES.paymentRequested

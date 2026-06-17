@@ -14,6 +14,7 @@ import {
   createUserNotification,
   formatNotificationBadgeCount,
   listAsyncNotificationsForUser,
+  listAsyncAdminPaymentQueue,
   getNotificationSummaryForUser,
   listNotificationsForUser,
   markAllNotificationsReadForUser,
@@ -75,6 +76,71 @@ test('async manual payment request creates a receipt notification for the reques
   assert.ok(receipt);
   assert.match(receipt.body, /수동 확인/);
   assert.equal(receipt.linkUrl, `/profile#payment-${result.payment.id}`);
+});
+
+test('async manual payment request notifies admins with direct payment queue links', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+
+  const result = await createAsyncAuthenticatedManualPaymentRequest(repository, {
+    actor: { id: 'user_trial', role: 'member' },
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T12:00:00.000Z',
+    depositorName: 'Trial User',
+  });
+
+  const adminNotifications = await repository.listNotificationsByUserId('admin_1');
+  const superAdminNotifications = await repository.listNotificationsByUserId('super_1');
+  const adminPaymentNotice = adminNotifications.find((notification) => (
+    notification.category === 'payment' &&
+    notification.linkUrl === `/admin#admin-payment-${result.payment.id}`
+  ));
+  const superAdminPaymentNotice = superAdminNotifications.find((notification) => (
+    notification.category === 'payment' &&
+    notification.linkUrl === `/admin#admin-payment-${result.payment.id}`
+  ));
+  const paymentQueue = await listAsyncAdminPaymentQueue(repository);
+
+  assert.ok(adminPaymentNotice);
+  assert.ok(superAdminPaymentNotice);
+  assert.match(adminPaymentNotice.title, /입금확인 요청/);
+  assert.match(adminPaymentNotice.body, /Trial User/);
+  assert.equal(paymentQueue.some((item) => item.payment.id === result.payment.id), true);
+});
+
+test('async manual payment request repairs a pending subscription that has no payment request', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  await repository.saveSubscription({
+    id: 'sub_dangling_payment_request',
+    userId: 'user_trial',
+    planId: 'plan_monthly',
+    status: 'payment_pending',
+    startsAt: null,
+    endsAt: null,
+    approvedByAdminId: null,
+    approvedAt: null,
+    cancelledAt: null,
+    refundedAt: null,
+    createdAt: '2026-05-23T11:59:00.000Z',
+    updatedAt: '2026-05-23T11:59:00.000Z',
+  });
+
+  const result = await createAsyncAuthenticatedManualPaymentRequest(repository, {
+    actor: { id: 'user_trial', role: 'member' },
+    planId: 'plan_monthly',
+    method: 'bank_transfer',
+    requestedAt: '2026-05-23T12:00:00.000Z',
+    depositorName: 'Trial User',
+  });
+  const paymentQueue = await listAsyncAdminPaymentQueue(repository);
+  const repairedSubscription = await repository.getSubscriptionById('sub_dangling_payment_request');
+
+  assert.equal(result.subscription.id, 'sub_dangling_payment_request');
+  assert.equal(result.payment.subscriptionId, 'sub_dangling_payment_request');
+  assert.equal(repairedSubscription?.updatedAt, '2026-05-23T12:00:00.000Z');
+  assert.equal(paymentQueue.some((item) => item.payment.id === result.payment.id), true);
 });
 
 test('async payment confirmation notifies admins that subscription approval is waiting', async () => {

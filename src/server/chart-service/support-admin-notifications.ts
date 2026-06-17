@@ -2,12 +2,14 @@ import {
   USER_ROLES,
   type NotificationRecord,
   type PaymentRequestRecord,
+  type SubscriptionPlan,
   type SubscriptionRecord,
   type SupportMessageRecord,
   type SupportThreadRecord,
 } from '../../domain/chart-service/index.ts';
 import type { AsyncChartServiceRepository } from './async-repository.ts';
 import type { ChartServiceRepository, EmailOutboxRecord, ServiceUserRecord } from './repository.ts';
+import { createAdminPaymentLink } from './notification-links.ts';
 import { createAdminSupportThreadPath } from './support-links.ts';
 import { notifyUserPushSubscriptions } from './web-push.ts';
 
@@ -60,6 +62,37 @@ export async function notifyAsyncAdminsAboutSubscriptionApprovalRequest(
   const admins = getSupportAdminUsers(await repository.listUsers());
   for (const admin of admins) {
     const notification = await createAsyncSubscriptionApprovalAdminNotification(repository, admin, input);
+    await repository.saveNotification(notification);
+    void notifyUserPushSubscriptions(repository, notification).catch(() => {});
+  }
+}
+
+export function notifyAdminsAboutPaymentRequest(
+  repository: ChartServiceRepository,
+  input: {
+    payment: PaymentRequestRecord;
+    plan: SubscriptionPlan;
+    user: ServiceUserRecord;
+    createdAt: string;
+  },
+): void {
+  for (const admin of getSupportAdminUsers(repository.listUsers())) {
+    repository.saveNotification(createPaymentRequestAdminNotification(repository, admin, input));
+  }
+}
+
+export async function notifyAsyncAdminsAboutPaymentRequest(
+  repository: AsyncChartServiceRepository,
+  input: {
+    payment: PaymentRequestRecord;
+    plan: SubscriptionPlan;
+    user: ServiceUserRecord;
+    createdAt: string;
+  },
+): Promise<void> {
+  const admins = getSupportAdminUsers(await repository.listUsers());
+  for (const admin of admins) {
+    const notification = await createAsyncPaymentRequestAdminNotification(repository, admin, input);
     await repository.saveNotification(notification);
     void notifyUserPushSubscriptions(repository, notification).catch(() => {});
   }
@@ -186,6 +219,52 @@ async function createAsyncSubscriptionApprovalAdminNotification(
   };
 }
 
+function createPaymentRequestAdminNotification(
+  repository: ChartServiceRepository,
+  admin: ServiceUserRecord,
+  input: {
+    payment: PaymentRequestRecord;
+    plan: SubscriptionPlan;
+    user: ServiceUserRecord;
+    createdAt: string;
+  },
+): NotificationRecord {
+  return {
+    id: repository.nextId('notification'),
+    userId: admin.id,
+    category: 'payment',
+    title: '입금확인 요청이 접수되었습니다',
+    body: formatPaymentRequestAdminSummary(input),
+    linkUrl: createAdminPaymentLink(input.payment.id),
+    readAt: null,
+    archivedAt: null,
+    createdAt: input.createdAt,
+  };
+}
+
+async function createAsyncPaymentRequestAdminNotification(
+  repository: AsyncChartServiceRepository,
+  admin: ServiceUserRecord,
+  input: {
+    payment: PaymentRequestRecord;
+    plan: SubscriptionPlan;
+    user: ServiceUserRecord;
+    createdAt: string;
+  },
+): Promise<NotificationRecord> {
+  return {
+    id: await repository.nextId('notification'),
+    userId: admin.id,
+    category: 'payment',
+    title: '입금확인 요청이 접수되었습니다',
+    body: formatPaymentRequestAdminSummary(input),
+    linkUrl: createAdminPaymentLink(input.payment.id),
+    readAt: null,
+    archivedAt: null,
+    createdAt: input.createdAt,
+  };
+}
+
 function formatSupportRequestSummary(input: {
   thread: SupportThreadRecord;
   message: SupportMessageRecord;
@@ -218,4 +297,15 @@ function formatPaymentUserLabel(input: { payment: PaymentRequestRecord; user: Se
   const depositorName = input.payment.depositorName?.trim();
   const displayName = depositorName || input.user.name;
   return `${displayName} <${input.user.email}>`;
+}
+
+function formatPaymentRequestAdminSummary(input: {
+  payment: PaymentRequestRecord;
+  plan: SubscriptionPlan;
+  user: ServiceUserRecord;
+}): string {
+  return [
+    `${formatPaymentUserLabel(input)}님의 ${input.plan.name} 입금확인 요청이 접수되었습니다.`,
+    '입금관리에서 실제 입금 내역을 확인해 주세요.',
+  ].join(' ');
 }
