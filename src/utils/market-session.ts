@@ -2,8 +2,9 @@ import type { DisplayCurrency } from '../types/market';
 
 const KRW_INDEX_SYMBOLS = new Set(['KOSPI', 'KOSPI200', 'KOSDAQ']);
 const USD_INDEX_SYMBOLS = new Set(['NQ1!', 'NAS100', 'NAS100FT', 'NAS100.FT', 'NAS100FUTURES', 'NDX', 'NASDAQ', 'IXIC', 'SPX500', 'HKG33', 'HSI', '^GSPC', '^IXIC', '^DJI', '^FTSE']);
-const USD_COMMODITY_SYMBOLS = new Set(['XAUUSD', 'XAGUSD']);
+const USD_COMMODITY_SYMBOLS = new Set(['XAUUSD', 'XAGUSD', 'WTI1!', 'BRENT']);
 const NASDAQ_FUTURES_SYMBOLS = new Set(['NAS100', 'NQ1!', 'NQ', 'NAS100FT', 'NAS100.FT', 'NAS100FUTURES']);
+const FX_QUOTES = new Set(['USD', 'EUR', 'JPY', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD', 'CNH', 'HKD', 'SGD']);
 
 export function getChicagoWeekdayHourMinute(now: Date): { weekday: string; hour: number; minute: number } {
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -141,6 +142,16 @@ export function isNasdaqFuturesLikeSymbol(symbol: string): boolean {
   const upper = symbol.trim().toUpperCase();
   const compact = upper.replace(/[\s_-]+/g, '');
   return NASDAQ_FUTURES_SYMBOLS.has(upper) || NASDAQ_FUTURES_SYMBOLS.has(compact);
+}
+
+export function isMtTickVolumeLikeSymbol(symbol: string): boolean {
+  const normalized = canonicalizeUiSymbol(symbol).replace(/\.P$/, '');
+  if (isNasdaqFuturesLikeSymbol(normalized)) return true;
+  if (USD_COMMODITY_SYMBOLS.has(normalized)) return true;
+  if (/^[A-Z]{6}$/.test(normalized)) {
+    return FX_QUOTES.has(normalized.slice(0, 3)) && FX_QUOTES.has(normalized.slice(3));
+  }
+  return false;
 }
 
 export function canonicalizeUiSymbol(symbol: string): string {

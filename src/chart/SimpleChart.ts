@@ -220,7 +220,7 @@ import type { CandleData } from '../types';
 import type { DisplayCurrency } from '../types/market';
 import { formatKUnit, formatKUnitWithComma, formatThousandAdaptive } from '../utils/format';
 import { applyGapSmoothing, type GapMode } from '../utils/gap-smoothing';
-import { getExchangeSessionTimezoneForSymbol } from '../utils/market-session';
+import { getExchangeSessionTimezoneForSymbol, isMtTickVolumeLikeSymbol } from '../utils/market-session';
 type ActiveDrawingToolId = DrawingToolId | 'eraser';
 type DrawingMagnetMode = 'off' | 'soft' | 'strong';
 type VwapAnchorSelection = {
@@ -1301,13 +1301,18 @@ export class SimpleChart {
       const last = this.data[this.data.length - 1];
       const lastVol = last?.volume;
       const lastTurnover = last ? last.volume * last.close : null;
+      const usesTickVolume = isMtTickVolumeLikeSymbol(this.config.symbol);
       return {
-        title: 'Volume',
+        title: usesTickVolume ? 'Volume (Tick)' : 'Volume',
         settings: [],
-        values: [
-          { text: `V ${lastVol == null ? '-' : formatThousandAdaptive(lastVol, 0)}`, color: '#8fa2c4' },
-          { text: `거래대금 ${lastTurnover == null ? '-' : formatKUnitWithComma(lastTurnover)}`, color: '#c7d2ea' },
-        ],
+        values: usesTickVolume
+          ? [
+              { text: `Tick Vol ${lastVol == null ? '-' : formatThousandAdaptive(lastVol, 0)}`, color: '#8fa2c4' },
+            ]
+          : [
+              { text: `V ${lastVol == null ? '-' : formatThousandAdaptive(lastVol, 0)}`, color: '#8fa2c4' },
+              { text: `거래대금 ${lastTurnover == null ? '-' : formatKUnitWithComma(lastTurnover)}`, color: '#c7d2ea' },
+            ],
       };
     }
     return null;
@@ -9770,13 +9775,21 @@ export class SimpleChart {
       const closeColor = isUp ? '#ef5350' : '#26a69a';
       const tradingValue = c.close * c.volume;
       const d = symbolPriceDigits;
+      const usesTickVolume = isMtTickVolumeLikeSymbol(this.config.symbol);
+      const volumeTooltipRows: CrosshairTooltipRow[] = usesTickVolume
+        ? [
+            { label: 'Tick Volume', value: formatKUnit(c.volume), color: '#c9d4e8' },
+          ]
+        : [
+            { label: '거래량', value: formatKUnit(c.volume), color: '#c9d4e8' },
+            { label: '거래대금', value: formatKUnitWithComma(tradingValue), color: '#c9d4e8' },
+          ];
       const tooltipRows: CrosshairTooltipRow[] = [
         { label: '시가', value: formatWithComma(c.open,  d), color: '#c9d4e8' },
         { label: '고가', value: formatWithComma(c.high,  d), color: '#ef5350' },
         { label: '저가', value: formatWithComma(c.low,   d), color: '#26a69a' },
         { label: '종가', value: formatWithComma(c.close, d), color: closeColor },
-        { label: '거래량', value: formatKUnit(c.volume),        color: '#c9d4e8' },
-        { label: '거래대금', value: formatKUnitWithComma(tradingValue), color: '#c9d4e8' },
+        ...volumeTooltipRows,
       ];
       const tooltipResult = renderCrosshairTooltip({
         ctx,

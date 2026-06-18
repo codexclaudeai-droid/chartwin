@@ -25,7 +25,7 @@ import {
   calculateVwapWithBands,
   calculateWilliamsAlligator,
 } from '../src/chart/indicators/index.ts';
-import { getExchangeSessionTimezoneForSymbol } from '../src/utils/market-session.ts';
+import { getExchangeSessionTimezoneForSymbol, isMtTickVolumeLikeSymbol } from '../src/utils/market-session.ts';
 
 const candle = (open, high, low, close, volume = 100) => ({ time: 0, open, high, low, close, volume });
 
@@ -472,4 +472,13 @@ test('VWAP exchange session timezone is inferred from chart symbols', () => {
   assert.equal(getExchangeSessionTimezoneForSymbol('BTCUSDT.P'), 'UTC');
   assert.equal(getExchangeSessionTimezoneForSymbol('NAS100'), 'America/Chicago');
   assert.equal(getExchangeSessionTimezoneForSymbol('KOSPI'), 'Asia/Seoul');
+});
+
+test('MT collector symbols are treated as tick-volume based instruments', () => {
+  assert.equal(isMtTickVolumeLikeSymbol('NQ1!'), true);
+  assert.equal(isMtTickVolumeLikeSymbol('NAS100 Futures'), true);
+  assert.equal(isMtTickVolumeLikeSymbol('XAUUSD'), true);
+  assert.equal(isMtTickVolumeLikeSymbol('EURUSD'), true);
+  assert.equal(isMtTickVolumeLikeSymbol('BTCUSDT'), false);
+  assert.equal(isMtTickVolumeLikeSymbol('KOSPI'), false);
 });
