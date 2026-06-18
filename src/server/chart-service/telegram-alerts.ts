@@ -296,9 +296,12 @@ export async function sendAsyncTelegramProfileTestMessage(
 
 export function formatTelegramSignalMessage(event: TelegramSignalEvent): string {
   const side = formatTelegramEventType(event.eventType);
+  const eventEmoji = formatTelegramEventEmoji(event.eventType);
+  const symbol = formatTelegramSymbol(event.symbolId);
   const takeProfitPrices = normalizeTakeProfitPrices(event.takeProfitPrices);
   const parts = [
-    `${side} ${event.symbolId.trim().toUpperCase()}`,
+    '⚡ TC Signal',
+    `${eventEmoji} ${side} ${symbol}`,
     event.timeframe ? `TF: ${event.timeframe}` : null,
     typeof event.price === 'number' && Number.isFinite(event.price) ? `Price: ${event.price}` : null,
     typeof event.stopLossPrice === 'number' && Number.isFinite(event.stopLossPrice) ? `S/L: ${event.stopLossPrice}` : null,
@@ -393,6 +396,24 @@ function formatTelegramEventType(eventType: TelegramSignalEventType): string {
   if (eventType === 'stop_loss') return 'S/L';
   if (eventType === 'take_profit') return 'T/P';
   return eventType.toUpperCase();
+}
+
+function formatTelegramEventEmoji(eventType: TelegramSignalEventType): string {
+  if (eventType === 'buy') return '📈';
+  if (eventType === 'sell') return '📉';
+  if (eventType === 'stop_loss') return '🛑';
+  if (eventType === 'take_profit') return '🎯';
+  return '📣';
+}
+
+function formatTelegramSymbol(rawSymbol: string): string {
+  const symbol = rawSymbol.trim().toUpperCase();
+  return formatTelegramSymbolLabel(symbol);
+}
+
+function formatTelegramSymbolLabel(symbol: string): string {
+  if (symbol === 'NQ1!') return 'NAS100 Futures';
+  return symbol;
 }
 
 function formatTelegramEventTime(occurredAt: string): string {

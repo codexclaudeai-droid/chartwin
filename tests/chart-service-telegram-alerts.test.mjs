@@ -170,7 +170,7 @@ test('Telegram signal message omits strategy and formats combined S/L and T/P le
     occurredAt: '2026-06-11T13:45:00.000Z',
   });
 
-  assert.match(message, /BUY BTCUSDT/);
+  assert.match(message, /^⚡ TC Signal\n📈 BUY BTCUSDT/);
   assert.match(message, /TF: 1h/);
   assert.match(message, /Price: 65000/);
   assert.match(message, /S\/L: 64000/);
@@ -187,13 +187,42 @@ test('Telegram exit event labels use S/L and T/P abbreviations', () => {
     strategyId: 'strategy_js_grid_martingale',
     symbolId: 'BTCUSDT',
     occurredAt: now,
-  }), /^S\/L BTCUSDT/);
+  }), /^⚡ TC Signal\n🛑 S\/L BTCUSDT/);
   assert.match(formatTelegramSignalMessage({
     eventType: 'take_profit',
     strategyId: 'strategy_js_grid_martingale',
     symbolId: 'BTCUSDT',
     occurredAt: now,
-  }), /^T\/P BTCUSDT/);
+  }), /^⚡ TC Signal\n🎯 T\/P BTCUSDT/);
+});
+
+test('Telegram signal message prefixes sell signals and gateway symbols with emojis', () => {
+  const message = formatTelegramSignalMessage({
+    eventType: 'sell',
+    strategyId: 'strategy_js_grid_martingale',
+    symbolId: 'NQ1!',
+    timeframe: '1m',
+    price: 30574.65,
+    occurredAt: '2026-06-16T13:49:00.000Z',
+  });
+
+  assert.match(message, /^⚡ TC Signal\n📉 SELL NAS100 Futures/);
+  assert.doesNotMatch(message, /NQ1!/);
+  assert.match(message, /TF: 1m/);
+  assert.match(message, /Price: 30574.65/);
+});
+
+test('Telegram signal message uses a gold-bar style emoji for XAU symbols', () => {
+  const message = formatTelegramSignalMessage({
+    eventType: 'buy',
+    strategyId: 'strategy_js_grid_martingale',
+    symbolId: 'XAUUSD',
+    timeframe: '1m',
+    price: 2350.5,
+    occurredAt: '2026-06-16T13:49:00.000Z',
+  });
+
+  assert.match(message, /^⚡ TC Signal\n📈 BUY XAUUSD/);
 });
 
 test('async Telegram signal delivery supports API route persistence', async () => {
@@ -329,7 +358,7 @@ test('server Telegram monitor seeds existing latest signal before sending realti
   assert.equal(realtime.sentCount, 1);
   assert.equal(duplicate.sentCount, 0);
   assert.equal(sentMessages.length, 1);
-  assert.match(sentMessages[0], /BUY BTCUSDT/);
+  assert.match(sentMessages[0], /BUY .*BTCUSDT/);
   assert.match(sentMessages[0], /TF: 1m/);
 });
 
@@ -382,7 +411,7 @@ test('server Telegram monitor scans closed candles since the last check so delay
 
   assert.equal(result.sentCount, 1);
   assert.equal(sentMessages.length, 1);
-  assert.match(sentMessages[0], /BUY BTCUSDT/);
+  assert.match(sentMessages[0], /BUY .*BTCUSDT/);
   assert.match(sentMessages[0], /Time: 70\.01\.01 09:02:00 KST/);
   assert.equal(watchState?.lastCheckedCandleTime, 1200);
   assert.equal(watchState?.lastSignalCandleTime, 120);
@@ -473,7 +502,7 @@ test('server Telegram monitor applies stored strategy parameter profiles before 
 
   assert.equal(result.sentCount, 1);
   assert.equal(sentMessages.length, 1);
-  assert.match(sentMessages[0], /BUY BTCUSDT/);
+  assert.match(sentMessages[0], /BUY .*BTCUSDT/);
 });
 
 test('server Telegram monitor ignores still-open candles', async () => {
@@ -594,7 +623,7 @@ test('browser Telegram signal API allows delayed confirmations on earlier candle
   assert.equal(result.suppressedCount, 0);
   assert.equal(result.sentCount, 1);
   assert.equal(sentMessages.length, 1);
-  assert.match(sentMessages[0], /SELL BTCUSDT/);
+  assert.match(sentMessages[0], /SELL .*BTCUSDT/);
   assert.equal(watchState?.lastCheckedCandleTime, 300);
   assert.equal(watchState?.lastSignalCandleTime, 240);
   assert.equal(watchState?.lastSignalEventType, 'sell');
