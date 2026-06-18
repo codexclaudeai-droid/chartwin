@@ -27,7 +27,7 @@ import {
   type ServerStrategyCandle,
 } from './server-strategy-signals.ts';
 import {
-  createBinanceServerCandleProvider,
+  createHybridServerCandleProvider,
   type ServerCandleProvider,
 } from './server-candles.ts';
 import { notifyAsyncSignalPushSubscribers } from './signal-push-notifications.ts';
@@ -78,7 +78,7 @@ export async function runTelegramSignalMonitorOnce(
   const nowIso = nowDate.toISOString();
   const nowSec = Math.floor(nowDate.getTime() / 1000);
   const strategies = options.strategies ?? getDefaultServerStrategies();
-  const candleProvider = options.candleProvider ?? createBinanceServerCandleProvider();
+  const candleProvider = options.candleProvider ?? createHybridServerCandleProvider();
   const jobs = buildTelegramSignalMonitorJobs(await repository.listTelegramBotProfiles());
   const strategyParameterSettings = await readServerStrategyParameterSettings(repository);
   const result: TelegramSignalMonitorResult = {

@@ -389,6 +389,18 @@ test('server Telegram monitor scans closed candles since the last check so delay
   assert.equal(watchState?.lastSignalEventType, 'buy');
 });
 
+test('server Telegram monitor uses hybrid candle provider for Binance and gateway symbols by default', () => {
+  const monitorSource = fs.readFileSync(new URL('../src/server/chart-service/telegram-signal-monitor.ts', import.meta.url), 'utf8');
+  const candleSource = fs.readFileSync(new URL('../src/server/chart-service/server-candles.ts', import.meta.url), 'utf8');
+
+  assert.match(monitorSource, /createHybridServerCandleProvider/);
+  assert.match(monitorSource, /options\.candleProvider \?\? createHybridServerCandleProvider\(\)/);
+  assert.match(candleSource, /shouldUseBinanceDirect\(args\.symbol\)/);
+  assert.match(candleSource, /createMarketCandleServerProvider/);
+  assert.match(candleSource, /selectMarketCandles/);
+  assert.match(candleSource, /inferGatewayReportMarket\(symbol\)/);
+});
+
 test('server Telegram monitor applies stored strategy parameter profiles before computing signals', async () => {
   const syncRepository = createMockChartServiceRepository();
   const repository = createAsyncChartServiceRepository(syncRepository);

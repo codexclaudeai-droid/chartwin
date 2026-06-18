@@ -1,5 +1,11 @@
 import type { TimeframeKey } from '../../catalog/time.ts';
+import {
+  inferGatewayReportMarket,
+  normalizeSymbol,
+  shouldUseBinanceDirect,
+} from '../../data/gateway-market.ts';
 import type { ServerStrategyCandle } from './server-strategy-signals.ts';
+import { selectMarketCandles } from './market-candles.ts';
 
 export type ServerCandleProvider = (args: {
   symbol: string;
@@ -44,6 +50,39 @@ export function createBinanceServerCandleProvider(
       limit,
       fetcher,
     });
+  };
+}
+
+export function createHybridServerCandleProvider(
+  fetcher: typeof fetch = fetch,
+): ServerCandleProvider {
+  const binanceProvider = createBinanceServerCandleProvider(fetcher);
+  const marketCandleProvider = createMarketCandleServerProvider();
+
+  return async (args) => {
+    if (shouldUseBinanceDirect(args.symbol)) {
+      return await binanceProvider(args);
+    }
+    return await marketCandleProvider(args);
+  };
+}
+
+export function createMarketCandleServerProvider(): ServerCandleProvider {
+  return async ({ symbol, timeframe, limit }) => {
+    const candles = await selectMarketCandles({
+      market: inferGatewayReportMarket(symbol),
+      symbol: normalizeSymbol(symbol),
+      timeframe,
+      limit,
+    });
+    return candles.map((candle) => ({
+      time: candle.time,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+      volume: candle.volume,
+    }));
   };
 }
 
