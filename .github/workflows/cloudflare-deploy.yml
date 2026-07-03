@@ -74,6 +74,44 @@ jobs:
             fi
           done
 
+      - name: Ensure MT gateway tunnel DNS
+        env:
+          CLOUDFLARE_ZONE_NAME: tradingcore.co
+          CLOUDFLARE_GATEWAY_HOSTNAME: gateway.tradingcore.co
+          CLOUDFLARE_GATEWAY_TARGET: 000f9e3d-3533-4e9f-8687-7c79a26ce52a.cfargotunnel.com
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const headers = {
+            Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+            'Content-Type': 'application/json',
+          };
+          const api = 'https://api.cloudflare.com/client/v4';
+          const request = async (path, init = {}) => {
+            const response = await fetch(`${api}${path}`, { ...init, headers });
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+              throw new Error(`Cloudflare API ${response.status}: ${JSON.stringify(payload.errors)}`);
+            }
+            return payload.result;
+          };
+          const zones = await request(`/zones?name=${encodeURIComponent(process.env.CLOUDFLARE_ZONE_NAME)}`);
+          const zone = zones[0];
+          if (!zone) throw new Error('Cloudflare zone not found');
+          const name = process.env.CLOUDFLARE_GATEWAY_HOSTNAME;
+          const records = await request(`/zones/${zone.id}/dns_records?name=${encodeURIComponent(name)}`);
+          const body = JSON.stringify({
+            type: 'CNAME',
+            name,
+            content: process.env.CLOUDFLARE_GATEWAY_TARGET,
+            proxied: true,
+            ttl: 1,
+          });
+          const path = records[0]
+            ? `/zones/${zone.id}/dns_records/${records[0].id}`
+            : `/zones/${zone.id}/dns_records`;
+          await request(path, { method: records[0] ? 'PUT' : 'POST', body });
+          NODE
       - name: Prepare Supabase Postgres database
         run: |
           npm run service:prod-env:check
