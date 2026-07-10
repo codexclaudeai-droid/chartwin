@@ -485,7 +485,25 @@ export function createMockChartServiceRepository(
     saveTelegramSignalWatchState(watchState) {
       const index = state.telegramSignalWatchStates.findIndex((item) => item.key === watchState.key);
       if (index >= 0) {
-        state.telegramSignalWatchStates[index] = structuredClone(watchState);
+        const current = state.telegramSignalWatchStates[index];
+        const useIncomingSignal = watchState.lastSignalCandleTime != null && (
+          current.lastSignalCandleTime == null ||
+          watchState.lastSignalCandleTime >= current.lastSignalCandleTime
+        );
+        state.telegramSignalWatchStates[index] = structuredClone({
+          ...watchState,
+          lastCheckedCandleTime: Math.max(
+            current.lastCheckedCandleTime,
+            watchState.lastCheckedCandleTime,
+          ),
+          lastSignalCandleTime: useIncomingSignal
+            ? watchState.lastSignalCandleTime
+            : current.lastSignalCandleTime,
+          lastSignalEventType: useIncomingSignal
+            ? watchState.lastSignalEventType
+            : current.lastSignalEventType,
+          updatedAt: current.updatedAt > watchState.updatedAt ? current.updatedAt : watchState.updatedAt,
+        });
       } else {
         state.telegramSignalWatchStates.push(structuredClone(watchState));
       }
@@ -499,6 +517,11 @@ export function createMockChartServiceRepository(
     },
     saveSignalEvent(event) {
       upsertById(state.signalEvents, event);
+    },
+    createSignalEventIfAbsent(event) {
+      if (state.signalEvents.some((item) => item.id === event.id)) return false;
+      state.signalEvents.push(structuredClone(event));
+      return true;
     },
     listSignupAgreementsByUserId(userId) {
       return state.signupAgreements

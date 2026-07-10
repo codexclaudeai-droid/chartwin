@@ -367,6 +367,7 @@ export type ChartServiceRepository = {
   saveTelegramSignalWatchState(state: TelegramSignalWatchStateRecord): void;
   listSignalEvents(limit?: number): SignalEventRecord[];
   saveSignalEvent(event: SignalEventRecord): void;
+  createSignalEventIfAbsent(event: SignalEventRecord): boolean;
   listSignupAgreementsByUserId(userId: string): SignupAgreementRecord[];
   saveSignupAgreement(agreement: SignupAgreementRecord): void;
   listReferralLedgersByPaymentId(paymentRequestId: string): ReferralLedgerRecord[];

@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   createMockChartServiceRepository,
   createAsyncChartServiceRepository,
+  createSignalEventDedupeId,
   createSignalRealtimeStream,
   getSignalRealtimeSubscriberCount,
   publishSignalRealtimeEvent,
@@ -65,6 +66,21 @@ test('saving async signal events persists and publishes the shared server event'
   assert.match(signalChunk, new RegExp(saved.id));
 
   await reader.cancel();
+});
+
+test('signal dedupe IDs ignore source labels but distinguish minute and monthly timeframes', () => {
+  const baseEvent = {
+    eventType: 'buy',
+    strategyId: 'strategy_js_grid_martingale',
+    signalSource: 'chart_strategy',
+    symbolId: 'BTCUSDT',
+    timeframe: '1m',
+    occurredAt: '2026-07-11T01:00:00.000Z',
+  };
+  const fallbackNow = '2026-07-11T01:00:01.000Z';
+  const minuteId = createSignalEventDedupeId(baseEvent, fallbackNow);
+  assert.equal(minuteId, createSignalEventDedupeId({ ...baseEvent, signalSource: 'ea_strategy' }, fallbackNow));
+  assert.notEqual(minuteId, createSignalEventDedupeId({ ...baseEvent, timeframe: '1M' }, fallbackNow));
 });
 
 function createSignalEvent(symbolId, timeframe) {

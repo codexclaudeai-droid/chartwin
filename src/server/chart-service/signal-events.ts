@@ -22,6 +22,42 @@ export async function saveAsyncSignalEventFromTelegramEvent(
   return record;
 }
 
+export type SignalEventClaimResult = {
+  record: SignalEventRecord;
+  claimed: boolean;
+};
+
+export async function claimAsyncSignalEventFromTelegramEvent(
+  repository: AsyncChartServiceRepository,
+  event: TelegramSignalEvent,
+  options: {
+    origin: SignalEventOrigin;
+    now?: string;
+  },
+): Promise<SignalEventClaimResult> {
+  const now = normalizeIso(options.now) ?? new Date().toISOString();
+  const record = createSignalEventRecordFromTelegramEvent(
+    createSignalEventDedupeId(event, now),
+    event,
+    { origin: options.origin, now },
+  );
+  const claimed = await repository.createSignalEventIfAbsent(record);
+  if (claimed) publishSignalRealtimeEvent(record);
+  return { record, claimed };
+}
+
+export function createSignalEventDedupeId(event: TelegramSignalEvent, fallbackNow: string): string {
+  const occurredAt = normalizeIso(event.occurredAt) ?? fallbackNow;
+  const components = [
+    event.eventType,
+    event.strategyId.trim(),
+    event.symbolId.trim().toUpperCase(),
+    normalizeSignalTimeframe(event.timeframe),
+    occurredAt,
+  ];
+  return `signal_event_once_${components.map((value) => encodeURIComponent(value)).join('|')}`;
+}
+
 export function createSignalEventRecordFromTelegramEvent(
   id: string,
   event: TelegramSignalEvent,
@@ -57,6 +93,11 @@ function normalizeSignalSource(value: unknown): SignalSource {
 function normalizeNullableText(value: unknown): string | null {
   const text = typeof value === 'string' ? value.trim() : '';
   return text || null;
+}
+
+function normalizeSignalTimeframe(value: unknown): string {
+  const timeframe = normalizeNullableText(value) ?? '';
+  return timeframe === '1M' ? timeframe : timeframe.toLowerCase();
 }
 
 function normalizeNullableNumber(value: unknown): number | null {

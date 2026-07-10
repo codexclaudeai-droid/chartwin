@@ -506,11 +506,32 @@ export function createPostgresAsyncChartServiceRepository(
     },
     async saveTelegramSignalWatchState(state: TelegramSignalWatchStateRecord): Promise<void> {
       await ensureTelegramAlertTables();
-      await execute(createPostgresUpsertStatement(
+      const insert = createPostgresInsertStatement(
         'telegram_signal_watch_states',
         mapTelegramSignalWatchStateToPostgresRow(state),
-        ['key'],
-      ));
+      );
+      await execute({
+        sql: [
+          insert.sql,
+          'on conflict (key) do update set',
+          'strategy_id = excluded.strategy_id,',
+          'symbol_id = excluded.symbol_id,',
+          'timeframe = excluded.timeframe,',
+          'last_checked_candle_time = greatest(telegram_signal_watch_states.last_checked_candle_time, excluded.last_checked_candle_time),',
+          'last_signal_candle_time = case',
+          'when excluded.last_signal_candle_time is null then telegram_signal_watch_states.last_signal_candle_time',
+          'when telegram_signal_watch_states.last_signal_candle_time is null then excluded.last_signal_candle_time',
+          'when excluded.last_signal_candle_time >= telegram_signal_watch_states.last_signal_candle_time then excluded.last_signal_candle_time',
+          'else telegram_signal_watch_states.last_signal_candle_time end,',
+          'last_signal_event_type = case',
+          'when excluded.last_signal_candle_time is null then telegram_signal_watch_states.last_signal_event_type',
+          'when telegram_signal_watch_states.last_signal_candle_time is null then excluded.last_signal_event_type',
+          'when excluded.last_signal_candle_time >= telegram_signal_watch_states.last_signal_candle_time then excluded.last_signal_event_type',
+          'else telegram_signal_watch_states.last_signal_event_type end,',
+          'updated_at = greatest(telegram_signal_watch_states.updated_at, excluded.updated_at)',
+        ].join(' '),
+        values: insert.values,
+      });
     },
     async listSignalEvents(limit = 100): Promise<SignalEventRecord[]> {
       await ensureTelegramAlertTables();
@@ -527,6 +548,18 @@ export function createPostgresAsyncChartServiceRepository(
         mapSignalEventToPostgresRow(event),
         ['id'],
       ));
+    },
+    async createSignalEventIfAbsent(event: SignalEventRecord): Promise<boolean> {
+      await ensureTelegramAlertTables();
+      const insert = createPostgresInsertStatement(
+        'signal_events',
+        mapSignalEventToPostgresRow(event),
+      );
+      const rows = await queryRows({
+        sql: `${insert.sql} on conflict (id) do nothing returning id`,
+        values: insert.values,
+      });
+      return rows.length > 0;
     },
     async listSignupAgreementsByUserId(userId: string): Promise<SignupAgreementRecord[]> {
       return selectMany('signup_agreements', mapSignupAgreementFromPostgresRow, { user_id: userId }, {

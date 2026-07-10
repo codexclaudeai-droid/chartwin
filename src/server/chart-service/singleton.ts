@@ -110,6 +110,7 @@ function hasAsyncRepositoryCapabilities(persistence: AsyncChartServicePersistenc
     typeof persistence.repository.saveTelegramSignalWatchState === 'function' &&
     typeof persistence.repository.listSignalEvents === 'function' &&
     typeof persistence.repository.saveSignalEvent === 'function' &&
+    typeof persistence.repository.createSignalEventIfAbsent === 'function' &&
     typeof persistence.repository.getSupportMessageById === 'function' &&
     typeof persistence.repository.listSupportMessagesByThreadId === 'function' &&
     typeof persistence.repository.deleteSupportMessage === 'function' &&
@@ -141,6 +142,7 @@ function hasMemoryRepositoryCapabilities(repository: ChartServiceRepository): bo
     typeof repository.saveTelegramSignalWatchState === 'function' &&
     typeof repository.listSignalEvents === 'function' &&
     typeof repository.saveSignalEvent === 'function' &&
+    typeof repository.createSignalEventIfAbsent === 'function' &&
     typeof repository.listSupportMessagesByThreadId === 'function' &&
     typeof repository.deleteSupportMessage === 'function' &&
     typeof repository.deleteSupportMessagesByThreadId === 'function';
@@ -531,7 +533,21 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
       const rows = mutableRepository.__fallbackTelegramSignalWatchStates ?? [];
       const index = rows.findIndex((item) => item.key === watchState.key);
       if (index >= 0) {
-        rows[index] = structuredClone(watchState);
+        const current = rows[index];
+        const useIncomingSignal = watchState.lastSignalCandleTime != null && (
+          current.lastSignalCandleTime == null ||
+          watchState.lastSignalCandleTime >= current.lastSignalCandleTime
+        );
+        rows[index] = structuredClone({
+          ...watchState,
+          lastCheckedCandleTime: Math.max(
+            current.lastCheckedCandleTime,
+            watchState.lastCheckedCandleTime,
+          ),
+          lastSignalCandleTime: useIncomingSignal ? watchState.lastSignalCandleTime : current.lastSignalCandleTime,
+          lastSignalEventType: useIncomingSignal ? watchState.lastSignalEventType : current.lastSignalEventType,
+          updatedAt: current.updatedAt > watchState.updatedAt ? current.updatedAt : watchState.updatedAt,
+        });
       } else {
         rows.push(structuredClone(watchState));
       }
@@ -559,6 +575,16 @@ function ensureMemoryRepositoryCapabilities(repository: ChartServiceRepository):
         rows.push(structuredClone(event));
       }
       mutableRepository.__fallbackSignalEvents = rows;
+    };
+  }
+
+  if (typeof mutableRepository.createSignalEventIfAbsent !== 'function') {
+    mutableRepository.createSignalEventIfAbsent = (event) => {
+      const rows = mutableRepository.__fallbackSignalEvents ?? [];
+      if (rows.some((item) => item.id === event.id)) return false;
+      rows.push(structuredClone(event));
+      mutableRepository.__fallbackSignalEvents = rows;
+      return true;
     };
   }
 

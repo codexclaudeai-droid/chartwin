@@ -50,14 +50,16 @@ test('chart signal notice suppresses reload backlogs and only announces the late
   assert.match(initSource, /speakSignalNotice\(latestSignal\.side\);/);
 });
 
-test('chart signal notice can announce delayed confirmations on earlier candles after the baseline is primed', () => {
-  assert.doesNotMatch(initSource, /signalNoticeLiveAfterTimeSecByPane/);
-  assert.doesNotMatch(initSource, /getSignalNoticeLatestCandleTimeSec/);
+test('chart signal notice only announces fresh local and server events', () => {
+  assert.match(initSource, /const isFreshSignalNotice = \(timeSec: number, timeframe: string\): boolean =>/);
   assert.match(
     initSource,
-    /return collectTodaySignalNotices\(paneId\)\.filter\(\(item\) => \{[\s\S]*?if \(announcedSignalKeys\.has\(item\.key\)\) return false;[\s\S]*?announcedSignalKeys\.add\(item\.key\);[\s\S]*?return true;/,
+    /return collectTodaySignalNotices\(paneId\)\.filter\(\(item\) => \{[\s\S]*?if \(!isFreshSignalNotice\(item\.timeSec, pane\.chart\.config\.timeframe\)\) \{[\s\S]*?announcedSignalKeys\.add\(item\.key\);[\s\S]*?return false;[\s\S]*?\}/,
   );
-  assert.doesNotMatch(initSource, /item\.timeSec <=/);
+  assert.match(
+    initSource,
+    /const handleServerSignalEvent = \(signalEvent: ServerSignalEvent\) => \{[\s\S]*?if \(!isFreshSignalNotice\(timeSec, signalEvent\.timeframe \?\? ''\)\) return;/,
+  );
 });
 
 test('chart signal notice posts new buy sell signals to Telegram alert API', () => {

@@ -7,6 +7,7 @@ import {
 } from '../../domain/chart-service/index.ts';
 import type { AsyncChartServiceRepository } from './async-repository.ts';
 import type { StrategyDefinition, StrategySignal } from '../../strategy/strategy-service.ts';
+import { isSignalWithinRealtimeWindow } from '../../strategy/signal-freshness.ts';
 import type {
   SignalEventOrigin,
   TelegramBotProfileRecord,
@@ -31,7 +32,7 @@ import {
   type ServerCandleProvider,
 } from './server-candles.ts';
 import { notifyAsyncSignalPushSubscribers } from './signal-push-notifications.ts';
-import { saveAsyncSignalEventFromTelegramEvent } from './signal-events.ts';
+import { claimAsyncSignalEventFromTelegramEvent } from './signal-events.ts';
 
 export type TelegramSignalMonitorJob = {
   key: string;
@@ -178,16 +179,34 @@ export async function runTelegramSignalMonitorOnce(
           price: closedSignal.candle.close,
           occurredAt: new Date(closedSignal.candle.time * 1000).toISOString(),
         };
-        await saveAsyncSignalEventFromTelegramEvent(repository, event, {
+        lastSignalCandleTime = closedSignal.candle.time;
+        lastSignalEventType = closedSignal.eventType;
+        await repository.saveTelegramSignalWatchState(createTelegramSignalWatchState(
+          job,
+          closedSignal.candle.time,
+          lastSignalCandleTime,
+          lastSignalEventType,
+          nowIso,
+        ));
+
+        if (!isSignalWithinRealtimeWindow({
+          signalTimeSec: closedSignal.candle.time,
+          timeframe: job.timeframe,
+          nowSec,
+        })) {
+          continue;
+        }
+
+        const claim = await claimAsyncSignalEventFromTelegramEvent(repository, event, {
           origin: 'server_monitor',
           now: nowIso,
         });
+        if (!claim.claimed) continue;
+
         const delivery = await sendAsyncTelegramAlertForSignal(repository, event, options.telegramFetch);
         result.sentCount += delivery.sentCount;
         result.failedCount += delivery.failedCount;
         await notifySignalPushSubscribers(repository, event, result);
-        lastSignalCandleTime = closedSignal.candle.time;
-        lastSignalEventType = closedSignal.eventType;
       }
 
       await repository.saveTelegramSignalWatchState(createTelegramSignalWatchState(
@@ -270,18 +289,35 @@ export async function sendAsyncTelegramAlertForSignalWithWatchState(
   repository: AsyncChartServiceRepository,
   event: TelegramSignalEvent,
   fetcher?: TelegramFetch,
-  options: { origin?: SignalEventOrigin } = {},
+  options: { origin?: SignalEventOrigin; now?: string | Date } = {},
 ): Promise<TelegramSignalDeliveryResult> {
+  const nowDate = normalizeNow(options.now);
+  const nowIso = nowDate.toISOString();
+  const nowSec = Math.floor(nowDate.getTime() / 1000);
+  const origin = options.origin ?? 'browser_chart';
   const eventCandleTime = readEventCandleTimeSec(event);
   const timeframe = normalizeString(event.timeframe ?? '');
+  const hasSupportedTimeframe = isSupportedServerTimeframe(timeframe);
   const canTrack = eventCandleTime != null &&
     (event.eventType === 'buy' || event.eventType === 'sell') &&
-    isSupportedServerTimeframe(timeframe);
+    hasSupportedTimeframe;
+  const isFresh = eventCandleTime == null || !hasSupportedTimeframe || isSignalWithinRealtimeWindow({
+    signalTimeSec: eventCandleTime,
+    timeframe,
+    nowSec,
+  });
 
   if (!canTrack) {
-    await saveAsyncSignalEventFromTelegramEvent(repository, event, {
-      origin: options.origin ?? 'browser_chart',
+    if (!isFresh) {
+      return { sentCount: 0, failedCount: 0, logs: [], suppressedCount: 1 };
+    }
+    const claim = await claimAsyncSignalEventFromTelegramEvent(repository, event, {
+      origin,
+      now: nowIso,
     });
+    if (!claim.claimed) {
+      return { sentCount: 0, failedCount: 0, logs: [], suppressedCount: 1 };
+    }
     const delivery = await sendAsyncTelegramAlertForSignal(repository, event, fetcher);
     return { ...delivery, suppressedCount: 0 };
   }
@@ -301,10 +337,6 @@ export async function sendAsyncTelegramAlertForSignalWithWatchState(
     return { sentCount: 0, failedCount: 0, logs: [], suppressedCount: 1 };
   }
 
-  await saveAsyncSignalEventFromTelegramEvent(repository, event, {
-    origin: options.origin ?? 'browser_chart',
-  });
-  const delivery = await sendAsyncTelegramAlertForSignal(repository, event, fetcher);
   const lastCheckedCandleTime = Math.max(previous?.lastCheckedCandleTime ?? eventCandleTime, eventCandleTime);
   await repository.saveTelegramSignalWatchState(
     createTelegramSignalWatchState(
@@ -312,9 +344,22 @@ export async function sendAsyncTelegramAlertForSignalWithWatchState(
       lastCheckedCandleTime,
       eventCandleTime,
       event.eventType,
-      new Date().toISOString(),
+      nowIso,
     ),
   );
+  if (!isFresh) {
+    return { sentCount: 0, failedCount: 0, logs: [], suppressedCount: 1 };
+  }
+
+  const claim = await claimAsyncSignalEventFromTelegramEvent(repository, event, {
+    origin,
+    now: nowIso,
+  });
+  if (!claim.claimed) {
+    return { sentCount: 0, failedCount: 0, logs: [], suppressedCount: 1 };
+  }
+
+  const delivery = await sendAsyncTelegramAlertForSignal(repository, event, fetcher);
   return { ...delivery, suppressedCount: 0 };
 }
 

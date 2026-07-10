@@ -362,7 +362,7 @@ test('server Telegram monitor seeds existing latest signal before sending realti
   assert.match(sentMessages[0], /TF: 1m/);
 });
 
-test('server Telegram monitor scans closed candles since the last check so delayed cron runs do not skip signals', async () => {
+test('server Telegram monitor advances past stale catch-up signals without sending them', async () => {
   const syncRepository = createMockChartServiceRepository();
   const repository = createAsyncChartServiceRepository(syncRepository);
   const strategy = buildStrategyDefinition({
@@ -409,10 +409,8 @@ test('server Telegram monitor scans closed candles since the last check so delay
 
   const watchState = await repository.getTelegramSignalWatchState(`${strategy.id}:BTCUSDT:1m`);
 
-  assert.equal(result.sentCount, 1);
-  assert.equal(sentMessages.length, 1);
-  assert.match(sentMessages[0], /BUY .*BTCUSDT/);
-  assert.match(sentMessages[0], /Time: 70\.01\.01 09:02:00 KST/);
+  assert.equal(result.sentCount, 0);
+  assert.equal(sentMessages.length, 0);
   assert.equal(watchState?.lastCheckedCandleTime, 1200);
   assert.equal(watchState?.lastSignalCandleTime, 120);
   assert.equal(watchState?.lastSignalEventType, 'buy');
@@ -585,7 +583,7 @@ test('browser Telegram signal API shares watch state to suppress server monitor 
   assert.equal(syncRepository.listTelegramDeliveryLogs().length, 0);
 });
 
-test('browser Telegram signal API allows delayed confirmations on earlier candles when the signal is new', async () => {
+test('browser Telegram signal API accepts a fresh late-discovered signal without regressing the checked candle', async () => {
   const syncRepository = createMockChartServiceRepository();
   const repository = createAsyncChartServiceRepository(syncRepository);
   await repository.saveTelegramBotProfile(createProfile({
@@ -616,7 +614,7 @@ test('browser Telegram signal API allows delayed confirmations on earlier candle
   }, async (_url, init) => {
     sentMessages.push(JSON.parse(init.body).text);
     return { ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: sentMessages.length } }) };
-  });
+  }, { now: '1970-01-01T00:05:30.000Z' });
 
   const watchState = await repository.getTelegramSignalWatchState('strategy_js_grid_martingale:BTCUSDT:1m');
 

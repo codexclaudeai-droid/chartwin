@@ -32,6 +32,7 @@ import {
 import { GRID_ATR_BNF_SROUTER_PRESETS, inferGridAtrBnfSrouterPreset } from '../strategy/strategies/grid-atr-bnf-srouter-v1';
 import { getStrategyHistoryDiagnostic } from '../strategy/strategy-history';
 import { normalizeConfirmedSignalSeriesLength } from '../strategy/signal-series';
+import { isSignalWithinRealtimeWindow } from '../strategy/signal-freshness';
 import {
   openChartSettingsModal,
   openIndicatorModal,
@@ -3089,6 +3090,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
     const announcedSignalKeys = new Set<string>();
     const signalNoticeBaselineKeyByPane = new Map<number, string>();
     const signalNoticeSuppressNextReadyComputeByPane = new Set<number>();
+    const isFreshSignalNotice = (timeSec: number, timeframe: string): boolean => (
+      isSignalWithinRealtimeWindow({
+        signalTimeSec: timeSec,
+        timeframe,
+        nowSec: Date.now() / 1000,
+      })
+    );
     const getSignalNoticeHost = (): HTMLDivElement => {
       const w = window as typeof window & { __signalNoticeHost__?: HTMLDivElement };
       const existing = w.__signalNoticeHost__;
@@ -3384,8 +3392,13 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         markExistingTodaySignalsAnnounced(paneId);
         return [];
       }
+      const pane = paneControllers.get(paneId) ?? ensurePane(paneId);
       return collectTodaySignalNotices(paneId).filter((item) => {
         if (announcedSignalKeys.has(item.key)) return false;
+        if (!isFreshSignalNotice(item.timeSec, pane.chart.config.timeframe)) {
+          announcedSignalKeys.add(item.key);
+          return false;
+        }
         announcedSignalKeys.add(item.key);
         return true;
       });
@@ -3394,6 +3407,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       if (signalEvent.eventType !== 'buy' && signalEvent.eventType !== 'sell') return;
       const timeSec = Math.floor(Date.parse(signalEvent.occurredAt) / 1000);
       if (!Number.isFinite(timeSec)) return;
+      if (!isFreshSignalNotice(timeSec, signalEvent.timeframe ?? '')) return;
       const signalValue = signalEvent.eventType === 'buy' ? 1 : -1;
       const side: 'LONG' | 'SHORT' = signalValue > 0 ? 'LONG' : 'SHORT';
       const symbol = canonicalizeUiSymbol(signalEvent.symbolId).trim().toUpperCase();
