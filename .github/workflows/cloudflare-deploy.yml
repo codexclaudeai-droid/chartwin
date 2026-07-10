@@ -73,7 +73,6 @@ jobs:
               exit 1
             fi
           done
-
       - name: Prepare Supabase Postgres database
         run: |
           npm run service:prod-env:check

@@ -17,7 +17,7 @@
     "CHART_SERVICE_EMAIL_PROVIDER": "cloudflare",
     "CHART_SERVICE_EMAIL_DELIVERY_LIMIT": "50",
     "CHART_SERVICE_TELEGRAM_CRON_ENABLED": "true",
-    "DATA_GATEWAY_PUBLIC_URL": "https://minority-iowa-retrieve-contest.trycloudflare.com"
+    "DATA_GATEWAY_PUBLIC_URL": "https://gateway.tradingcore.co"
   },
   "send_email": [
     {
