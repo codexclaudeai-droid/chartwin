@@ -9,6 +9,7 @@ import {
   fillMissingMarketCandles,
   selectMarketCandles,
 } from './market-candles.ts';
+import type { ChartServiceRepositoryRuntimeEnv } from './repository-adapter.ts';
 
 export type ServerCandleProvider = (args: {
   symbol: string;
@@ -61,9 +62,10 @@ export function createBinanceServerCandleProvider(
 
 export function createHybridServerCandleProvider(
   fetcher: typeof fetch = fetch,
+  runtimeEnv?: ChartServiceRepositoryRuntimeEnv,
 ): ServerCandleProvider {
   const binanceProvider = createBinanceServerCandleProvider(fetcher);
-  const marketCandleProvider = createMarketCandleServerProvider();
+  const marketCandleProvider = createMarketCandleServerProvider(selectMarketCandles, runtimeEnv);
 
   return async (args) => {
     if (shouldUseBinanceDirect(args.symbol)) {
@@ -75,6 +77,7 @@ export function createHybridServerCandleProvider(
 
 export function createMarketCandleServerProvider(
   selector: typeof selectMarketCandles = selectMarketCandles,
+  runtimeEnv?: ChartServiceRepositoryRuntimeEnv,
 ): ServerCandleProvider {
   return async ({ symbol, timeframe, limit }) => {
     const targetLimit = normalizeServerCandleLimit(limit);
@@ -83,7 +86,7 @@ export function createMarketCandleServerProvider(
       symbol: normalizeSymbol(symbol),
       timeframe,
       limit: targetLimit,
-    });
+    }, runtimeEnv);
     return fillMissingMarketCandles(candles, timeframe)
       .slice(-targetLimit)
       .map((candle) => ({

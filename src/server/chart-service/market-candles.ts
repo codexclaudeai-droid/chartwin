@@ -7,6 +7,7 @@ import {
   getChartServiceRepositoryConfigFromEnv,
   resolveChartServiceRepositoryAdapter,
   type ChartServiceRepositoryAdapterConfig,
+  type ChartServiceRepositoryRuntimeEnv,
 } from './repository-adapter.ts';
 import { TIMEFRAME_SECONDS } from '../../catalog/time.ts';
 import { sanitizeGatewayCandles } from '../../data/gateway-candle-sanitize.ts';
@@ -328,7 +329,10 @@ export function fillMissingMarketCandles(
   return filled;
 }
 
-export async function selectMarketCandles(query: MarketCandleQuery): Promise<MarketCandle[]> {
+export async function selectMarketCandles(
+  query: MarketCandleQuery,
+  runtimeEnv?: ChartServiceRepositoryRuntimeEnv,
+): Promise<MarketCandle[]> {
   const requestedMarket = normalizeMarketCandleMarket(query.market);
   const market = canonicalizeMarketCandleMarket(requestedMarket, query.symbol);
   const symbol = canonicalizeMarketCandleSymbol(market, query.symbol);
@@ -337,7 +341,7 @@ export async function selectMarketCandles(query: MarketCandleQuery): Promise<Mar
     throw new MarketCandleRequestError('market/symbol/timeframe query is required', 400);
   }
 
-  const executor = createMarketCandleQueryExecutorFromConfig(getChartServiceRepositoryConfigFromEnv());
+  const executor = createMarketCandleQueryExecutorFromConfig(getChartServiceRepositoryConfigFromEnv(runtimeEnv));
   if (!executor) {
     throw new MarketCandleRequestError('postgres market candle store is not configured', 503);
   }

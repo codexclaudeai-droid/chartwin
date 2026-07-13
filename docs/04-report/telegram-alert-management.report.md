@@ -24,6 +24,7 @@ Cloudflare scheduled monitoring provides the browser-free fallback, while `npm r
 - Added a Node Telegram signal monitor runner and `service:telegram-monitor` command for browser-free server monitoring.
 - Added server-side PWA signal push notifications for active free-trial and active paid subscribers, with expired subscriptions blocked.
 - Enabled Cloudflare scheduled monitoring as the browser-free catch-up path.
+- Bound Cloudflare scheduled non-Binance candle reads to the same Worker Hyperdrive environment used by the repository.
 - Unified browser and server strategy history at 3,000 candles with gateway gap filling and Binance pagination.
 - Added recent three-candle revision detection with baseline seeding and bounded late-signal delivery.
 - Connected freshly published revised events to chart SSE popup and voice notifications.

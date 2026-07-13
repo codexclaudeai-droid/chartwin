@@ -16,6 +16,7 @@
 - Authenticated chart signal API dispatches normalized signal events through the Telegram delivery helper.
 - Live chart strategy BUY/SELL notices post to the Telegram signal API with active strategy and symbol context.
 - Production realtime alerts can run from Cloudflare scheduled monitoring or the explicit Node monitor process with `npm run service:telegram-monitor`.
+- Cloudflare scheduled monitoring forwards env.HYPERDRIVE into non-Binance candle reads, so XAUUSD and NQ1! do not fall back to the direct origin database connection.
 - Browser and server strategy inputs share 3,000 candles; gateway symbols use the same bounded gap fill and Binance history uses 1,000-candle pagination.
 - The monitor rechecks the latest three closed candles for newly exposed stateful-strategy signals, seeds existing signals without replay, and keeps a 180-second hard cap for revised events.
 - A freshly published server SSE event can trigger the open chart popup and voice even when the original candle exceeded the normal 90-second window.

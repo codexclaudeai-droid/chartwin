@@ -3,6 +3,7 @@ import {
   runTelegramSignalMonitorOnce,
   type TelegramSignalMonitorResult,
 } from './telegram-signal-monitor.ts';
+import { createHybridServerCandleProvider } from './server-candles.ts';
 import type { ChartServiceRepositoryRuntimeEnv } from './repository-adapter.ts';
 
 type ScheduledControllerLike = {
@@ -27,8 +28,9 @@ export async function runScheduledTelegramSignalMonitor(
     ? new Date(Number(controller.scheduledTime)).toISOString()
     : new Date().toISOString();
   const persistence = getAsyncChartServicePersistence(env);
+  const candleProvider = createHybridServerCandleProvider(fetch, env);
   return await persistence.runMutation(async (repository) => (
-    await runTelegramSignalMonitorOnce(repository, { now: scheduledAt })
+    await runTelegramSignalMonitorOnce(repository, { now: scheduledAt, candleProvider })
   ));
 }
 

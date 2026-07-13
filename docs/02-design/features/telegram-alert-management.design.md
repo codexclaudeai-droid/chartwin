@@ -79,6 +79,8 @@ The Node monitor is configured with these optional environment variables:
 
 The Cloudflare scheduled server monitor is the browser-free fallback and can run every minute from the Worker cron trigger. The explicit Node monitor remains available for an AWS process manager when a dedicated always-on runtime is preferred.
 
+The scheduled entry passes its Worker runtime environment directly into the gateway market-candle provider. This keeps XAUUSD, NQ1!, and other non-Binance jobs on the Hyperdrive connection even though scheduled events do not have an OpenNext request context.
+
 The scheduled worker only calculates and sends alerts when `CHART_SERVICE_TELEGRAM_CRON_ENABLED=true`; otherwise scheduled invocations return a disabled no-op result.
 
 The default fetcher calls:
