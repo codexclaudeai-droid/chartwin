@@ -553,12 +553,14 @@ export function mapSignalAdminSettingsFromPostgresRow(row: PostgresRow): SignalA
 export function mapSignalAdminSettingsToPostgresRow(record: SignalAdminSettingsRecord): PostgresRow {
   return {
     id: record.id,
-    hidden_symbols_json: [...record.hiddenSymbols],
-    disabled_symbols_json: [...record.disabledSymbols],
-    hidden_strategy_ids_json: [...record.hiddenStrategyIds],
-    global_signal_policy_json: record.signalPolicy.globalPolicy,
-    symbol_signal_policies_json: record.signalPolicy.symbolPolicies,
-    strategy_param_profiles_json: record.strategyParams.profiles,
+    // node-postgres serializes JavaScript arrays as PostgreSQL array literals,
+    // which are invalid inputs for jsonb columns. Send explicit JSON instead.
+    hidden_symbols_json: JSON.stringify([...record.hiddenSymbols]),
+    disabled_symbols_json: JSON.stringify([...record.disabledSymbols]),
+    hidden_strategy_ids_json: JSON.stringify([...record.hiddenStrategyIds]),
+    global_signal_policy_json: JSON.stringify(record.signalPolicy.globalPolicy),
+    symbol_signal_policies_json: JSON.stringify(record.signalPolicy.symbolPolicies),
+    strategy_param_profiles_json: JSON.stringify(record.strategyParams.profiles),
     strategy_mgmt_visible: record.strategyMgmtVisible,
     selected_strategy_id: record.selectedStrategyId,
     updated_at: record.updatedAt,
