@@ -43,6 +43,8 @@ const SYMBOL_GROUPS: SymbolGroup[] = [
     providerLabel: 'MT4/5',
     symbols: [
       { id: 'NQ1!', desc: 'NAS100 Futures' },
+      { id: 'NDX', desc: 'Nasdaq 100 Index' },
+      { id: 'NASDAQ', desc: 'NASDAQ Composite' },
       { id: 'SPX500', desc: 'S&P 500' },
       { id: 'HSI', desc: 'Hang Seng' },
       { id: 'KOSPI', desc: 'Korea Composite Stock Price Index' },

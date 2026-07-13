@@ -127,6 +127,8 @@ test('nasdaq futures symbol remains visible and uses the NAS100 Futures display 
   assert.doesNotMatch(initSource, /E-mini Nasdaq-100/);
   assert.match(bottomBarSource, /name: 'NAS100 Futures'/);
   assert.match(signalAdminSource, /\{ id: 'NQ1!', desc: 'NAS100 Futures' \}/);
+  assert.match(signalAdminSource, /\{ id: 'NDX', desc: 'Nasdaq 100 Index' \}/);
+  assert.match(signalAdminSource, /\{ id: 'NASDAQ', desc: 'NASDAQ Composite' \}/);
 });
 
 test('chart admin config keeps locally toggled symbol visibility', () => {
