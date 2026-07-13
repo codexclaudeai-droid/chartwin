@@ -1,5 +1,6 @@
 import { getAsyncChartServicePersistence } from './singleton.ts';
 import {
+  DEFAULT_SERVER_SIGNAL_CANDLE_LIMIT,
   runTelegramSignalMonitorOnce,
   type TelegramSignalMonitorResult,
 } from './telegram-signal-monitor.ts';
@@ -44,7 +45,7 @@ export type RunNodeTelegramSignalMonitorOptions = {
 
 const DEFAULT_MONITOR_INTERVAL_MS = 60_000;
 const DEFAULT_MONITOR_SETTLE_DELAY_MS = 3_000;
-const DEFAULT_MONITOR_CANDLE_LIMIT = 500;
+const DEFAULT_MONITOR_CANDLE_LIMIT = DEFAULT_SERVER_SIGNAL_CANDLE_LIMIT;
 
 export function resolveNodeTelegramSignalMonitorConfig(
   env: NodeTelegramSignalMonitorEnv = {},

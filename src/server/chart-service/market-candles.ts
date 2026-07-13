@@ -291,6 +291,43 @@ export function aggregateMarketCandlesToTimeframe(
   return Array.from(buckets.values()).sort((a, b) => a.time - b.time);
 }
 
+export function fillMissingMarketCandles(
+  candles: MarketCandle[],
+  timeframe: string,
+  maxGapBars = 180,
+): MarketCandle[] {
+  if (!Array.isArray(candles) || candles.length < 2) return candles;
+  const timeframeSec = getMarketCandleTimeframeSec(timeframe);
+  if (!Number.isFinite(timeframeSec) || timeframeSec <= 0) return candles;
+  if (timeframe === '1w' || timeframe === '1M') return candles;
+
+  const maximumGapBars = Math.max(0, Math.floor(maxGapBars));
+  const filled: MarketCandle[] = [candles[0]];
+  for (let index = 1; index < candles.length; index += 1) {
+    const previous = filled[filled.length - 1];
+    const next = candles[index];
+    if (!previous || !next) continue;
+    const gapSec = next.time - previous.time;
+    if (gapSec > timeframeSec) {
+      const missingBars = Math.floor(gapSec / timeframeSec) - 1;
+      if (missingBars > 0 && missingBars <= maximumGapBars) {
+        for (let offset = 1; offset <= missingBars; offset += 1) {
+          filled.push({
+            time: previous.time + timeframeSec * offset,
+            open: previous.close,
+            high: previous.close,
+            low: previous.close,
+            close: previous.close,
+            volume: 0,
+          });
+        }
+      }
+    }
+    filled.push(next);
+  }
+  return filled;
+}
+
 export async function selectMarketCandles(query: MarketCandleQuery): Promise<MarketCandle[]> {
   const requestedMarket = normalizeMarketCandleMarket(query.market);
   const market = canonicalizeMarketCandleMarket(requestedMarket, query.symbol);

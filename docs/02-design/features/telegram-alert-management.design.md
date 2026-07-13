@@ -64,6 +64,10 @@ The chart page posts new live strategy BUY/SELL signals to `/api/telegram-alerts
 
 Current production alerting can run from the Node server monitor without keeping a user browser open. The monitor is started with `npm run service:telegram-monitor`, reads enabled Telegram profiles, builds the strategy/symbol/timeframe watch list, and checks closed candles just after each one-minute boundary. Chart pages still post live signals for in-browser popup/voice behavior, but they are no longer the only possible realtime source.
 
+To keep browser and server strategy inputs aligned, both calculations use the latest 3,000 candles. Gateway market candles use the same bounded gap-fill rule (up to 180 missing bars), Binance history is paginated in 1,000-candle batches, and one monitor cycle reuses a candle snapshot across strategies sharing the same symbol and timeframe.
+
+Some stateful strategies can expose a signal on one of the previous candles after newer candles arrive. Each server cycle therefore rechecks only the latest three closed candles. A newly exposed revision can be delivered for up to 180 seconds after its candle confirmation, while the first monitor run only seeds existing signals and never replays them. Fresh SSE publication time lets an open chart show the matching popup and voice without weakening the normal 90-second candle freshness rule.
+
 When the Node monitor detects a new closed-candle BUY/SELL signal, it also creates `signal` notification records and attempts PWA app push delivery for members with active chart access. The initial recipient policy includes active free-trial users and active/expiring paid subscribers whose end time has not passed. Expired trials, expired paid subscriptions, pending requests, cancelled/refunded subscriptions, and suspended accounts are excluded. Member-level interested symbols and timeframes are intentionally deferred to the My Profile settings phase.
 
 The Node monitor is configured with these optional environment variables:
@@ -71,11 +75,11 @@ The Node monitor is configured with these optional environment variables:
 - `CHART_SERVICE_SIGNAL_MONITOR_ENABLED=false`: disables the explicit Node monitor process.
 - `CHART_SERVICE_SIGNAL_MONITOR_INTERVAL_MS`: defaults to `60000`.
 - `CHART_SERVICE_SIGNAL_MONITOR_SETTLE_DELAY_MS`: defaults to `3000`, so checks run just after candle close.
-- `CHART_SERVICE_SIGNAL_MONITOR_CANDLE_LIMIT`: defaults to `500`.
+- `CHART_SERVICE_SIGNAL_MONITOR_CANDLE_LIMIT`: defaults to `3000`.
 
-The Cloudflare scheduled server monitor remains in the codebase for later reuse, but its cron trigger is paused because Cloudflare cron timing and production timeframe alignment need more validation.
+The Cloudflare scheduled server monitor is the browser-free fallback and can run every minute from the Worker cron trigger. The explicit Node monitor remains available for an AWS process manager when a dedicated always-on runtime is preferred.
 
-The scheduled worker only runs when `CHART_SERVICE_TELEGRAM_CRON_ENABLED=true` and a cron trigger is restored in `wrangler.jsonc`. With the default `false` setting, scheduled invocations return a disabled no-op result and do not calculate or send Telegram signal alerts.
+The scheduled worker only calculates and sends alerts when `CHART_SERVICE_TELEGRAM_CRON_ENABLED=true`; otherwise scheduled invocations return a disabled no-op result.
 
 The default fetcher calls:
 
@@ -108,4 +112,4 @@ After a token is saved, the UI displays only `123456...ABCD` style masked text.
 - Chart live signal notice posts BUY/SELL events to the Telegram signal API.
 - Signal API authenticates, validates, and dispatches normalized events.
 - Server signal monitor creates PWA push notifications for active free-trial and active paid subscribers while blocking expired subscriptions.
-- Cloudflare scheduled monitor is paused by default while preserving the worker module for future cron reactivation.
+- Cloudflare scheduled monitor provides browser-free catch-up without replaying historical signals.

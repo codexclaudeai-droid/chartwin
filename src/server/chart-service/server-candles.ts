@@ -5,7 +5,10 @@ import {
   shouldUseBinanceDirect,
 } from '../../data/gateway-market.ts';
 import type { ServerStrategyCandle } from './server-strategy-signals.ts';
-import { selectMarketCandles } from './market-candles.ts';
+import {
+  fillMissingMarketCandles,
+  selectMarketCandles,
+} from './market-candles.ts';
 
 export type ServerCandleProvider = (args: {
   symbol: string;
@@ -28,6 +31,9 @@ const BINANCE_INTERVAL_BY_TIMEFRAME: Partial<Record<TimeframeKey, string>> = {
   '1w': '1w',
   '1M': '1M',
 };
+
+const BINANCE_MAX_KLINES_PER_REQUEST = 1000;
+const MAX_SERVER_CANDLE_LIMIT = 10_000;
 
 export function createBinanceServerCandleProvider(
   fetcher: typeof fetch = fetch,
@@ -67,22 +73,27 @@ export function createHybridServerCandleProvider(
   };
 }
 
-export function createMarketCandleServerProvider(): ServerCandleProvider {
+export function createMarketCandleServerProvider(
+  selector: typeof selectMarketCandles = selectMarketCandles,
+): ServerCandleProvider {
   return async ({ symbol, timeframe, limit }) => {
-    const candles = await selectMarketCandles({
+    const targetLimit = normalizeServerCandleLimit(limit);
+    const candles = await selector({
       market: inferGatewayReportMarket(symbol),
       symbol: normalizeSymbol(symbol),
       timeframe,
-      limit,
+      limit: targetLimit,
     });
-    return candles.map((candle) => ({
-      time: candle.time,
-      open: candle.open,
-      high: candle.high,
-      low: candle.low,
-      close: candle.close,
-      volume: candle.volume,
-    }));
+    return fillMissingMarketCandles(candles, timeframe)
+      .slice(-targetLimit)
+      .map((candle) => ({
+        time: candle.time,
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+        volume: candle.volume,
+      }));
   };
 }
 
@@ -104,27 +115,60 @@ async function fetchBinanceKlines(args: {
   limit: number;
   fetcher: typeof fetch;
 }): Promise<ServerStrategyCandle[]> {
-  const query = new URLSearchParams({
-    symbol: args.symbol,
-    interval: args.interval,
-    limit: String(Math.max(2, Math.min(1000, Math.floor(args.limit)))),
-  });
-  const endpoint = args.market === 'futures'
-    ? `https://fapi.binance.com/fapi/v1/klines?${query.toString()}`
-    : `https://api.binance.com/api/v3/klines?${query.toString()}`;
-  const response = await args.fetcher(endpoint, {
-    method: 'GET',
-    cache: 'no-store',
-  });
-  if (!response.ok) {
-    throw new Error(`Binance REST error: ${response.status}`);
+  const targetLimit = normalizeServerCandleLimit(args.limit);
+  const candlesByTime = new Map<number, ServerStrategyCandle>();
+  let endTimeMs: number | null = null;
+
+  while (candlesByTime.size < targetLimit) {
+    const batchLimit = Math.min(
+      BINANCE_MAX_KLINES_PER_REQUEST,
+      targetLimit - candlesByTime.size,
+    );
+    const query = new URLSearchParams({
+      symbol: args.symbol,
+      interval: args.interval,
+      limit: String(batchLimit),
+    });
+    if (endTimeMs != null) {
+      query.set('endTime', String(endTimeMs));
+    }
+    const endpoint = args.market === 'futures'
+      ? `https://fapi.binance.com/fapi/v1/klines?${query.toString()}`
+      : `https://api.binance.com/api/v3/klines?${query.toString()}`;
+    const response = await args.fetcher(endpoint, {
+      method: 'GET',
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      throw new Error(`Binance REST error: ${response.status}`);
+    }
+
+    const rows = await response.json() as unknown[];
+    const batch = rows
+      .map(parseKlineRow)
+      .filter((candle): candle is ServerStrategyCandle => candle != null)
+      .sort((left, right) => left.time - right.time);
+    if (!batch.length) break;
+
+    batch.forEach((candle) => {
+      candlesByTime.set(candle.time, candle);
+    });
+    if (rows.length < batchLimit) break;
+
+    const nextEndTimeMs = batch[0].time * 1000 - 1;
+    if (endTimeMs != null && nextEndTimeMs >= endTimeMs) break;
+    endTimeMs = nextEndTimeMs;
   }
 
-  const rows = await response.json() as unknown[];
-  return rows
-    .map(parseKlineRow)
-    .filter((candle): candle is ServerStrategyCandle => candle != null)
-    .sort((left, right) => left.time - right.time);
+  return Array.from(candlesByTime.values())
+    .sort((left, right) => left.time - right.time)
+    .slice(-targetLimit);
+}
+
+function normalizeServerCandleLimit(limit: number): number {
+  const parsed = Math.floor(Number(limit));
+  if (!Number.isFinite(parsed)) return 2;
+  return Math.max(2, Math.min(MAX_SERVER_CANDLE_LIMIT, parsed));
 }
 
 function parseKlineRow(row: unknown): ServerStrategyCandle | null {

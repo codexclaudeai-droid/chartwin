@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import test from 'node:test';
 
 import {
+  createBinanceServerCandleProvider,
+  createMarketCandleServerProvider,
   createMockChartServiceRepository,
   createAsyncChartServiceRepository,
   createPostgresAsyncChartServiceRepository,
@@ -17,6 +19,7 @@ import {
   toPublicTelegramBotProfile,
 } from '../src/server/chart-service/index.ts';
 import { DEFAULT_SIGNAL_POLICY_SETTINGS } from '../src/domain/chart-service/index.ts';
+import { fillMissingMarketCandles } from '../src/server/chart-service/market-candles.ts';
 
 const now = '2026-06-11T00:00:00.000Z';
 
@@ -426,6 +429,214 @@ test('server Telegram monitor uses hybrid candle provider for Binance and gatewa
   assert.match(candleSource, /createMarketCandleServerProvider/);
   assert.match(candleSource, /selectMarketCandles/);
   assert.match(candleSource, /inferGatewayReportMarket\(symbol\)/);
+});
+
+function createServerKlineRow(index) {
+  const price = 10_000 + index;
+  return [
+    index * 60_000,
+    String(price),
+    String(price + 2),
+    String(price - 2),
+    String(price + 1),
+    '5',
+  ];
+}
+
+test('Binance server candle provider paginates until the requested 3000-candle history is complete', async () => {
+  const requestedUrls = [];
+  const provider = createBinanceServerCandleProvider(async (input) => {
+    const url = new URL(String(input));
+    requestedUrls.push(url);
+    const limit = Number(url.searchParams.get('limit'));
+    const endTime = Number(url.searchParams.get('endTime'));
+    const lastIndex = Number.isFinite(endTime) && endTime > 0
+      ? Math.floor(endTime / 60_000)
+      : 3_000;
+    const firstIndex = Math.max(1, lastIndex - limit + 1);
+    const rows = Array.from(
+      { length: lastIndex - firstIndex + 1 },
+      (_, offset) => createServerKlineRow(firstIndex + offset),
+    );
+    return new Response(JSON.stringify(rows), { status: 200 });
+  });
+
+  const candles = await provider({ symbol: 'BTCUSDT', timeframe: '1m', limit: 3_000 });
+
+  assert.equal(requestedUrls.length, 3);
+  assert.deepEqual(requestedUrls.map((url) => url.searchParams.get('limit')), ['1000', '1000', '1000']);
+  assert.equal(requestedUrls[0].searchParams.has('endTime'), false);
+  assert.equal(requestedUrls[1].searchParams.get('endTime'), String(2_001 * 60_000 - 1));
+  assert.equal(candles.length, 3_000);
+  assert.equal(candles[0].time, 60);
+  assert.equal(candles.at(-1).time, 3_000 * 60);
+});
+
+test('market server candle provider applies the same bounded gap fill and final limit as the chart gateway', async () => {
+  const queries = [];
+  const provider = createMarketCandleServerProvider(async (query) => {
+    queries.push(query);
+    return [
+      { time: 60, open: 10, high: 12, low: 9, close: 11, volume: 3 },
+      { time: 180, open: 12, high: 14, low: 11, close: 13, volume: 4 },
+    ];
+  });
+
+  const candles = await provider({ symbol: 'XAUUSD', timeframe: '1m', limit: 3_000 });
+
+  assert.equal(queries.length, 1);
+  assert.equal(queries[0].limit, 3_000);
+  assert.deepEqual(candles, [
+    { time: 60, open: 10, high: 12, low: 9, close: 11, volume: 3 },
+    { time: 120, open: 11, high: 11, low: 11, close: 11, volume: 0 },
+    { time: 180, open: 12, high: 14, low: 11, close: 13, volume: 4 },
+  ]);
+});
+
+test('market candle gap fill leaves long market closures untouched', () => {
+  const candles = [
+    { time: 60, open: 10, high: 10, low: 10, close: 10, volume: 1 },
+    { time: 60 + 182 * 60, open: 12, high: 12, low: 12, close: 12, volume: 1 },
+  ];
+
+  assert.deepEqual(fillMissingMarketCandles(candles, '1m'), candles);
+});
+
+test('server Telegram monitor shares one 3000-candle snapshot across strategies for the same symbol and timeframe', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const strategies = ['one', 'two'].map((suffix) => buildStrategyDefinition({
+    id: `strategy_test_snapshot_${suffix}`,
+    name: `Snapshot ${suffix}`,
+    description: 'No-op strategy used to verify shared candle inputs',
+    language: 'javascript',
+    sourceCode: '(function() { return 0; })',
+  }));
+  await repository.saveTelegramBotProfile(createProfile({
+    id: 'telegram_profile_shared_snapshot',
+    strategyIds: strategies.map((strategy) => strategy.id),
+    symbolIds: ['XAUUSD'],
+    timeframeIds: ['1m'],
+  }));
+
+  const requestedLimits = [];
+  const result = await runTelegramSignalMonitorOnce(repository, {
+    now: '1970-01-01T00:04:00.000Z',
+    strategies,
+    candleProvider: async ({ limit }) => {
+      requestedLimits.push(limit);
+      return [
+        { time: 60, open: 10, high: 11, low: 9, close: 10, volume: 1 },
+        { time: 120, open: 10, high: 11, low: 9, close: 10, volume: 1 },
+      ];
+    },
+  });
+
+  assert.equal(result.seededCount, 2);
+  assert.deepEqual(requestedLimits, [3_000]);
+});
+
+test('server Telegram monitor sends a signal that first appears on a recently checked candle', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const strategy = buildStrategyDefinition({
+    id: 'strategy_test_recent_revision',
+    name: 'Recent Revision Test',
+    description: 'Exposes a prior-candle signal after two newer candles exist',
+    language: 'javascript',
+    sourceCode: `(
+      function(context, index) {
+        return context.close.length >= 4 && index === 1 ? 1 : 0;
+      }
+    )`,
+  });
+  await repository.saveTelegramBotProfile(createProfile({
+    id: 'telegram_profile_recent_revision',
+    strategyIds: [strategy.id],
+    symbolIds: ['XAUUSD'],
+    timeframeIds: ['1m'],
+  }));
+
+  const firstCandles = [
+    { time: 60, open: 10, high: 11, low: 9, close: 10, volume: 1 },
+    { time: 120, open: 10, high: 12, low: 9, close: 11, volume: 1 },
+    { time: 180, open: 11, high: 12, low: 10, close: 11, volume: 1 },
+  ];
+  const sentMessages = [];
+  const seeded = await runTelegramSignalMonitorOnce(repository, {
+    now: '1970-01-01T00:04:00.000Z',
+    strategies: [strategy],
+    candleProvider: async () => firstCandles,
+  });
+  const revised = await runTelegramSignalMonitorOnce(repository, {
+    now: '1970-01-01T00:05:00.000Z',
+    strategies: [strategy],
+    candleProvider: async () => [
+      ...firstCandles,
+      { time: 240, open: 11, high: 12, low: 10, close: 11, volume: 1 },
+    ],
+    telegramFetch: async (_url, init) => {
+      sentMessages.push(JSON.parse(init.body).text);
+      return { ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: 1 } }) };
+    },
+  });
+
+  const watchState = await repository.getTelegramSignalWatchState(`${strategy.id}:XAUUSD:1m`);
+  assert.equal(seeded.sentCount, 0);
+  assert.equal(revised.sentCount, 1);
+  assert.equal(sentMessages.length, 1);
+  assert.match(sentMessages[0], /BUY .*XAUUSD/);
+  assert.equal(watchState?.lastCheckedCandleTime, 240);
+  assert.equal(watchState?.lastSignalCandleTime, 120);
+});
+
+test('server Telegram monitor seeds recent historical signals without replaying them on the next candle', async () => {
+  const syncRepository = createMockChartServiceRepository();
+  const repository = createAsyncChartServiceRepository(syncRepository);
+  const strategy = buildStrategyDefinition({
+    id: 'strategy_test_revision_baseline',
+    name: 'Revision Baseline Test',
+    description: 'Keeps existing recent signals as a no-send baseline',
+    language: 'javascript',
+    sourceCode: `(
+      function(_context, index) {
+        return index === 1 ? 1 : 0;
+      }
+    )`,
+  });
+  await repository.saveTelegramBotProfile(createProfile({
+    id: 'telegram_profile_revision_baseline',
+    strategyIds: [strategy.id],
+    symbolIds: ['XAUUSD'],
+    timeframeIds: ['1m'],
+  }));
+
+  const firstCandles = [
+    { time: 60, open: 10, high: 11, low: 9, close: 10, volume: 1 },
+    { time: 120, open: 10, high: 12, low: 9, close: 11, volume: 1 },
+    { time: 180, open: 11, high: 12, low: 10, close: 11, volume: 1 },
+  ];
+  await runTelegramSignalMonitorOnce(repository, {
+    now: '1970-01-01T00:04:00.000Z',
+    strategies: [strategy],
+    candleProvider: async () => firstCandles,
+  });
+  const seededState = await repository.getTelegramSignalWatchState(`${strategy.id}:XAUUSD:1m`);
+  const next = await runTelegramSignalMonitorOnce(repository, {
+    now: '1970-01-01T00:05:00.000Z',
+    strategies: [strategy],
+    candleProvider: async () => [
+      ...firstCandles,
+      { time: 240, open: 11, high: 12, low: 10, close: 11, volume: 1 },
+    ],
+    telegramFetch: async () => {
+      throw new Error('seeded historical signal must not be replayed');
+    },
+  });
+
+  assert.equal(seededState?.lastSignalCandleTime, 120);
+  assert.equal(seededState?.lastSignalEventType, 'buy');
+  assert.equal(next.sentCount, 0);
 });
 
 test('server Telegram monitor applies stored strategy parameter profiles before computing signals', async () => {

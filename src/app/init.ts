@@ -32,7 +32,10 @@ import {
 import { GRID_ATR_BNF_SROUTER_PRESETS, inferGridAtrBnfSrouterPreset } from '../strategy/strategies/grid-atr-bnf-srouter-v1';
 import { getStrategyHistoryDiagnostic } from '../strategy/strategy-history';
 import { normalizeConfirmedSignalSeriesLength } from '../strategy/signal-series';
-import { isSignalWithinRealtimeWindow } from '../strategy/signal-freshness';
+import {
+  isSignalRealtimeEmissionWithinWindow,
+  isSignalWithinRealtimeWindow,
+} from '../strategy/signal-freshness';
 import {
   openChartSettingsModal,
   openIndicatorModal,
@@ -3403,11 +3406,18 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
         return true;
       });
     };
-    const handleServerSignalEvent = (signalEvent: ServerSignalEvent) => {
+    const handleServerSignalEvent = (signalEvent: ServerSignalEvent, emittedAt: string) => {
       if (signalEvent.eventType !== 'buy' && signalEvent.eventType !== 'sell') return;
       const timeSec = Math.floor(Date.parse(signalEvent.occurredAt) / 1000);
       if (!Number.isFinite(timeSec)) return;
-      if (!isFreshSignalNotice(timeSec, signalEvent.timeframe ?? '')) return;
+      const nowSec = Date.now() / 1000;
+      const emittedAtSec = Date.parse(emittedAt) / 1000;
+      const isFreshOccurrence = isFreshSignalNotice(timeSec, signalEvent.timeframe ?? '');
+      const isFreshEmission = isSignalRealtimeEmissionWithinWindow({
+        emittedAtSec,
+        nowSec,
+      });
+      if (!isFreshOccurrence && !isFreshEmission) return;
       const signalValue = signalEvent.eventType === 'buy' ? 1 : -1;
       const side: 'LONG' | 'SHORT' = signalValue > 0 ? 'LONG' : 'SHORT';
       const symbol = canonicalizeUiSymbol(signalEvent.symbolId).trim().toUpperCase();
@@ -3454,7 +3464,7 @@ const splitPresets = [1, 2, 4, 6, 8] as const;
       const handleChanged = (event: Event) => {
         const payload = parseServerSignalRealtimePayload(String((event as MessageEvent).data ?? ''));
         if (!payload) return;
-        handleServerSignalEvent(payload.signalEvent);
+        handleServerSignalEvent(payload.signalEvent, payload.emittedAt);
       };
       const cleanup = () => {
         eventSource.removeEventListener('signals.changed', handleChanged);

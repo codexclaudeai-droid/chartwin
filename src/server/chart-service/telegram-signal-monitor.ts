@@ -69,7 +69,9 @@ export type TelegramSignalMonitorOptions = {
   candleLimit?: number;
 };
 
-const DEFAULT_CANDLE_LIMIT = 500;
+export const DEFAULT_SERVER_SIGNAL_CANDLE_LIMIT = 3_000;
+const SERVER_SIGNAL_REVISION_BARS = 3;
+const SERVER_SIGNAL_REVISION_MAX_LAG_SECONDS = 180;
 
 export async function runTelegramSignalMonitorOnce(
   repository: AsyncChartServiceRepository,
@@ -81,6 +83,8 @@ export async function runTelegramSignalMonitorOnce(
   const strategies = options.strategies ?? getDefaultServerStrategies();
   const candleProvider = options.candleProvider ?? createHybridServerCandleProvider();
   const jobs = buildTelegramSignalMonitorJobs(await repository.listTelegramBotProfiles());
+  const candleLimit = options.candleLimit ?? DEFAULT_SERVER_SIGNAL_CANDLE_LIMIT;
+  const candleSnapshots = new Map<string, Promise<ServerStrategyCandle[]>>();
   const strategyParameterSettings = await readServerStrategyParameterSettings(repository);
   const result: TelegramSignalMonitorResult = {
     jobCount: jobs.length,
@@ -108,11 +112,17 @@ export async function runTelegramSignalMonitorOnce(
       }
       const strategyForJob = applyStrategyParameterSettings(strategy, strategyParameterSettings, job.symbolId);
 
-      const candles = await candleProvider({
-        symbol: job.symbolId,
-        timeframe: job.timeframe,
-        limit: options.candleLimit ?? DEFAULT_CANDLE_LIMIT,
-      });
+      const snapshotKey = `${job.symbolId}:${job.timeframe}:${candleLimit}`;
+      let candleSnapshot = candleSnapshots.get(snapshotKey);
+      if (!candleSnapshot) {
+        candleSnapshot = candleProvider({
+          symbol: job.symbolId,
+          timeframe: job.timeframe,
+          limit: candleLimit,
+        });
+        candleSnapshots.set(snapshotKey, candleSnapshot);
+      }
+      const candles = await candleSnapshot;
       if (hasOpenTailCandle(candles, job.timeframe, nowSec)) {
         result.skippedOpenCandleCount += 1;
       }
@@ -127,15 +137,20 @@ export async function runTelegramSignalMonitorOnce(
         continue;
       }
 
-      const eventType = signalToTelegramEventType(closed.signal);
       const previous = await repository.getTelegramSignalWatchState(job.key);
 
       if (!previous) {
+        const seededSignal = getLatestClosedSignalEvent({
+          candles,
+          signals,
+          timeframe: job.timeframe,
+          nowSec,
+        });
         await repository.saveTelegramSignalWatchState(createTelegramSignalWatchState(
           job,
           closed.candle.time,
-          eventType ? closed.candle.time : null,
-          eventType,
+          seededSignal?.candle.time ?? null,
+          seededSignal?.eventType ?? null,
           nowIso,
         ));
         result.seededCount += 1;
@@ -153,6 +168,9 @@ export async function runTelegramSignalMonitorOnce(
         nowSec,
         afterCandleTime: previous.lastCheckedCandleTime,
         latestClosedCandleTime: closed.candle.time,
+        lastSignalCandleTime: previous.lastSignalCandleTime,
+        lastSignalEventType: previous.lastSignalEventType,
+        revisionBars: SERVER_SIGNAL_REVISION_BARS,
       });
       let lastSignalCandleTime = previous.lastSignalCandleTime;
       let lastSignalEventType = previous.lastSignalEventType;
@@ -189,11 +207,13 @@ export async function runTelegramSignalMonitorOnce(
           nowIso,
         ));
 
-        if (!isSignalWithinRealtimeWindow({
+        const isFresh = isSignalWithinRealtimeWindow({
           signalTimeSec: closedSignal.candle.time,
           timeframe: job.timeframe,
           nowSec,
-        })) {
+          maxLagSeconds: closedSignal.isRevision ? SERVER_SIGNAL_REVISION_MAX_LAG_SECONDS : undefined,
+        });
+        if (!isFresh) {
           continue;
         }
 
@@ -388,24 +408,81 @@ function getClosedSignalEventsAfter(args: {
   nowSec: number;
   afterCandleTime: number;
   latestClosedCandleTime: number;
-}): Array<{ candle: ServerStrategyCandle; signal: StrategySignal; eventType: TelegramSignalEventType }> {
+  lastSignalCandleTime: number | null;
+  lastSignalEventType: TelegramSignalEventType | null;
+  revisionBars: number;
+}): Array<{
+  candle: ServerStrategyCandle;
+  signal: StrategySignal;
+  eventType: TelegramSignalEventType;
+  isRevision: boolean;
+}> {
   const timeframeSec = TIMEFRAME_SECONDS[args.timeframe];
   if (!timeframeSec) return [];
   const count = Math.min(args.candles.length, args.signals.length);
-  const events: Array<{ candle: ServerStrategyCandle; signal: StrategySignal; eventType: TelegramSignalEventType }> = [];
+  const closedIndexes: number[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const candle = args.candles[index];
+    if (!candle) continue;
+    if (candle.time > args.latestClosedCandleTime) continue;
+    if (candle.time + timeframeSec > args.nowSec) continue;
+    closedIndexes.push(index);
+  }
+  const revisionCount = Math.max(0, Math.floor(args.revisionBars));
+  const revisionStartIndex = revisionCount > 0
+    ? (closedIndexes[Math.max(0, closedIndexes.length - revisionCount)] ?? count)
+    : count;
+  const events: Array<{
+    candle: ServerStrategyCandle;
+    signal: StrategySignal;
+    eventType: TelegramSignalEventType;
+    isRevision: boolean;
+  }> = [];
 
   for (let index = 0; index < count; index += 1) {
     const candle = args.candles[index];
     if (!candle) continue;
-    if (candle.time <= args.afterCandleTime) continue;
+    if (candle.time > args.latestClosedCandleTime) continue;
     if (candle.time + timeframeSec > args.nowSec) continue;
     const signal = args.signals[index] ?? 0;
     const eventType = signalToTelegramEventType(signal);
     if (!eventType) continue;
-    events.push({ candle, signal, eventType });
+    const isNewCandle = candle.time > args.afterCandleTime;
+    const isAfterLastSignal = args.lastSignalCandleTime == null
+      || candle.time > args.lastSignalCandleTime
+      || (
+        candle.time === args.lastSignalCandleTime
+        && eventType !== args.lastSignalEventType
+      );
+    const isRevision = !isNewCandle && index >= revisionStartIndex && isAfterLastSignal;
+    if (!isNewCandle && !isRevision) continue;
+    events.push({ candle, signal, eventType, isRevision });
   }
 
   return events;
+}
+
+function getLatestClosedSignalEvent(args: {
+  candles: ServerStrategyCandle[];
+  signals: StrategySignal[];
+  timeframe: TimeframeKey;
+  nowSec: number;
+}): {
+  candle: ServerStrategyCandle;
+  signal: StrategySignal;
+  eventType: TelegramSignalEventType;
+} | null {
+  const timeframeSec = TIMEFRAME_SECONDS[args.timeframe];
+  if (!timeframeSec) return null;
+  const count = Math.min(args.candles.length, args.signals.length);
+  for (let index = count - 1; index >= 0; index -= 1) {
+    const candle = args.candles[index];
+    if (!candle || candle.time + timeframeSec > args.nowSec) continue;
+    const signal = args.signals[index] ?? 0;
+    const eventType = signalToTelegramEventType(signal);
+    if (eventType) return { candle, signal, eventType };
+  }
+  return null;
 }
 
 function hasOpenTailCandle(candles: ServerStrategyCandle[], timeframe: TimeframeKey, nowSec: number): boolean {

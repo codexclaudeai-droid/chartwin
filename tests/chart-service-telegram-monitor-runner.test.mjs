@@ -16,7 +16,7 @@ test('Node Telegram monitor runner is independent from paused Cloudflare cron', 
   assert.equal(config.enabled, true);
   assert.equal(config.intervalMs, 60_000);
   assert.equal(config.settleDelayMs, 3_000);
-  assert.equal(config.candleLimit, 500);
+  assert.equal(config.candleLimit, 3_000);
 
   assert.equal(resolveNodeTelegramSignalMonitorConfig({
     CHART_SERVICE_SIGNAL_MONITOR_ENABLED: 'false',
